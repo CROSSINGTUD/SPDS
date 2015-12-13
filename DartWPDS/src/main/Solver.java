@@ -11,6 +11,7 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.AssignStmt;
+import soot.jimple.InstanceFieldRef;
 import soot.jimple.InvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.VirtualInvokeExpr;
@@ -27,9 +28,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import data.Access;
+import data.AccessStmt;
 import data.Fact;
+import data.FieldWeight;
 import data.One;
 import data.Stmt;
+import data.WrappedSootField;
 
 public class Solver {
   private JimpleBasedInterproceduralCFG icfg;
@@ -100,8 +104,8 @@ public class Solver {
         if (rule.getS2().equals(new Fact(base))) {
           PushRule<Stmt, Fact, Access> pushRule =
               new PushRule<Stmt, Fact, Access>(rule.getL2(), rule.getS2(), new Stmt(succ),
-                  new Stmt(sp), new Fact(callee.getActiveBody().getThisLocal()),
-                  computeWeight(succ));
+                  new Stmt(sp), new Fact(callee.getActiveBody().getThisLocal()), computeWeight(
+                      rule.getL2(), succ));
           worklist.add(pushRule);
         }
         if (paramLocals != null)
@@ -110,7 +114,7 @@ public class Solver {
               PushRule<Stmt, Fact, Access> pushRule =
                   new PushRule<Stmt, Fact, Access>(rule.getL2(), rule.getS2(), new Stmt(succ),
                       new Stmt(sp), new Fact(callee.getActiveBody().getParameterLocal(i)),
-                      computeWeight(succ));
+                      computeWeight(rule.getL2(), succ));
               worklist.add(pushRule);
             }
           }
@@ -123,8 +127,8 @@ public class Solver {
 
   private void processCallToReturn(Unit succ, Rule<Stmt, Fact, Access> rule) {
     NormalRule<Stmt, Fact, Access> generate =
-        new NormalRule<>(rule.getL2(), rule.getS2(), new Stmt(succ), rule.getS2(),
-            computeWeight(succ));
+        new NormalRule<>(rule.getL2(), rule.getS2(), new Stmt(succ), rule.getS2(), computeWeight(
+            rule.getL2(), succ));
     worklist.add(generate);
   }
 
@@ -148,12 +152,13 @@ public class Solver {
       if (index == -1) {
         PopRule<Stmt, Fact, Access> generate =
             new PopRule<>(rule.getL2(), rule.getS2(), new Fact(
-                (Local) ((VirtualInvokeExpr) inv.getInvokeExpr()).getBase()), computeWeight(succ));
+                (Local) ((VirtualInvokeExpr) inv.getInvokeExpr()).getBase()), computeWeight(
+                rule.getL2(), succ));
         worklist.add(generate);
       } else {
         PopRule<Stmt, Fact, Access> generate =
             new PopRule<>(rule.getL2(), rule.getS2(), new Fact((Local) inv.getInvokeExpr().getArg(
-                index)), computeWeight(succ));
+                index)), computeWeight(rule.getL2(), succ));
         worklist.add(generate);
       }
     }
@@ -167,7 +172,8 @@ public class Solver {
         if (rule.getS2().equals(Fact.REACHABLE)) {
           Fact fact = new Fact((Local) assign.getLeftOp());
           NormalRule<Stmt, Fact, Access> generate =
-              new NormalRule<>(rule.getL2(), fact, new Stmt(succ), fact, computeWeight(succ));
+              new NormalRule<>(rule.getL2(), fact, new Stmt(succ), fact, computeWeight(
+                  rule.getL2(), succ));
           worklist.add(generate);
         }
       } else if (assign.getRightOp() instanceof Local) {
@@ -176,20 +182,37 @@ public class Solver {
             Local leftOp = (Local) assign.getLeftOp();
             NormalRule<Stmt, Fact, Access> generate =
                 new NormalRule<>(rule.getL2(), rule.getS2(), new Stmt(succ), new Fact(leftOp),
-                    computeWeight(succ));
+                    computeWeight(rule.getL2(), succ));
             worklist.add(generate);
           }
         }
       }
     }
     NormalRule<Stmt, Fact, Access> generate =
-        new NormalRule<>(rule.getL2(), rule.getS2(), new Stmt(succ), rule.getS2(),
-            computeWeight(succ));
+        new NormalRule<>(rule.getL2(), rule.getS2(), new Stmt(succ), rule.getS2(), computeWeight(
+            rule.getL2(), succ));
     worklist.add(generate);
   }
 
-  private Access computeWeight(Unit succ) {
-    return One.v();
+  private Access computeWeight(Stmt prev, Unit succ) {
+    if (succ instanceof AssignStmt) {
+      AssignStmt assignStmt = (AssignStmt) succ;
+      if (assignStmt.getLeftOp() instanceof InstanceFieldRef) {
+        InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getLeftOp();
+        return new Access(new PushRule<WrappedSootField, AccessStmt, FieldWeight>(
+            WrappedSootField.ANYFIELD, new AccessStmt(prev.getDelegate()),
+            WrappedSootField.ANYFIELD, new WrappedSootField(ifr.getField()), new AccessStmt(succ),
+            new FieldWeight()));
+      } else if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
+        InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
+        return new Access(new PopRule<WrappedSootField, AccessStmt, FieldWeight>(
+            new WrappedSootField(ifr.getField()), new AccessStmt(prev.getDelegate()),
+            new AccessStmt(succ), new FieldWeight()));
+      }
+    }
+    return new Access(new NormalRule<WrappedSootField, AccessStmt, FieldWeight>(
+        WrappedSootField.ANYFIELD, new AccessStmt(prev.getDelegate()), WrappedSootField.ANYFIELD,
+        new AccessStmt(succ), new FieldWeight()));
   }
 
   public void query(Fact fact, Unit stmt) {

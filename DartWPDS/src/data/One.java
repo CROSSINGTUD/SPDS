@@ -23,4 +23,9 @@ public class One extends Access {
     return this;
   }
 
+  @Override
+  public String toString() {
+    return "<ONE>";
+  }
+
 }

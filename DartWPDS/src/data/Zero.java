@@ -23,4 +23,8 @@ public class Zero extends Access {
     return other;
   }
 
+  @Override
+  public String toString() {
+    return "<ZERO>";
+  }
 }
