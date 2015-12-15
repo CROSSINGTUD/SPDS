@@ -192,6 +192,18 @@ public class RegEx<V> {
     return simplify(new Concatenate<V>(a, b));
   }
 
+  public static <V> boolean contains(RegEx<V> regex, RegEx<V> el) {
+    if (regex instanceof Union) {
+      Union con = (Union) regex;
+      if (contains(con.getFirst(), el))
+        return true;
+      if (contains(con.getSecond(), el))
+        return true;
+      return false;
+    }
+    return regex.equals(el);
+  }
+
   public static <V> RegEx<V> star(RegEx<V> reg) {
     if (reg instanceof EmptySet || reg instanceof Epsilon)
       return epsilon();
@@ -295,4 +307,6 @@ public class RegEx<V> {
       empty = new EmptySet<V>();
     return empty;
   }
+
+
 }

@@ -5,5 +5,6 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/soot"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/WPDS"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/PathExpression"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/heros"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

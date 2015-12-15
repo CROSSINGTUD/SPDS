@@ -28,14 +28,6 @@ public abstract class PushdownSystem<N extends Location, D extends State, W exte
   }
 
   @Override
-  public abstract W getZero();
-
-  @Override
-  public abstract W getOne();
-
-  public abstract N anyTransition();
-
-  @Override
   public Set<NormalRule<N, D, W>> getNormalRules() {
     return normalRules;
   }
@@ -61,6 +53,7 @@ public abstract class PushdownSystem<N extends Location, D extends State, W exte
 
   @Override
   public Set<Rule<N, D, W>> getRulesStarting(D start, N string) {
+    assert !string.equals(anyTransition());
     Set<Rule<N, D, W>> allRules = getAllRules();
     Set<Rule<N, D, W>> result = new HashSet<>();
     for (Rule<N, D, W> r : allRules) {
@@ -81,22 +74,28 @@ public abstract class PushdownSystem<N extends Location, D extends State, W exte
   }
 
   @Override
-  public Set<Rule<N, D, W>> getRulesEnding(D start, N string) {
-    Set<Rule<N, D, W>> allRules = getAllRules();
-    Set<Rule<N, D, W>> result = new HashSet<>();
-    for (Rule<N, D, W> r : allRules) {
-      if (r instanceof PopRule)
-        continue;
+  public Set<NormalRule<N, D, W>> getNormalRulesEnding(D start, N string) {
+    assert !string.equals(anyTransition());
+    Set<NormalRule<N, D, W>> allRules = getNormalRules();
+    Set<NormalRule<N, D, W>> result = new HashSet<>();
+    for (NormalRule<N, D, W> r : allRules) {
       if (r.getS2().equals(start) && r.getL2().equals(string))
         result.add(r);
       if (anyTransition() != null && r.getS2().equals(start) && r.getL2().equals(anyTransition())) {
-        if (r instanceof NormalRule) {
-          result.add(new NormalRule<N, D, W>(string, r.getS1(), string, r.getS2(), r.getWeight()));
-        } else if (r instanceof PushRule) {
-          result.add(new PushRule<N, D, W>(string, r.getS1(), string, r.getL2(), r.getS2(),
-              r.getWeight()));
-        }
+        result.add(new NormalRule<N, D, W>(string, r.getS1(), string, r.getS2(), r.getWeight()));
       }
+    }
+    return result;
+  }
+
+  @Override
+  public Set<PushRule<N, D, W>> getPushRulesEnding(D start, N string) {
+    assert !string.equals(anyTransition());
+    Set<PushRule<N, D, W>> allRules = getPushRules();
+    Set<PushRule<N, D, W>> result = new HashSet<>();
+    for (PushRule<N, D, W> r : allRules) {
+      if (r.getS2().equals(start) && r.getL2().equals(string))
+        result.add(r);
     }
     return result;
   }

@@ -2,7 +2,6 @@ package wpds.impl;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -27,7 +26,6 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
       fa.addWeightForTransition(trans, pds.getOne());
     }
     for (PopRule<N, D, W> r : pds.getPopRules()) {
-      assert r instanceof PopRule;
       update(new Transition<N, D>(r.getS1(), r.getL1(), r.getS2()), r.getWeight(),
           Lists.<Transition<N, D>>newLinkedList());
     }
@@ -35,30 +33,36 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
     while (!worklist.isEmpty()) {
       Transition<N, D> t = worklist.removeFirst();
 
-      Set<Rule<N, D, W>> rulesEnding = pds.getRulesEnding(t.getStart(), t.getLabel());
-      for (Rule<N, D, W> r : rulesEnding) {
+      for (NormalRule<N, D, W> r : pds.getNormalRulesEnding(t.getStart(), t.getLabel())) {
         // Normal rules
-        if (r instanceof NormalRule) {
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
           update(new Transition<N, D>(r.getS1(), r.getL1(), t.getTarget()), r.getWeight(),
               previous);
-        }
-
+      }
+      for (PushRule<N, D, W> r : pds.getPushRulesEnding(t.getStart(), t.getLabel())) {
         // Push rules
-
-        if (r instanceof PushRule) {
-          LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
-          previous.add(t);
-          for (Transition<N, D> tdash : Sets.newHashSet(fa.getTransitions())) {
+        for (Transition<N, D> tdash : Sets.newHashSet(fa.getTransitions())) {
+          if (tdash.getLabel().equals(r.getCallSite())) {
+            LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
+            previous.add(t);
             previous.add(tdash);
             update(new Transition<N, D>(r.getS1(), r.getL1(), tdash.getTarget()), r.getWeight(),
                 previous);
+          } else if (r.getCallSite().equals(pds.anyTransition())) {
+            LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
+            previous.add(t);
+            previous.add(tdash);
+            update(new Transition<N, D>(r.getS1(), tdash.getLabel(), tdash.getTarget()),
+                r.getWeight(), previous);
           }
+
         }
       }
+
       for (PushRule<N, D, W> r : pds.getPushRules()) {
-        if (!r.getCallSite().equals(t.getString())) {
+        if (!r.getCallSite().equals(pds.anyTransition())
+            && !r.getCallSite().equals(t.getString())) {
           continue;
         }
         Transition<N, D> tdash = new Transition<N, D>(r.getS2(), r.getL2(), t.getTarget());
@@ -68,7 +72,8 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
         LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
         previous.add(tdash);
         previous.add(t);
-        update(new Transition<N, D>(r.getS1(), r.getL1(), t.getTarget()), r.getWeight(), previous);
+        N label = (r.getCallSite().equals(pds.anyTransition()) ? t.getLabel() : r.getL1());
+        update(new Transition<N, D>(r.getS1(), label, t.getTarget()), r.getWeight(), previous);
       }
     }
 
@@ -76,6 +81,8 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
   }
 
   private void update(Transition<N, D> trans, W weight, List<Transition<N, D>> previous) {
+    if (trans.getLabel().equals(pds.anyTransition()))
+      throw new RuntimeException("INVALID TRANSITION");
     fa.addTransition(trans);
     W lt = getOrCreateWeight(trans);
     W fr = weight;

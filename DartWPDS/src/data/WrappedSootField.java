@@ -18,7 +18,6 @@ public class WrappedSootField implements Location {
     };
   };
 
-
   private SootField delegate;
 
   public static WrappedSootField ANYFIELD = new WrappedSootField() {

@@ -1,19 +1,20 @@
 package data;
 
 import soot.Local;
+import soot.Unit;
 import wpds.interfaces.State;
 
 public class Fact implements State {
 
   private Local local;
-  private Stmt stmt;
+  private Unit stmt;
 
   public Fact(Local local) {
     this.local = local;
   }
 
 
-  public Fact(Fact d, Stmt stmt) {
+  public Fact(Fact d, Unit stmt) {
     this.local = d.local;
     this.stmt = stmt;
   }

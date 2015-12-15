@@ -3,11 +3,11 @@ package data;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.google.common.collect.Sets;
+
 import wpds.impl.PushdownSystem;
 import wpds.impl.Rule;
 import wpds.interfaces.Weight;
-
-import com.google.common.collect.Sets;
 
 public class PDSSet implements Weight {
   private final Set<PDS> rules;
@@ -29,14 +29,6 @@ public class PDSSet implements Weight {
   }
 
 
-  public void printPostStarFor(FieldPAutomaton fieldauto, AccessStmt stmt) {
-    for (PDS pds : rules) {
-      System.out.println("NEXXT");
-      System.out.println(pds);
-      System.out.println(pds.poststar(fieldauto));
-      System.out.println(pds.poststar(fieldauto).extractLanguage(stmt));
-    }
-  }
 
   @Override
   public Weight extendWith(Weight other) {
@@ -109,7 +101,7 @@ public class PDSSet implements Weight {
     return rules.toString();
   }
 
-  private class PDS extends PushdownSystem<WrappedSootField, AccessStmt, NoWeight> {
+  public class PDS extends PushdownSystem<WrappedSootField, AccessStmt, NoWeight> {
 
 
     @Override
@@ -133,6 +125,8 @@ public class PDSSet implements Weight {
     }
   }
 
-
+  public Set<PDS> getPDSSystems() {
+    return rules;
+  }
 
 }

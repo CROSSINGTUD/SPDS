@@ -6,13 +6,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.Weight;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 public class PostStar<N extends Location, D extends State, W extends Weight> {
   private Map<Transition<N, D>, W> transitionToWeight = Maps.newHashMap();
@@ -101,7 +101,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
   }
 
   private void update(Transition<N, D> trans, W weight, List<Transition<N, D>> previous) {
-
+    if (trans.getLabel().equals(pds.anyTransition()))
+      throw new RuntimeException("INVALID TRANSITION");
     fa.addTransition(trans);
     W lt = getOrCreateWeight(trans);
     W fr = weight;
