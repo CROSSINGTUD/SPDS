@@ -52,11 +52,7 @@ public class PathExpressionComputer<N, V> {
 
         int vi = tri.getSource();
         RegEx<V> regExVi = regEx.get(vi - 1);
-        if (regExVi != RegEx.<V>emptySet()) {
-          regEx.set(vi - 1, RegEx.<V>concatenate(regExVi, expression));
-        } else {
-          regEx.set(vi - 1, expression);
-        }
+        regEx.set(vi - 1, RegEx.<V>concatenate(regExVi, expression));
 
       } else {
         RegEx<V> expression = tri.getExpression();
@@ -64,18 +60,10 @@ public class PathExpressionComputer<N, V> {
         int wi = tri.getTarget();
         RegEx<V> inter;
         RegEx<V> regExVi = regEx.get(vi - 1);
-        if (regExVi != RegEx.<V>emptySet()) {
-          inter = RegEx.simplify(RegEx.<V>concatenate(regExVi, expression));
-        } else {
-          inter = expression;
-        }
+        inter = RegEx.simplify(RegEx.<V>concatenate(regExVi, expression));
 
         RegEx<V> regExWi = regEx.get(wi - 1);
-        if (regExWi != RegEx.<V>emptySet()) {
-          regEx.set(wi - 1, RegEx.simplify(RegEx.<V>union(RegEx.<V>simplify(regExWi), inter)));
-        } else {
-          regEx.set(wi - 1, inter);
-        }
+        regEx.set(wi - 1, RegEx.simplify(RegEx.<V>union(RegEx.<V>simplify(regExWi), inter)));
       }
     }
     return regEx;

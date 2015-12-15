@@ -103,6 +103,28 @@ public class PathExpressionTests {
     assertEquals(expected, expressionBetween);
   }
 
+  @Test
+  public void empty() {
+    IntGraph g = new IntGraph();
+    g.addEdge(2, "a", 1);
+    g.addEdge(2, "b", 3);
+    g.addEdge(3, "c", 1);
+    PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
+    RegEx<String> expressionBetween = expr.getExpressionBetween(1, 3);
+    RegEx<String> expected = RegEx.<String>emptySet();
+    assertEquals(expected, expressionBetween);
+  }
+
+  @Test
+  public void empty2() {
+    IntGraph g = new IntGraph();
+    g.addEdge(3, "c", 1);
+    PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
+    RegEx<String> expressionBetween = expr.getExpressionBetween(1, 3);
+    RegEx<String> expected = RegEx.<String>emptySet();
+    assertEquals(expected, expressionBetween);
+  }
+
   private static RegEx<String> e(String e) {
     return new RegEx.Plain<String>(e);
   }

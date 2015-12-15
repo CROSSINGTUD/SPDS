@@ -182,11 +182,13 @@ public class RegEx<V> {
     assert a != null;
     assert b != null;
 
-    if (a instanceof Epsilon || a instanceof EmptySet)
-      return b;
-
-    if (b instanceof Epsilon || b instanceof EmptySet)
+    if (a instanceof EmptySet)
       return a;
+    if (b instanceof Epsilon)
+      return a;
+
+    if (a instanceof Epsilon)
+      return b;
     return simplify(new Concatenate<V>(a, b));
   }
 
