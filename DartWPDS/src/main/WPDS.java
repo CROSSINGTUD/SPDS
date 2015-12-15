@@ -1,32 +1,29 @@
 package main;
 
-import soot.jimple.Jimple;
 import wpds.impl.PushdownSystem;
-import data.Access;
 import data.Fact;
 import data.One;
+import data.PDSSet;
 import data.Stmt;
 import data.Zero;
 
-public class WPDS extends PushdownSystem<Stmt, Fact, Access> {
+public class WPDS extends PushdownSystem<Stmt, Fact, PDSSet> {
 
   @Override
-  public Access getZero() {
+  public PDSSet getZero() {
     return Zero.v();
   }
 
   @Override
-  public Access getOne() {
+  public PDSSet getOne() {
     return One.v();
   }
 
-  Stmt epsilon;
+
 
   @Override
-  public Stmt epsilon() {
-    if (epsilon == null)
-      epsilon = new Stmt(Jimple.v().newNopStmt());
-    return epsilon;
+  public Stmt anyTransition() {
+    return null;
   }
 
 }

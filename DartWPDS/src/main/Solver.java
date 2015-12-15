@@ -6,6 +6,7 @@ import java.util.LinkedList;
 import java.util.Set;
 
 import soot.Local;
+import soot.MethodOrMethodContext;
 import soot.Scene;
 import soot.SootMethod;
 import soot.Unit;
@@ -16,51 +17,56 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.VirtualInvokeExpr;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
+import soot.util.queue.QueueReader;
 import wpds.impl.NormalRule;
-import wpds.impl.PAutomaton;
 import wpds.impl.PopRule;
-import wpds.impl.PreStar;
 import wpds.impl.PushRule;
 import wpds.impl.Rule;
 import wpds.impl.Transition;
+import wpds.impl.WeightedPAutomaton;
+import wpds.interfaces.Weight;
+import wpds.interfaces.Weight.NoWeight;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-import data.Access;
 import data.AccessStmt;
 import data.Fact;
-import data.FieldWeight;
+import data.FieldPAutomaton;
 import data.One;
+import data.PDSSet;
 import data.Stmt;
 import data.WrappedSootField;
 
 public class Solver {
   private JimpleBasedInterproceduralCFG icfg;
   private WPDS pds;
-  private Set<Rule<Stmt, Fact, Access>> rules = Sets.newHashSet();
-  private LinkedList<Rule<Stmt, Fact, Access>> worklist = Lists.newLinkedList();
+  private Set<Rule<Stmt, Fact, PDSSet>> rules = Sets.newHashSet();
+  private LinkedList<Rule<Stmt, Fact, PDSSet>> worklist = Lists.newLinkedList();
 
   public Solver() {
     icfg = new JimpleBasedInterproceduralCFG();
     pds = new WPDS();
     initPDS();
-    System.out.println(pds);
   }
 
   private void initPDS() {
-    SootMethod mainMethod = Scene.v().getMainMethod();
-    for (Unit sp : icfg.getStartPointsOf(mainMethod)) {
-      worklist.add(new NormalRule<Stmt, Fact, Access>(new Stmt(sp), Fact.REACHABLE, new Stmt(sp),
-          Fact.REACHABLE, One.v()));
+    QueueReader<MethodOrMethodContext> listener = Scene.v().getReachableMethods().listener();
+    while (listener.hasNext()) {
+      MethodOrMethodContext next = listener.next();
+      for (Unit sp : icfg.getStartPointsOf(next.method())) {
+        worklist.add(new NormalRule<Stmt, Fact, PDSSet>(new Stmt(sp), Fact.REACHABLE, new Stmt(sp),
+            Fact.REACHABLE, One.v()));
+      }
     }
     process(worklist);
-    System.out.println(pds);
   }
 
-  private void process(LinkedList<Rule<Stmt, Fact, Access>> worklist) {
+  private void process(LinkedList<Rule<Stmt, Fact, PDSSet>> worklist) {
+    long before = System.currentTimeMillis();
     while (!worklist.isEmpty()) {
-      Rule<Stmt, Fact, Access> rule = worklist.removeFirst();
+      Rule<Stmt, Fact, PDSSet> rule = worklist.removeFirst();
+      // System.out.println(rule);
       if (!rule.getS1().equals(Fact.REACHABLE))
         pds.addRule(rule);
       if (!rules.contains(rule)) {
@@ -68,9 +74,11 @@ public class Solver {
         computeTargets(rule);
       }
     }
+    long after = System.currentTimeMillis();
+    System.out.println("PDS Phase: " + (after - before));
   }
 
-  private void computeTargets(Rule<Stmt, Fact, Access> rule) {
+  private void computeTargets(Rule<Stmt, Fact, PDSSet> rule) {
     Stmt l2 = rule.getL2();
     if (l2 == null)
       return;
@@ -86,7 +94,7 @@ public class Solver {
 
   }
 
-  private void processCall(Unit succ, Rule<Stmt, Fact, Access> rule) {
+  private void processCall(Unit succ, Rule<Stmt, Fact, PDSSet> rule) {
     // succ is a callSite
     InvokeExpr invokeExpr = ((soot.jimple.Stmt) succ).getInvokeExpr();
     Local base = null;
@@ -102,8 +110,8 @@ public class Solver {
     for (SootMethod callee : icfg.getCalleesOfCallAt(succ)) {
       for (Unit sp : icfg.getStartPointsOf(callee)) {
         if (rule.getS2().equals(new Fact(base))) {
-          PushRule<Stmt, Fact, Access> pushRule =
-              new PushRule<Stmt, Fact, Access>(rule.getL2(), rule.getS2(), new Stmt(succ),
+          PushRule<Stmt, Fact, PDSSet> pushRule =
+              new PushRule<Stmt, Fact, PDSSet>(rule.getL2(), rule.getS2(), new Stmt(succ),
                   new Stmt(sp), new Fact(callee.getActiveBody().getThisLocal()), computeWeight(
                       rule.getL2(), succ));
           worklist.add(pushRule);
@@ -111,8 +119,8 @@ public class Solver {
         if (paramLocals != null)
           for (int i = 0; i < paramLocals.length; i++) {
             if (rule.getS2().equals(new Fact(paramLocals[i]))) {
-              PushRule<Stmt, Fact, Access> pushRule =
-                  new PushRule<Stmt, Fact, Access>(rule.getL2(), rule.getS2(), new Stmt(succ),
+              PushRule<Stmt, Fact, PDSSet> pushRule =
+                  new PushRule<Stmt, Fact, PDSSet>(rule.getL2(), rule.getS2(), new Stmt(succ),
                       new Stmt(sp), new Fact(callee.getActiveBody().getParameterLocal(i)),
                       computeWeight(rule.getL2(), succ));
               worklist.add(pushRule);
@@ -125,14 +133,14 @@ public class Solver {
     processCallToReturn(succ, rule);
   }
 
-  private void processCallToReturn(Unit succ, Rule<Stmt, Fact, Access> rule) {
-    NormalRule<Stmt, Fact, Access> generate =
+  private void processCallToReturn(Unit succ, Rule<Stmt, Fact, PDSSet> rule) {
+    NormalRule<Stmt, Fact, PDSSet> generate =
         new NormalRule<>(rule.getL2(), rule.getS2(), new Stmt(succ), rule.getS2(), computeWeight(
             rule.getL2(), succ));
     worklist.add(generate);
   }
 
-  private void processExit(Unit succ, Rule<Stmt, Fact, Access> rule) {
+  private void processExit(Unit succ, Rule<Stmt, Fact, PDSSet> rule) {
     SootMethod callee = icfg.getMethodOf(succ);
     Collection<Unit> callSites = icfg.getCallersOf(callee);
     int index = -2;
@@ -150,13 +158,13 @@ public class Solver {
         continue;
       soot.jimple.Stmt inv = (soot.jimple.Stmt) callSite;
       if (index == -1) {
-        PopRule<Stmt, Fact, Access> generate =
+        PopRule<Stmt, Fact, PDSSet> generate =
             new PopRule<>(rule.getL2(), rule.getS2(), new Fact(
                 (Local) ((VirtualInvokeExpr) inv.getInvokeExpr()).getBase()), computeWeight(
                 rule.getL2(), succ));
         worklist.add(generate);
       } else {
-        PopRule<Stmt, Fact, Access> generate =
+        PopRule<Stmt, Fact, PDSSet> generate =
             new PopRule<>(rule.getL2(), rule.getS2(), new Fact((Local) inv.getInvokeExpr().getArg(
                 index)), computeWeight(rule.getL2(), succ));
         worklist.add(generate);
@@ -164,14 +172,14 @@ public class Solver {
     }
   }
 
-  private void processNormal(Unit succ, Rule<Stmt, Fact, Access> rule) {
-    System.out.println("NROMAL " + rule);
+  private void processNormal(Unit succ, Rule<Stmt, Fact, PDSSet> rule) {
+
     if (succ instanceof AssignStmt) {
       AssignStmt assign = (AssignStmt) succ;
       if (assign.getRightOp() instanceof NewExpr) {
         if (rule.getS2().equals(Fact.REACHABLE)) {
           Fact fact = new Fact((Local) assign.getLeftOp());
-          NormalRule<Stmt, Fact, Access> generate =
+          NormalRule<Stmt, Fact, PDSSet> generate =
               new NormalRule<>(rule.getL2(), fact, new Stmt(succ), fact, computeWeight(
                   rule.getL2(), succ));
           worklist.add(generate);
@@ -180,7 +188,24 @@ public class Solver {
         if (rule.getS2().equals(new Fact((Local) assign.getRightOp()))) {
           if (assign.getLeftOp() instanceof Local) {
             Local leftOp = (Local) assign.getLeftOp();
-            NormalRule<Stmt, Fact, Access> generate =
+            NormalRule<Stmt, Fact, PDSSet> generate =
+                new NormalRule<>(rule.getL2(), rule.getS2(), new Stmt(succ), new Fact(leftOp),
+                    computeWeight(rule.getL2(), succ));
+            worklist.add(generate);
+          } else if (assign.getLeftOp() instanceof InstanceFieldRef) {
+            InstanceFieldRef leftOp = (InstanceFieldRef) assign.getLeftOp();
+            NormalRule<Stmt, Fact, PDSSet> generate =
+                new NormalRule<>(rule.getL2(), rule.getS2(), new Stmt(succ), new Fact(
+                    (Local) leftOp.getBase()), computeWeight(rule.getL2(), succ));
+            worklist.add(generate);
+          }
+        }
+      } else if (assign.getRightOp() instanceof InstanceFieldRef) {
+        InstanceFieldRef instanceFieldRef = (InstanceFieldRef) assign.getRightOp();
+        if (rule.getS2().equals(new Fact((Local) instanceFieldRef.getBase()))) {
+          if (assign.getLeftOp() instanceof Local) {
+            Local leftOp = (Local) assign.getLeftOp();
+            NormalRule<Stmt, Fact, PDSSet> generate =
                 new NormalRule<>(rule.getL2(), rule.getS2(), new Stmt(succ), new Fact(leftOp),
                     computeWeight(rule.getL2(), succ));
             worklist.add(generate);
@@ -188,56 +213,73 @@ public class Solver {
         }
       }
     }
-    NormalRule<Stmt, Fact, Access> generate =
-        new NormalRule<>(rule.getL2(), rule.getS2(), new Stmt(succ), rule.getS2(), computeWeight(
-            rule.getL2(), succ));
+    NormalRule<Stmt, Fact, PDSSet> generate =
+        new NormalRule<>(rule.getL2(), rule.getS2(), new Stmt(succ), rule.getS2(), new PDSSet(
+            new NormalRule<WrappedSootField, AccessStmt, NoWeight>(WrappedSootField.ANYFIELD,
+                new AccessStmt(rule.getL2().getDelegate()), WrappedSootField.ANYFIELD,
+                new AccessStmt(succ), Weight.NO_WEIGHT)));
     worklist.add(generate);
   }
 
-  private Access computeWeight(Stmt prev, Unit succ) {
+  private PDSSet computeWeight(Stmt prev, Unit succ) {
     if (succ instanceof AssignStmt) {
       AssignStmt assignStmt = (AssignStmt) succ;
       if (assignStmt.getLeftOp() instanceof InstanceFieldRef) {
         InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getLeftOp();
-        return new Access(new PushRule<WrappedSootField, AccessStmt, FieldWeight>(
+        return new PDSSet(new PushRule<WrappedSootField, AccessStmt, NoWeight>(
             WrappedSootField.ANYFIELD, new AccessStmt(prev.getDelegate()),
             WrappedSootField.ANYFIELD, new WrappedSootField(ifr.getField()), new AccessStmt(succ),
-            new FieldWeight()));
+            Weight.NO_WEIGHT));
       } else if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
         InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
-        return new Access(new PopRule<WrappedSootField, AccessStmt, FieldWeight>(
-            new WrappedSootField(ifr.getField()), new AccessStmt(prev.getDelegate()),
-            new AccessStmt(succ), new FieldWeight()));
+        return new PDSSet(new PopRule<WrappedSootField, AccessStmt, NoWeight>(new WrappedSootField(
+            ifr.getField()), new AccessStmt(prev.getDelegate()), new AccessStmt(succ),
+            Weight.NO_WEIGHT));
       }
     }
-    return new Access(new NormalRule<WrappedSootField, AccessStmt, FieldWeight>(
+    return new PDSSet(new NormalRule<WrappedSootField, AccessStmt, NoWeight>(
         WrappedSootField.ANYFIELD, new AccessStmt(prev.getDelegate()), WrappedSootField.ANYFIELD,
-        new AccessStmt(succ), new FieldWeight()));
+        new AccessStmt(succ), Weight.NO_WEIGHT));
   }
 
   public void query(Fact fact, Unit stmt) {
     System.out.println(pds.getStates());
     WPAutomaton pAutomaton =
-        new WPAutomaton(Collections.singleton(fact),
-            Collections.singleton(new Transition<Stmt, Fact, Access>(fact, new Stmt(stmt),
-                Fact.TARGET)), Collections.singleton(Fact.TARGET));
-    System.out.println(pAutomaton);
-    PreStar<Stmt, Fact, Access> star = new PreStar<Stmt, Fact, Access>();
-    System.out.println(star.prestar(pds, pAutomaton));
+        new WPAutomaton(fact, Collections.singleton(new Transition<Stmt, Fact, PDSSet>(fact,
+            new Stmt(stmt), Fact.TARGET)), Fact.TARGET);
 
-    PAutomaton<Stmt, Fact, Access> prestar = pds.prestar(pAutomaton);
-    for (Transition<Stmt, Fact, Access> t : prestar.getTransitions()) {
+    WeightedPAutomaton<Stmt, Fact, PDSSet> prestar = pds.prestar(pAutomaton);
+    for (Transition<Stmt, Fact, PDSSet> t : prestar.getTransitions()) {
       Stmt string = t.getString();
       Unit unit = string.getDelegate();
       if (unit instanceof AssignStmt && ((AssignStmt) unit).getRightOp() instanceof NewExpr) {
         Value leftOp = ((AssignStmt) unit).getLeftOp();
+        System.out.println("ALLOCATION SITE" + unit);
         Fact allocFact = new Fact((Local) leftOp);
         WPAutomaton queryAutomaton =
-            new WPAutomaton(Collections.singleton(allocFact),
-                Collections.singleton(new Transition<Stmt, Fact, Access>(allocFact, string,
-                    Fact.TARGET)), Collections.singleton(Fact.TARGET));
-        PAutomaton<Stmt, Fact, Access> poststar = pds.poststar(queryAutomaton);
-        System.out.println(poststar);
+            new WPAutomaton(allocFact, Collections.singleton(new Transition<Stmt, Fact, PDSSet>(
+                allocFact, string, Fact.TARGET)), Fact.TARGET);
+        WeightedPAutomaton<Stmt, Fact, PDSSet> poststar = pds.poststar(queryAutomaton);
+
+        // System.out.println(poststar);
+        SootMethod method = icfg.getMethodOf(stmt);
+        for (Unit end : icfg.getEndPointsOf(method)) {
+          for (Unit eP : icfg.getPredsOf(end)) {
+            for (Transition<Stmt, Fact, PDSSet> trans : poststar.getTransitions()) {
+              if (trans.getString().equals(new Stmt(eP)) && trans.getStart().toString().equals("k")) {
+                PDSSet weightFor = poststar.getWeightFor(trans);
+                AccessStmt s = new AccessStmt(unit);
+                FieldPAutomaton fieldauto =
+                    new FieldPAutomaton(s,
+                        Collections
+                            .singleton(new Transition<WrappedSootField, AccessStmt, NoWeight>(s,
+                                WrappedSootField.EPSILON, AccessStmt.TARGET)), AccessStmt.TARGET);
+                weightFor.printPostStarFor(fieldauto, new AccessStmt(eP));
+              }
+            }
+          }
+        }
+        System.out.println("END OF ALLOCATION SITE" + unit);
       }
     }
     // TODO Auto-generated method stub

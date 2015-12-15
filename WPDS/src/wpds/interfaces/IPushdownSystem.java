@@ -33,7 +33,5 @@ public interface IPushdownSystem<N extends Location, D extends State, W extends 
 
   public PAutomaton<N, D, W> poststar(WeightedPAutomaton<N, D, W> initialAutomaton);
 
-  public N epsilon();
-
 
 }

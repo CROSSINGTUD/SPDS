@@ -2,7 +2,7 @@ package data;
 
 import wpds.interfaces.Weight;
 
-public class Zero extends Access {
+public class Zero extends PDSSet {
   private static Zero zero;
 
   private Zero() {}

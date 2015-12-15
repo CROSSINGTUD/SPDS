@@ -16,7 +16,7 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
   private IPushdownSystem<N, D, W> pds;
   private WeightedPAutomaton<N, D, W> fa;
 
-  public PAutomaton<N, D, W> prestar(IPushdownSystem<N, D, W> pds,
+  public WeightedPAutomaton<N, D, W> prestar(IPushdownSystem<N, D, W> pds,
       WeightedPAutomaton<N, D, W> initialAutomaton) {
     this.pds = pds;
     worklist = Lists.newLinkedList(initialAutomaton.getTransitions());

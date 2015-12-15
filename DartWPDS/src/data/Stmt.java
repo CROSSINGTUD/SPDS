@@ -1,5 +1,6 @@
 package data;
 
+import soot.Printer;
 import soot.Unit;
 import wpds.interfaces.Location;
 
@@ -16,7 +17,7 @@ public class Stmt implements Location {
 
   @Override
   public String toString() {
-    return delegate.toString();
+    return Printer.v().getOrCreatNumberFor(delegate).toString();
   }
 
   @Override
@@ -43,5 +44,4 @@ public class Stmt implements Location {
       return false;
     return true;
   }
-
 }

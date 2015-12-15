@@ -19,20 +19,30 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
   private LinkedList<Transition<N, D, W>> worklist = Lists.newLinkedList();
   private IPushdownSystem<N, D, W> pds;
   private WeightedPAutomaton<N, D, W> fa;
+  private int iterationCount;
 
-  public PAutomaton<N, D, W> poststar(IPushdownSystem<N, D, W> pds,
+  public WeightedPAutomaton<N, D, W> poststar(IPushdownSystem<N, D, W> pds,
       WeightedPAutomaton<N, D, W> initialAutomaton) {
+    long before = System.currentTimeMillis();
     this.pds = pds;
     worklist = Lists.newLinkedList(initialAutomaton.getTransitions());
     fa = initialAutomaton;
-    System.out.println(worklist);
 
     for (Transition<N, D, W> trans : worklist)
       fa.addWeightForTransition(trans, pds.getOne());
 
+    saturate();
+
+    long after = System.currentTimeMillis();
+    System.out.println("POSTSTAR TOOK: " + (after - before) + "ms/" + iterationCount + " Iter.");
+    return fa;
+  }
+
+  private void saturate() {
     // PHASE 1: Is done automatically
 
     while (!worklist.isEmpty()) {
+      iterationCount++;
       Transition<N, D, W> t = worklist.removeFirst();
       Set<Rule<N, D, W>> rules = pds.getRulesStarting(t.getStart(), t.getString());
 
@@ -46,7 +56,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
           PopRule<N, D, W> popRule = (PopRule<N, D, W>) rule;
           LinkedList<Transition<N, D, W>> previous = Lists.<Transition<N, D, W>>newLinkedList();
           previous.add(t);
-          update(new Transition<N, D, W>(p, pds.epsilon(), t.getTarget()), newWeight, previous);
+          update(new Transition<N, D, W>(p, fa.epsilon(), t.getTarget()), newWeight, previous);
 
           Collection<Transition<N, D, W>> trans = fa.getTransitionsOutOf(t.getTarget());
           for (Transition<N, D, W> tq : trans) {
@@ -64,6 +74,9 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
         } else if (rule instanceof PushRule) {
           PushRule<N, D, W> pushRule = (PushRule<N, D, W>) rule;
           D irState = fa.createState(p, pushRule.getL2());
+          if (irState.toString().equals("<7,b>")) {
+            System.out.println("AA");
+          }
           LinkedList<Transition<N, D, W>> previous = Lists.<Transition<N, D, W>>newLinkedList();
           previous.add(t);
           update(new Transition<N, D, W>(p, pushRule.l2, irState),
@@ -71,7 +84,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 
           Collection<Transition<N, D, W>> into = fa.getTransitionsInto(irState);
           for (Transition<N, D, W> ts : into) {
-            if (ts.getString().equals(pds.epsilon())) {
+            if (ts.getString().equals(fa.epsilon())) {
               LinkedList<Transition<N, D, W>> prev = Lists.<Transition<N, D, W>>newLinkedList();
               prev.add(t);
               prev.add(ts);
@@ -79,15 +92,16 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
                   (W) transitionToWeight.get(ts).extendWith(newWeight), prev);
             }
           }
+          update(new Transition<N, D, W>(irState, pushRule.getCallSite(), t.getTarget()),
+              (W) currWeight, previous);
         }
       }
 
     }
-
-    return fa;
   }
 
   private void update(Transition<N, D, W> trans, W weight, List<Transition<N, D, W>> previous) {
+
     fa.addTransition(trans);
     W lt = getOrCreateWeight(trans);
     W fr = weight;

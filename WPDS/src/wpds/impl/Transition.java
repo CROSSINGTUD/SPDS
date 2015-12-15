@@ -1,19 +1,23 @@
 package wpds.impl;
 
+import heros.demandide.pathexpression.Edge;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.Weight;
 
-public class Transition<N extends Location, D extends State, W extends Weight> {
+public class Transition<N extends Location, D extends State, W extends Weight> implements
+    Edge<D, N> {
   private D s1;
   private N l1;
   private D s2;
 
   public Transition(D s1, N l1, D s2) {
+    assert s1 != null;
+    assert s2 != null;
+    assert l1 != null;
     this.s1 = s1;
     this.l1 = l1;
     this.s2 = s2;
-
   }
 
   public Configuration<N, D> getStartConfig() {
@@ -71,7 +75,11 @@ public class Transition<N extends Location, D extends State, W extends Weight> {
 
   @Override
   public String toString() {
-    // TODO Auto-generated method stub
-    return s1 + "~" + l1 + "~" + s2;
+    return s1 + "~" + l1 + "~>" + s2;
+  }
+
+  @Override
+  public N getLabel() {
+    return l1;
   }
 }

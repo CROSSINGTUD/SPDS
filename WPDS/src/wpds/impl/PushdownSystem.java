@@ -33,6 +33,8 @@ public abstract class PushdownSystem<N extends Location, D extends State, W exte
   @Override
   public abstract W getOne();
 
+  public abstract N anyTransition();
+
   @Override
   public Set<NormalRule<N, D, W>> getNormalRules() {
     return normalRules;
@@ -64,6 +66,16 @@ public abstract class PushdownSystem<N extends Location, D extends State, W exte
     for (Rule<N, D, W> r : allRules) {
       if (r.getS1().equals(start) && r.getL1().equals(string))
         result.add(r);
+      if (anyTransition() != null && r.getS1().equals(start) && r.getL1().equals(anyTransition())) {
+        if (r instanceof NormalRule) {
+          result.add(new NormalRule<N, D, W>(string, r.getS1(), string, r.getS2(), r.getWeight()));
+        } else if (r instanceof PopRule) {
+          result.add(new PopRule<N, D, W>(string, r.getS1(), r.getS2(), r.getWeight()));
+        } else if (r instanceof PushRule) {
+          result.add(new PushRule<N, D, W>(string, r.getS1(), string, r.getL2(), r.getS2(), r
+              .getWeight()));
+        }
+      }
     }
     return result;
   }
@@ -80,12 +92,12 @@ public abstract class PushdownSystem<N extends Location, D extends State, W exte
 
 
   @Override
-  public PAutomaton<N, D, W> poststar(WeightedPAutomaton<N, D, W> initialAutomaton) {
+  public WeightedPAutomaton<N, D, W> poststar(WeightedPAutomaton<N, D, W> initialAutomaton) {
     return new PostStar<N, D, W>().poststar(this, initialAutomaton);
   }
 
   @Override
-  public PAutomaton<N, D, W> prestar(WeightedPAutomaton<N, D, W> initialAutomaton) {
+  public WeightedPAutomaton<N, D, W> prestar(WeightedPAutomaton<N, D, W> initialAutomaton) {
     return new PreStar<N, D, W>().prestar(this, initialAutomaton);
   }
 
@@ -102,5 +114,43 @@ public abstract class PushdownSystem<N extends Location, D extends State, W exte
     s += Joiner.on("\n\t\t").join(pushRules);
     return s;
   }
+
+  @Override
+  public int hashCode() {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + ((normalRules == null) ? 0 : normalRules.hashCode());
+    result = prime * result + ((popRules == null) ? 0 : popRules.hashCode());
+    result = prime * result + ((pushRules == null) ? 0 : pushRules.hashCode());
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (getClass() != obj.getClass())
+      return false;
+    PushdownSystem other = (PushdownSystem) obj;
+    if (normalRules == null) {
+      if (other.normalRules != null)
+        return false;
+    } else if (!normalRules.equals(other.normalRules))
+      return false;
+    if (popRules == null) {
+      if (other.popRules != null)
+        return false;
+    } else if (!popRules.equals(other.popRules))
+      return false;
+    if (pushRules == null) {
+      if (other.pushRules != null)
+        return false;
+    } else if (!pushRules.equals(other.pushRules))
+      return false;
+    return true;
+  }
+
 
 }

@@ -2,30 +2,34 @@ package main;
 
 import java.util.Set;
 
+import soot.jimple.Jimple;
 import wpds.impl.Transition;
 import wpds.impl.WeightedPAutomaton;
-import data.Access;
 import data.Fact;
+import data.PDSSet;
 import data.Stmt;
 
-public class WPAutomaton extends WeightedPAutomaton<Stmt, Fact, Access> {
+public class WPAutomaton extends WeightedPAutomaton<Stmt, Fact, PDSSet> {
 
-  public WPAutomaton(Set<Fact> initialStates, Set<Transition<Stmt, Fact, Access>> transitions,
-      Set<Fact> finalStates) {
-    super(initialStates, transitions, finalStates);
-    // TODO Auto-generated constructor stub
+  Stmt epsilon;
+
+  public WPAutomaton(Fact initialState, Set<Transition<Stmt, Fact, PDSSet>> transitions,
+      Fact finalState) {
+    super(initialState, transitions, finalState);
   }
 
   @Override
   public Fact createState(Fact d, Stmt loc) {
-    // TODO Auto-generated method stub
-    return null;
+    return new Fact(d, loc);
   }
+
+
 
   @Override
-  public WeightedPAutomaton<Stmt, Fact, Access> copy() {
-    return new WPAutomaton(initialStates, transitions, finalStates);
+  public Stmt epsilon() {
+    if (epsilon == null)
+      epsilon = new Stmt(Jimple.v().newNopStmt());
+    return epsilon;
   }
-
 
 }

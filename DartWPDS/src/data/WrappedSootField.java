@@ -4,11 +4,34 @@ import soot.SootField;
 import wpds.interfaces.Location;
 
 public class WrappedSootField implements Location {
+  public static final WrappedSootField EPSILON = new WrappedSootField() {
+    public String toString() {
+      return "ø";
+    };
+
+    public boolean equals(Object obj) {
+      return obj == WrappedSootField.EPSILON;
+    };
+
+    public int hashCode() {
+      return 1000000001;
+    };
+  };
+
+
   private SootField delegate;
 
   public static WrappedSootField ANYFIELD = new WrappedSootField() {
     public String toString() {
       return "*";
+    };
+
+    public boolean equals(Object obj) {
+      return obj == WrappedSootField.ANYFIELD;
+    };
+
+    public int hashCode() {
+      return 1000000003;
     };
   };
 

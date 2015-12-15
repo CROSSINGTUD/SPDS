@@ -12,6 +12,6 @@ public class PopRule<N extends Location, D extends State, W extends Weight> exte
 
   @Override
   public String toString() {
-    return "POP<" + s1 + "@" + l1 + ">-><" + s2 + ">(" + w + ")";
+    return "<" + s1 + ";" + l1 + ">-><" + s2 + ">(" + w + ")";
   }
 }

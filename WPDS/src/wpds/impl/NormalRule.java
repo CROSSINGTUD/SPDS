@@ -13,6 +13,7 @@ public class NormalRule<N extends Location, D extends State, W extends Weight> e
 
   @Override
   public String toString() {
-    return "<" + s1 + "@" + l1 + ">-><" + s2 + "@" + l2 + ">(" + w + ")";
+    return "<" + s1 + ";" + l1 + ">-><" + s2 + ";" + l2 + ">"
+        + ((w instanceof Weight.NoWeight) ? "" : "(" + w + ")");
   }
 }

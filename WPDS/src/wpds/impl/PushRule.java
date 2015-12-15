@@ -44,7 +44,7 @@ public class PushRule<N extends Location, D extends State, W extends Weight> ext
 
   @Override
   public String toString() {
-    return "PUSH<" + s1 + "@" + l1 + ">-><" + s2 + "@" + l2 + "VIA" + callSite + ">(" + w + ")";
+    return "<" + s1 + ";" + l1 + ">-><" + s2 + ";" + l2 + "." + callSite + ">(" + w + ")";
   }
 
 }

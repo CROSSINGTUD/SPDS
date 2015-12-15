@@ -12,10 +12,10 @@ import com.google.common.base.Joiner;
 
 public abstract class WeightedPAutomaton<N extends Location, D extends State, W extends Weight>
     extends PAutomaton<N, D, W> {
+  private Map<Transition<N, D, W>, W> transitionToWeights = new HashMap<>();
 
-  public WeightedPAutomaton(Set<D> initialStates, Set<Transition<N, D, W>> transitions,
-      Set<D> finalStates) {
-    super(initialStates, transitions, finalStates);
+  public WeightedPAutomaton(D initialState, Set<Transition<N, D, W>> transitions, D finalState) {
+    super(initialState, transitions, finalState);
   }
 
 
@@ -27,7 +27,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
     return transitionToWeights.get(trans);
   }
 
-  private Map<Transition<N, D, W>, W> transitionToWeights = new HashMap<>();
 
 
   @Override
@@ -37,4 +36,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
     s += Joiner.on("\n\t\t").join(transitionToWeights.entrySet());
     return s;
   }
+
+
 }
