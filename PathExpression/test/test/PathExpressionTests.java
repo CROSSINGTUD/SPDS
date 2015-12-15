@@ -26,7 +26,55 @@ public class PathExpressionTests {
     g.addEdge(2, "w", 3);
     PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
     RegEx<String> expressionBetween = expr.getExpressionBetween(1, 3);
-    RegEx<String> expected = new RegEx.Plain<String>("ww");
+    RegEx<String> expected = a("w", "w");
+    assertEquals(expected, expressionBetween);
+  }
+
+  @Test
+  public void simple3() {
+    IntGraph g = new IntGraph();
+    g.addEdge(1, "a", 2);
+    g.addEdge(2, "b", 3);
+    g.addEdge(3, "c", 4);
+    PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
+    RegEx<String> expressionBetween = expr.getExpressionBetween(1, 4);
+    RegEx<String> expected = a(a("a", "b"), "c");
+    assertEquals(expected, expressionBetween);
+  }
+
+  @Test
+  public void star2() {
+    IntGraph g = new IntGraph();
+    g.addEdge(1, "a", 2);
+    g.addEdge(2, "b", 1);
+    PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
+    RegEx<String> expressionBetween = expr.getExpressionBetween(1, 2);
+    RegEx<String> expected = a("a", star(a("b", "a")));
+    assertEquals(expected, expressionBetween);
+  }
+
+  @Test
+  public void star3() {
+    IntGraph g = new IntGraph();
+    g.addEdge(1, "a", 2);
+    g.addEdge(2, "b", 1);
+    g.addEdge(1, "c", 2);
+    PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
+    RegEx<String> expressionBetween = expr.getExpressionBetween(1, 2);
+    RegEx<String> expected = a(u("a", "c"), star(a("b", u("a", "c"))));
+    assertEquals(expected, expressionBetween);
+  }
+
+  @Test
+  public void simple4() {
+    IntGraph g = new IntGraph();
+    g.addEdge(1, "a", 2);
+    g.addEdge(2, "b", 3);
+    g.addEdge(3, "c", 4);
+    g.addEdge(1, "c", 4);
+    PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
+    RegEx<String> expressionBetween = expr.getExpressionBetween(1, 4);
+    RegEx<String> expected = u("c", a(a("a", "b"), "c"));
     assertEquals(expected, expressionBetween);
   }
 

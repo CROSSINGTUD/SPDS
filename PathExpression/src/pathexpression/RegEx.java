@@ -25,6 +25,52 @@ public class RegEx<V> {
     public RegEx<V> getSecond() {
       return b;
     }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + (hashCode(a, b));
+      return result;
+    }
+
+    private int hashCode(RegEx<V> a, RegEx<V> b) {
+      if (a == null && b == null)
+        return 1;
+      if (a == null)
+        return b.hashCode();
+      if (b == null)
+        return a.hashCode();
+      return a.hashCode() + b.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      Union other = (Union) obj;
+      if (matches(a, other.a)) {
+        return matches(b, other.b);
+      }
+      if (matches(a, other.b)) {
+        return matches(b, other.a);
+      }
+      return false;
+    }
+
+    private boolean matches(RegEx<V> a, RegEx<V> b) {
+      if (a == null) {
+        if (b != null)
+          return false;
+        return true;
+      }
+      return a.equals(b);
+    }
+
   }
   private static class Concatenate<V> extends RegEx<V> {
     public RegEx<V> b;
@@ -48,6 +94,37 @@ public class RegEx<V> {
     public RegEx<V> getSecond() {
       return b;
     }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + ((a == null) ? 0 : a.hashCode());
+      result = prime * result + ((b == null) ? 0 : b.hashCode());
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      Concatenate other = (Concatenate) obj;
+      if (a == null) {
+        if (other.a != null)
+          return false;
+      } else if (!a.equals(other.a))
+        return false;
+      if (b == null) {
+        if (other.b != null)
+          return false;
+      } else if (!b.equals(other.b))
+        return false;
+      return true;
+    }
   }
   private static class Star<V> extends RegEx<V> {
     public RegEx<V> a;
@@ -63,6 +140,31 @@ public class RegEx<V> {
 
     public RegEx<V> getPlain() {
       return a;
+    }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + ((a == null) ? 0 : a.hashCode());
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      Star other = (Star) obj;
+      if (a == null) {
+        if (other.a != null)
+          return false;
+      } else if (!a.equals(other.a))
+        return false;
+      return true;
     }
   }
 

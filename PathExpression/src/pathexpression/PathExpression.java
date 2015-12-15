@@ -1,24 +1,24 @@
 package pathexpression;
 
-public class PathExpression<N, V> {
+class PathExpression<V> {
   private RegEx<V> ex;
-  private N w;
-  private N u;
+  private int w;
+  private int u;
 
   public RegEx<V> getExpression() {
     return ex;
   }
 
-  public N getTarget() {
+  public int getTarget() {
     return w;
   }
 
-  public N getSource() {
+  public int getSource() {
     return u;
   }
 
 
-  public PathExpression(RegEx<V> reg, N u, N w) {
+  public PathExpression(RegEx<V> reg, int u, int w) {
     this.ex = reg;
     this.u = u;
     this.w = w;
@@ -33,8 +33,8 @@ public class PathExpression<N, V> {
     final int prime = 31;
     int result = 1;
     result = prime * result + ((ex == null) ? 0 : ex.hashCode());
-    result = prime * result + ((u == null) ? 0 : u.hashCode());
-    result = prime * result + ((w == null) ? 0 : w.hashCode());
+    result = prime * result + u;
+    result = prime * result + w;
     return result;
   }
 
@@ -52,15 +52,9 @@ public class PathExpression<N, V> {
         return false;
     } else if (!ex.equals(other.ex))
       return false;
-    if (u == null) {
-      if (other.u != null)
-        return false;
-    } else if (!u.equals(other.u))
+    if (u != other.u)
       return false;
-    if (w == null) {
-      if (other.w != null)
-        return false;
-    } else if (!w.equals(other.w))
+    if (w != other.w)
       return false;
     return true;
   }

@@ -24,7 +24,6 @@ public class PathExpressionComputer<N, V> {
     for (N node : graph.getNodes()) {
       nodeToIntMap.put(node, (nodeToIntMap.size() + 1));
     }
-    System.out.println(nodeToIntMap);
   }
 
   private Integer getIntegerFor(N node) {
@@ -32,29 +31,64 @@ public class PathExpressionComputer<N, V> {
     return nodeToIntMap.get(node);
   }
 
-  private N getNodeFor(Integer i) {
-    assert nodeToIntMap.inverse().get(i) != null;
-    return nodeToIntMap.inverse().get(i);
-  }
-
   public RegEx<V> getExpressionBetween(N a, N b) {
     eliminate();
-    List<PathExpression<N, V>> allExpr = extractPathSequence();
-    for (PathExpression<N, V> expr : allExpr) {
-      if (expr.getSource().equals(a) && expr.getTarget().equals(b))
-        return expr.getExpression();
-    }
-    return RegEx.<V>emptySet();
+    List<RegEx<V>> allExpr = computeAllPathFrom(a);
+    return allExpr.get(getIntegerFor(b) - 1);
   }
 
-  private List<PathExpression<N, V>> extractPathSequence() {
+  private List<RegEx<V>> computeAllPathFrom(N a) {
+    eliminate();
+    List<PathExpression<V>> extractPathSequence = extractPathSequence();
+    List<RegEx<V>> regEx = new LinkedList<>();
+    for (int i = 0; i < graph.getNodes().size(); i++)
+      regEx.add(RegEx.<V>emptySet());
+
+    regEx.set(getIntegerFor(a) - 1, RegEx.<V>epsilon());
+    for (int i = 0; i < extractPathSequence.size(); i++) {
+      PathExpression<V> tri = extractPathSequence.get(i);
+      if (tri.getSource() == tri.getTarget()) {
+        RegEx<V> expression = tri.getExpression();
+
+        int vi = tri.getSource();
+        RegEx<V> regExVi = regEx.get(vi - 1);
+        if (regExVi != RegEx.<V>emptySet()) {
+          regEx.set(vi - 1, RegEx.<V>concatenate(regExVi, expression));
+        } else {
+          regEx.set(vi - 1, expression);
+        }
+
+      } else {
+        RegEx<V> expression = tri.getExpression();
+        int vi = tri.getSource();
+        int wi = tri.getTarget();
+        RegEx<V> inter;
+        RegEx<V> regExVi = regEx.get(vi - 1);
+        if (regExVi != RegEx.<V>emptySet()) {
+          inter = RegEx.simplify(RegEx.<V>concatenate(regExVi, expression));
+        } else {
+          inter = expression;
+        }
+
+        RegEx<V> regExWi = regEx.get(wi - 1);
+        if (regExWi != RegEx.<V>emptySet()) {
+          regEx.set(wi - 1, RegEx.simplify(RegEx.<V>union(RegEx.<V>simplify(regExWi), inter)));
+        } else {
+          regEx.set(wi - 1, inter);
+        }
+      }
+    }
+    return regEx;
+  }
+
+  private List<PathExpression<V>> extractPathSequence() {
     int n = graph.getNodes().size();
-    List<PathExpression<N, V>> list = new LinkedList<PathExpression<N, V>>();
+    List<PathExpression<V>> list = new LinkedList<PathExpression<V>>();
     for (int u = 1; u <= n; u++) {
       for (int w = u; w <= n; w++) {
         RegEx<V> reg = table.get(u, w);
         if (!(reg.equals(RegEx.emptySet())) && !(reg.equals(RegEx.epsilon()))) {
-          list.add(new PathExpression<N, V>(reg, getNodeFor(u), getNodeFor(w)));
+          list.add(new PathExpression<V>(reg, u, w));
         }
       }
     }
@@ -62,11 +96,10 @@ public class PathExpressionComputer<N, V> {
       for (int w = 1; w < u; w++) {
         RegEx<V> reg = table.get(u, w);
         if (!(reg.equals(RegEx.emptySet()))) {
-          list.add(new PathExpression<N, V>(reg, getNodeFor(u), getNodeFor(w)));
+          list.add(new PathExpression<V>(reg, u, w));
         }
       }
     }
-    System.out.println(list);
     return list;
   }
 
@@ -78,8 +111,11 @@ public class PathExpressionComputer<N, V> {
       }
     }
     for (Edge<N, V> e : graph.getEdges()) {
-      table.put(getIntegerFor(e.getStart()), getIntegerFor(e.getTarget()),
-          new RegEx.Plain<V>(e.getLabel()));
+      Integer head = getIntegerFor(e.getStart());
+      Integer tail = getIntegerFor(e.getTarget());
+      RegEx<V> pht = table.get(head, tail);
+      pht = RegEx.<V>union(new RegEx.Plain<V>(e.getLabel()), pht);
+      table.put(head, tail, pht);
     }
     for (int v = 1; v <= numberOfNodes; v++) {
       RegEx<V> pvv = table.get(v, v);
@@ -106,6 +142,5 @@ public class PathExpressionComputer<N, V> {
         }
       }
     }
-    System.out.println(table);
   }
 }
