@@ -1,9 +1,10 @@
 import static org.junit.Assert.assertEquals;
-import heros.demandide.pathexpression.PathExpression;
-import heros.demandide.pathexpression.PathExpressionComputer;
-import heros.demandide.pathexpression.RegEx;
 
 import org.junit.Test;
+
+import pathexpression.PathExpression;
+import pathexpression.PathExpressionComputer;
+import pathexpression.RegEx;
 
 
 public class PathExpressionTests {

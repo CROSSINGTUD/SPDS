@@ -245,11 +245,11 @@ public class Solver {
   public void query(Fact fact, Unit stmt) {
     System.out.println(pds.getStates());
     WPAutomaton pAutomaton =
-        new WPAutomaton(fact, Collections.singleton(new Transition<Stmt, Fact, PDSSet>(fact,
+        new WPAutomaton(fact, Collections.singleton(new Transition<Stmt, Fact>(fact,
             new Stmt(stmt), Fact.TARGET)), Fact.TARGET);
 
     WeightedPAutomaton<Stmt, Fact, PDSSet> prestar = pds.prestar(pAutomaton);
-    for (Transition<Stmt, Fact, PDSSet> t : prestar.getTransitions()) {
+    for (Transition<Stmt, Fact> t : prestar.getTransitions()) {
       Stmt string = t.getString();
       Unit unit = string.getDelegate();
       if (unit instanceof AssignStmt && ((AssignStmt) unit).getRightOp() instanceof NewExpr) {
@@ -257,23 +257,22 @@ public class Solver {
         System.out.println("ALLOCATION SITE" + unit);
         Fact allocFact = new Fact((Local) leftOp);
         WPAutomaton queryAutomaton =
-            new WPAutomaton(allocFact, Collections.singleton(new Transition<Stmt, Fact, PDSSet>(
-                allocFact, string, Fact.TARGET)), Fact.TARGET);
+            new WPAutomaton(allocFact, Collections.singleton(new Transition<Stmt, Fact>(allocFact,
+                string, Fact.TARGET)), Fact.TARGET);
         WeightedPAutomaton<Stmt, Fact, PDSSet> poststar = pds.poststar(queryAutomaton);
 
         // System.out.println(poststar);
         SootMethod method = icfg.getMethodOf(stmt);
         for (Unit end : icfg.getEndPointsOf(method)) {
           for (Unit eP : icfg.getPredsOf(end)) {
-            for (Transition<Stmt, Fact, PDSSet> trans : poststar.getTransitions()) {
+            for (Transition<Stmt, Fact> trans : poststar.getTransitions()) {
               if (trans.getString().equals(new Stmt(eP)) && trans.getStart().toString().equals("k")) {
                 PDSSet weightFor = poststar.getWeightFor(trans);
                 AccessStmt s = new AccessStmt(unit);
                 FieldPAutomaton fieldauto =
                     new FieldPAutomaton(s,
-                        Collections
-                            .singleton(new Transition<WrappedSootField, AccessStmt, NoWeight>(s,
-                                WrappedSootField.EPSILON, AccessStmt.TARGET)), AccessStmt.TARGET);
+                        Collections.singleton(new Transition<WrappedSootField, AccessStmt>(s,
+                            WrappedSootField.EPSILON, AccessStmt.TARGET)), AccessStmt.TARGET);
                 weightFor.printPostStarFor(fieldauto, new AccessStmt(eP));
               }
             }

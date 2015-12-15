@@ -1,4 +1,4 @@
-import heros.demandide.pathexpression.Edge;
+import pathexpression.Edge;
 
 
 public class IntEdge implements Edge<Integer, String> {

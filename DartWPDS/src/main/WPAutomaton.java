@@ -13,8 +13,7 @@ public class WPAutomaton extends WeightedPAutomaton<Stmt, Fact, PDSSet> {
 
   Stmt epsilon;
 
-  public WPAutomaton(Fact initialState, Set<Transition<Stmt, Fact, PDSSet>> transitions,
-      Fact finalState) {
+  public WPAutomaton(Fact initialState, Set<Transition<Stmt, Fact>> transitions, Fact finalState) {
     super(initialState, transitions, finalState);
   }
 

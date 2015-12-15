@@ -1,4 +1,4 @@
-package heros.demandide.pathexpression;
+package pathexpression;
 
 public interface Edge<N, V> {
   public N getStart();

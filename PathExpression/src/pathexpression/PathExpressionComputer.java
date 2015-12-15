@@ -1,4 +1,4 @@
-package heros.demandide.pathexpression;
+package pathexpression;
 
 import java.util.LinkedList;
 import java.util.List;

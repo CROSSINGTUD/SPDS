@@ -1,7 +1,7 @@
-import heros.demandide.pathexpression.Edge;
-import heros.demandide.pathexpression.LabeledGraph;
-
 import java.util.Set;
+
+import pathexpression.Edge;
+import pathexpression.LabeledGraph;
 
 import com.google.common.collect.Sets;
 

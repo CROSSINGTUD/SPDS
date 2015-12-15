@@ -9,7 +9,7 @@ import wpds.interfaces.Weight.NoWeight;
 public class FieldPAutomaton extends WeightedPAutomaton<WrappedSootField, AccessStmt, NoWeight> {
 
   public FieldPAutomaton(AccessStmt initialState,
-      Set<Transition<WrappedSootField, AccessStmt, NoWeight>> transitions, AccessStmt finalState) {
+      Set<Transition<WrappedSootField, AccessStmt>> transitions, AccessStmt finalState) {
     super(initialState, transitions, finalState);
   }
 

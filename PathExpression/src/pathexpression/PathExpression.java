@@ -1,4 +1,4 @@
-package heros.demandide.pathexpression;
+package pathexpression;
 
 public class PathExpression<N, V> {
   private RegEx<V> ex;

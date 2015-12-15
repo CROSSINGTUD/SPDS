@@ -1,12 +1,10 @@
 package wpds.impl;
 
-import heros.demandide.pathexpression.Edge;
+import pathexpression.Edge;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
-import wpds.interfaces.Weight;
 
-public class Transition<N extends Location, D extends State, W extends Weight> implements
-    Edge<D, N> {
+public class Transition<N extends Location, D extends State> implements Edge<D, N> {
   private D s1;
   private N l1;
   private D s2;
