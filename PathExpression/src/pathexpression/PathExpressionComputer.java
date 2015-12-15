@@ -37,14 +37,14 @@ public class PathExpressionComputer<N, V> {
     return nodeToIntMap.inverse().get(i);
   }
 
-  public PathExpression<N, V> getExpressionBetween(N a, N b) {
+  public RegEx<V> getExpressionBetween(N a, N b) {
     eliminate();
     List<PathExpression<N, V>> allExpr = extractPathSequence();
     for (PathExpression<N, V> expr : allExpr) {
       if (expr.getSource().equals(a) && expr.getTarget().equals(b))
-        return expr;
+        return expr.getExpression();
     }
-    return new PathExpression<N, V>(RegEx.<V>emptySet(), a, b);
+    return RegEx.<V>emptySet();
   }
 
   private List<PathExpression<N, V>> extractPathSequence() {
