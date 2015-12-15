@@ -116,6 +116,20 @@ public class PathExpressionTests {
   }
 
   @Test
+  public void unionAndConcatenate() {
+    IntGraph g = new IntGraph();
+    g.addEdge(1, "a", 2);
+    g.addEdge(2, "b", 4);
+    g.addEdge(1, "a", 3);
+    g.addEdge(3, "b", 4);
+    g.addEdge(4, "c", 5);
+    PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
+    RegEx<String> expressionBetween = expr.getExpressionBetween(1, 5);
+    RegEx<String> expected = a(a("a", "b"), "c");
+    assertEquals(expected, expressionBetween);
+  }
+
+  @Test
   public void empty2() {
     IntGraph g = new IntGraph();
     g.addEdge(3, "c", 1);

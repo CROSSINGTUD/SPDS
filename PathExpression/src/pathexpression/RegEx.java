@@ -15,7 +15,7 @@ public class RegEx<V> {
     }
 
     public String toString() {
-      return a.toString() + " U " + b.toString();
+      return "{" + a.toString() + " U " + b.toString() + "}";
     }
 
     public RegEx<V> getFirst() {
@@ -84,7 +84,7 @@ public class RegEx<V> {
     }
 
     public String toString() {
-      return a.toString() + " . " + b.toString();
+      return "(" + a.toString() + " . " + b.toString() + ")";
     }
 
     public RegEx<V> getFirst() {
@@ -194,7 +194,7 @@ public class RegEx<V> {
 
   public static <V> RegEx<V> star(RegEx<V> reg) {
     if (reg instanceof EmptySet || reg instanceof Epsilon)
-      return new Epsilon<V>();
+      return epsilon();
     return simplify(new Star<V>(reg));
   }
 
@@ -204,6 +204,8 @@ public class RegEx<V> {
       if (u.getFirst() instanceof EmptySet)
         return u.getSecond();
       if (u.getSecond() instanceof EmptySet)
+        return u.getFirst();
+      if (u.getFirst().equals(u.getSecond()))
         return u.getFirst();
     }
     if (in instanceof Concatenate) {
@@ -218,8 +220,11 @@ public class RegEx<V> {
 
     if (in instanceof Star) {
       Star<V> star = (Star<V>) in;
-      if (star.getPlain() instanceof EmptySet || star.getPlain() instanceof Epsilon)
-        return new Epsilon<V>();
+      if (star.getPlain() instanceof EmptySet) {
+        return star.getPlain();
+      }
+      if (star.getPlain() instanceof Epsilon)
+        return epsilon();
     }
 
     return in;
