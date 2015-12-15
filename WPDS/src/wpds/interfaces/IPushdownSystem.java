@@ -29,6 +29,8 @@ public interface IPushdownSystem<N extends Location, D extends State, W extends 
 
   public Set<Rule<N, D, W>> getRulesStarting(D start, N string);
 
+  public Set<Rule<N, D, W>> getRulesEnding(D start, N string);
+
   public PAutomaton<N, D, W> prestar(WeightedPAutomaton<N, D, W> initialAutomaton);
 
   public PAutomaton<N, D, W> poststar(WeightedPAutomaton<N, D, W> initialAutomaton);

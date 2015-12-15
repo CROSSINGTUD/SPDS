@@ -3,13 +3,13 @@ package wpds.impl;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Sets;
+
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.Weight;
-
-import com.google.common.base.Joiner;
-import com.google.common.collect.Sets;
 
 public abstract class PushdownSystem<N extends Location, D extends State, W extends Weight>
     implements IPushdownSystem<N, D, W> {
@@ -72,8 +72,29 @@ public abstract class PushdownSystem<N extends Location, D extends State, W exte
         } else if (r instanceof PopRule) {
           result.add(new PopRule<N, D, W>(string, r.getS1(), r.getS2(), r.getWeight()));
         } else if (r instanceof PushRule) {
-          result.add(new PushRule<N, D, W>(string, r.getS1(), string, r.getL2(), r.getS2(), r
-              .getWeight()));
+          result.add(new PushRule<N, D, W>(string, r.getS1(), string, r.getL2(), r.getS2(),
+              r.getWeight()));
+        }
+      }
+    }
+    return result;
+  }
+
+  @Override
+  public Set<Rule<N, D, W>> getRulesEnding(D start, N string) {
+    Set<Rule<N, D, W>> allRules = getAllRules();
+    Set<Rule<N, D, W>> result = new HashSet<>();
+    for (Rule<N, D, W> r : allRules) {
+      if (r instanceof PopRule)
+        continue;
+      if (r.getS2().equals(start) && r.getL2().equals(string))
+        result.add(r);
+      if (anyTransition() != null && r.getS2().equals(start) && r.getL2().equals(anyTransition())) {
+        if (r instanceof NormalRule) {
+          result.add(new NormalRule<N, D, W>(string, r.getS1(), string, r.getS2(), r.getWeight()));
+        } else if (r instanceof PushRule) {
+          result.add(new PushRule<N, D, W>(string, r.getS1(), string, r.getL2(), r.getS2(),
+              r.getWeight()));
         }
       }
     }

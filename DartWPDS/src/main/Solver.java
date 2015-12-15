@@ -243,7 +243,6 @@ public class Solver {
   }
 
   public void query(Fact fact, Unit stmt) {
-    System.out.println(pds.getStates());
     WPAutomaton pAutomaton =
         new WPAutomaton(fact, Collections.singleton(new Transition<Stmt, Fact>(fact,
             new Stmt(stmt), Fact.TARGET)), Fact.TARGET);
@@ -266,7 +265,7 @@ public class Solver {
         for (Unit end : icfg.getEndPointsOf(method)) {
           for (Unit eP : icfg.getPredsOf(end)) {
             for (Transition<Stmt, Fact> trans : poststar.getTransitions()) {
-              if (trans.getString().equals(new Stmt(eP)) && trans.getStart().toString().equals("k")) {
+              if (trans.getString().equals(new Stmt(eP)) && trans.getStart().toString().equals("e")) {
                 PDSSet weightFor = poststar.getWeightFor(trans);
                 AccessStmt s = new AccessStmt(unit);
                 FieldPAutomaton fieldauto =

@@ -32,18 +32,20 @@ public class PathExpressionComputer<N, V> {
   }
 
   public RegEx<V> getExpressionBetween(N a, N b) {
+    if (!graph.getNodes().contains(a))
+      return RegEx.<V>emptySet();
     eliminate();
     List<RegEx<V>> allExpr = computeAllPathFrom(a);
     return allExpr.get(getIntegerFor(b) - 1);
   }
 
   private List<RegEx<V>> computeAllPathFrom(N a) {
+    assert graph.getNodes().contains(a);
     eliminate();
     List<PathExpression<V>> extractPathSequence = extractPathSequence();
     List<RegEx<V>> regEx = new LinkedList<>();
     for (int i = 0; i < graph.getNodes().size(); i++)
       regEx.add(RegEx.<V>emptySet());
-
     regEx.set(getIntegerFor(a) - 1, RegEx.<V>epsilon());
     for (int i = 0; i < extractPathSequence.size(); i++) {
       PathExpression<V> tri = extractPathSequence.get(i);

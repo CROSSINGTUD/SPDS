@@ -2,14 +2,15 @@ package wpds.impl;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.Weight;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 public class PreStar<N extends Location, D extends State, W extends Weight> {
   private LinkedList<Transition<N, D>> worklist = Lists.newLinkedList();
@@ -34,18 +35,19 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
     while (!worklist.isEmpty()) {
       Transition<N, D> t = worklist.removeFirst();
 
-      // Normal rules
-      for (NormalRule<N, D, W> r : pds.getNormalRules()) {
-        if (r.getTargetConfig().equals(t.getStartConfig())) {
+      Set<Rule<N, D, W>> rulesEnding = pds.getRulesEnding(t.getStart(), t.getLabel());
+      for (Rule<N, D, W> r : rulesEnding) {
+        // Normal rules
+        if (r instanceof NormalRule) {
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
-          update(new Transition<N, D>(r.getS1(), r.getL1(), t.getTarget()), r.getWeight(), previous);
+          update(new Transition<N, D>(r.getS1(), r.getL1(), t.getTarget()), r.getWeight(),
+              previous);
         }
-      }
 
-      // Push rules
-      for (PushRule<N, D, W> r : pds.getPushRules()) {
-        if (r.getTargetConfig().equals(t.getStartConfig())) {
+        // Push rules
+
+        if (r instanceof PushRule) {
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
           for (Transition<N, D> tdash : Sets.newHashSet(fa.getTransitions())) {

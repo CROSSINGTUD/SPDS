@@ -3,20 +3,21 @@ package wpds.impl;
 import java.util.Collection;
 import java.util.Set;
 
-import pathexpression.Edge;
-import pathexpression.LabeledGraph;
-import pathexpression.PathExpressionComputer;
-import wpds.interfaces.Location;
-import wpds.interfaces.State;
-import wpds.interfaces.Weight;
-
 import com.google.common.base.Joiner;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
-public abstract class PAutomaton<N extends Location, D extends State, W extends Weight> implements
-    LabeledGraph<D, N> {
+import pathexpression.Edge;
+import pathexpression.LabeledGraph;
+import pathexpression.PathExpressionComputer;
+import pathexpression.RegEx;
+import wpds.interfaces.Location;
+import wpds.interfaces.State;
+import wpds.interfaces.Weight;
+
+public abstract class PAutomaton<N extends Location, D extends State, W extends Weight>
+    implements LabeledGraph<D, N> {
   // Set Q is implicit
   // Weighted Pushdown Systems and their Application to Interprocedural Dataflow Analysis
   protected Set<Transition<N, D>> transitions = Sets.newHashSet();
@@ -88,9 +89,9 @@ public abstract class PAutomaton<N extends Location, D extends State, W extends 
 
   public abstract N epsilon();
 
-  public String extractLanguage(D from) {
+  public RegEx<N> extractLanguage(D from) {
     PathExpressionComputer<D, N> expr = new PathExpressionComputer<>(this);
-    return expr.getExpressionBetween(from, getFinalState()).toString();
+    return expr.getExpressionBetween(from, getFinalState());
   }
 
   public Set<D> getStates() {
