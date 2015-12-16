@@ -11,7 +11,7 @@ public abstract class Rule<N extends Location, D extends State, W extends Weight
   protected D s2;
   protected W w;
 
-  public Rule(N l1, D s1, N l2, D s2, W w) {
+  public Rule(D s1, N l1, D s2, N l2, W w) {
     this.l1 = l1;
     this.s1 = s1;
     this.l2 = l2;

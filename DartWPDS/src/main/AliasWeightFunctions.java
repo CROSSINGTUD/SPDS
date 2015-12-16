@@ -28,46 +28,47 @@ public class AliasWeightFunctions implements WEdgeFunctions<Unit, Fact, SootMeth
             && currNode.equals(new Fact((Local) assignStmt.getRightOp()))) {
           InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getLeftOp();
           return new PDSSet(new PushRule<WrappedSootField, AccessStmt, NoWeight>(
-              WrappedSootField.ANYFIELD, new AccessStmt(curr), WrappedSootField.ANYFIELD,
-              new WrappedSootField(ifr.getField()), new AccessStmt(succ), Weight.NO_WEIGHT));
+              new AccessStmt(curr), WrappedSootField.ANYFIELD, new AccessStmt(succ),
+              new WrappedSootField(ifr.getField()), WrappedSootField.ANYFIELD, Weight.NO_WEIGHT));
         }
       } else if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
         InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
         if (currNode.equals(new Fact((Local) ifr.getBase()))
             && succNode.equals(new Fact((Local) assignStmt.getLeftOp()))) {
-          return new PDSSet(new PopRule<WrappedSootField, AccessStmt, NoWeight>(
-              new WrappedSootField(ifr.getField()), new AccessStmt(curr), new AccessStmt(succ),
+          return new PDSSet(
+              new PopRule<WrappedSootField, AccessStmt, NoWeight>(new AccessStmt(curr),
+                  new WrappedSootField(ifr.getField()), new AccessStmt(succ),
               Weight.NO_WEIGHT));
         }
       }
     }
-    return new PDSSet(new NormalRule<WrappedSootField, AccessStmt, NoWeight>(
-        WrappedSootField.ANYFIELD, new AccessStmt(curr), WrappedSootField.ANYFIELD,
-        new AccessStmt(succ), Weight.NO_WEIGHT));
+    return new PDSSet(new NormalRule<WrappedSootField, AccessStmt, NoWeight>(new AccessStmt(curr),
+        WrappedSootField.ANYFIELD, new AccessStmt(succ), WrappedSootField.ANYFIELD,
+        Weight.NO_WEIGHT));
   }
 
   @Override
   public PDSSet getCallEdgeFunction(Unit callStmt, Fact srcNode, Unit calleeStart,
       Fact destNode) {
     return new PDSSet(new NormalRule<WrappedSootField, AccessStmt, NoWeight>(
-        WrappedSootField.ANYFIELD, new AccessStmt(callStmt), WrappedSootField.ANYFIELD,
-        new AccessStmt(calleeStart), Weight.NO_WEIGHT));
+        new AccessStmt(callStmt), WrappedSootField.ANYFIELD, new AccessStmt(calleeStart),
+        WrappedSootField.ANYFIELD, Weight.NO_WEIGHT));
   }
 
   @Override
   public PDSSet getReturnEdgeFunction(Unit callSite, SootMethod calleeMethod, Unit exitStmt,
       Fact exitNode, Unit returnSite, Fact retNode) {
     return new PDSSet(new NormalRule<WrappedSootField, AccessStmt, NoWeight>(
-        WrappedSootField.ANYFIELD, new AccessStmt(exitStmt), WrappedSootField.ANYFIELD,
-        new AccessStmt(returnSite), Weight.NO_WEIGHT));
+        new AccessStmt(exitStmt), WrappedSootField.ANYFIELD, new AccessStmt(returnSite),
+        WrappedSootField.ANYFIELD, Weight.NO_WEIGHT));
   }
 
   @Override
   public PDSSet getCallToReturnEdgeFunction(Unit callSite, Fact callNode, Unit returnSite,
       Fact returnSideNode) {
-      return new PDSSet(new NormalRule<WrappedSootField, AccessStmt, NoWeight>(
-        WrappedSootField.ANYFIELD, new AccessStmt(callSite), WrappedSootField.ANYFIELD,
-          new AccessStmt(returnSite), Weight.NO_WEIGHT));
+    return new PDSSet(new NormalRule<WrappedSootField, AccessStmt, NoWeight>(
+        new AccessStmt(callSite), WrappedSootField.ANYFIELD, new AccessStmt(returnSite),
+        WrappedSootField.ANYFIELD, Weight.NO_WEIGHT));
   }
 
 }

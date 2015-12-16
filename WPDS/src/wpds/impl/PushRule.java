@@ -8,8 +8,8 @@ public class PushRule<N extends Location, D extends State, W extends Weight> ext
 
   private N callSite;
 
-  public PushRule(N l1, D s1, N callSite, N l2, D s2, W w) {
-    super(l1, s1, l2, s2, w);
+  public PushRule(D s1, N l1, D s2, N l2, N callSite, W w) {
+    super(s1, l1, s2, l2, w);
     this.callSite = callSite;
   }
 
