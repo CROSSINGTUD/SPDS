@@ -2,12 +2,12 @@ package pathexpression;
 
 
 
-public class RegEx<V> {
-  private static class Union<V> extends RegEx<V> {
-    private RegEx<V> b;
-    private RegEx<V> a;
+public class RegEx<V> implements IRegEx<V> {
+  private static class Union<V> implements IRegEx<V> {
+    private IRegEx<V> b;
+    private IRegEx<V> a;
 
-    public Union(RegEx<V> a, RegEx<V> b) {
+    public Union(IRegEx<V> a, IRegEx<V> b) {
       assert a != null;
       assert b != null;
       this.a = a;
@@ -18,11 +18,11 @@ public class RegEx<V> {
       return "{" + a.toString() + " U " + b.toString() + "}";
     }
 
-    public RegEx<V> getFirst() {
+    public IRegEx<V> getFirst() {
       return a;
     }
 
-    public RegEx<V> getSecond() {
+    public IRegEx<V> getSecond() {
       return b;
     }
 
@@ -34,7 +34,7 @@ public class RegEx<V> {
       return result;
     }
 
-    private int hashCode(RegEx<V> a, RegEx<V> b) {
+    private int hashCode(IRegEx<V> a, IRegEx<V> b) {
       if (a == null && b == null)
         return 1;
       if (a == null)
@@ -62,7 +62,7 @@ public class RegEx<V> {
       return false;
     }
 
-    private boolean matches(RegEx<V> a, RegEx<V> b) {
+    private boolean matches(IRegEx<V> a, IRegEx<V> b) {
       if (a == null) {
         if (b != null)
           return false;
@@ -72,11 +72,11 @@ public class RegEx<V> {
     }
 
   }
-  private static class Concatenate<V> extends RegEx<V> {
-    public RegEx<V> b;
-    public RegEx<V> a;
+  private static class Concatenate<V> implements IRegEx<V> {
+    public IRegEx<V> b;
+    public IRegEx<V> a;
 
-    public Concatenate(RegEx<V> a, RegEx<V> b) {
+    public Concatenate(IRegEx<V> a, IRegEx<V> b) {
       assert a != null;
       assert b != null;
       this.a = a;
@@ -87,11 +87,11 @@ public class RegEx<V> {
       return "(" + a.toString() + " . " + b.toString() + ")";
     }
 
-    public RegEx<V> getFirst() {
+    public IRegEx<V> getFirst() {
       return a;
     }
 
-    public RegEx<V> getSecond() {
+    public IRegEx<V> getSecond() {
       return b;
     }
 
@@ -126,10 +126,10 @@ public class RegEx<V> {
       return true;
     }
   }
-  private static class Star<V> extends RegEx<V> {
-    public RegEx<V> a;
+  private static class Star<V> implements IRegEx<V> {
+    public IRegEx<V> a;
 
-    public Star(RegEx<V> a) {
+    public Star(IRegEx<V> a) {
       assert a != null;
       this.a = a;
     }
@@ -138,7 +138,7 @@ public class RegEx<V> {
       return "[" + a.toString() + "]* ";
     }
 
-    public RegEx<V> getPlain() {
+    public IRegEx<V> getPlain() {
       return a;
     }
 
@@ -168,7 +168,7 @@ public class RegEx<V> {
     }
   }
 
-  public static <V> RegEx<V> union(RegEx<V> a, RegEx<V> b) {
+  public static <V> IRegEx<V> union(IRegEx<V> a, IRegEx<V> b) {
     assert a != null;
     assert b != null;
     if (a instanceof EmptySet)
@@ -178,9 +178,12 @@ public class RegEx<V> {
     return simplify(new Union<V>(a, b));
   }
 
-  public static <V> RegEx<V> concatenate(RegEx<V> a, RegEx<V> b) {
+  public static <V> IRegEx<V> concatenate(IRegEx<V> a, IRegEx<V> b) {
     assert a != null;
     assert b != null;
+
+    if (b instanceof EmptySet)
+      return a;
 
     if (a instanceof EmptySet)
       return a;
@@ -192,25 +195,25 @@ public class RegEx<V> {
     return simplify(new Concatenate<V>(a, b));
   }
 
-  public static <V> boolean contains(RegEx<V> regex, RegEx<V> el) {
+  public static <V> boolean containsEpsilon(IRegEx<V> regex) {
     if (regex instanceof Union) {
       Union con = (Union) regex;
-      if (contains(con.getFirst(), el))
+      if (containsEpsilon(con.getFirst()))
         return true;
-      if (contains(con.getSecond(), el))
+      if (containsEpsilon(con.getSecond()))
         return true;
       return false;
     }
-    return regex.equals(el);
+    return regex instanceof Epsilon;
   }
 
-  public static <V> RegEx<V> star(RegEx<V> reg) {
+  public static <V> IRegEx<V> star(IRegEx<V> reg) {
     if (reg instanceof EmptySet || reg instanceof Epsilon)
-      return epsilon();
+      return reg;
     return simplify(new Star<V>(reg));
   }
 
-  public static <V> RegEx<V> simplify(RegEx<V> in) {
+  private static <V> IRegEx<V> simplify(IRegEx<V> in) {
     if (in instanceof Union) {
       Union<V> u = ((Union<V>) in);
       if (u.getFirst() instanceof EmptySet)
@@ -222,10 +225,10 @@ public class RegEx<V> {
     }
     if (in instanceof Concatenate) {
       Concatenate<V> c = (Concatenate<V>) in;
-      RegEx<V> first = c.getFirst();
-      if (first instanceof Epsilon || first instanceof EmptySet)
+      IRegEx<V> first = c.getFirst();
+      IRegEx<V> second = c.getSecond();
+      if (first instanceof Epsilon)
         return c.getSecond();
-      RegEx<V> second = c.getSecond();
       if (second instanceof Epsilon || second instanceof EmptySet)
         return c.getFirst();
     }
@@ -236,13 +239,13 @@ public class RegEx<V> {
         return star.getPlain();
       }
       if (star.getPlain() instanceof Epsilon)
-        return epsilon();
+        return star.getPlain();
     }
 
     return in;
   }
 
-  public static class Plain<V> extends RegEx<V> {
+  public static class Plain<V> implements IRegEx<V> {
     public V v;
 
     public Plain(V v) {
@@ -280,33 +283,17 @@ public class RegEx<V> {
     }
   }
 
-  private static class Epsilon<V> extends RegEx<V> {
-    public String toString() {
-      return "EPSILON";
-    }
-
-  }
-  private static class EmptySet<V> extends RegEx<V> {
+  public static class EmptySet<V> implements IRegEx<V> {
     public String toString() {
       return "EMPTY";
     }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof EmptySet;
+    }
   }
 
-  private static RegEx eps;
-
-  public static <V> RegEx<V> epsilon() {
-    if (eps == null)
-      eps = new Epsilon<V>();
-    return eps;
-  }
-
-  private static RegEx empty;
-
-  public static <V> RegEx<V> emptySet() {
-    if (empty == null)
-      empty = new EmptySet<V>();
-    return empty;
-  }
 
 
 }

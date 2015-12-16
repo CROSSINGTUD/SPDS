@@ -8,14 +8,19 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Table;
 
+import pathexpression.RegEx.EmptySet;
+
 public class PathExpressionComputer<N, V> {
 
   private LabeledGraph<N, V> graph;
   private BiMap<N, Integer> nodeToIntMap = HashBiMap.create();
-  private Table<Integer, Integer, RegEx<V>> table = HashBasedTable.create();
+  private Table<Integer, Integer, IRegEx<V>> table = HashBasedTable.create();
+  private IRegEx<V> emptyRegEx = new RegEx.EmptySet<V>();
+  private Epsilon<V> eps;
 
   public PathExpressionComputer(LabeledGraph<N, V> graph) {
     this.graph = graph;
+    eps = new Epsilon<V>(graph.epsilon());
     initNodesToIntMap();
   }
 
@@ -31,41 +36,43 @@ public class PathExpressionComputer<N, V> {
     return nodeToIntMap.get(node);
   }
 
-  public RegEx<V> getExpressionBetween(N a, N b) {
+  public IRegEx<V> getExpressionBetween(N a, N b) {
     if (!graph.getNodes().contains(a))
-      return RegEx.<V>emptySet();
-    eliminate();
-    List<RegEx<V>> allExpr = computeAllPathFrom(a);
+      return emptyRegEx;
+    List<IRegEx<V>> allExpr = computeAllPathFrom(a);
     return allExpr.get(getIntegerFor(b) - 1);
   }
 
-  private List<RegEx<V>> computeAllPathFrom(N a) {
+  public Epsilon<V> getEpsilon() {
+    return eps;
+  }
+  private List<IRegEx<V>> computeAllPathFrom(N a) {
     assert graph.getNodes().contains(a);
     eliminate();
     List<PathExpression<V>> extractPathSequence = extractPathSequence();
-    List<RegEx<V>> regEx = new LinkedList<>();
+    List<IRegEx<V>> regEx = new LinkedList<>();
     for (int i = 0; i < graph.getNodes().size(); i++)
-      regEx.add(RegEx.<V>emptySet());
-    regEx.set(getIntegerFor(a) - 1, RegEx.<V>epsilon());
+      regEx.add(emptyRegEx);
+    regEx.set(getIntegerFor(a) - 1, eps);
     for (int i = 0; i < extractPathSequence.size(); i++) {
       PathExpression<V> tri = extractPathSequence.get(i);
       if (tri.getSource() == tri.getTarget()) {
-        RegEx<V> expression = tri.getExpression();
+        IRegEx<V> expression = tri.getExpression();
 
         int vi = tri.getSource();
-        RegEx<V> regExVi = regEx.get(vi - 1);
+        IRegEx<V> regExVi = regEx.get(vi - 1);
         regEx.set(vi - 1, RegEx.<V>concatenate(regExVi, expression));
 
       } else {
-        RegEx<V> expression = tri.getExpression();
+        IRegEx<V> expression = tri.getExpression();
         int vi = tri.getSource();
         int wi = tri.getTarget();
-        RegEx<V> inter;
-        RegEx<V> regExVi = regEx.get(vi - 1);
-        inter = RegEx.simplify(RegEx.<V>concatenate(regExVi, expression));
+        IRegEx<V> inter;
+        IRegEx<V> regExVi = regEx.get(vi - 1);
+        inter = RegEx.<V>concatenate(regExVi, expression);
 
-        RegEx<V> regExWi = regEx.get(wi - 1);
-        regEx.set(wi - 1, RegEx.simplify(RegEx.<V>union(RegEx.<V>simplify(regExWi), inter)));
+        IRegEx<V> regExWi = regEx.get(wi - 1);
+        regEx.set(wi - 1, RegEx.<V>union(regExWi, inter));
       }
     }
     return regEx;
@@ -76,16 +83,16 @@ public class PathExpressionComputer<N, V> {
     List<PathExpression<V>> list = new LinkedList<PathExpression<V>>();
     for (int u = 1; u <= n; u++) {
       for (int w = u; w <= n; w++) {
-        RegEx<V> reg = table.get(u, w);
-        if (!(reg.equals(RegEx.emptySet())) && !(reg.equals(RegEx.epsilon()))) {
+        IRegEx<V> reg = table.get(u, w);
+        if (!(reg instanceof EmptySet)) {
           list.add(new PathExpression<V>(reg, u, w));
         }
       }
     }
     for (int u = n; u > 0; u--) {
       for (int w = 1; w < u; w++) {
-        RegEx<V> reg = table.get(u, w);
-        if (!(reg.equals(RegEx.emptySet()))) {
+        IRegEx<V> reg = table.get(u, w);
+        if (!(reg instanceof EmptySet)) {
           list.add(new PathExpression<V>(reg, u, w));
         }
       }
@@ -97,40 +104,50 @@ public class PathExpressionComputer<N, V> {
     int numberOfNodes = graph.getNodes().size();
     for (int i = 1; i <= numberOfNodes; i++) {
       for (int j = 1; j <= numberOfNodes; j++) {
-        table.put(i, j, RegEx.<V>emptySet());
+        updateTable(i, j, emptyRegEx);
       }
     }
     for (Edge<N, V> e : graph.getEdges()) {
       Integer head = getIntegerFor(e.getStart());
       Integer tail = getIntegerFor(e.getTarget());
-      RegEx<V> pht = table.get(head, tail);
-      pht = RegEx.<V>union(new RegEx.Plain<V>(e.getLabel()), pht);
-      table.put(head, tail, pht);
+      IRegEx<V> pht = table.get(head, tail);
+      if (e.getLabel().equals(graph.epsilon())) {
+        pht = RegEx.<V>union(new Epsilon(e.getLabel()), pht);
+      } else {
+        pht = RegEx.<V>union(new RegEx.Plain<V>(e.getLabel()), pht);
+      }
+      updateTable(head, tail, pht);
     }
     for (int v = 1; v <= numberOfNodes; v++) {
-      RegEx<V> pvv = table.get(v, v);
-      table.put(v, v, RegEx.<V>star(pvv));
+      IRegEx<V> pvv = table.get(v, v);
+      updateTable(v, v, RegEx.<V>star(pvv));
       int u = v + 1;
       int w = v + 1;
       for (; u <= numberOfNodes; u++) {
-        RegEx<V> puv = table.get(u, v);
-        if (puv.equals(RegEx.emptySet())) {
+        IRegEx<V> puv = table.get(u, v);
+        if (puv instanceof EmptySet) {
           continue;
         }
         puv = RegEx.<V>concatenate(puv, pvv);
-        table.put(u, v, puv);
+        updateTable(u, v, puv);
         for (; w <= numberOfNodes; w++) {
-          RegEx<V> pvw = table.get(v, w);
-          if (pvw.equals(RegEx.emptySet())) {
+          IRegEx<V> pvw = table.get(v, w);
+          if (pvw instanceof EmptySet) {
             continue;
           }
 
-          RegEx<V> old_puw = table.get(u, w);
-          RegEx<V> a = RegEx.<V>concatenate(puv, pvw);
-          RegEx<V> puw = RegEx.<V>union(old_puw, a);
-          table.put(u, w, puw);
+          IRegEx<V> old_puw = table.get(u, w);
+          IRegEx<V> a = RegEx.<V>concatenate(puv, pvw);
+          IRegEx<V> puw = RegEx.<V>union(old_puw, a);
+          updateTable(u, w, puw);
         }
       }
     }
   }
+
+
+  private void updateTable(Integer i, Integer j, IRegEx<V> reg) {
+    table.put(i, j, reg);
+  }
+
 }

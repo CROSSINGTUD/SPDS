@@ -9,9 +9,9 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 import pathexpression.Edge;
+import pathexpression.IRegEx;
 import pathexpression.LabeledGraph;
 import pathexpression.PathExpressionComputer;
-import pathexpression.RegEx;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.Weight;
@@ -89,7 +89,7 @@ public abstract class PAutomaton<N extends Location, D extends State, W extends 
 
   public abstract N epsilon();
 
-  public RegEx<N> extractLanguage(D from) {
+  public IRegEx<N> extractLanguage(D from) {
     PathExpressionComputer<D, N> expr = new PathExpressionComputer<>(this);
     return expr.getExpressionBetween(from, getFinalState());
   }

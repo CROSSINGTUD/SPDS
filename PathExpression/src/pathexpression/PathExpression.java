@@ -1,11 +1,11 @@
 package pathexpression;
 
 class PathExpression<V> {
-  private RegEx<V> ex;
+  private IRegEx<V> ex;
   private int w;
   private int u;
 
-  public RegEx<V> getExpression() {
+  public IRegEx<V> getExpression() {
     return ex;
   }
 
@@ -18,7 +18,7 @@ class PathExpression<V> {
   }
 
 
-  public PathExpression(RegEx<V> reg, int u, int w) {
+  public PathExpression(IRegEx<V> reg, int u, int w) {
     this.ex = reg;
     this.u = u;
     this.w = w;
