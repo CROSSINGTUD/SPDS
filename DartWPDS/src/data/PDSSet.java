@@ -20,7 +20,7 @@ public class PDSSet implements Weight {
     rules = outer;
   }
 
-  public PDSSet(Set<PDS> rules) {
+  private PDSSet(Set<PDS> rules) {
     this.rules = rules;
   }
 
