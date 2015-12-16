@@ -3,11 +3,9 @@ package wpds.impl;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
@@ -15,7 +13,6 @@ import wpds.interfaces.State;
 import wpds.interfaces.Weight;
 
 public class PostStar<N extends Location, D extends State, W extends Weight> {
-  private Map<Transition<N, D>, W> transitionToWeight = Maps.newHashMap();
   private LinkedList<Transition<N, D>> worklist = Lists.newLinkedList();
   private IPushdownSystem<N, D, W> pds;
   private WeightedPAutomaton<N, D, W> fa;
@@ -23,7 +20,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 
   public WeightedPAutomaton<N, D, W> poststar(IPushdownSystem<N, D, W> pds,
       WeightedPAutomaton<N, D, W> initialAutomaton) {
-    long before = System.currentTimeMillis();
     this.pds = pds;
     worklist = Lists.newLinkedList(initialAutomaton.getTransitions());
     fa = initialAutomaton;
@@ -33,8 +29,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 
     saturate();
 
-    long after = System.currentTimeMillis();
-    System.out.println("POSTSTAR TOOK: " + (after - before) + "ms/" + iterationCount + " Iter.");
     return fa;
   }
 
@@ -74,13 +68,10 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
         } else if (rule instanceof PushRule) {
           PushRule<N, D, W> pushRule = (PushRule<N, D, W>) rule;
           D irState = fa.createState(p, pushRule.getL2());
-          if (irState.toString().equals("<7,b>")) {
-            System.out.println("AA");
-          }
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
           update(new Transition<N, D>(p, pushRule.l2, irState),
-              (W) currWeight.extendWith(pushRule.w), previous);
+              (W) currWeight.extendWith(pushRule.getWeight()), previous);
 
           Collection<Transition<N, D>> into = fa.getTransitionsInto(irState);
           for (Transition<N, D> ts : into) {
@@ -89,7 +80,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
               prev.add(t);
               prev.add(ts);
               update(new Transition<N, D>(ts.getStart(), pushRule.getCallSite(), t.getTarget()),
-                  (W) transitionToWeight.get(ts).extendWith(newWeight), prev);
+                  (W) getOrCreateWeight(ts).extendWith(newWeight), prev);
             }
           }
           update(new Transition<N, D>(irState, pushRule.getCallSite(), t.getTarget()),

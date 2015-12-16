@@ -1,0 +1,9 @@
+WPDS TODOS:
+==================
+Replace chaotic iteration by strategy proposed in
+"Improving Pushdown System Model Checking" which uses Path Expressions
+Open Questions: 
+1. Do we have to start with Weight One at the entry of a method call, as we would do for IDE?
+2. Do we need the features discussed in "Solving multiple Dataflow Queries"?
+
+ 

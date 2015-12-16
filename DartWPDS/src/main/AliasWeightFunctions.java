@@ -20,6 +20,7 @@ public class AliasWeightFunctions implements WEdgeFunctions<Unit, Fact, SootMeth
 
   @Override
   public PDSSet getNormalEdgeFunction(Unit curr, Fact currNode, Unit succ, Fact succNode) {
+
     if (curr instanceof AssignStmt) {
       AssignStmt assignStmt = (AssignStmt) curr;
       if (assignStmt.getLeftOp() instanceof InstanceFieldRef) {
@@ -32,7 +33,8 @@ public class AliasWeightFunctions implements WEdgeFunctions<Unit, Fact, SootMeth
         }
       } else if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
         InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
-        if (currNode.equals(new Fact((Local) ifr.getBase()))) {
+        if (currNode.equals(new Fact((Local) ifr.getBase()))
+            && succNode.equals(new Fact((Local) assignStmt.getLeftOp()))) {
           return new PDSSet(new PopRule<WrappedSootField, AccessStmt, NoWeight>(
               new WrappedSootField(ifr.getField()), new AccessStmt(curr), new AccessStmt(succ),
               Weight.NO_WEIGHT));
