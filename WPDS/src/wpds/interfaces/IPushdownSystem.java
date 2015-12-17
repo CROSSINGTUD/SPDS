@@ -3,7 +3,6 @@ package wpds.interfaces;
 import java.util.Set;
 
 import wpds.impl.NormalRule;
-import wpds.impl.PAutomaton;
 import wpds.impl.PopRule;
 import wpds.impl.PushRule;
 import wpds.impl.Rule;
@@ -34,8 +33,8 @@ public interface IPushdownSystem<N extends Location, D extends State, W extends 
 
   public Set<PushRule<N, D, W>> getPushRulesEnding(D start, N string);
 
-  public PAutomaton<N, D, W> prestar(WeightedPAutomaton<N, D, W> initialAutomaton);
+  public WeightedPAutomaton<N, D, W> prestar(WeightedPAutomaton<N, D, W> initialAutomaton);
 
-  public PAutomaton<N, D, W> poststar(WeightedPAutomaton<N, D, W> initialAutomaton);
+  public WeightedPAutomaton<N, D, W> poststar(WeightedPAutomaton<N, D, W> initialAutomaton);
 
 }
