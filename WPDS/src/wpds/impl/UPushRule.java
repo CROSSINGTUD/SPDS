@@ -13,7 +13,7 @@ public class UPushRule<N extends Location, D extends State> extends PushRule<N, 
 
   @Override
   public String toString() {
-    return "<" + s1 + ";" + l1 + ">-><" + s2 + ";" + l2 + ">";
+    return "<" + s1 + ";" + l1 + ">-><" + s2 + ";" + l2 + "." + callSite + ">";
   }
 
 }

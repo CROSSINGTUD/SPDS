@@ -95,13 +95,13 @@ public abstract class WeightedPushdownSystem<N extends Location, D extends State
 
 
   @Override
-  public WeightedPAutomaton<N, D, W> poststar(WeightedPAutomaton<N, D, W> initialAutomaton) {
-    return new PostStar<N, D, W>().poststar(this, initialAutomaton);
+  public void poststar(WeightedPAutomaton<N, D, W> initialAutomaton) {
+    new PostStar<N, D, W>().poststar(this, initialAutomaton);
   }
 
   @Override
-  public WeightedPAutomaton<N, D, W> prestar(WeightedPAutomaton<N, D, W> initialAutomaton) {
-    return new PreStar<N, D, W>().prestar(this, initialAutomaton);
+  public void prestar(WeightedPAutomaton<N, D, W> initialAutomaton) {
+    new PreStar<N, D, W>().prestar(this, initialAutomaton);
   }
 
   public String toString() {

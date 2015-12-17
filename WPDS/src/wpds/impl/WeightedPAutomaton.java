@@ -2,6 +2,7 @@ package wpds.impl;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -56,7 +57,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
   }
 
   public Collection<Transition<N, D>> getTransitionsInto(D state) {
-    return transitionsInto.get(state);
+    return new HashSet<>(transitionsInto.get(state));
   }
 
   public boolean addTransition(Transition<N, D> trans) {

@@ -17,7 +17,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
   private WeightedPAutomaton<N, D, W> fa;
   private int iterationCount;
 
-  public WeightedPAutomaton<N, D, W> poststar(IPushdownSystem<N, D, W> pds,
+  public void poststar(IPushdownSystem<N, D, W> pds,
       WeightedPAutomaton<N, D, W> initialAutomaton) {
     this.pds = pds;
     worklist = Lists.newLinkedList(initialAutomaton.getTransitions());
@@ -28,7 +28,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
     saturate();
 
-    return fa;
   }
 
   private void saturate() {
@@ -46,30 +45,30 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
           continue;
         D p = rule.getS2();
         if (rule instanceof PopRule) {
-          PopRule<N, D, W> popRule = (PopRule<N, D, W>) rule;
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
-          update(new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight, previous);
+          update(rule, new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight, previous);
 
           Collection<Transition<N, D>> trans = fa.getTransitionsOutOf(t.getTarget());
           for (Transition<N, D> tq : trans) {
             LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
             prev.add(t);
             prev.add(tq);
-            update(new Transition<N, D>(p, tq.getString(), tq.getTarget()),
+            update(rule, new Transition<N, D>(p, tq.getString(), tq.getTarget()),
                 (W) newWeight.extendWithIn(getOrCreateWeight(tq)), prev);
           }
         } else if (rule instanceof NormalRule) {
           NormalRule<N, D, W> normalRule = (NormalRule<N, D, W>) rule;
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
-          update(new Transition<N, D>(p, normalRule.getL2(), t.getTarget()), newWeight, previous);
+          update(rule, new Transition<N, D>(p, normalRule.getL2(), t.getTarget()), newWeight,
+              previous);
         } else if (rule instanceof PushRule) {
           PushRule<N, D, W> pushRule = (PushRule<N, D, W>) rule;
           D irState = fa.createState(p, pushRule.getL2());
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
-          update(new Transition<N, D>(p, pushRule.l2, irState),
+          update(rule, new Transition<N, D>(p, pushRule.l2, irState),
               (W) currWeight.extendWithIn(pushRule.getWeight()), previous);
 
           Collection<Transition<N, D>> into = fa.getTransitionsInto(irState);
@@ -78,11 +77,12 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
               LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
               prev.add(t);
               prev.add(ts);
-              update(new Transition<N, D>(ts.getStart(), pushRule.getCallSite(), t.getTarget()),
+              update(rule,
+                  new Transition<N, D>(ts.getStart(), pushRule.getCallSite(), t.getTarget()),
                   (W) getOrCreateWeight(ts).extendWithIn(newWeight), prev);
             }
           }
-          update(new Transition<N, D>(irState, pushRule.getCallSite(), t.getTarget()),
+          update(rule, new Transition<N, D>(irState, pushRule.getCallSite(), t.getTarget()),
               (W) currWeight, previous);
         }
       }
@@ -90,13 +90,15 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
     }
   }
 
-  private void update(Transition<N, D> trans, W weight, List<Transition<N, D>> previous) {
+  private void update(Rule<N, D, W> triggeringRule, Transition<N, D> trans, W weight,
+      List<Transition<N, D>> previous) {
     fa.addTransition(trans);
     W lt = getOrCreateWeight(trans);
     W fr = weight;
     for (Transition<N, D> prev : previous) {
       fr = (W) fr.extendWithIn(getOrCreateWeight(prev));
     }
+    // System.out.println(trans + "\t as of \t" + triggeringRule + " \t and \t " + previous);
     W newLt = (W) lt.combineWithIn(fr);
     fa.addWeightForTransition(trans, newLt);
     if (!lt.equals(newLt)) {

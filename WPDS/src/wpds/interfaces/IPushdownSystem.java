@@ -33,8 +33,8 @@ public interface IPushdownSystem<N extends Location, D extends State, W extends 
 
   public Set<PushRule<N, D, W>> getPushRulesEnding(D start, N string);
 
-  public WeightedPAutomaton<N, D, W> prestar(WeightedPAutomaton<N, D, W> initialAutomaton);
+  public void prestar(WeightedPAutomaton<N, D, W> initialAutomaton);
 
-  public WeightedPAutomaton<N, D, W> poststar(WeightedPAutomaton<N, D, W> initialAutomaton);
+  public void poststar(WeightedPAutomaton<N, D, W> initialAutomaton);
 
 }

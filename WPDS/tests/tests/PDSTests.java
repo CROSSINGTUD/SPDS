@@ -14,8 +14,6 @@ import wpds.impl.Transition;
 import wpds.impl.UNormalRule;
 import wpds.impl.UPopRule;
 import wpds.impl.UPushRule;
-import wpds.impl.Weight.NoWeight;
-import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 
@@ -32,23 +30,23 @@ public class PDSTests {
   public void simple() {
     pds.addRule(normal(1, "1", 1, "2"));
     pds.addRule(normal(1, "2", 1, "3"));
-    WeightedPAutomaton<StackSymbol, Abstraction, NoWeight<StackSymbol>> prestar =
-        pds.prestar(accepts(1, "3"));
-    assertEquals(prestar.getTransitions().size(), 3);
-    assertEquals(prestar.getStates().size(), 2);
-    assertTrue(prestar.getStates().contains(a(1)));
+    PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "3");
+    pds.prestar(fa);
+    assertEquals(fa.getTransitions().size(), 3);
+    assertEquals(fa.getStates().size(), 2);
+    assertTrue(fa.getStates().contains(a(1)));
   }
 
   @Test
   public void simple2() {
     pds.addRule(normal(1, "a", 2, "b"));
     pds.addRule(normal(2, "b", 2, "c"));
-    WeightedPAutomaton<StackSymbol, Abstraction, NoWeight<StackSymbol>> prestar =
-        pds.prestar(accepts(2, "c"));
-    assertEquals(prestar.getTransitions().size(), 3);
-    assertEquals(prestar.getStates().size(), 3);
-    assertTrue(prestar.getStates().contains(a(1)));
-    assertTrue(prestar.getStates().contains(a(2)));
+    PAutomaton<StackSymbol, Abstraction> fa = accepts(2, "c");
+    pds.prestar(fa);
+    assertEquals(fa.getTransitions().size(), 3);
+    assertEquals(fa.getStates().size(), 3);
+    assertTrue(fa.getStates().contains(a(1)));
+    assertTrue(fa.getStates().contains(a(2)));
   }
 
 
@@ -57,9 +55,10 @@ public class PDSTests {
     pds.addRule(normal(1, "a", 1, "b"));
     pds.addRule(push(1, "b", 1, "c", "d"));
     pds.addRule(pop(1, "c", 1));
-    WeightedPAutomaton<StackSymbol, Abstraction, NoWeight<StackSymbol>> acc =
-        pds.poststar(accepts(1, "a"));
-    assertTrue(acc.getTransitions().contains(t(1, "d", ACC)));
+    PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "a");
+    pds.poststar(fa);
+    System.out.println(fa);
+    assertTrue(fa.getTransitions().contains(t(1, "d", ACC)));
   }
 
   @Test
@@ -71,14 +70,43 @@ public class PDSTests {
     pds.addRule(pop(1, "h", 1));
     pds.addRule(pop(1, "d", 1));
     pds.addRule(normal(1, "e", 1, "k"));
-    WeightedPAutomaton<StackSymbol, Abstraction, NoWeight<StackSymbol>> acc =
-        pds.poststar(accepts(1, "a"));
-    assertTrue(acc.getTransitions().contains(t(1, "k", ACC)));
-    WeightedPAutomaton<StackSymbol, Abstraction, NoWeight<StackSymbol>> pre =
-        pds.prestar(accepts(1, "k"));
-    assertTrue(pre.getTransitions().contains(t(1, "a", ACC)));
+    PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "a");
+    pds.poststar(fa);
+    System.out.println(fa);
+    assertTrue(fa.getTransitions().contains(t(1, "k", ACC)));
+    fa = accepts(1, "k");
+    pds.prestar(fa);
+    assertTrue(fa.getTransitions().contains(t(1, "a", ACC)));
   }
 
+
+  @Test
+  public void recPushTest() {
+    pds.addRule(normal(1, "a", 1, "b"));
+    pds.addRule(normal(1, "b", 1, "c"));
+    pds.addRule(push(1, "c", 1, "d", "e"));
+    pds.addRule(normal(1, "d", 1, "f"));
+    pds.addRule(push(1, "f", 1, "d", "h"));
+    pds.addRule(pop(1, "d", 1));
+    pds.addRule(normal(1, "e", 1, "k"));
+    PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "a");
+    pds.poststar(fa);
+    System.out.println(fa);
+    assertTrue(fa.getTransitions().contains(t(1, "k", ACC)));
+    assertTrue(fa.getTransitions().contains(t(1, "k", ACC)));
+    assertTrue(fa.getTransitions().contains(t(1, fa.epsilon(), new Abstraction(a(1), s("d")))));
+  }
+
+  @Test
+  public void recPushTestSimple() {
+    pds.addRule(push(1, "a", 1, "d", "e"));
+    pds.addRule(push(1, "d", 1, "d", "h"));
+    pds.addRule(pop(1, "d", 1));
+    pds.addRule(normal(1, "e", 1, "k"));
+    PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "a");
+    pds.poststar(fa);
+    System.out.println(fa);
+  }
   private static Abstraction ACC = a(999);
 
   private static PAutomaton<StackSymbol, Abstraction> accepts(int a, String c) {
@@ -105,8 +133,12 @@ public class PDSTests {
     return new StackSymbol(a);
   }
 
+  private static Transition<StackSymbol, Abstraction> t(int a, StackSymbol c, Abstraction b) {
+    return new Transition<StackSymbol, Abstraction>(a(a), c, b);
+  }
+
   private static Transition<StackSymbol, Abstraction> t(int a, String c, Abstraction b) {
-    return new Transition<StackSymbol, Abstraction>(a(a), s(c), b);
+    return t(a, s(c), b);
   }
 
   private static Transition<StackSymbol, Abstraction> t(int a, String c, int b) {
