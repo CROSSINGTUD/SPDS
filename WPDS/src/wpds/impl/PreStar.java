@@ -9,9 +9,9 @@ import com.google.common.collect.Sets;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
-import wpds.interfaces.Weight;
+import wpds.wildcard.Wildcard;
 
-public class PreStar<N extends Location, D extends State, W extends Weight> {
+public class PreStar<N extends Location, D extends State, W extends Weight<N>> {
   private LinkedList<Transition<N, D>> worklist = Lists.newLinkedList();
   private IPushdownSystem<N, D, W> pds;
   private WeightedPAutomaton<N, D, W> fa;
@@ -23,7 +23,9 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
     fa = initialAutomaton;
 
     for (Transition<N, D> trans : Sets.newHashSet(fa.getTransitions())) {
-      fa.addWeightForTransition(trans, pds.getOne());
+      W one = pds.getOne();
+      one.setRange(trans.getLabel(), trans.getLabel());
+      fa.addWeightForTransition(trans, one);
     }
     for (PopRule<N, D, W> r : pds.getPopRules()) {
       update(new Transition<N, D>(r.getS1(), r.getL1(), r.getS2()), r.getWeight(),
@@ -49,7 +51,7 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
             previous.add(tdash);
             update(new Transition<N, D>(r.getS1(), r.getL1(), tdash.getTarget()), r.getWeight(),
                 previous);
-          } else if (r.getCallSite().equals(pds.anyTransition())) {
+          } else if (r.getCallSite() instanceof Wildcard) {
             LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
             previous.add(t);
             previous.add(tdash);
@@ -61,7 +63,7 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
       }
 
       for (PushRule<N, D, W> r : pds.getPushRules()) {
-        if (!r.getCallSite().equals(pds.anyTransition())
+        if (!(r.getCallSite() instanceof Wildcard)
             && !r.getCallSite().equals(t.getString())) {
           continue;
         }
@@ -72,7 +74,7 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
         LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
         previous.add(tdash);
         previous.add(t);
-        N label = (r.getCallSite().equals(pds.anyTransition()) ? t.getLabel() : r.getL1());
+        N label = ((r.getCallSite() instanceof Wildcard) ? t.getLabel() : r.getL1());
         update(new Transition<N, D>(r.getS1(), label, t.getTarget()), r.getWeight(), previous);
       }
     }
@@ -81,15 +83,15 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
   }
 
   private void update(Transition<N, D> trans, W weight, List<Transition<N, D>> previous) {
-    if (trans.getLabel().equals(pds.anyTransition()))
+    if (trans.getLabel() instanceof Wildcard)
       throw new RuntimeException("INVALID TRANSITION");
     fa.addTransition(trans);
     W lt = getOrCreateWeight(trans);
     W fr = weight;
     for (Transition<N, D> prev : previous) {
-      fr = (W) fr.extendWith(getOrCreateWeight(prev));
+      fr = (W) fr.extendWithIn(getOrCreateWeight(prev));
     }
-    W newLt = (W) lt.combineWith(fr);
+    W newLt = (W) lt.combineWithIn(fr);
     fa.addWeightForTransition(trans, newLt);
     if (!lt.equals(newLt)) {
       worklist.add(trans);
@@ -100,6 +102,9 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
     W w = fa.getWeightFor(trans);
     if (w != null)
       return w;
-    return pds.getZero();
+
+    W z = pds.getZero();
+    z.setRange(trans.getLabel(), trans.getLabel());
+    return z;
   }
 }

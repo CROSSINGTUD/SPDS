@@ -2,11 +2,11 @@ package wpds.impl;
 
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
-import wpds.interfaces.Weight;
 
-public class PushRule<N extends Location, D extends State, W extends Weight> extends Rule<N, D, W> {
+public class PushRule<N extends Location, D extends State, W extends Weight<N>>
+    extends Rule<N, D, W> {
 
-  private N callSite;
+  protected N callSite;
 
   public PushRule(D s1, N l1, D s2, N l2, N callSite, W w) {
     super(s1, l1, s2, l2, w);

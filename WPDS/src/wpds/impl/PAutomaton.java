@@ -14,7 +14,6 @@ import pathexpression.LabeledGraph;
 import pathexpression.PathExpressionComputer;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
-import wpds.interfaces.Weight;
 
 public abstract class PAutomaton<N extends Location, D extends State, W extends Weight>
     implements LabeledGraph<D, N> {

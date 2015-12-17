@@ -1,6 +1,6 @@
 package wpds.semiring;
 
-import wpds.interfaces.Weight;
+import wpds.impl.Weight;
 
 public class Zero<W extends Weight> implements Weight {
   private static Zero zero;

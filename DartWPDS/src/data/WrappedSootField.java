@@ -2,6 +2,7 @@ package data;
 
 import soot.SootField;
 import wpds.interfaces.Location;
+import wpds.wildcard.Wildcard;
 
 public class WrappedSootField implements Location {
   public static final WrappedSootField EPSILON = new WrappedSootField() {
@@ -20,7 +21,10 @@ public class WrappedSootField implements Location {
 
   private SootField delegate;
 
-  public static WrappedSootField ANYFIELD = new WrappedSootField() {
+  public static AnyField ANYFIELD = new AnyField();
+
+
+  private final static class AnyField extends WrappedSootField implements Wildcard {
     public String toString() {
       return "*";
     };
@@ -32,7 +36,7 @@ public class WrappedSootField implements Location {
     public int hashCode() {
       return 1000000003;
     };
-  };
+  }
 
   private WrappedSootField() {}
 

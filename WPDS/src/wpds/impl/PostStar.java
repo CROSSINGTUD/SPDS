@@ -10,9 +10,8 @@ import com.google.common.collect.Lists;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
-import wpds.interfaces.Weight;
 
-public class PostStar<N extends Location, D extends State, W extends Weight> {
+public class PostStar<N extends Location, D extends State, W extends Weight<N>> {
   private LinkedList<Transition<N, D>> worklist = Lists.newLinkedList();
   private IPushdownSystem<N, D, W> pds;
   private WeightedPAutomaton<N, D, W> fa;
@@ -42,7 +41,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 
       W currWeight = getOrCreateWeight(t);
       for (Rule<N, D, W> rule : rules) {
-        W newWeight = (W) currWeight.extendWith(rule.getWeight());
+        W newWeight = (W) currWeight.extendWithIn(rule.getWeight());
         if (newWeight.equals(pds.getZero()))
           continue;
         D p = rule.getS2();
@@ -58,7 +57,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
             prev.add(t);
             prev.add(tq);
             update(new Transition<N, D>(p, tq.getString(), tq.getTarget()),
-                (W) newWeight.extendWith(getOrCreateWeight(tq)), prev);
+                (W) newWeight.extendWithIn(getOrCreateWeight(tq)), prev);
           }
         } else if (rule instanceof NormalRule) {
           NormalRule<N, D, W> normalRule = (NormalRule<N, D, W>) rule;
@@ -71,7 +70,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
           update(new Transition<N, D>(p, pushRule.l2, irState),
-              (W) currWeight.extendWith(pushRule.getWeight()), previous);
+              (W) currWeight.extendWithIn(pushRule.getWeight()), previous);
 
           Collection<Transition<N, D>> into = fa.getTransitionsInto(irState);
           for (Transition<N, D> ts : into) {
@@ -80,7 +79,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
               prev.add(t);
               prev.add(ts);
               update(new Transition<N, D>(ts.getStart(), pushRule.getCallSite(), t.getTarget()),
-                  (W) getOrCreateWeight(ts).extendWith(newWeight), prev);
+                  (W) getOrCreateWeight(ts).extendWithIn(newWeight), prev);
             }
           }
           update(new Transition<N, D>(irState, pushRule.getCallSite(), t.getTarget()),
@@ -92,15 +91,13 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
   }
 
   private void update(Transition<N, D> trans, W weight, List<Transition<N, D>> previous) {
-    if (trans.getLabel().equals(pds.anyTransition()))
-      throw new RuntimeException("INVALID TRANSITION");
     fa.addTransition(trans);
     W lt = getOrCreateWeight(trans);
     W fr = weight;
     for (Transition<N, D> prev : previous) {
-      fr = (W) fr.extendWith(getOrCreateWeight(prev));
+      fr = (W) fr.extendWithIn(getOrCreateWeight(prev));
     }
-    W newLt = (W) lt.combineWith(fr);
+    W newLt = (W) lt.combineWithIn(fr);
     fa.addWeightForTransition(trans, newLt);
     if (!lt.equals(newLt)) {
       worklist.add(trans);

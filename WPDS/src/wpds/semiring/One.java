@@ -1,16 +1,20 @@
 package wpds.semiring;
 
-import wpds.interfaces.Weight;
+import wpds.impl.Weight;
 
-public class One implements Weight {
+public class One<N> extends Weight<N> {
+
+  public One(N from, N to) {
+    super(from, to);
+  }
 
   @Override
-  public Weight extendWith(Weight other) {
+  public Weight<N> extendWith(Weight<N> other) {
     return other;
   }
 
   @Override
-  public Weight combineWith(Weight other) {
+  public Weight<N> combineWith(Weight<N> other) {
     return other.combineWith(this);
   }
 

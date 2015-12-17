@@ -18,13 +18,14 @@ import soot.jimple.AssignStmt;
 import soot.jimple.NewExpr;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import wpds.WPDSSolver;
-import wpds.impl.PushdownSystem;
 import wpds.impl.Transition;
+import wpds.impl.Weight.NoWeight;
 import wpds.impl.WeightedPAutomaton;
+import wpds.impl.WeightedPushdownSystem;
 
 public class WPDSMain {
   private JimpleBasedInterproceduralCFG icfg;
-  private PushdownSystem<Unit, Fact, PDSSet> pds;
+  private WeightedPushdownSystem<Unit, Fact, PDSSet> pds;
   public WPDSMain() {
     icfg = new JimpleBasedInterproceduralCFG();
     WPDSSolver<Unit, Fact, SootMethod, PDSSet, JimpleBasedInterproceduralCFG> wpdsSolver =
@@ -74,10 +75,16 @@ public class WPDSMain {
               Collections.singleton(new Transition<WrappedSootField, AccessStmt>(allocationSite,
                   WrappedSootField.EPSILON, AccessStmt.TARGET)),
               AccessStmt.TARGET);
+
+          // if (t.getStart().toString().equals("e")) {
+            WeightedPAutomaton<WrappedSootField, AccessStmt, NoWeight<WrappedSootField>> aur =
+              pds.poststar(fieldPAutomaton);
           System.out.print(t.getStart() + ".");
           IRegEx<WrappedSootField> language =
-              pds.poststar(fieldPAutomaton).extractLanguage(new AccessStmt(t.getLabel()));
+ aur.extractLanguage(new AccessStmt(t.getLabel()));
           System.out.println(language);
+          // System.out.println(aur);
+          // }
         }
       }
     }

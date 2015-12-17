@@ -6,7 +6,6 @@ import java.util.Set;
 
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
-import wpds.interfaces.Weight;
 
 import com.google.common.base.Joiner;
 

@@ -1,6 +1,6 @@
 package data;
 
-import wpds.interfaces.Weight;
+import wpds.impl.Weight;
 
 public class One extends PDSSet {
   private static One one;

@@ -7,9 +7,10 @@ import wpds.impl.PAutomaton;
 import wpds.impl.PopRule;
 import wpds.impl.PushRule;
 import wpds.impl.Rule;
+import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 
-public interface IPushdownSystem<N extends Location, D extends State, W extends Weight> {
+public interface IPushdownSystem<N extends Location, D extends State, W extends Weight<N>> {
 
   public void addRule(Rule<N, D, W> rule);
 
@@ -37,5 +38,4 @@ public interface IPushdownSystem<N extends Location, D extends State, W extends 
 
   public PAutomaton<N, D, W> poststar(WeightedPAutomaton<N, D, W> initialAutomaton);
 
-  public N anyTransition();
 }

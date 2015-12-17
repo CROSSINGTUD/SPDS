@@ -3,10 +3,11 @@ package data;
 import java.util.Set;
 
 import wpds.impl.Transition;
+import wpds.impl.Weight.NoWeight;
 import wpds.impl.WeightedPAutomaton;
-import wpds.interfaces.Weight.NoWeight;
 
-public class FieldPAutomaton extends WeightedPAutomaton<WrappedSootField, AccessStmt, NoWeight> {
+public class FieldPAutomaton
+    extends WeightedPAutomaton<WrappedSootField, AccessStmt, NoWeight<WrappedSootField>> {
 
   public FieldPAutomaton(AccessStmt initialState,
       Set<Transition<WrappedSootField, AccessStmt>> transitions, AccessStmt finalState) {

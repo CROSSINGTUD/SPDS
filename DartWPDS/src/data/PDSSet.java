@@ -5,14 +5,16 @@ import java.util.Set;
 
 import com.google.common.collect.Sets;
 
-import wpds.impl.PushdownSystem;
+import soot.Unit;
 import wpds.impl.Rule;
-import wpds.interfaces.Weight;
+import wpds.impl.Weight;
+import wpds.wildcard.Wildcard;
+import wpds.wildcard.WildcardPushdownSystem;
 
-public class PDSSet implements Weight {
+public class PDSSet extends Weight<Unit> {
   private final Set<PDS> rules;
 
-  public PDSSet(Rule<WrappedSootField, AccessStmt, NoWeight> rule) {
+  public PDSSet(Rule<WrappedSootField, AccessStmt, NoWeight<WrappedSootField>> rule) {
     Set<PDS> outer = new HashSet<PDS>();
     PDS inner = new PDS();
     inner.addRule(rule);
@@ -31,7 +33,7 @@ public class PDSSet implements Weight {
 
 
   @Override
-  public Weight extendWith(Weight other) {
+  public Weight<Unit> extendWith(Weight<Unit> other) {
     if (!(other instanceof PDSSet))
       throw new RuntimeException();
     if (other instanceof One)
@@ -40,7 +42,8 @@ public class PDSSet implements Weight {
     Set<PDS> outer = deepCopy();
     for (PDS inner : outer) {
       for (PDS otherRules : access.rules) {
-        for (Rule<WrappedSootField, AccessStmt, NoWeight> otherRule : otherRules.getAllRules())
+        for (Rule<WrappedSootField, AccessStmt, NoWeight<WrappedSootField>> otherRule : otherRules
+            .getAllRules())
           inner.addRule(otherRule);
       }
     }
@@ -48,7 +51,7 @@ public class PDSSet implements Weight {
   }
 
   @Override
-  public Weight combineWith(Weight other) {
+  public Weight<Unit> combineWith(Weight<Unit> other) {
     if (!(other instanceof PDSSet))
       throw new RuntimeException();
     PDSSet access = (PDSSet) other;
@@ -63,7 +66,8 @@ public class PDSSet implements Weight {
     Set<PDS> result = new HashSet<PDS>();
     for (PDS outer : rules) {
       PDS innerRes = new PDS();
-      for (Rule<WrappedSootField, AccessStmt, NoWeight> inner : outer.getAllRules()) {
+      for (Rule<WrappedSootField, AccessStmt, NoWeight<WrappedSootField>> inner : outer
+          .getAllRules()) {
         innerRes.addRule(inner);
       }
       result.add(innerRes);
@@ -101,26 +105,14 @@ public class PDSSet implements Weight {
     return rules.toString();
   }
 
-  public class PDS extends PushdownSystem<WrappedSootField, AccessStmt, NoWeight> {
-
-
-    @Override
-    public NoWeight getZero() {
-      return NoWeight.NO_WEIGHT_ZERO;
-    }
-
-    @Override
-    public NoWeight getOne() {
-      return NoWeight.NO_WEIGHT;
-    }
-
+  public class PDS extends WildcardPushdownSystem<WrappedSootField, AccessStmt> {
     @Override
     public String toString() {
       return getAllRules().toString();
     }
 
     @Override
-    public WrappedSootField anyTransition() {
+    public Wildcard anyTransition() {
       return WrappedSootField.ANYFIELD;
     }
   }

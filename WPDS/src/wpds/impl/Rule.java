@@ -2,7 +2,6 @@ package wpds.impl;
 
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
-import wpds.interfaces.Weight;
 
 public abstract class Rule<N extends Location, D extends State, W extends Weight> {
   protected N l1;
