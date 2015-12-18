@@ -42,6 +42,9 @@ public abstract class Rule<N extends Location, D extends State, W extends Weight
     return s2;
   }
 
+  public void setS1(D s1) {
+    this.s1 = s1;
+  }
   public W getWeight() {
     return w;
   }

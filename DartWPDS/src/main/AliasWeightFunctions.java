@@ -2,6 +2,7 @@ package main;
 
 import data.AccessStmt;
 import data.Fact;
+import data.One;
 import data.PDSSet;
 import data.WrappedSootField;
 import soot.Local;
@@ -9,6 +10,7 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
 import soot.jimple.InstanceFieldRef;
+import soot.jimple.NewExpr;
 import wpds.WEdgeFunctions;
 import wpds.impl.UNormalRule;
 import wpds.impl.UPopRule;
@@ -36,30 +38,31 @@ public class AliasWeightFunctions implements WEdgeFunctions<Unit, Fact, SootMeth
           return new PDSSet(new UPopRule<WrappedSootField, AccessStmt>(new AccessStmt(curr),
               new WrappedSootField(ifr.getField()), new AccessStmt(succ)));
         }
+      } else if (assignStmt.getLeftOp() instanceof Local && assignStmt.getRightOp() instanceof NewExpr) {
+        if (currNode.equals(new Fact((Local) assignStmt.getLeftOp()))){
+          return new PDSSet(new UNormalRule<WrappedSootField, AccessStmt>(new AccessStmt(curr),
+              WrappedSootField.EPSILON, new AccessStmt(succ),WrappedSootField.EPSILON));
+        }
       }
     }
-    return new PDSSet(new UNormalRule<WrappedSootField, AccessStmt>(new AccessStmt(curr),
-        WrappedSootField.ANYFIELD, new AccessStmt(succ), WrappedSootField.ANYFIELD));
+    return One.v();
   }
 
   @Override
   public PDSSet getCallEdgeFunction(Unit callStmt, Fact srcNode, Unit calleeStart, Fact destNode) {
-    return new PDSSet(new UNormalRule<WrappedSootField, AccessStmt>(new AccessStmt(callStmt),
-        WrappedSootField.ANYFIELD, new AccessStmt(calleeStart), WrappedSootField.ANYFIELD));
+    return One.v();
   }
 
   @Override
   public PDSSet getReturnEdgeFunction(Unit callSite, SootMethod calleeMethod, Unit exitStmt,
       Fact exitNode, Unit returnSite, Fact retNode) {
-    return new PDSSet(new UNormalRule<WrappedSootField, AccessStmt>(new AccessStmt(exitStmt),
-        WrappedSootField.ANYFIELD, new AccessStmt(returnSite), WrappedSootField.ANYFIELD));
+    return One.v();
   }
 
   @Override
   public PDSSet getCallToReturnEdgeFunction(Unit callSite, Fact callNode, Unit returnSite,
       Fact returnSideNode) {
-    return new PDSSet(new UNormalRule<WrappedSootField, AccessStmt>(new AccessStmt(callSite),
-        WrappedSootField.ANYFIELD, new AccessStmt(returnSite), WrappedSootField.ANYFIELD));
+    return One.v();
   }
 
 }

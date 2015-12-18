@@ -4,12 +4,15 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 
 import pathexpression.Edge;
 import pathexpression.IRegEx;
@@ -32,11 +35,9 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
   private final Multimap<D, Transition<N, D>> transitionsOutOf = HashMultimap.create();
   private final Multimap<D, Transition<N, D>> transitionsInto = HashMultimap.create();
 
-  public WeightedPAutomaton(D initialState, Set<Transition<N, D>> transitions, D finalState) {
+  public WeightedPAutomaton(D initialState, D finalState) {
     this.initialState = initialState;
-    this.transitions = Sets.newHashSet(transitions);
     this.finalState = finalState;
-    initTransitions();
   }
 
   private void initTransitions() {
@@ -84,8 +85,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
     String s = "PAutomaton\n";
     s += "\tInitialStates:" + initialState + "\n";
     s += "\tFinalStates:" + finalState + "\n";
-    s += "\tTransitions:\n\t\t";
-    s += Joiner.on("\n\t\t").join(transitions);
+    s += "\tWeightToTransitions:\n\t\t";
+    s += Joiner.on("\n\t\t").join(transitionToWeights.entrySet());
     return s;
   }
 

@@ -41,13 +41,15 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
       W currWeight = getOrCreateWeight(t);
       for (Rule<N, D, W> rule : rules) {
         W newWeight = (W) currWeight.extendWithIn(rule.getWeight());
-        if (newWeight.equals(pds.getZero()))
-          continue;
+        // if (newWeight.equals(pds.getZero()))
+        // continue;
         D p = rule.getS2();
         if (rule instanceof PopRule) {
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
-          update(rule, new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight, previous);
+          System.out.println("EPS");
+          update(rule, new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight,
+              previous);
 
           Collection<Transition<N, D>> trans = fa.getTransitionsOutOf(t.getTarget());
           for (Transition<N, D> tq : trans) {
@@ -55,7 +57,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
             prev.add(t);
             prev.add(tq);
             update(rule, new Transition<N, D>(p, tq.getString(), tq.getTarget()),
-                (W) newWeight.extendWithIn(getOrCreateWeight(tq)), prev);
+ (W) newWeight,
+                prev);
           }
         } else if (rule instanceof NormalRule) {
           NormalRule<N, D, W> normalRule = (NormalRule<N, D, W>) rule;
@@ -82,6 +85,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
                   (W) getOrCreateWeight(ts).extendWithIn(newWeight), prev);
             }
           }
+          System.out.println("PUSHRULE weight " + currWeight);
           update(rule, new Transition<N, D>(irState, pushRule.getCallSite(), t.getTarget()),
               (W) currWeight, previous);
         }
@@ -94,14 +98,11 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
       List<Transition<N, D>> previous) {
     fa.addTransition(trans);
     W lt = getOrCreateWeight(trans);
-    W fr = weight;
-    for (Transition<N, D> prev : previous) {
-      fr = (W) fr.extendWithIn(getOrCreateWeight(prev));
-    }
-    // System.out.println(trans + "\t as of \t" + triggeringRule + " \t and \t " + previous);
-    W newLt = (W) lt.combineWithIn(fr);
+    W newLt = (W) lt.combineWithIn(weight);
     fa.addWeightForTransition(trans, newLt);
     if (!lt.equals(newLt)) {
+      System.out.println(
+          trans + "\t as of \t" + triggeringRule + " \t and " + newLt);
       worklist.add(trans);
     }
   }

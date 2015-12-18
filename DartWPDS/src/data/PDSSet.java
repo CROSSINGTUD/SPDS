@@ -1,28 +1,32 @@
 package data;
 
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Set;
 
 import com.google.common.collect.Sets;
 
 import soot.Unit;
 import wpds.impl.Rule;
+import wpds.impl.UNormalRule;
 import wpds.impl.Weight;
 import wpds.wildcard.Wildcard;
 import wpds.wildcard.WildcardPushdownSystem;
 
 public class PDSSet extends Weight<Unit> {
-  private final Set<PDS> rules;
+  private final Set<AccessStack> rules;
+
 
   public PDSSet(Rule<WrappedSootField, AccessStmt, NoWeight<WrappedSootField>> rule) {
-    Set<PDS> outer = new HashSet<PDS>();
-    PDS inner = new PDS();
-    inner.addRule(rule);
+    Set<AccessStack> outer =
+        new HashSet<>();
+    AccessStack inner = new AccessStack();
+    inner.add(rule);
     outer.add(inner);
     rules = outer;
   }
 
-  private PDSSet(Set<PDS> rules) {
+  private PDSSet(Set<AccessStack> rules) {
     this.rules = rules;
   }
 
@@ -39,12 +43,23 @@ public class PDSSet extends Weight<Unit> {
     if (other instanceof One)
       return new PDSSet(rules);
     PDSSet access = (PDSSet) other;
-    Set<PDS> outer = deepCopy();
-    for (PDS inner : outer) {
-      for (PDS otherRules : access.rules) {
-        for (Rule<WrappedSootField, AccessStmt, NoWeight<WrappedSootField>> otherRule : otherRules
-            .getAllRules())
-          inner.addRule(otherRule);
+    Set<AccessStack> outer = deepCopy();
+    for (AccessStack inner : outer) {
+      for (AccessStack otherRules : access.rules) {
+        for (Rule<WrappedSootField, AccessStmt, NoWeight<WrappedSootField>> otherRule : otherRules)
+          if (!inner.contains(otherRule)) {
+            inner.add(otherRule);
+          } else {
+            Rule<WrappedSootField, AccessStmt, wpds.impl.Weight.NoWeight<WrappedSootField>> last =
+                inner.getLast();
+            AccessStmt s1 = last.getS2();
+            UNormalRule<WrappedSootField, AccessStmt> loopRule = new UNormalRule<WrappedSootField, AccessStmt>(s1, WrappedSootField.ANYFIELD,
+                    otherRule.getS1(), WrappedSootField.ANYFIELD);
+            if(!inner.contains(loopRule)){
+              inner.add(new UNormalRule<WrappedSootField, AccessStmt>(s1, WrappedSootField.ANYFIELD,
+                  otherRule.getS1(), WrappedSootField.ANYFIELD));
+            }
+          }
       }
     }
     return new PDSSet(outer);
@@ -55,20 +70,19 @@ public class PDSSet extends Weight<Unit> {
     if (!(other instanceof PDSSet))
       throw new RuntimeException();
     PDSSet access = (PDSSet) other;
-    Set<PDS> outer = deepCopy();
-    for (PDS otherPDS : access.rules) {
+    Set<AccessStack> outer = deepCopy();
+    for (AccessStack otherPDS : access.rules) {
       outer.add(otherPDS);
     }
     return new PDSSet(outer);
   }
 
-  private Set<PDS> deepCopy() {
-    Set<PDS> result = new HashSet<PDS>();
-    for (PDS outer : rules) {
-      PDS innerRes = new PDS();
-      for (Rule<WrappedSootField, AccessStmt, NoWeight<WrappedSootField>> inner : outer
-          .getAllRules()) {
-        innerRes.addRule(inner);
+  private Set<AccessStack> deepCopy() {
+    Set<AccessStack> result = new HashSet<AccessStack>();
+    for (AccessStack outer : rules) {
+      AccessStack innerRes = new AccessStack();
+      for (Rule<WrappedSootField, AccessStmt, wpds.impl.Weight.NoWeight<WrappedSootField>> inner : outer) {
+        innerRes.add(inner);
       }
       result.add(innerRes);
     }
@@ -106,6 +120,7 @@ public class PDSSet extends Weight<Unit> {
   }
 
   public class PDS extends WildcardPushdownSystem<WrappedSootField, AccessStmt> {
+    private AccessStmt last;
     @Override
     public String toString() {
       return getAllRules().toString();
@@ -115,10 +130,42 @@ public class PDSSet extends Weight<Unit> {
     public Wildcard anyTransition() {
       return WrappedSootField.ANYFIELD;
     }
+
+    public AccessStmt getLastStmt() {
+      return last;
+    }
   }
 
   public Set<PDS> getPDSSystems() {
-    return rules;
+
+    return converToPDS();
+  }
+
+  private Set<PDS> converToPDS() {
+    Set<PDS> result = Sets.newHashSet();
+    for (AccessStack as : rules) {
+      result.add(convertToPDS(as));
+    }
+    return result;
+  }
+
+  private PDS convertToPDS(AccessStack as) {
+    PDS pds = new PDS();
+    AccessStmt last = null;
+    System.out.println(as);
+    for (Rule<WrappedSootField, AccessStmt, NoWeight<WrappedSootField>> rule : as) {
+      if (last != null) {
+        rule.setS1(last);
+      }
+      pds.addRule(rule);
+      last = rule.getS2();
+    }
+    pds.last = last;
+    return pds;
+  }
+
+  private class AccessStack
+      extends LinkedList<Rule<WrappedSootField, AccessStmt, NoWeight<WrappedSootField>>> {
   }
 
 }
