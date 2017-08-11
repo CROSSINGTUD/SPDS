@@ -75,7 +75,6 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 	}
 
 	private void checkFeasibility(Node<Stmt, Fact> succ) {
-		System.out.println("IS feasable?" + succ);
 		PAutomaton<Field, NodeWithLocation<Stmt, Fact,Field>> aut1 = new PAutomaton<Field, NodeWithLocation<Stmt, Fact,Field>>(withField(seed), withField(seed)) {
 			@Override
 			public  NodeWithLocation<Stmt, Fact,Field> createState(NodeWithLocation<Stmt, Fact,Field> d, Field loc) {
@@ -88,8 +87,6 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 		};
 			aut1.addTransition(new Transition<Field, NodeWithLocation<Stmt, Fact,Field>>(withField(seed), emptyField(), withField(seed)));
 		fieldRefContextPDS.poststar(aut1);
-		System.out.println(aut1);
-		System.out.println(aut1.getStates());
 		boolean pds1 = aut1.getStates().contains(withField(succ));
 
 		PAutomaton<CallSite, INode<Stmt, Fact>> aut2 = new PAutomaton<CallSite, INode<Stmt, Fact>>(seed, seed) {
