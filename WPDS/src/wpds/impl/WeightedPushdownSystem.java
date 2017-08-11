@@ -9,6 +9,7 @@ import com.google.common.collect.Sets;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
+import wpds.wildcard.Wildcard;
 
 public abstract class WeightedPushdownSystem<N extends Location, D extends State, W extends Weight<N>>
     implements IPushdownSystem<N, D, W> {
@@ -55,7 +56,7 @@ public abstract class WeightedPushdownSystem<N extends Location, D extends State
     Set<Rule<N, D, W>> allRules = getAllRules();
     Set<Rule<N, D, W>> result = new HashSet<>();
     for (Rule<N, D, W> r : allRules) {
-      if (r.getS1().equals(start) && r.getL1().equals(string))
+      if (r.getS1().equals(start) && (r.getL1().equals(string) || r.getL1() instanceof Wildcard))
         result.add(r);
     }
     return result;

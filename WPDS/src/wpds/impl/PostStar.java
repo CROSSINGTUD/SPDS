@@ -10,6 +10,7 @@ import com.google.common.collect.Lists;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
+import wpds.wildcard.Wildcard;
 
 public class PostStar<N extends Location, D extends State, W extends Weight<N>> {
   private LinkedList<Transition<N, D>> worklist = Lists.newLinkedList();
@@ -25,6 +26,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
     for (Transition<N, D> trans : worklist)
       fa.addWeightForTransition(trans, pds.getOne());
+    System.out.println(pds);
 
     saturate();
 
@@ -37,6 +39,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
       iterationCount++;
       Transition<N, D> t = worklist.removeFirst();
       Set<Rule<N, D, W>> rules = pds.getRulesStarting(t.getStart(), t.getString());
+      System.out.println(t.getStart() + " " +t.getString()  + " "+ rules);
 
       W currWeight = getOrCreateWeight(t);
       for (Rule<N, D, W> rule : rules) {
@@ -47,7 +50,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
         if (rule instanceof PopRule) {
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
-          System.out.println("EPS");
           update(rule, new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight,
               previous);
 
@@ -64,7 +66,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
           NormalRule<N, D, W> normalRule = (NormalRule<N, D, W>) rule;
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
-          update(rule, new Transition<N, D>(p, normalRule.getL2(), t.getTarget()), newWeight,
+          update(rule, new Transition<N, D>(p, (normalRule.getL2() instanceof Wildcard ? t.getString(): normalRule.getL2()), t.getTarget()), newWeight,
               previous);
         } else if (rule instanceof PushRule) {
           PushRule<N, D, W> pushRule = (PushRule<N, D, W>) rule;
@@ -85,7 +87,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
                   (W) getOrCreateWeight(ts).extendWithIn(newWeight), prev);
             }
           }
-          System.out.println("PUSHRULE weight " + currWeight);
           update(rule, new Transition<N, D>(irState, pushRule.getCallSite(), t.getTarget()),
               (W) currWeight, previous);
         }
