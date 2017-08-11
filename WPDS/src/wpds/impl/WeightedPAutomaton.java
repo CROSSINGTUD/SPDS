@@ -47,6 +47,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
   }
 
   public abstract D createState(D d, N loc);
+  
+  public abstract boolean hasEmptyStack(D state);
 
 
   public Set<Transition<N, D>> getTransitions() {

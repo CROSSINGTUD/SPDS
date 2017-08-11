@@ -13,6 +13,10 @@ public class NodeWithLocation<Stmt, Fact, Location> extends Node<Stmt, Fact>{
 		return new Node<Stmt,Fact>(stmt,variable);
 	}
 
+	public Location location(){
+		return loc;
+	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;

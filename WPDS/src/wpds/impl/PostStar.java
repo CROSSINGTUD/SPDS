@@ -50,6 +50,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
         if (rule instanceof PopRule) {
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
+          System.err.println(new Transition<N, D>(p, fa.epsilon(), t.getTarget()));
           update(rule, new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight,
               previous);
 
@@ -70,10 +71,13 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
               previous);
         } else if (rule instanceof PushRule) {
           PushRule<N, D, W> pushRule = (PushRule<N, D, W>) rule;
-          D irState = fa.createState(p, pushRule.getL2());
+          N gammaPrime = pushRule.getL2();
+          if(gammaPrime instanceof Wildcard)
+        	  gammaPrime = t.getString();
+          D irState = fa.createState(p, gammaPrime);
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
-          update(rule, new Transition<N, D>(p, pushRule.l2, irState),
+          update(rule, new Transition<N, D>(p,  gammaPrime, irState),
               (W) currWeight.extendWithIn(pushRule.getWeight()), previous);
 
           Collection<Transition<N, D>> into = fa.getTransitionsInto(irState);
@@ -102,7 +106,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
     W newLt = (W) lt.combineWithIn(weight);
     fa.addWeightForTransition(trans, newLt);
     if (!lt.equals(newLt)) {
-      System.out.println(
+      System.out.println("\t"+
           trans + "\t as of \t" + triggeringRule + " \t and " + newLt);
       worklist.add(trans);
     }

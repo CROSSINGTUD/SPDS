@@ -3,6 +3,7 @@ package wpds.impl;
 import pathexpression.Edge;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
+import wpds.wildcard.Wildcard;
 
 public class Transition<N extends Location, D extends State> implements Edge<D, N> {
   private D s1;
@@ -16,6 +17,8 @@ public class Transition<N extends Location, D extends State> implements Edge<D, 
     this.s1 = s1;
     this.l1 = l1;
     this.s2 = s2;
+    if(l1 instanceof Wildcard)
+    	throw new RuntimeException("No wildcards allowed!");
   }
 
   public Configuration<N, D> getStartConfig() {

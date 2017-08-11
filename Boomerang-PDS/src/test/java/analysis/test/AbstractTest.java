@@ -60,7 +60,7 @@ public class AbstractTest {
 
 	private void addCallSitePush(Node<Stmt, Variable> curr, Statement callSite, Node<Stmt, Variable> succ, Statement returnSite, Statement calleeStart) {
 		addSucc(curr, succ);
-		callSiteRuleMap.put(asStatement(curr), asStatement(succ), new UPushRule<Statement, NodeWithLocation<Stmt, Variable, Statement>>(asStatement(curr), callSite, asStatement(succ), returnSite, calleeStart));
+		callSiteRuleMap.put(asStatement(curr), asStatement(succ), new UPushRule<Statement, NodeWithLocation<Stmt, Variable, Statement>>(asStatement(curr), callSite, asStatement(succ), returnSite,calleeStart));
 		addFieldNormal(curr, succ);
 	} 
 	private void addCallSiteNormal(Node<Stmt, Variable> curr, Node<Stmt, Variable> succ) {
@@ -122,18 +122,18 @@ public class AbstractTest {
 	@Test
 	public void test1() {
 		addFieldPush(s("1","u"), f("h"), s("2","v"));
-		addCallSitePush(s("2","v"), call("cs1: foo"), s("3","p"),call("cs1: foo"),call("foo"));
+		addCallSitePush(s("2","v"),solver.emptyCallSite(), s("3","p"),call("cs1"),call("foo"));
 		addFieldPush(s("3","p"), f("g"), s("4","q"));
 		addCallSitePop(s("4","q"), call("foo"), s("5","w"));
-		addFieldPop(s("5","w"), f("g"), s("6","x"));
-		addFieldPop(s("6","x"), f("f"), s("7","y"));
-		
-		//second branch
-		addFieldPush(s("8","r"), f("f"), s("9","s"));
-		addCallSitePush(s("9","s"), call("cs2: foo"), s("3","p"),call("cs2: foo"),call("foo"));
-		addCallSitePop(s("4","q"), call("foo"), s("10","t"));
+//		addFieldPop(s("5","w"), f("g"), s("6","x"));
+//		addFieldPop(s("6","x"), f("f"), s("7","y"));
+//		
+//		//second branch
+//		addFieldPush(s("8","r"), f("f"), s("9","s"));
+//		addCallSitePush(s("9","s"),call("cs1"), s("3","p"),call("cs2"),call("foo"));
+//		addCallSitePop(s("4","q"), call("foo"), s("10","t"));
 		solver.solve(s("1","u"));
-		System.out.println(solver.getReachedStates());
+//		System.out.println(solver.getReachedStates());
 		assertFalse(solver.getReachedStates().contains(s("10","t")));
 		assertTrue(solver.getReachedStates().contains(s("5","w")));
 		assertTrue(solver.getReachedStates().contains(s("6","x")));
@@ -143,7 +143,7 @@ public class AbstractTest {
 	@Test
 	public void testWithTwoStacks() {
 		addFieldPush(s("1","u"), f("h"), s("2","v"));
-		addCallSitePush(s("2","v"), call("cs1: foo"), s("3","p"), call("cs1: foo"),call("foo"));
+		addCallSitePush(s("2","v"), solver.emptyCallSite(), s("3","p"), solver.emptyCallSite(),call("foo"));
 		addFieldPush(s("3","p"), f("g"), s("4","q"));
 		addCallSitePop(s("4","q"), call("foo"), s("5","w"));
 		solver.solve(s("1","u"));
@@ -242,7 +242,7 @@ public class AbstractTest {
 	}
 	@Test
 	public void negativeTestCallSitePushAndPop() {
-		addCallSitePush(s("1","u"),  call("cs1: h"),s("2","v"),call("cs1: h"),call("h"));
+		addCallSitePush(s("1","u"), solver.emptyCallSite(),s("2","v"),solver.epsilonCallSite(),call("h"));
 		addCallSitePop(s("2","v"), call("f"), s("3","w"));
 		solver.solve(s("1","u"));
 		assertFalse(solver.getReachedStates().contains(s("3","w")));
@@ -250,7 +250,7 @@ public class AbstractTest {
 	
 	@Test
 	public void positiveTestCallSitePushAndPop() {
-		addCallSitePush(s("1","u"),  call("cs1: h"),s("2","v"),call("cs1: h"),call("h"));
+		addCallSitePush(s("1","u"),  solver.emptyCallSite(),s("2","v"),solver.emptyCallSite(),call("h"));
 		addCallSitePop(s("2","v"), call("h"), s("3","w"));
 		solver.solve(s("1","u"));
 		assertTrue(solver.getReachedStates().contains(s("3","w")));

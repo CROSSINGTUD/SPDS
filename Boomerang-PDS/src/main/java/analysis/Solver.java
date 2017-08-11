@@ -77,14 +77,16 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 			public  NodeWithLocation<Stmt, Fact,Field> createState(NodeWithLocation<Stmt, Fact,Field> d, Field loc) {
 				return new NodeWithLocation<Stmt, Fact, Field>(d.stmt, d.variable, loc);
 			}
-
+			@Override
+			public boolean hasEmptyStack(NodeWithLocation<Stmt, Fact, Field> state) {
+				return state.location().equals(Solver.this.emptyField());
+			}
 			@Override
 			public Field epsilon() {
 				return epsilonField();
 			}
 		};
-		for (Field f : fieldOutOfSeed)
-			aut1.addTransition(new Transition<Field, NodeWithLocation<Stmt, Fact,Field>>(withField(seed), f, withField(seed)));
+			aut1.addTransition(new Transition<Field, NodeWithLocation<Stmt, Fact,Field>>(withField(seed), emptyField(), withField(seed)));
 		fieldRefContextPDS.poststar(aut1);
 		System.out.println(aut1);
 		System.out.println(aut1.getStates());
@@ -95,14 +97,20 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 			public NodeWithLocation<Stmt, Fact, CallSite> createState(NodeWithLocation<Stmt, Fact, CallSite> d, CallSite loc) {
 				return new NodeWithLocation<Stmt, Fact, CallSite>(d.stmt,d.variable, loc);
 			}
+			
+			
 
 			@Override
 			public CallSite epsilon() {
 				return epsilonCallSite();
 			}
+
+			@Override
+			public boolean hasEmptyStack(NodeWithLocation<Stmt, Fact, CallSite> state) {
+				return state.location().equals(Solver.this.emptyCallSite());
+			}
 		};
-		for (CallSite c : callsiteOutOfSeed)
-			aut2.addTransition(new Transition<CallSite, NodeWithLocation<Stmt, Fact, CallSite>>(withCall(seed), c, withCall(seed)));
+			aut2.addTransition(new Transition<CallSite, NodeWithLocation<Stmt, Fact, CallSite>>(withCall(seed), emptyCallSite(), withCall(seed)));
 		callingContextPDS.poststar(aut2);
 		System.out.println(aut2);
 		System.out.println(aut2.getStates());
