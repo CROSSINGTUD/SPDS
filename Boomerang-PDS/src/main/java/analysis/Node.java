@@ -2,7 +2,7 @@ package analysis;
 
 import wpds.interfaces.State;
 
-public class Node<Stmt, Fact> implements INode<Stmt,Fact>{
+public class Node<Stmt, Fact> implements State{
 
 	final protected Stmt stmt;
 	final protected Fact variable;

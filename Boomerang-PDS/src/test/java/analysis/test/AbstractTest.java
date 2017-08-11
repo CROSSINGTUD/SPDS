@@ -10,11 +10,13 @@ import org.junit.Test;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 
 import analysis.INode;
 import analysis.Node;
 import analysis.NodeWithLocation;
+import analysis.SingleNode;
 import analysis.Solver;
 import wpds.impl.Rule;
 import wpds.impl.UNormalRule;
@@ -25,83 +27,101 @@ import wpds.interfaces.Location;
 import wpds.wildcard.Wildcard;
 
 public class AbstractTest {
-	private Multimap<Node<Stmt, Variable>, Node<Stmt, Variable>> successorMap = HashMultimap.create();
-	private Table<Node<Stmt, Variable>, Node<Stmt, Variable>, Rule<Statement, INode<Stmt, Variable>, NoWeight<Statement>>> callSiteRuleMap = HashBasedTable
+	private Multimap<Node<Statement, Variable>, Node<Statement, Variable>> successorMap = HashMultimap.create();
+	private Table<Node<Statement, Variable>, Node<Statement, Variable>, Collection<Rule<Statement, INode<Variable>, NoWeight<Statement>>>> callSiteRuleMap = HashBasedTable
 			.create();
-	private Table<NodeWithLocation<Stmt, Variable, FieldRef>, NodeWithLocation<Stmt, Variable, FieldRef>, Rule<FieldRef, NodeWithLocation<Stmt, Variable, FieldRef>, NoWeight<FieldRef>>> fieldRefRuleMap = HashBasedTable
+	private Table<NodeWithLocation<Statement, Variable, FieldRef>, NodeWithLocation<Statement, Variable, FieldRef>, Collection<Rule<FieldRef, NodeWithLocation<Statement, Variable, FieldRef>, NoWeight<FieldRef>>>> fieldRefRuleMap = HashBasedTable
 			.create();
 
-	private void addFieldPop(Node<Stmt, Variable> curr, FieldRef pop, Node<Stmt, Variable> succ) {
+	private void addFieldPop(Node<Statement, Variable> curr, FieldRef pop, Node<Statement, Variable> succ) {
 		addSucc(curr, succ);
-		fieldRefRuleMap.put(asField(curr), asField(succ), new UPopRule<FieldRef, NodeWithLocation<Stmt, Variable,FieldRef>>(asField(curr), pop, asField(succ)));
-		callSiteRuleMap.put(curr, succ, new UNormalRule<Statement, INode<Stmt, Variable>>(curr, new CallWildCard(), succ, new CallWildCard()));
+		addFieldFlow(asField(curr), asField(succ), new UPopRule<FieldRef, NodeWithLocation<Statement, Variable,FieldRef>>(asField(curr), pop, asField(succ)));
+		addFlow(curr, succ, new UNormalRule<Statement, INode<Variable>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt()));
 	}
 
-	private void addFieldPush(Node<Stmt, Variable> curr, FieldRef push, Node<Stmt, Variable> succ) {
+	private void addFieldPush(Node<Statement, Variable> curr, FieldRef push, Node<Statement, Variable> succ) {
 		addSucc(curr, succ);
-		fieldRefRuleMap.put(asField(curr), asField(succ), new UPushRule<FieldRef, NodeWithLocation<Stmt, Variable, FieldRef>>(asField(curr), new FieldWildCard(), asField(succ),new FieldWildCard(),push));
-		callSiteRuleMap.put(curr, succ, new UNormalRule<Statement, INode<Stmt, Variable>>(curr, new CallWildCard(), succ, new CallWildCard()));
+		addFieldFlow(asField(curr), asField(succ), new UPushRule<FieldRef, NodeWithLocation<Statement, Variable, FieldRef>>(asField(curr), new FieldWildCard(), asField(succ),new FieldWildCard(),push));
+		addFlow(curr, succ, new UNormalRule<Statement, INode<Variable>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt()));
 	}
 
 
-	private void addNormal(Node<Stmt, Variable> curr, Node<Stmt, Variable> succ) {
+	private void addNormal(Node<Statement, Variable> curr, Node<Statement, Variable> succ) {
 		addSucc(curr, succ);
-		fieldRefRuleMap.put(asField(curr), asField(succ), new UNormalRule<FieldRef, NodeWithLocation<Stmt, Variable,FieldRef>>(asField(curr), new FieldWildCard(), asField(succ),new FieldWildCard()));
-		callSiteRuleMap.put(curr, succ, new UNormalRule<Statement, INode<Stmt, Variable>>(curr, new CallWildCard(), succ, new CallWildCard()));
+		addFieldFlow(asField(curr), asField(succ), new UNormalRule<FieldRef, NodeWithLocation<Statement, Variable,FieldRef>>(asField(curr), new FieldWildCard(), asField(succ),new FieldWildCard()));
+		addFlow(curr, succ, new UNormalRule<Statement, INode<Variable>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt()));
 	}
-	private void addFieldNormal(Node<Stmt, Variable> curr, Node<Stmt, Variable> succ) {
+	private void addFieldNormal(Node<Statement, Variable> curr, Node<Statement, Variable> succ) {
 		addSucc(curr, succ);
-		fieldRefRuleMap.put(asField(curr), asField(succ), new UNormalRule<FieldRef, NodeWithLocation<Stmt, Variable, FieldRef>>(asField(curr), new FieldWildCard(), asField(succ),new FieldWildCard()));
+		addFieldFlow(asField(curr), asField(succ), new UNormalRule<FieldRef, NodeWithLocation<Statement, Variable, FieldRef>>(asField(curr), new FieldWildCard(), asField(succ),new FieldWildCard()));
 	}
 
-	private void addCallSitePop(Node<Stmt, Variable> curr, Statement pop, Node<Stmt, Variable> succ) {
+	private void addFieldFlow(NodeWithLocation<Statement, Variable, FieldRef> curr,
+			NodeWithLocation<Statement, Variable, FieldRef> succ,
+			Rule<FieldRef, NodeWithLocation<Statement, Variable, FieldRef>, NoWeight<FieldRef>> rule) {
+		Collection<Rule<FieldRef, NodeWithLocation<Statement, Variable, FieldRef>, NoWeight<FieldRef>>> collection = fieldRefRuleMap.get(curr, succ);
+		if(collection == null)
+			collection = Sets.newHashSet();
+		collection.add(rule);
+		fieldRefRuleMap.put(curr, succ, collection);
+	}
+
+	private void addReturnFlow(Node<Statement, Variable> curr, Statement pop, Node<Statement, Variable> succ) {
 		addSucc(curr, succ);
-		callSiteRuleMap.put(curr, succ, new UPopRule<Statement, INode<Stmt, Variable>>(curr, pop, succ));
+		addFlow(curr, succ, new UPopRule<Statement, INode<Variable>>(wrap(curr.fact()), pop, wrap(succ.fact())));
 		addFieldNormal(curr, succ);
 	}
+	
+	public void addFlow(Node<Statement, Variable> curr, Node<Statement, Variable> succ, Rule<Statement, INode<Variable>, NoWeight<Statement>> rule){
+		Collection<Rule<Statement, INode<Variable>, NoWeight<Statement>>> set = callSiteRuleMap.get(curr, succ);
+		if(set == null)
+			set = Sets.newHashSet();
+		set.add(rule);
+		callSiteRuleMap.put(curr, succ, set);
+	}
 
-	private void addCallSitePush(Node<Stmt, Variable> curr, Statement callSite, Node<Stmt, Variable> succ, Statement returnSite, Statement calleeStart) {
+	private void addCallFlow(Node<Statement, Variable> curr, Node<Statement, Variable> succ, Statement calleeStart) {
 		addSucc(curr, succ);
-		callSiteRuleMap.put(curr, succ, new UPushRule<Statement, INode<Stmt, Variable>>(curr, callSite,succ,calleeStart,returnSite));
+		addFlow(curr, succ, new UPushRule<Statement, INode<Variable>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), calleeStart,succ.stmt()));
 		addFieldNormal(curr, succ);
 	} 
-	private void addCallSiteNormal(Node<Stmt, Variable> curr, Node<Stmt, Variable> succ) {
+	private void addNormalFlow(Node<Statement, Variable> curr, Node<Statement, Variable> succ) {
 		addSucc(curr, succ);
-		callSiteRuleMap.put(curr, succ, new UNormalRule<Statement, INode<Stmt, Variable>>(curr, new CallWildCard(), succ, new CallWildCard()));
+		addFlow(curr, succ, new UNormalRule<Statement, INode<Variable>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt()));
+		addFieldNormal(curr, succ);
 	}
-	private void addSucc(Node<Stmt, Variable> curr, Node<Stmt, Variable> succ) {
+	private void addSucc(Node<Statement, Variable> curr, Node<Statement, Variable> succ) {
 		successorMap.put(curr, succ);
 	}
 	private FieldRef epsilonField = new FieldRef("eps_f");
 	private Statement epsilonCallSite = new Statement("eps_c");
 	
-	private NodeWithLocation<Stmt, Variable, Statement> asStatement(Node<Stmt,Variable> node){
-		return asStatement(node, solver.emptyCallSite());
+	private INode<Variable> wrap(Variable variable) {
+		return new SingleNode<Variable>(variable);
 	}
 	
 
-	private NodeWithLocation<Stmt, Variable, Statement> asStatement(Node<Stmt, Variable> node, Statement statement) {
-		return new NodeWithLocation<Stmt, Variable, Statement>(node.stmt(), node.fact(), statement);
+	private NodeWithLocation<Statement, Variable, FieldRef> asField(Node<Statement,Variable> node){
+		return new NodeWithLocation<Statement, Variable, FieldRef>(node.stmt(), node.fact(), solver.emptyField());
 	}
-	
-	private NodeWithLocation<Stmt, Variable, FieldRef> asField(Node<Stmt,Variable> node){
-		return new NodeWithLocation<Stmt, Variable, FieldRef>(node.stmt(), node.fact(), solver.emptyField());
-	}
-	private Solver<Stmt, Variable, FieldRef, Statement> solver = new Solver<Stmt, Variable, FieldRef, Statement>() {
+	private Solver<Statement, Variable, FieldRef> solver = new Solver<Statement, Variable, FieldRef>() {
 		@Override
-		public Rule<Statement, INode<Stmt, Variable>, NoWeight<Statement>> computeCallSiteRule(Node<Stmt, Variable> curr,
-				Node<Stmt, Variable> succ) {
-			return callSiteRuleMap.get(curr, succ);
+		public Collection<Rule<Statement, INode<Variable>, NoWeight<Statement>>> computeCallSiteRule(Node<Statement, Variable> curr,
+				Node<Statement, Variable> succ) {
+			 Collection<Rule<Statement, INode<Variable>, NoWeight<Statement>>> res = callSiteRuleMap.get(curr, succ);
+			 if(res == null)
+				 return Sets.newHashSet();
+			return res;
 		}
 
 		@Override
-		public Rule<FieldRef, NodeWithLocation<Stmt, Variable, FieldRef>, NoWeight<FieldRef>> computeFieldRefRule(NodeWithLocation<Stmt, Variable, FieldRef> curr,
-				NodeWithLocation<Stmt, Variable, FieldRef> succ) {
+		public Collection<Rule<FieldRef, NodeWithLocation<Statement, Variable, FieldRef>, NoWeight<FieldRef>>> computeFieldRefRule(NodeWithLocation<Statement, Variable, FieldRef> curr,
+				NodeWithLocation<Statement, Variable, FieldRef> succ) {
 			return fieldRefRuleMap.get(curr, succ);
 		}
 
 		@Override
-		public Collection<Node<Stmt, Variable>> computeSuccessor(Node<Stmt, Variable> node) {
+		public Collection<Node<Statement, Variable>> computeSuccessor(Node<Statement, Variable> node) {
 			return successorMap.get(node);
 		}
 
@@ -129,20 +149,20 @@ public class AbstractTest {
 	@Test
 	public void test1() {
 		addFieldPush(s("1","u"), f("h"), s("2","v"));
-		addCallSitePush(s("2","v"),solver.emptyCallSite(), s("3","p"),call("cs1"),call("foo"));
+		addCallFlow(s("2","v"), s("3","p"),call("foo"));
 		addFieldPush(s("3","p"), f("g"), s("4","q"));
-		addCallSitePop(s("4","q"), call("foo"), s("5","w"));
+		addReturnFlow(s("4","q"), call("foo"), s("5","w"));
 		addFieldPop(s("5","w"), f("g"), s("6","x"));
 		addFieldPop(s("6","x"), f("f"), s("7","y"));
 		
 //		second branch
 		addFieldPush(s("8","r"), f("f"), s("9","s"));
-		addCallSitePush(s("9","s"),solver.emptyCallSite(),s("3","p"),call("cs2"),call("foo"));
-		addCallSitePop(s("4","q"), call("foo"), s("10","t"));
+		addCallFlow(s("9","s"),s("3","p"),call("foo"));
+		addReturnFlow(s("4","q"), call("foo"), s("10","t"));
 		addFieldPush(s("10","t"), f("f"), s("11","s"));
 		
 		solver.solve(s("1","u"));
-//		System.out.println(solver.getReachedStates());
+		System.out.println(solver.getReachedStates());
 		assertFalse(solver.getReachedStates().contains(s("10","t")));
 		assertTrue(solver.getReachedStates().contains(s("5","w")));
 		assertTrue(solver.getReachedStates().contains(s("6","x")));
@@ -150,31 +170,29 @@ public class AbstractTest {
 	}
 	
 	@Test
-	public void twoCallStacks() {
-		addCallSitePush(s("2","v"),call("stmt"), s("3","p"),call("cs1"),call("foo"));
-		addCallSitePop(s("3","p"), call("foo"), s("5","w"));
-		addCallSiteNormal(s("5","w"), call("cs1"), s("6","x"),call("nop"));
+	public void simple() {
+		addNormalFlow(s("1","v"), s("2","w"));
+		addCallFlow(s("2","w"), s("3","p"),call("4"));
+		addNormalFlow(s("4","p"),  s("5","q"));
+		addNormalFlow(s("5","q"),  s("6","x"));
+		addReturnFlow(s("6","x"), call("4"),s("6","p"));
 		
-//		second branch
-		addCallSitePush(s("9","s"),solver.emptyCallSite(),s("3","p"),call("cs2"),call("foo"));
-		addCallSitePop(s("3","p"), call("foo"), s("10","t"));
-		
-		solver.solve(s("9","s"));
-//		System.out.println(solver.getReachedStates());
-		assertTrue(solver.getReachedStates().contains(s("10","t")));
-		assertFalse(solver.getReachedStates().contains(s("6","x")));
+		solver.solve(s("1","v"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(s("6","p")));
 	}
 	
 	
 	@Test
 	public void testWithTwoStacks() {
 		addFieldPush(s("1","u"), f("h"), s("2","v"));
-		addCallSitePush(s("2","v"), solver.emptyCallSite(), s("3","p"), solver.emptyCallSite(),call("foo"));
-		addFieldPush(s("3","p"), f("g"), s("4","q"));
-		addCallSitePop(s("4","q"), call("foo"), s("5","w"));
+		addCallFlow(s("2","v"),  s("3","p"), call("4"));
+		addFieldPush(s("4","p"), f("g"), s("5","q"));
+		addReturnFlow(s("5","q"), call("5"), s("3","w"));
+		addNormal(s("3","w"),s("7","t"));
 		solver.solve(s("1","u"));
 		System.out.println(solver.getReachedStates());
-		assertTrue(solver.getReachedStates().contains(s("5","w")));
+		assertTrue(solver.getReachedStates().contains(s("7","t")));
 	}
 
 
@@ -290,12 +308,12 @@ public class AbstractTest {
 		return new FieldRef(f);
 	}
 
-	public static Node<Stmt,Variable> s(String stmt,String var){
-		return new Node<Stmt,Variable>(new Stmt(stmt),new Variable(var));
+	public static Node<Statement,Variable> s(String stmt,String var){
+		return new Node<Statement,Variable>(new Statement(stmt),new Variable(var));
 	}
 	
-	private static class Stmt extends StringBasedObj {
-		public Stmt(String name) {
+	private static class Statement extends StringBasedObj implements Location {
+		public Statement(String name) {
 			super(name);
 		}
 	}
@@ -320,12 +338,6 @@ public class AbstractTest {
 
 	private static class FieldRef extends StringBasedObj implements Location {
 		public FieldRef(String name) {
-			super(name);
-		}
-	}
-
-	private static class Statement extends StringBasedObj implements Location {
-		public Statement(String name) {
 			super(name);
 		}
 	}

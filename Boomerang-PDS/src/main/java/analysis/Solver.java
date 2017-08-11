@@ -15,22 +15,21 @@ import com.google.common.collect.Sets;
 
 import wpds.impl.PAutomaton;
 import wpds.impl.PopRule;
+import wpds.impl.PushRule;
 import wpds.impl.PushdownSystem;
 import wpds.impl.Rule;
 import wpds.impl.Transition;
 import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.Location;
 
-public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extends Location> {
-	private PushdownSystem<CallSite, INode<Stmt, Fact>> callingContextPDS = new PushdownSystem<CallSite, INode<Stmt, Fact>>() {
+public abstract class Solver<Stmt extends Location, Fact, Field extends Location> {
+	private PushdownSystem<Stmt, INode<Fact>> callingContextPDS = new PushdownSystem<Stmt, INode<Fact>>() {
 	};
 	private PushdownSystem<Field, NodeWithLocation<Stmt, Fact, Field>> fieldRefContextPDS = new PushdownSystem<Field, NodeWithLocation<Stmt, Fact, Field>>() {
 	};
 	private LinkedList<Node<Stmt, Fact>> worklist = Lists.newLinkedList();
 	private Node<Stmt, Fact> seed;
 	private Set<Node<Stmt, Fact>> reachedStates = Sets.newHashSet();
-	private Set<Field> fieldOutOfSeed = Sets.newHashSet();
-	private Set<CallSite> callsiteOutOfSeed = Sets.newHashSet();
 	private Multimap<Node<Stmt,Fact>,Node<Stmt,Fact>> solvedEdges = HashMultimap.create();
 
 	public void solve(Node<Stmt, Fact> curr) {
@@ -49,21 +48,33 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 			for (Node<Stmt, Fact> succ : successors) {
 				if(!addEdge(curr,succ))
 					continue;
-				Rule<Field, NodeWithLocation<Stmt, Fact, Field>, NoWeight<Field>> fieldRule = computeFieldRefRule(withField(curr), withField(succ));
-				fieldRefContextPDS.addRule(fieldRule);
+				
+				Collection<Rule<Field, NodeWithLocation<Stmt, Fact, Field>, NoWeight<Field>>> fieldRules = computeFieldRefRule(withField(curr), withField(succ));
+				boolean check = false;
+				for(Rule<Field, NodeWithLocation<Stmt, Fact, Field>, NoWeight<Field>> fieldRule : fieldRules){
+					fieldRefContextPDS.addRule(fieldRule);
+					if (fieldRule instanceof PopRule) {
+						checkFeasibility(succ);	
+						check = true;
+					}
+				}
 
-				Rule<CallSite, INode<Stmt, Fact>, NoWeight<CallSite>> callRule = computeCallSiteRule(curr, succ);
-				System.err.println(curr +" succ " + succ + callRule);
-				callingContextPDS.addRule(callRule);
-
-				if (curr.equals(seed)) {
-					callsiteOutOfSeed.add(callRule.getL1());
-					fieldOutOfSeed.add(fieldRule.getL1());
+				Collection<Rule<Stmt, INode<Fact>, NoWeight<Stmt>>> callRules = computeCallSiteRule(curr, succ);
+				for(Rule<Stmt, INode<Fact>, NoWeight<Stmt>> callRule : callRules){
+					System.err.println(curr +" succ " + succ + callRule);
+					callingContextPDS.addRule(callRule);
+					if (callRule instanceof PopRule) {
+						check = true;	
+					}
+					if(callRule instanceof PushRule){
+						PushRule pushRule = (PushRule) callRule;
+						worklist.add(new Node<Stmt,Fact>((Stmt) ((PushRule) callRule).getL2(), callRule.getS2().fact()));
+					}
 				}
 				
-				if (callRule instanceof PopRule || fieldRule instanceof PopRule) {
-					checkFeasibility(succ);	
-				} else {
+				if(check){
+					checkFeasibility(succ);
+				} else{
 					worklist.add(succ);
 				}
 			}
@@ -89,48 +100,48 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 		fieldRefContextPDS.poststar(aut1);
 		boolean pds1 = aut1.getStates().contains(withField(succ));
 
-		PAutomaton<CallSite, INode<Stmt, Fact>> aut2 = new PAutomaton<CallSite, INode<Stmt, Fact>>(seed, seed) {
+		PAutomaton<Stmt, INode<Fact>> aut2 = new PAutomaton<Stmt, INode<Fact>>(wrap(seed.variable), wrap(seed.variable)) {
 			@Override
-			public  INode<Stmt, Fact> createState(INode<Stmt, Fact> d, CallSite loc) {
+			public  INode<Fact> createState(INode<Fact> d, Stmt loc) {
 				return generateState(d,loc);
 			}
 			
 			
 
 			@Override
-			public CallSite epsilon() {
+			public Stmt epsilon() {
 				return epsilonCallSite();
 			}
 		};
-			aut2.addTransition(new Transition<CallSite, INode<Stmt, Fact>>(seed, emptyCallSite(), seed));
+			aut2.addTransition(new Transition<Stmt, INode<Fact>>(wrap(seed.variable),seed.stmt(), wrap(seed.variable)));
 		callingContextPDS.poststar(aut2);
 		System.out.println(aut2);
 		System.out.println(aut2.getStates());
-		boolean pds2 = aut2.getStates().contains(succ);
+		boolean pds2 = aut2.getStates().contains(new SingleNode<Fact>(succ.variable));
 		if (pds1 && pds2) {
 			System.out.println("IS feasable!" + succ);
 			worklist.add(succ);
-		}
+		} 
 	}
 
-	Map<Entry<INode<Stmt,Fact>, CallSite>, INode<Stmt,Fact>> generatedState = Maps.newHashMap();
+	private INode<Fact> wrap(Fact variable) {
+		return new SingleNode<Fact>(variable);
+	}
 	
-	protected INode<Stmt, Fact> generateState(final INode<Stmt, Fact> d, final CallSite loc) {
-		Entry<INode<Stmt,Fact>, CallSite> e = new AbstractMap.SimpleEntry<>(d,loc);
-		if(!generatedState.containsKey(e)){
-			generatedState.put(e, new INode<Stmt, Fact>() {
-				@Override
-				public Stmt stmt() {
-					return null;
-				}
+	
 
+	Map<Entry<INode<Fact>, Stmt>, INode<Fact>> generatedState = Maps.newHashMap();
+	
+	protected INode<Fact> generateState(final INode<Fact> d, final Stmt loc) {
+		Entry<INode<Fact>, Stmt> e = new AbstractMap.SimpleEntry<>(d,loc);
+		if(!generatedState.containsKey(e)){
+			generatedState.put(e, new INode<Fact>() {
 				@Override
 				public Fact fact() {
 					return null;
 				}
 				@Override
 				public String toString() {
-					// TODO Auto-generated method stub
 					return d + " " + loc;
 				}
 			});
@@ -142,16 +153,10 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 		return new NodeWithLocation<Stmt, Fact, Field>(node.stmt, node.variable, emptyField());
 	}
 
-	private NodeWithLocation<Stmt, Fact, CallSite> withCall(Node<Stmt,Fact> node) {
-		return new NodeWithLocation<Stmt, Fact, CallSite>(node.stmt, node.variable, emptyCallSite());
-	}
-	
-	
-
-	public abstract Rule<CallSite, INode<Stmt, Fact>, NoWeight<CallSite>> computeCallSiteRule(Node<Stmt, Fact> curr,
+	public abstract Collection<Rule<Stmt, INode<Fact>, NoWeight<Stmt>>> computeCallSiteRule(Node<Stmt, Fact> curr,
 			Node<Stmt, Fact> succ);
 
-	public abstract Rule<Field, NodeWithLocation<Stmt, Fact, Field>, NoWeight<Field>> computeFieldRefRule(NodeWithLocation<Stmt, Fact, Field> curr,
+	public abstract Collection<Rule<Field, NodeWithLocation<Stmt, Fact, Field>, NoWeight<Field>>> computeFieldRefRule(NodeWithLocation<Stmt, Fact, Field> curr,
 			NodeWithLocation<Stmt, Fact, Field> succ);
 
 	public abstract Collection<Node<Stmt, Fact>> computeSuccessor(Node<Stmt, Fact> node);
@@ -160,9 +165,9 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 	
 	public abstract Field emptyField();
 
-	public abstract CallSite epsilonCallSite();
+	public abstract Stmt epsilonCallSite();
 
-	public abstract CallSite emptyCallSite();
+	public abstract Stmt emptyCallSite();
 	
 	public Set<Node<Stmt, Fact>> getReachedStates() {
 		return Sets.newHashSet(reachedStates);
