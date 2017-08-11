@@ -1,11 +1,15 @@
 package analysis;
 
+import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
@@ -18,7 +22,7 @@ import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.Location;
 
 public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extends Location> {
-	private PushdownSystem<CallSite, NodeWithLocation<Stmt, Fact, CallSite>> callingContextPDS = new PushdownSystem<CallSite, NodeWithLocation<Stmt, Fact, CallSite>>() {
+	private PushdownSystem<CallSite, INode<Stmt, Fact>> callingContextPDS = new PushdownSystem<CallSite, INode<Stmt, Fact>>() {
 	};
 	private PushdownSystem<Field, NodeWithLocation<Stmt, Fact, Field>> fieldRefContextPDS = new PushdownSystem<Field, NodeWithLocation<Stmt, Fact, Field>>() {
 	};
@@ -48,7 +52,7 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 				Rule<Field, NodeWithLocation<Stmt, Fact, Field>, NoWeight<Field>> fieldRule = computeFieldRefRule(withField(curr), withField(succ));
 				fieldRefContextPDS.addRule(fieldRule);
 
-				Rule<CallSite, NodeWithLocation<Stmt, Fact, CallSite>, NoWeight<CallSite>> callRule = computeCallSiteRule(withCall(curr), withCall(succ));
+				Rule<CallSite, INode<Stmt, Fact>, NoWeight<CallSite>> callRule = computeCallSiteRule(curr, succ);
 				System.err.println(curr +" succ " + succ + callRule);
 				callingContextPDS.addRule(callRule);
 
@@ -78,10 +82,6 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 				return new NodeWithLocation<Stmt, Fact, Field>(d.stmt, d.variable, loc);
 			}
 			@Override
-			public boolean hasEmptyStack(NodeWithLocation<Stmt, Fact, Field> state) {
-				return state.location().equals(Solver.this.emptyField());
-			}
-			@Override
 			public Field epsilon() {
 				return epsilonField();
 			}
@@ -92,10 +92,10 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 		System.out.println(aut1.getStates());
 		boolean pds1 = aut1.getStates().contains(withField(succ));
 
-		PAutomaton<CallSite, NodeWithLocation<Stmt, Fact, CallSite>> aut2 = new PAutomaton<CallSite, NodeWithLocation<Stmt, Fact, CallSite>>(withCall(seed), withCall(seed)) {
+		PAutomaton<CallSite, INode<Stmt, Fact>> aut2 = new PAutomaton<CallSite, INode<Stmt, Fact>>(seed, seed) {
 			@Override
-			public NodeWithLocation<Stmt, Fact, CallSite> createState(NodeWithLocation<Stmt, Fact, CallSite> d, CallSite loc) {
-				return new NodeWithLocation<Stmt, Fact, CallSite>(d.stmt,d.variable, loc);
+			public  INode<Stmt, Fact> createState(INode<Stmt, Fact> d, CallSite loc) {
+				return generateState(d,loc);
 			}
 			
 			
@@ -104,21 +104,41 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 			public CallSite epsilon() {
 				return epsilonCallSite();
 			}
-
-			@Override
-			public boolean hasEmptyStack(NodeWithLocation<Stmt, Fact, CallSite> state) {
-				return state.location().equals(Solver.this.emptyCallSite());
-			}
 		};
-			aut2.addTransition(new Transition<CallSite, NodeWithLocation<Stmt, Fact, CallSite>>(withCall(seed), emptyCallSite(), withCall(seed)));
+			aut2.addTransition(new Transition<CallSite, INode<Stmt, Fact>>(seed, emptyCallSite(), seed));
 		callingContextPDS.poststar(aut2);
 		System.out.println(aut2);
 		System.out.println(aut2.getStates());
-		boolean pds2 = aut2.getStates().contains(withCall(succ));
+		boolean pds2 = aut2.getStates().contains(succ);
 		if (pds1 && pds2) {
 			System.out.println("IS feasable!" + succ);
 			worklist.add(succ);
 		}
+	}
+
+	Map<Entry<INode<Stmt,Fact>, CallSite>, INode<Stmt,Fact>> generatedState = Maps.newHashMap();
+	
+	protected INode<Stmt, Fact> generateState(final INode<Stmt, Fact> d, final CallSite loc) {
+		Entry<INode<Stmt,Fact>, CallSite> e = new AbstractMap.SimpleEntry<>(d,loc);
+		if(!generatedState.containsKey(e)){
+			generatedState.put(e, new INode<Stmt, Fact>() {
+				@Override
+				public Stmt stmt() {
+					return null;
+				}
+
+				@Override
+				public Fact fact() {
+					return null;
+				}
+				@Override
+				public String toString() {
+					// TODO Auto-generated method stub
+					return d + " " + loc;
+				}
+			});
+		}
+			return generatedState.get(e);
 	}
 
 	private NodeWithLocation<Stmt, Fact, Field> withField(Node<Stmt,Fact> node) {
@@ -131,8 +151,8 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 	
 	
 
-	public abstract Rule<CallSite, NodeWithLocation<Stmt, Fact, CallSite>, NoWeight<CallSite>> computeCallSiteRule(NodeWithLocation<Stmt, Fact, CallSite> curr,
-			NodeWithLocation<Stmt, Fact, CallSite> succ);
+	public abstract Rule<CallSite, INode<Stmt, Fact>, NoWeight<CallSite>> computeCallSiteRule(Node<Stmt, Fact> curr,
+			Node<Stmt, Fact> succ);
 
 	public abstract Rule<Field, NodeWithLocation<Stmt, Fact, Field>, NoWeight<Field>> computeFieldRefRule(NodeWithLocation<Stmt, Fact, Field> curr,
 			NodeWithLocation<Stmt, Fact, Field> succ);

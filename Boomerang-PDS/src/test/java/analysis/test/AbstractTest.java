@@ -12,6 +12,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Table;
 
+import analysis.INode;
 import analysis.Node;
 import analysis.NodeWithLocation;
 import analysis.Solver;
@@ -25,7 +26,7 @@ import wpds.wildcard.Wildcard;
 
 public class AbstractTest {
 	private Multimap<Node<Stmt, Variable>, Node<Stmt, Variable>> successorMap = HashMultimap.create();
-	private Table<NodeWithLocation<Stmt, Variable, Statement>, NodeWithLocation<Stmt, Variable, Statement>, Rule<Statement, NodeWithLocation<Stmt, Variable, Statement>, NoWeight<Statement>>> callSiteRuleMap = HashBasedTable
+	private Table<Node<Stmt, Variable>, Node<Stmt, Variable>, Rule<Statement, INode<Stmt, Variable>, NoWeight<Statement>>> callSiteRuleMap = HashBasedTable
 			.create();
 	private Table<NodeWithLocation<Stmt, Variable, FieldRef>, NodeWithLocation<Stmt, Variable, FieldRef>, Rule<FieldRef, NodeWithLocation<Stmt, Variable, FieldRef>, NoWeight<FieldRef>>> fieldRefRuleMap = HashBasedTable
 			.create();
@@ -33,19 +34,20 @@ public class AbstractTest {
 	private void addFieldPop(Node<Stmt, Variable> curr, FieldRef pop, Node<Stmt, Variable> succ) {
 		addSucc(curr, succ);
 		fieldRefRuleMap.put(asField(curr), asField(succ), new UPopRule<FieldRef, NodeWithLocation<Stmt, Variable,FieldRef>>(asField(curr), pop, asField(succ)));
-		addCallSiteNormal(curr, succ);
+		callSiteRuleMap.put(curr, succ, new UNormalRule<Statement, INode<Stmt, Variable>>(curr, new CallWildCard(), succ, new CallWildCard()));
 	}
 
 	private void addFieldPush(Node<Stmt, Variable> curr, FieldRef push, Node<Stmt, Variable> succ) {
 		addSucc(curr, succ);
 		fieldRefRuleMap.put(asField(curr), asField(succ), new UPushRule<FieldRef, NodeWithLocation<Stmt, Variable, FieldRef>>(asField(curr), new FieldWildCard(), asField(succ),new FieldWildCard(),push));
-		addCallSiteNormal(curr, succ);
+		callSiteRuleMap.put(curr, succ, new UNormalRule<Statement, INode<Stmt, Variable>>(curr, new CallWildCard(), succ, new CallWildCard()));
 	}
+
 
 	private void addNormal(Node<Stmt, Variable> curr, Node<Stmt, Variable> succ) {
 		addSucc(curr, succ);
 		fieldRefRuleMap.put(asField(curr), asField(succ), new UNormalRule<FieldRef, NodeWithLocation<Stmt, Variable,FieldRef>>(asField(curr), new FieldWildCard(), asField(succ),new FieldWildCard()));
-		callSiteRuleMap.put(asStatement(curr), asStatement(succ), new UNormalRule<Statement, NodeWithLocation<Stmt, Variable,Statement>>(asStatement(curr), new CallWildCard(), asStatement(succ), new CallWildCard()));
+		callSiteRuleMap.put(curr, succ, new UNormalRule<Statement, INode<Stmt, Variable>>(curr, new CallWildCard(), succ, new CallWildCard()));
 	}
 	private void addFieldNormal(Node<Stmt, Variable> curr, Node<Stmt, Variable> succ) {
 		addSucc(curr, succ);
@@ -54,18 +56,18 @@ public class AbstractTest {
 
 	private void addCallSitePop(Node<Stmt, Variable> curr, Statement pop, Node<Stmt, Variable> succ) {
 		addSucc(curr, succ);
-		callSiteRuleMap.put(asStatement(curr), asStatement(succ), new UPopRule<Statement, NodeWithLocation<Stmt, Variable, Statement>>(asStatement(curr), pop, asStatement(succ)));
+		callSiteRuleMap.put(curr, succ, new UPopRule<Statement, INode<Stmt, Variable>>(curr, pop, succ));
 		addFieldNormal(curr, succ);
 	}
 
 	private void addCallSitePush(Node<Stmt, Variable> curr, Statement callSite, Node<Stmt, Variable> succ, Statement returnSite, Statement calleeStart) {
 		addSucc(curr, succ);
-		callSiteRuleMap.put(asStatement(curr), asStatement(succ), new UPushRule<Statement, NodeWithLocation<Stmt, Variable, Statement>>(asStatement(curr), callSite, asStatement(succ), returnSite,calleeStart));
+		callSiteRuleMap.put(curr, succ, new UPushRule<Statement, INode<Stmt, Variable>>(curr, callSite,succ,calleeStart,returnSite));
 		addFieldNormal(curr, succ);
 	} 
 	private void addCallSiteNormal(Node<Stmt, Variable> curr, Node<Stmt, Variable> succ) {
 		addSucc(curr, succ);
-		callSiteRuleMap.put(asStatement(curr), asStatement(succ), new UNormalRule<Statement, NodeWithLocation<Stmt, Variable, Statement>>(asStatement(curr), new CallWildCard(), asStatement(succ), new CallWildCard()));
+		callSiteRuleMap.put(curr, succ, new UNormalRule<Statement, INode<Stmt, Variable>>(curr, new CallWildCard(), succ, new CallWildCard()));
 	}
 	private void addSucc(Node<Stmt, Variable> curr, Node<Stmt, Variable> succ) {
 		successorMap.put(curr, succ);
@@ -74,7 +76,12 @@ public class AbstractTest {
 	private Statement epsilonCallSite = new Statement("eps_c");
 	
 	private NodeWithLocation<Stmt, Variable, Statement> asStatement(Node<Stmt,Variable> node){
-		return new NodeWithLocation<Stmt, Variable, Statement>(node.stmt(), node.fact(), solver.emptyCallSite());
+		return asStatement(node, solver.emptyCallSite());
+	}
+	
+
+	private NodeWithLocation<Stmt, Variable, Statement> asStatement(Node<Stmt, Variable> node, Statement statement) {
+		return new NodeWithLocation<Stmt, Variable, Statement>(node.stmt(), node.fact(), statement);
 	}
 	
 	private NodeWithLocation<Stmt, Variable, FieldRef> asField(Node<Stmt,Variable> node){
@@ -82,8 +89,8 @@ public class AbstractTest {
 	}
 	private Solver<Stmt, Variable, FieldRef, Statement> solver = new Solver<Stmt, Variable, FieldRef, Statement>() {
 		@Override
-		public Rule<Statement, NodeWithLocation<Stmt, Variable, Statement>, NoWeight<Statement>> computeCallSiteRule(NodeWithLocation<Stmt, Variable, Statement> curr,
-				NodeWithLocation<Stmt, Variable, Statement> succ) {
+		public Rule<Statement, INode<Stmt, Variable>, NoWeight<Statement>> computeCallSiteRule(Node<Stmt, Variable> curr,
+				Node<Stmt, Variable> succ) {
 			return callSiteRuleMap.get(curr, succ);
 		}
 
@@ -125,13 +132,13 @@ public class AbstractTest {
 		addCallSitePush(s("2","v"),solver.emptyCallSite(), s("3","p"),call("cs1"),call("foo"));
 		addFieldPush(s("3","p"), f("g"), s("4","q"));
 		addCallSitePop(s("4","q"), call("foo"), s("5","w"));
-//		addFieldPop(s("5","w"), f("g"), s("6","x"));
-//		addFieldPop(s("6","x"), f("f"), s("7","y"));
-//		
-//		//second branch
-//		addFieldPush(s("8","r"), f("f"), s("9","s"));
-//		addCallSitePush(s("9","s"),call("cs1"), s("3","p"),call("cs2"),call("foo"));
-//		addCallSitePop(s("4","q"), call("foo"), s("10","t"));
+		addFieldPop(s("5","w"), f("g"), s("6","x"));
+		addFieldPop(s("6","x"), f("f"), s("7","y"));
+		
+//		second branch
+		addFieldPush(s("8","r"), f("f"), s("9","s"));
+		addCallSitePush(s("9","s"),call("cs1"), s("3","p"),call("cs2"),call("foo"));
+		addCallSitePop(s("4","q"), call("foo"), s("10","t"));
 		solver.solve(s("1","u"));
 //		System.out.println(solver.getReachedStates());
 		assertFalse(solver.getReachedStates().contains(s("10","t")));
