@@ -4,12 +4,20 @@ import wpds.interfaces.State;
 
 public class Node<Stmt, Fact> implements State{
 
-	final private Stmt stmt;
-	final private Fact variable;
+	final protected Stmt stmt;
+	final protected Fact variable;
 
 	public Node(Stmt stmt, Fact variable) {
 		this.stmt = stmt;
 		this.variable = variable;
+	}
+	
+	public Stmt stmt() {
+		return stmt;
+	}
+	
+	public Fact fact(){
+		return variable;
 	}
 
 	@Override

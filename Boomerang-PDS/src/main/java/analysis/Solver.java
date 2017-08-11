@@ -18,9 +18,9 @@ import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.Location;
 
 public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extends Location> {
-	private PushdownSystem<CallSite, Node<Stmt, Fact>> callingContextPDS = new PushdownSystem<CallSite, Node<Stmt, Fact>>() {
+	private PushdownSystem<CallSite, NodeWithLocation<Stmt, Fact, CallSite>> callingContextPDS = new PushdownSystem<CallSite, NodeWithLocation<Stmt, Fact, CallSite>>() {
 	};
-	private PushdownSystem<Field, Node<Stmt, Fact>> fieldRefContextPDS = new PushdownSystem<Field, Node<Stmt, Fact>>() {
+	private PushdownSystem<Field, NodeWithLocation<Stmt, Fact, Field>> fieldRefContextPDS = new PushdownSystem<Field, NodeWithLocation<Stmt, Fact, Field>>() {
 	};
 	private LinkedList<Node<Stmt, Fact>> worklist = Lists.newLinkedList();
 	private Node<Stmt, Fact> seed;
@@ -45,10 +45,10 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 			for (Node<Stmt, Fact> succ : successors) {
 				if(!addEdge(curr,succ))
 					continue;
-				Rule<Field, Node<Stmt, Fact>, NoWeight<Field>> fieldRule = computeFieldRefRule(curr, succ);
+				Rule<Field, NodeWithLocation<Stmt, Fact, Field>, NoWeight<Field>> fieldRule = computeFieldRefRule(withField(curr), withField(succ));
 				fieldRefContextPDS.addRule(fieldRule);
 
-				Rule<CallSite, Node<Stmt, Fact>, NoWeight<CallSite>> callRule = computeCallSiteRule(curr, succ);
+				Rule<CallSite, NodeWithLocation<Stmt, Fact, CallSite>, NoWeight<CallSite>> callRule = computeCallSiteRule(withCall(curr), withCall(succ));
 				System.err.println(curr +" succ " + succ + callRule);
 				callingContextPDS.addRule(callRule);
 
@@ -72,11 +72,10 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 
 	private void checkFeasibility(Node<Stmt, Fact> succ) {
 		System.out.println("IS feasable?" + succ);
-		PAutomaton<Field, Node<Stmt, Fact>> aut1 = new PAutomaton<Field, Node<Stmt, Fact>>(seed, seed) {
+		PAutomaton<Field, NodeWithLocation<Stmt, Fact,Field>> aut1 = new PAutomaton<Field, NodeWithLocation<Stmt, Fact,Field>>(withField(seed), withField(seed)) {
 			@Override
-			public Node<Stmt, Fact> createState(Node<Stmt, Fact> d, Field loc) {
-				System.out.println("CREATE STATE"+ d);
-				return d;
+			public  NodeWithLocation<Stmt, Fact,Field> createState(NodeWithLocation<Stmt, Fact,Field> d, Field loc) {
+				return new NodeWithLocation<Stmt, Fact, Field>(d.stmt, d.variable, loc);
 			}
 
 			@Override
@@ -85,17 +84,16 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 			}
 		};
 		for (Field f : fieldOutOfSeed)
-			aut1.addTransition(new Transition<Field, Node<Stmt, Fact>>(seed, f, seed));
+			aut1.addTransition(new Transition<Field, NodeWithLocation<Stmt, Fact,Field>>(withField(seed), f, withField(seed)));
 		fieldRefContextPDS.poststar(aut1);
 		System.out.println(aut1);
 		System.out.println(aut1.getStates());
-		boolean pds1 = aut1.getStates().contains(succ);
+		boolean pds1 = aut1.getStates().contains(withField(succ));
 
-		PAutomaton<CallSite, Node<Stmt, Fact>> aut2 = new PAutomaton<CallSite, Node<Stmt, Fact>>(seed, seed) {
+		PAutomaton<CallSite, NodeWithLocation<Stmt, Fact, CallSite>> aut2 = new PAutomaton<CallSite, NodeWithLocation<Stmt, Fact, CallSite>>(withCall(seed), withCall(seed)) {
 			@Override
-			public Node<Stmt, Fact> createState(Node<Stmt, Fact> d, CallSite loc) {
-				System.out.println("CREATE STATE" +d);
-				return d;
+			public NodeWithLocation<Stmt, Fact, CallSite> createState(NodeWithLocation<Stmt, Fact, CallSite> d, CallSite loc) {
+				return new NodeWithLocation<Stmt, Fact, CallSite>(d.stmt,d.variable, loc);
 			}
 
 			@Override
@@ -104,29 +102,43 @@ public abstract class Solver<Stmt, Fact, Field extends Location, CallSite extend
 			}
 		};
 		for (CallSite c : callsiteOutOfSeed)
-			aut2.addTransition(new Transition<CallSite, Node<Stmt, Fact>>(seed, c, seed));
+			aut2.addTransition(new Transition<CallSite, NodeWithLocation<Stmt, Fact, CallSite>>(withCall(seed), c, withCall(seed)));
 		callingContextPDS.poststar(aut2);
 		System.out.println(aut2);
 		System.out.println(aut2.getStates());
-		boolean pds2 = aut2.getStates().contains(succ);
+		boolean pds2 = aut2.getStates().contains(withCall(succ));
 		if (pds1 && pds2) {
 			System.out.println("IS feasable!" + succ);
 			worklist.add(succ);
 		}
 	}
 
-	public abstract Rule<CallSite, Node<Stmt, Fact>, NoWeight<CallSite>> computeCallSiteRule(Node<Stmt, Fact> curr,
-			Node<Stmt, Fact> succ);
+	private NodeWithLocation<Stmt, Fact, Field> withField(Node<Stmt,Fact> node) {
+		return new NodeWithLocation<Stmt, Fact, Field>(node.stmt, node.variable, emptyField());
+	}
 
-	public abstract Rule<Field, Node<Stmt, Fact>, NoWeight<Field>> computeFieldRefRule(Node<Stmt, Fact> curr,
-			Node<Stmt, Fact> succ);
+	private NodeWithLocation<Stmt, Fact, CallSite> withCall(Node<Stmt,Fact> node) {
+		return new NodeWithLocation<Stmt, Fact, CallSite>(node.stmt, node.variable, emptyCallSite());
+	}
+	
+	
+
+	public abstract Rule<CallSite, NodeWithLocation<Stmt, Fact, CallSite>, NoWeight<CallSite>> computeCallSiteRule(NodeWithLocation<Stmt, Fact, CallSite> curr,
+			NodeWithLocation<Stmt, Fact, CallSite> succ);
+
+	public abstract Rule<Field, NodeWithLocation<Stmt, Fact, Field>, NoWeight<Field>> computeFieldRefRule(NodeWithLocation<Stmt, Fact, Field> curr,
+			NodeWithLocation<Stmt, Fact, Field> succ);
 
 	public abstract Collection<Node<Stmt, Fact>> computeSuccessor(Node<Stmt, Fact> node);
 
 	public abstract Field epsilonField();
+	
+	public abstract Field emptyField();
 
 	public abstract CallSite epsilonCallSite();
 
+	public abstract CallSite emptyCallSite();
+	
 	public Set<Node<Stmt, Fact>> getReachedStates() {
 		return Sets.newHashSet(reachedStates);
 	}

@@ -58,6 +58,9 @@ public abstract class WeightedPushdownSystem<N extends Location, D extends State
     for (Rule<N, D, W> r : allRules) {
       if (r.getS1().equals(start) && (r.getL1().equals(string) || r.getL1() instanceof Wildcard))
         result.add(r);
+      if(string instanceof Wildcard && r.getS1().equals(start)){
+    	  result.add(r);
+      }
     }
     return result;
   }
