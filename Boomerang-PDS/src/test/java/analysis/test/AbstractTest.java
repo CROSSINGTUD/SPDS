@@ -302,46 +302,6 @@ public class AbstractTest {
 		return new Node<Statement,Variable>(new Statement(stmt),new Variable(var));
 	}
 
-	private static class StmtWithVar{
-		private Variable var;
-		private Statement stmt;
-
-		public StmtWithVar(Statement stmt, Variable var){
-			this.stmt = stmt;
-			this.var = var;
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
-			result = prime * result + ((var == null) ? 0 : var.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			StmtWithVar other = (StmtWithVar) obj;
-			if (stmt == null) {
-				if (other.stmt != null)
-					return false;
-			} else if (!stmt.equals(other.stmt))
-				return false;
-			if (var == null) {
-				if (other.var != null)
-					return false;
-			} else if (!var.equals(other.var))
-				return false;
-			return true;
-		}
-	}
 	private static class Statement extends StringBasedObj implements Location {
 		public Statement(int name) {
 			super(Integer.toString(name));
