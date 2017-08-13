@@ -1,13 +1,13 @@
 package analysis;
 
 import analysis.Solver.PDSSystem;
+import wpds.interfaces.State;
 
-public class PopNode<Stmt,Fact,Location> extends Node<Stmt,Fact>{
+public class PopNode<Location> implements State{
 
 	private PDSSystem system;
 	private Location location;
-	public PopNode(Stmt stmt, Fact variable, Location location, PDSSystem system) {
-		super(stmt, variable);
+	public PopNode(Location location, PDSSystem system) {
 		this.system = system;
 		this.location = location;
 	}
@@ -20,6 +20,9 @@ public class PopNode<Stmt,Fact,Location> extends Node<Stmt,Fact>{
 	public Location location(){
 		return location;
 	}
-
+	@Override
+	public String toString() {
+		return "Pop " + location();
+	}
 
 }

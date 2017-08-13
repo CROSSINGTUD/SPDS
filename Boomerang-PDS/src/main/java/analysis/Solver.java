@@ -1,5 +1,6 @@
 package analysis;
 
+import java.security.cert.PolicyQualifierInfo;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -24,6 +25,7 @@ import wpds.impl.UPopRule;
 import wpds.impl.UPushRule;
 import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.Location;
+import wpds.interfaces.State;
 
 public abstract class Solver<Stmt extends Location, Fact, Field extends Location> {
 	
@@ -38,7 +40,12 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 	private LinkedList<Node<Stmt, Fact>> worklist = Lists.newLinkedList();
 	private Node<Stmt, Fact> seed;
 	private Set<Node<Stmt, Fact>> reachedStates = Sets.newHashSet();
+	private Set<Stmt> callSuccessors = Sets.newHashSet();
+	private Set<Field> fieldReturnSuccessors = Sets.newHashSet();
+	private Set<Node<Stmt, Fact>> callingContextReachable = Sets.newHashSet();
+	private Set<Node<Stmt, Fact>> fieldContextReachable = Sets.newHashSet();
 	private Multimap<Node<Stmt,Fact>,Node<Stmt,Fact>> solvedEdges = HashMultimap.create();
+	
 
 	public void solve(Node<Stmt, Fact> curr) {
 		this.seed = curr;
@@ -51,35 +58,36 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 			Node<Stmt, Fact> curr = worklist.poll();
 			reachedStates.add(curr);
 			
-			Collection<Node<Stmt, Fact>> successors = computeSuccessor(curr);
+			Collection<State> successors = computeSuccessor(curr);
 			System.err.println(curr + " FLOWS TO " + successors);
-			for (Node<Stmt, Fact> succ : successors) {
-				if(!addEdge(curr,succ))
-					continue;
-				
-				if(succ instanceof PopNode){
-					PopNode<Stmt,Fact,Location> popNode = (PopNode<Stmt,Fact,Location>) succ;
-					PDSSystem system = popNode.system();
-					Location location = popNode.location();
-					if(succ instanceof PushNode){
-						PushNode<Stmt,Fact,Location> pushNode = (PushNode) succ;
-						processPush(curr,location,succ,system);
-					} else{
-						//add poprule
-						processPop(curr,location,succ,system);
-						checkFeasibility(succ);
+			for (State s : successors) {
+				if(s instanceof Node){
+					Node<Stmt,Fact> succ = (Node<Stmt,Fact>) s;
+					if(!addEdge(curr,succ))
 						continue;
+
+					if(succ instanceof PushNode){
+						PushNode<Stmt,Fact,Location> pushNode = (PushNode<Stmt,Fact,Location>) succ;
+						PDSSystem system = pushNode.system();
+						Location location = pushNode.location();
+						processPush(curr,location,pushNode,system);
+					} else{
+						processNormal(curr,succ);
 					}
-				} else{
-					processNormal(curr,succ);
+					addToWorklist(succ);
+				} else if (s instanceof PopNode){
+					PopNode<Fact> popNode = (PopNode<Fact>) s;
+					PDSSystem system = popNode.system();
+					Fact location = popNode.location();
+					processPop(curr,location,system);
 				}
-				addToWorklist(succ);
 			}
 		}
 	}
 
-	private void addToWorklist(Node<Stmt, Fact> succ) {
-		worklist.add(new Node<Stmt,Fact>(succ.stmt(),succ.fact()));
+
+	private void addToWorklist(Node<Stmt, Fact> curr) {
+		worklist.add(new Node<Stmt,Fact>(curr.stmt(),curr.fact()));
 	}
 
 	private void processNormal(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
@@ -101,13 +109,17 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		return new NodeWithLocation<Stmt, Fact, Field>(node.stmt, node.fact(), emptyField());
 	}
 
-	private void processPop(Node<Stmt, Fact> curr, Location location, Node<Stmt, Fact> succ, PDSSystem system) {
+	private void processPop(Node<Stmt, Fact> curr, Fact location, PDSSystem system) {
 		if(system.equals(PDSSystem.FIELDS)){
-			fieldRefContextPDS.addRule(new UPopRule<Field, NodeWithLocation<Stmt,Fact,Field>>(asFieldFact(curr), (Field) location, asFieldFact(succ)));
-			addNormalCallFlow(curr, succ);
+			System.out.println(curr +" HERE "+ location);
+			NodeWithLocation<Stmt, Fact, Field> node = (NodeWithLocation) location;
+			fieldRefContextPDS.addRule(new UPopRule<Field, NodeWithLocation<Stmt,Fact,Field>>(asFieldFact(curr), node.location(), asFieldFact(node.asNode())));
+			checkFieldFeasibility(node.asNode());
+//			addNormalCallFlow(curr, succ);
 		} else if(system.equals(PDSSystem.METHODS)){
-			addNormalFieldFlow(curr, succ);
-			callingContextPDS.addRule(new UPopRule<Stmt, INode<Fact>>(wrap(curr.fact()),(Stmt)location,wrap(succ.fact())));
+//			addNormalFieldFlow(curr, succ);
+			callingContextPDS.addRule(new UPopRule<Stmt, INode<Fact>>(wrap(curr.fact()),curr.stmt(),wrap((Fact)location)));
+			checkCallFeasibility(location);
 		}
 	}
 
@@ -116,9 +128,11 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		if(system.equals(PDSSystem.FIELDS)){
 			fieldRefContextPDS.addRule(new UPushRule<Field, NodeWithLocation<Stmt,Fact,Field>>(asFieldFact(curr), fieldWildCard(), asFieldFact(succ), fieldWildCard(), (Field) location));
 			addNormalCallFlow(curr, succ);
+			fieldReturnSuccessors.add((Field) location);
 		} else if(system.equals(PDSSystem.METHODS)){
 			addNormalFieldFlow(curr, succ);
-			callingContextPDS.addRule(new UPushRule<Stmt, INode<Fact>>(wrap(curr.fact()),curr.stmt(),wrap(succ.fact()),  succ.stmt(), (Stmt) location));
+			callingContextPDS.addRule(new UPushRule<Stmt, INode<Fact>>(wrap(curr.fact()),curr.stmt(),wrap(succ.fact()), succ.stmt(),(Stmt) location));
+			callSuccessors.add((Stmt) location);
 		}
 	}
 
@@ -126,7 +140,8 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		return solvedEdges.put(curr,succ);
 	}
 
-	private void checkFeasibility(Node<Stmt, Fact> succ) {
+	private void checkFieldFeasibility(Node<Stmt, Fact> node) {
+		System.out.println(node);
 		PAutomaton<Field, NodeWithLocation<Stmt, Fact,Field>> aut1 = new PAutomaton<Field, NodeWithLocation<Stmt, Fact,Field>>(withField(seed), withField(seed)) {
 			@Override
 			public  NodeWithLocation<Stmt, Fact,Field> createState(NodeWithLocation<Stmt, Fact,Field> d, Field loc) {
@@ -137,18 +152,30 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 				return epsilonField();
 			}
 		};
-			aut1.addTransition(new Transition<Field, NodeWithLocation<Stmt, Fact,Field>>(withField(seed), emptyField(), withField(seed)));
+		aut1.addTransition(new Transition<Field, NodeWithLocation<Stmt, Fact,Field>>(withField(seed), emptyField(), withField(seed)));
 		fieldRefContextPDS.poststar(aut1);
-		boolean pds1 = aut1.getStates().contains(withField(succ));
-
+		for(NodeWithLocation<Stmt, Fact, Field> n: aut1.getStates())
+			if(n.asNode().equals(node)){
+				addToWorklist(node);
+			}
+		System.out.println(aut1);
+		for(Field retSite : fieldReturnSuccessors){
+//			Collection<Transition<Stmt, INode<Fact>>> transitionsOutOf = aut1.getTransitionsOutOf(new SingleNode<Fact>(node));
+//			for(Transition<Stmt, INode<Fact>> t : transitionsOutOf){
+//				if(t.getLabel().equals(retSite)){
+//					setCallingContextReachable(new Node<Stmt, Fact>(retSite, node));
+//				}
+//			}
+		}
+		
+	}
+	private void checkCallFeasibility(Fact fact) {
 		PAutomaton<Stmt, INode<Fact>> aut2 = new PAutomaton<Stmt, INode<Fact>>(wrap(seed.variable), wrap(seed.variable)) {
 			@Override
 			public  INode<Fact> createState(INode<Fact> d, Stmt loc) {
 				return generateState(d,loc);
 			}
 			
-			
-
 			@Override
 			public Stmt epsilon() {
 				return epsilonCallSite();
@@ -158,11 +185,27 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		callingContextPDS.poststar(aut2);
 		System.out.println(aut2);
 		System.out.println(aut2.getStates());
-		boolean pds2 = aut2.getStates().contains(new SingleNode<Fact>(succ.variable));
-		if (pds1 && pds2) {
-			System.out.println("IS feasable!" + succ);
-			addToWorklist(succ);
-		} 
+		for(Stmt retSite : callSuccessors){
+			Collection<Transition<Stmt, INode<Fact>>> transitionsOutOf = aut2.getTransitionsOutOf(new SingleNode<Fact>(fact));
+			for(Transition<Stmt, INode<Fact>> t : transitionsOutOf){
+				if(t.getLabel().equals(retSite)){
+					setCallingContextReachable(new Node<Stmt, Fact>(retSite, fact));
+				}
+			}
+		}
+	}
+
+	private void setCallingContextReachable(Node<Stmt, Fact> node) {
+		if(!callingContextReachable.add(node))
+			return;
+		if(fieldContextReachable.contains(node))
+			addToWorklist(node);
+	}
+	private void setFieldContextReachable(Node<Stmt, Fact> node) {
+		if(!fieldContextReachable.add(node))
+			return;
+		if(callingContextReachable.contains(node))
+			addToWorklist(node);
 	}
 
 	private INode<Fact> wrap(Fact variable) {
@@ -194,7 +237,7 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		return new NodeWithLocation<Stmt, Fact, Field>(node.stmt, node.variable, emptyField());
 	}
 
-	public abstract Collection<Node<Stmt, Fact>> computeSuccessor(Node<Stmt, Fact> node);
+	public abstract Collection<State> computeSuccessor(Node<Stmt, Fact> node);
 
 	public abstract Field epsilonField();
 	

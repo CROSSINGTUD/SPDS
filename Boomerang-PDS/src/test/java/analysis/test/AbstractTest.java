@@ -10,7 +10,6 @@ import org.junit.Test;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 
 import analysis.INode;
@@ -18,26 +17,23 @@ import analysis.Node;
 import analysis.NodeWithLocation;
 import analysis.PopNode;
 import analysis.PushNode;
-import analysis.SingleNode;
 import analysis.Solver;
 import analysis.Solver.PDSSystem;
 import wpds.impl.Rule;
-import wpds.impl.UNormalRule;
-import wpds.impl.UPopRule;
-import wpds.impl.UPushRule;
 import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.Location;
+import wpds.interfaces.State;
 import wpds.wildcard.Wildcard;
 
 public class AbstractTest {
-	private Multimap<Node<Statement, Variable>, Node<Statement, Variable>> successorMap = HashMultimap.create();
+	private Multimap<Node<Statement, Variable>, State> successorMap = HashMultimap.create();
 	private Table<Node<Statement, Variable>, Node<Statement, Variable>, Collection<Rule<Statement, INode<Variable>, NoWeight<Statement>>>> callSiteRuleMap = HashBasedTable
 			.create();
 	private Table<NodeWithLocation<Statement, Variable, FieldRef>, NodeWithLocation<Statement, Variable, FieldRef>, Collection<Rule<FieldRef, NodeWithLocation<Statement, Variable, FieldRef>, NoWeight<FieldRef>>>> fieldRefRuleMap = HashBasedTable
 			.create();
 
-	private void addFieldPop(Node<Statement, Variable> curr, FieldRef pop, Node<Statement, Variable> succ) {
-		addSucc(curr, new PopNode<Statement, Variable, FieldRef>(succ.stmt(),succ.fact(),pop,PDSSystem.FIELDS));
+	private void addFieldPop(Node<Statement, Variable> curr,FieldRef ref, Node<Statement, Variable> succ) {
+		addSucc(curr, new PopNode<NodeWithLocation<Statement,Variable, FieldRef>>(new NodeWithLocation<Statement, Variable, FieldRef>(succ.stmt(),succ.fact(),ref),PDSSystem.FIELDS));
 	}
 
 	private void addFieldPush(Node<Statement, Variable> curr, FieldRef push, Node<Statement, Variable> succ) {
@@ -48,23 +44,23 @@ public class AbstractTest {
 		addSucc(curr, succ);
 	}
 
-	private void addReturnFlow(Node<Statement, Variable> curr, Statement pop, Node<Statement, Variable> succ) {
-		addSucc(curr, new PopNode<Statement, Variable, Statement>(succ.stmt(),succ.fact(),pop, PDSSystem.METHODS));
+	private void addReturnFlow(Node<Statement, Variable> curr, Variable returns) {
+		addSucc(curr, new PopNode<Variable>(returns, PDSSystem.METHODS));
 	}
 	
-	private void addCallFlow(Node<Statement, Variable> curr, Node<Statement, Variable> succ, Statement push) {
-		addSucc(curr, new PushNode<Statement, Variable, Statement>(succ.stmt(),succ.fact(),push, PDSSystem.METHODS));
+	private void addCallFlow(Node<Statement, Variable> curr, Node<Statement, Variable> succ, Statement returnSite) {
+		addSucc(curr, new PushNode<Statement, Variable, Statement>(succ.stmt(),succ.fact(),returnSite, PDSSystem.METHODS));
 	} 
-	private void addSucc(Node<Statement, Variable> curr, Node<Statement, Variable> succ) {
+	private void addSucc(Node<Statement, Variable> curr, State succ) {
 		successorMap.put(curr, succ);
 	}
 	private FieldRef epsilonField = new FieldRef("eps_f");
-	private Statement epsilonCallSite = new Statement("eps_c");
+	private Statement epsilonCallSite = new Statement(-1);
 	
 	private Solver<Statement, Variable, FieldRef> solver = new Solver<Statement, Variable, FieldRef>() {
 
 		@Override
-		public Collection<Node<Statement, Variable>> computeSuccessor(Node<Statement, Variable> node) {
+		public Collection<State> computeSuccessor(Node<Statement, Variable> node) {
 			return successorMap.get(node);
 		}
 
@@ -85,7 +81,7 @@ public class AbstractTest {
 
 		@Override
 		public Statement emptyCallSite() {
-			return new Statement("EMPTY_C");
+			return new Statement(0);
 		}
 
 		@Override
@@ -96,114 +92,132 @@ public class AbstractTest {
 
 	@Test
 	public void test1() {
-		addFieldPush(node("1","u"), f("h"), node("2","v"));
-		addCallFlow(node("2","v"), node("3","p"),call("foo"));
-		addFieldPush(node("3","p"), f("g"), node("4","q"));
-		addReturnFlow(node("4","q"), call("foo"), node("5","w"));
-		addFieldPop(node("5","w"), f("g"), node("6","x"));
-		addFieldPop(node("6","x"), f("f"), node("7","y"));
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addCallFlow(node(2,"v"), node(3,"p"),returnSite(5));
+		addFieldPush(node(3,"p"), f("g"), node(4,"q"));
+		addReturnFlow(node(4,"q"), var("w"));
+		addFieldPop(node(5,"w"), f("g"), node(6,"x"));
+		addFieldPop(node(6,"x"), f("f"), node(7,"y"));
 		
 //		second branch
-		addFieldPush(node("8","r"), f("f"), node("9","s"));
-		addCallFlow(node("9","s"),node("3","p"),call("foo"));
-		addReturnFlow(node("4","q"), call("foo"), node("10","t"));
-		addFieldPush(node("10","t"), f("f"), node("11","s"));
+		addFieldPush(node(8,"r"), f("f"), node(9,"s"));
+		addCallFlow(node(9,"s"),node(3,"p"),returnSite(10));
+		addReturnFlow(node(4,"q"), var("t"));
+		addFieldPush(node(10,"t"), f("f"), node(11,"s"));
 		
-		solver.solve(node("1","u"));
+		solver.solve(node(1,"u"));
 		System.out.println(solver.getReachedStates());
-		assertFalse(solver.getReachedStates().contains(node("10","t")));
-		assertTrue(solver.getReachedStates().contains(node("5","w")));
-		assertTrue(solver.getReachedStates().contains(node("6","x")));
-		assertFalse(solver.getReachedStates().contains(node("7","y")));
+		assertFalse(solver.getReachedStates().contains(node(10,"t")));
+		assertTrue(solver.getReachedStates().contains(node(5,"w")));
+		assertTrue(solver.getReachedStates().contains(node(6,"x")));
+		assertFalse(solver.getReachedStates().contains(node(7,"y")));
 	}
 	
 	@Test
-	public void simple() {
-		addNormal(node("1","v"), node("2","w"));
-		addCallFlow(node("2","w"), node("3","p"),call("4"));
-		addNormal(node("4","p"),  node("5","q"));
-		addNormal(node("5","q"),  node("6","x"));
-		addReturnFlow(node("6","x"), call("4"),node("6","p"));
+	public void simpleNonFieldFlow() {
+		addNormal(node(1,"v"), node(2,"w"));
+		addCallFlow(node(2,"w"), node(3,"p"),returnSite(4));
+		addNormal(node(3,"p"),  node(5,"q"));
+		addNormal(node(5,"q"),  node(6,"x"));
+		addReturnFlow(node(6,"x"), var("p"));
+		addNormal(node(4,"p"),  node(6,"y"));
 		
-		solver.solve(node("1","v"));
+		solver.solve(node(1,"v"));
 		System.out.println(solver.getReachedStates());
-		assertTrue(solver.getReachedStates().contains(node("6","p")));
+		assertTrue(solver.getReachedStates().contains(node(6,"y")));
 	}
 	
 	
 	@Test
 	public void testWithTwoStacks() {
-		addFieldPush(node("1","u"), f("h"), node("2","v"));
-		addCallFlow(node("2","v"),  node("3","p"), call("4"));
-		addFieldPush(node("4","p"), f("g"), node("5","q"));
-		addReturnFlow(node("5","q"), call("5"), node("3","w"));
-		addNormal(node("3","w"),node("7","t"));
-		solver.solve(node("1","u"));
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addCallFlow(node(2,"v"),  node(3,"p"), returnSite(4));
+		addFieldPush(node(3,"p"), f("g"), node(5,"q"));
+		addReturnFlow(node(5,"q"), var("w"));
+		addNormal(node(4,"w"),node(7,"t"));
+		solver.solve(node(1,"u"));
 		System.out.println(solver.getReachedStates());
-		assertTrue(solver.getReachedStates().contains(node("7","t")));
+		assertTrue(solver.getReachedStates().contains(node(7,"t")));
 	}
 
 
 	@Test
 	public void positiveTestFieldDoublePushAndPop() {
-		addFieldPush(node("1","u"), f("h"), node("2","v"));
-		addFieldPush(node("2","v"), f("g"), node("3","w"));
-		addFieldPop(node("3","w"), f("g"), node("4","x"));
-		addFieldPop(node("4","x"), f("h"), node("5","y"));
-		solver.solve(node("1","u"));
-		assertTrue(solver.getReachedStates().contains(node("4","x")));
-		assertTrue(solver.getReachedStates().contains(node("5","y")));
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addFieldPush(node(2,"v"), f("g"), node(3,"w"));
+		addFieldPop(node(3,"w"),f("g"), node(4,"x"));
+		addFieldPop(node(4,"x"),f("h"), node(5,"y"));
+		solver.solve(node(1,"u"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(4,"x")));
+		assertTrue(solver.getReachedStates().contains(node(5,"y")));
 	}
 
 	@Test
 	public void negativeTestFieldDoublePushAndPop() {
-		addFieldPush(node("1","u"), f("h"), node("2","v"));
-		addFieldPush(node("2","v"), f("h"), node("3","w"));
-		addFieldPop(node("3","w"), f("h"), node("4","x"));
-		addFieldPop(node("4","x"), f("g"), node("5","y"));
-		solver.solve(node("1","u"));
-		assertTrue(solver.getReachedStates().contains(node("4","x")));
-		assertFalse(solver.getReachedStates().contains(node("5","y")));
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addFieldPush(node(2,"v"), f("h"), node(3,"w"));
+		addFieldPop(node(3,"w"), f("h"), node(4,"x"));
+		addFieldPop(node(4,"x"), f("g"), node(5,"y"));
+		solver.solve(node(1,"u"));
+		assertTrue(solver.getReachedStates().contains(node(4,"x")));
+		assertFalse(solver.getReachedStates().contains(node(5,"y")));
 	}
-	
+
+	@Test
+	public void positiveTestFieldPushPushAndPop() {
+		addFieldPush(node(0,"u"), f("h"), node(1,"u"));
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addFieldPop(node(2,"v"), f("h"),  node(2,"x"));
+		solver.solve(node(0,"u"));
+		assertTrue(solver.getReachedStates().contains(node(2,"x")));
+	}
+	@Test
+	public void negativeTestFieldPushAndPopPop() {
+		addFieldPush(node(0,"u"), f("h"), node(1,"u"));
+		addFieldPop(node(1,"u"), f("h"), node(2,"v"));
+		addFieldPop(node(2,"v"), f("h"),  node(2,"x"));
+		solver.solve(node(0,"u"));
+		assertFalse(solver.getReachedStates().contains(node(2,"x")));
+	}
 	@Test
 	public void positiveTestFieldPushAndPop() {
-		addFieldPush(node("1","u"), f("h"), node("2","v"));
-		addFieldPop(node("2","v"), f("h"), node("3","w"));
-		solver.solve(node("1","u"));
-		assertTrue(solver.getReachedStates().contains(node("3","w")));
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addFieldPop(node(2,"v"), f("h"),  node(2,"x"));
+		solver.solve(node(1,"u"));
+		assertTrue(solver.getReachedStates().contains(node(2,"x")));
 	}
 	
 	@Test
 	public void positiveTestFieldIntermediatePushAndPop() {
-		addFieldPush(node("1","u"), f("h"), node("2","v"));
-		addNormal(node("2","v"), node("3","w"));
-		addNormal(node("3","w"), node("4","w"));
-		addFieldPop(node("4","w"), f("h"), node("5","w"));
-		solver.solve(node("1","u"));
-		assertTrue(solver.getReachedStates().contains(node("5","w")));
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addNormal(node(2,"v"), node(3,"w"));
+		addNormal(node(3,"w"), node(4,"w"));
+		addFieldPop(node(4,"w"), f("h"), node(5,"w"));
+		solver.solve(node(1,"u"));
+		assertTrue(solver.getReachedStates().contains(node(5,"w")));
 	}
 	
 	@Test
 	public void positiveTestFieldLoop() {
-		addFieldPush(node("1","u"), f("h"), node("2","v"));
-		addFieldPush(node("2","v"), f("h"), node("2","v"));
-		addFieldPop(node("2","v"), f("h"), node("3","w"));
-		addFieldPop(node("3","w"), f("h"), node("4","x"));
-		solver.solve(node("1","u"));
-		assertTrue(solver.getReachedStates().contains(node("4","x")));
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addFieldPush(node(2,"v"), f("h"), node(2,"v"));
+		addFieldPop(node(2,"v"), f("h"), node(3,"w"));
+		addFieldPop(node(3,"w"), f("h"), node(4,"x"));
+		solver.solve(node(1,"u"));
+		assertTrue(solver.getReachedStates().contains(node(4,"x")));
 	}
 	
 	@Test
 	public void positiveTestFieldLoop2() {
-		addFieldPush(node("0","a"), f("g"), node("1","u"));
-		addFieldPush(node("1","u"), f("h"), node("2","v"));
-		addFieldPush(node("2","v"), f("h"), node("2","v"));
-		addFieldPop(node("2","v"), f("h"), node("3","w"));
-		addFieldPop(node("3","w"), f("h"), node("4","x"));
-		addFieldPop(node("4","x"), f("g"), node("5","y"));
-		solver.solve(node("0","a"));
-		assertTrue(solver.getReachedStates().contains(node("5","y")));
+		addFieldPush(node(0,"a"), f("g"), node(1,"u"));
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addFieldPush(node(2,"v"), f("h"), node(2,"v"));
+		addFieldPop(node(2,"v"), f("h"), node(3,"w"));
+		addFieldPop(node(3,"w"), f("h"), node(4,"x"));
+		addFieldPop(node(4,"x"), f("g"), node(5,"y"));
+		solver.solve(node(0,"a"));
+		assertTrue(solver.getReachedStates().contains(node(5,"y")));
 	}
 	
 //	@Test
@@ -227,30 +241,36 @@ public class AbstractTest {
 	
 	@Test
 	public void negativeTestFieldPushAndPop() {
-		addFieldPush(node("1","u"), f("h"), node("2","v"));
-		addFieldPop(node("2","v"), f("f"), node("3","w"));
-		solver.solve(node("1","u"));
-		assertFalse(solver.getReachedStates().contains(node("3","w")));
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addFieldPop(node(2,"v"), f("f"), node(3,"w"));
+		solver.solve(node(1,"u"));
+		assertFalse(solver.getReachedStates().contains(node(3,"w")));
 	}
 	@Test
 	public void negativeTestCallSitePushAndPop() {
-		addCallFlow(node("1","u"), node("2","v"),call("3"));
-		addReturnFlow(node("3","v"), call("3"), node("3","w"));
-		addNormal(node("3","w"), node("4","w"));
-		solver.solve(node("1","u"));
+		addCallFlow(node(1,"u"), node(2,"v"),returnSite(4));
+		addReturnFlow(node(2,"v"),var("w"));
+		addNormal(node(3,"w"), node(4,"w"));
+		solver.solve(node(1,"u"));
 		System.out.println(solver.getReachedStates());
-		assertFalse(solver.getReachedStates().contains(node("3","w")));
+		assertFalse(solver.getReachedStates().contains(node(3,"w")));
 	}
 	
 	@Test
 	public void positiveTestCallSitePushAndPop() {
-		addCallFlow(node("1","u"), node("2","v"),call("h"));
-		addReturnFlow(node("2","v"), call("h"), node("3","w"));
-		solver.solve(node("1","u"));
-		assertTrue(solver.getReachedStates().contains(node("3","w")));
+		addCallFlow(node(1,"u"), node(4,"v"),returnSite(2));
+		addReturnFlow(node(4,"v"), var("w"));
+		addNormal(node(2,"w"), node(3,"w"));
+		solver.solve(node(1,"u"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(3,"w")));
 	}
 	
-	private static Statement call(String call) {
+	private Variable var(String v) {
+		return new Variable(v);
+	}
+
+	private static Statement returnSite(int call) {
 		return new Statement(call);
 	}
 
@@ -258,13 +278,13 @@ public class AbstractTest {
 		return new FieldRef(f);
 	}
 
-	public static Node<Statement,Variable> node(String stmt,String var){
+	public static Node<Statement,Variable> node(int stmt,String var){
 		return new Node<Statement,Variable>(new Statement(stmt),new Variable(var));
 	}
-	
+
 	private static class Statement extends StringBasedObj implements Location {
-		public Statement(String name) {
-			super(name);
+		public Statement(int name) {
+			super(Integer.toString(name));
 		}
 	}
 
@@ -274,11 +294,6 @@ public class AbstractTest {
 		}
 	}
 	
-	private static class CallWildCard extends Statement implements Wildcard {
-		public CallWildCard() {
-			super("*_c");
-		}
-	}
 
 	private static class FieldWildCard extends FieldRef implements Wildcard {
 		public FieldWildCard() {
