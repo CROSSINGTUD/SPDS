@@ -1,7 +1,7 @@
-package wpds.impl;
+package wpds.interfaces;
 
-import wpds.interfaces.Location;
-import wpds.interfaces.State;
+import wpds.impl.Transition;
+import wpds.impl.Weight;
 
 public interface WPAUpdateListener<N extends Location, D extends State, W extends Weight<N>> {
 

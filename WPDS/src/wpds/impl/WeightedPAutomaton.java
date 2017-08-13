@@ -22,6 +22,7 @@ import pathexpression.LabeledGraph;
 import pathexpression.PathExpressionComputer;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
+import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedPAutomaton<N extends Location, D extends State, W extends Weight<N>>
 		implements LabeledGraph<D, N> {

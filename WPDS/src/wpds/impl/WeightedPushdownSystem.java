@@ -11,6 +11,7 @@ import com.google.common.collect.Sets;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
+import wpds.interfaces.WPDSUpdateListener;
 import wpds.wildcard.Wildcard;
 
 public abstract class WeightedPushdownSystem<N extends Location, D extends State, W extends Weight<N>>
