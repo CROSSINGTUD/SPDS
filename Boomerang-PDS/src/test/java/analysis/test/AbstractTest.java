@@ -141,6 +141,26 @@ public class AbstractTest {
 		System.out.println(solver.getReachedStates());
 		assertTrue(solver.getReachedStates().contains(node(7,"t")));
 	}
+	@Test
+	public void testWithTwoStacksAndTwoField() {
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addCallFlow(node(2,"v"),  node(3,"p"), returnSite(4));
+		addFieldPush(node(3,"p"), f("g"), node(5,"q"));
+		addFieldPush(node(5,"q"), f("f"), node(6,"q"));
+		addReturnFlow(node(6,"q"), var("w"));
+		addNormal(node(4,"w"),node(7,"t"));
+		addFieldPop(node(7,"t"), f("f"),node(8,"s"));
+		addFieldPop(node(8,"s"), f("g"),node(9,"x"));
+		addFieldPop(node(9,"x"), f("h"),node(10,"y"));
+		addFieldPop(node(9,"x"), f("impossibleRead"),node(11,"z"));
+		solver.solve(node(1,"u"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(7,"t")));
+		assertTrue(solver.getReachedStates().contains(node(8,"s")));
+		assertTrue(solver.getReachedStates().contains(node(9,"x")));
+		assertTrue(solver.getReachedStates().contains(node(10,"y")));
+		assertFalse(solver.getReachedStates().contains(node(11,"z")));
+	}
 
 
 	@Test
