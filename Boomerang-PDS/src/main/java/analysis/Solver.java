@@ -28,10 +28,12 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		FIELDS, METHODS
 	}
 
-	private PushdownSystem<Stmt, INode<Fact>> callingContextPDS = new PushdownSystem<Stmt, INode<Fact>>() {
+	private PushdownSystem<Stmt, INode<Fact>> callingPDS = new PushdownSystem<Stmt, INode<Fact>>() {
 	};
-	private PushdownSystem<Field, NodeWithLocation<Stmt, Fact, Field>> fieldRefContextPDS = new PushdownSystem<Field, NodeWithLocation<Stmt, Fact, Field>>() {
+	private PushdownSystem<Field, NodeWithLocation<Stmt, Fact, Field>> fieldPDS = new PushdownSystem<Field, NodeWithLocation<Stmt, Fact, Field>>() {
 	};
+	private PAutomaton<Field, NodeWithLocation<Stmt, Fact, Field>> fieldPA;
+	private PAutomaton<Stmt, INode<Fact>> callPA;
 	private LinkedList<Node<Stmt, Fact>> worklist = Lists.newLinkedList();
 	private Node<Stmt, Fact> seed;
 	private Set<Node<Stmt, Fact>> reachedStates = Sets.newHashSet();
@@ -92,13 +94,13 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 	}
 
 	private void addNormalCallFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
-		callingContextPDS.addRule(
+		callingPDS.addRule(
 				new UNormalRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt()));
 	}
 
 	private void addNormalFieldFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
 		setFieldContextReachable(new QueuedNode(succ));
-		fieldRefContextPDS.addRule(new UNormalRule<Field, NodeWithLocation<Stmt, Fact, Field>>(asFieldFact(curr),
+		fieldPDS.addRule(new UNormalRule<Field, NodeWithLocation<Stmt, Fact, Field>>(asFieldFact(curr),
 				fieldWildCard(), asFieldFact(succ), fieldWildCard()));
 	}
 
@@ -112,13 +114,13 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		if (system.equals(PDSSystem.FIELDS)) {
 			System.out.println(curr + " HERE " + location);
 			NodeWithLocation<Stmt, Fact, Field> node = (NodeWithLocation) location;
-			fieldRefContextPDS.addRule(new UPopRule<Field, NodeWithLocation<Stmt, Fact, Field>>(asFieldFact(curr),
+			fieldPDS.addRule(new UPopRule<Field, NodeWithLocation<Stmt, Fact, Field>>(asFieldFact(curr),
 					node.location(), asFieldFact(node.asNode())));
 			setCallingContextReachable(new QueuedNode(node.asNode()));
 			checkFieldFeasibility(node.asNode());
 		} else if (system.equals(PDSSystem.METHODS)) {
 			// 
-			callingContextPDS
+			callingPDS
 					.addRule(new UPopRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location)));
 			checkCallFeasibility(curr, location);
 		}
@@ -126,13 +128,13 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 
 	private void processPush(Node<Stmt, Fact> curr, Location location, Node<Stmt, Fact> succ, PDSSystem system) {
 		if (system.equals(PDSSystem.FIELDS)) {
-			fieldRefContextPDS.addRule(new UPushRule<Field, NodeWithLocation<Stmt, Fact, Field>>(asFieldFact(curr),
+			fieldPDS.addRule(new UPushRule<Field, NodeWithLocation<Stmt, Fact, Field>>(asFieldFact(curr),
 					fieldWildCard(), asFieldFact(succ), fieldWildCard(), (Field) location));
 			addNormalCallFlow(curr, succ);
 			fieldReturnSuccessors.add((Field) location);
 		} else if (system.equals(PDSSystem.METHODS)) {
 			addNormalFieldFlow(curr, succ);
-			callingContextPDS.addRule(new UPushRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(),
+			callingPDS.addRule(new UPushRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(),
 					wrap(succ.fact()), succ.stmt(), (Stmt) location));
 			callSuccessors.add((Stmt) location);
 		}
@@ -144,42 +146,38 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 
 	private void checkFieldFeasibility(Node<Stmt, Fact> node) {
 		System.out.println("CHECKING Field reachabilty for " + node);
-		PAutomaton<Field, NodeWithLocation<Stmt, Fact, Field>> aut1 = new PAutomaton<Field, NodeWithLocation<Stmt, Fact, Field>>(
-				withField(seed), withField(seed)) {
-			@Override
-			public NodeWithLocation<Stmt, Fact, Field> createState(NodeWithLocation<Stmt, Fact, Field> d, Field loc) {
-				return new NodeWithLocation<Stmt, Fact, Field>(d.stmt, d.variable, loc);
-			}
-
-			@Override
-			public Field epsilon() {
-				return epsilonField();
-			}
-		};
-		aut1.addTransition(new Transition<Field, NodeWithLocation<Stmt, Fact, Field>>(withField(seed), emptyField(),
-				withField(seed)));
-		fieldRefContextPDS.poststar(aut1);
+		
+		PAutomaton<Field, NodeWithLocation<Stmt, Fact, Field>> aut1 = getOrCreateFieldAutomaton();
+		fieldPDS.poststar(aut1);
 		for (NodeWithLocation<Stmt, Fact, Field> n : aut1.getStates())
 			if (n.asNode().equals(node)) {
 				setFieldContextReachable(new QueuedNode(n.stmt(),n.fact()));
 			}
 	}
 
-	private void checkCallFeasibility(Node<Stmt,Fact> curr,Fact fact) {
-		PAutomaton<Stmt, INode<Fact>> aut2 = new PAutomaton<Stmt, INode<Fact>>(wrap(seed.variable),
-				wrap(seed.variable)) {
-			@Override
-			public INode<Fact> createState(INode<Fact> d, Stmt loc) {
-				return generateState(d, loc);
+	private PAutomaton<Field, NodeWithLocation<Stmt, Fact, Field>> getOrCreateFieldAutomaton() {
+		if(fieldPA == null){
+			fieldPA = new PAutomaton<Field, NodeWithLocation<Stmt, Fact, Field>>(
+					withField(seed), withField(seed)) {
+				@Override
+				public NodeWithLocation<Stmt, Fact, Field> createState(NodeWithLocation<Stmt, Fact, Field> d, Field loc) {
+					return new NodeWithLocation<Stmt, Fact, Field>(d.stmt, d.variable, loc);
+				}
+	
+				@Override
+				public Field epsilon() {
+					return epsilonField();
+				}
+			};
+			fieldPA.addTransition(new Transition<Field, NodeWithLocation<Stmt, Fact, Field>>(withField(seed), emptyField(),
+					withField(seed)));
 			}
+		return fieldPA;
+	}
 
-			@Override
-			public Stmt epsilon() {
-				return epsilonCallSite();
-			}
-		};
-		aut2.addTransition(new Transition<Stmt, INode<Fact>>(wrap(seed.variable), seed.stmt(), wrap(seed.variable)));
-		callingContextPDS.poststar(aut2);
+	private void checkCallFeasibility(Node<Stmt,Fact> curr,Fact fact) {
+		PAutomaton<Stmt, INode<Fact>> aut2 = getOrCreateCallAutomaton();
+		callingPDS.poststar(aut2);
 		for (Stmt retSite : callSuccessors) {
 			Collection<Transition<Stmt, INode<Fact>>> transitionsOutOf = aut2
 					.getTransitionsOutOf(new SingleNode<Fact>(fact));
@@ -192,6 +190,25 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		}
 	}
 	
+	private PAutomaton<Stmt, INode<Fact>> getOrCreateCallAutomaton() {
+		if(callPA == null){
+			callPA = new PAutomaton<Stmt, INode<Fact>>(wrap(seed.variable),
+					wrap(seed.variable)) {
+				@Override
+				public INode<Fact> createState(INode<Fact> d, Stmt loc) {
+					return generateState(d, loc);
+				}
+
+				@Override
+				public Stmt epsilon() {
+					return epsilonCallSite();
+				}
+			};
+			callPA.addTransition(new Transition<Stmt, INode<Fact>>(wrap(seed.variable), seed.stmt(), wrap(seed.variable)));
+		}
+		return callPA;	
+	}
+
 	private class QueuedNode extends Node<Stmt,Fact> implements AvailableListener{
 		public QueuedNode(Stmt stmt, Fact variable) {
 			super(stmt, variable);
