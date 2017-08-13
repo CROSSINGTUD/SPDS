@@ -180,6 +180,7 @@ public class AbstractTest {
 		addFieldPop(node(1,"u"), f("h"), node(2,"v"));
 		addFieldPop(node(2,"v"), f("h"),  node(2,"x"));
 		solver.solve(node(0,"u"));
+		System.out.println(solver.getReachedStates());
 		assertFalse(solver.getReachedStates().contains(node(2,"x")));
 	}
 	@Test

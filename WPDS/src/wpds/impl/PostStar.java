@@ -39,7 +39,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
       iterationCount++;
       Transition<N, D> t = worklist.removeFirst();
       Set<Rule<N, D, W>> rules = pds.getRulesStarting(t.getStart(), t.getString());
-      System.out.println(t.getStart() + " " +t.getString()  + " "+ rules);
+//      System.out.println(t.getStart() + " " +t.getString()  + " "+ rules);
 
       W currWeight = getOrCreateWeight(t);
       for (Rule<N, D, W> rule : rules) {
@@ -50,7 +50,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
         if (rule instanceof PopRule) {
           LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
           previous.add(t);
-          System.err.println(new Transition<N, D>(p, fa.epsilon(), t.getTarget()));
+//          System.err.println(new Transition<N, D>(p, fa.epsilon(), t.getTarget()));
           update(rule, new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight,
               previous);
 

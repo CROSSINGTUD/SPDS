@@ -38,7 +38,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	protected Set<D> states = Sets.newHashSet();
 	private final Multimap<D, Transition<N, D>> transitionsOutOf = HashMultimap.create();
 	private final Multimap<D, Transition<N, D>> transitionsInto = HashMultimap.create();
-	private List<WPAUpdateListener<N, D, W>> listeners = Lists.newArrayList();
+	private Set<WPAUpdateListener<N, D, W>> listeners = Sets.newHashSet();
 
 	public WeightedPAutomaton(D initialState, D finalState) {
 		this.initialState = initialState;
@@ -121,7 +121,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public void registerListener(WPAUpdateListener<N,D,W> listener){
-		listeners.add(listener);
+		if(!listeners.add(listener))
+			return;
 		for(Transition<N, D > t : getTransitions()){
 			listener.onAddedTransition(t);
 		}

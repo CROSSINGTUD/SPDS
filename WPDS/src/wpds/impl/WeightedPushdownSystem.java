@@ -19,7 +19,7 @@ public abstract class WeightedPushdownSystem<N extends Location, D extends State
 	Set<PushRule<N, D, W>> pushRules = Sets.newHashSet();
 	Set<PopRule<N, D, W>> popRules = Sets.newHashSet();
 	Set<NormalRule<N, D, W>> normalRules = Sets.newHashSet();
-	List<WPDSUpdateListener<N, D, W>> listeners = Lists.newArrayList();
+	Set<WPDSUpdateListener<N, D, W>> listeners = Sets.newHashSet();
 
 	@Override
 	public boolean addRule(Rule<N, D, W> rule) {
@@ -43,7 +43,9 @@ public abstract class WeightedPushdownSystem<N extends Location, D extends State
 	}
 	
 	public void registerUpdateListener(WPDSUpdateListener<N, D, W> listener){
-		listeners.add(listener);
+		if(!listeners.add(listener)){
+			return;
+		}
 		for(Rule<N, D, W> r : getAllRules()){
 			listener.onRuleAdded(r);
 		}
