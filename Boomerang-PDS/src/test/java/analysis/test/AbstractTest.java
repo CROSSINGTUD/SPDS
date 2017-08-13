@@ -232,24 +232,39 @@ public class AbstractTest {
 		assertTrue(solver.getReachedStates().contains(node(5,"y")));
 	}
 	
-//	@Test
-//	public void positiveSummaryTest() {
-////		a.g = c
-////		foo(a)
-////		e = a.f
-////		foo(e)
-////		h = e.f
-//		addFieldPush(s("0","c"), f("g"), s("1","a"));
-//		addCallSitePush(s("1","a"), call("foo1"), s("1a","u"));
-//		addFieldPush(s("1a","u"), f("f"), s("2a","u"));
-//		addCallSitePop(s("2a","u"), call("foo1"), s("2","a"));
-//		addFieldPop(s("2","a"), f("f"), s("3","e"));
-//		addCallSitePush(s("3","e"), call("foo2"), s("1a","u"));
-//		addCallSitePop(s("2a","u"), call("foo2"), s("4","e"));
-//		addFieldPop(s("4","e"), f("f"), s("5","h"));
-//		solver.solve(s("0","c"));
-//		assertTrue(solver.getReachedStates().contains(s("4","e")));
-//	}
+	@Test
+	public void positiveSummaryTest() {
+//		1 :a.g = c
+//		4: foo(a)
+//		5: e = a.f
+//		6: foo(e)
+//		7: h = e.f
+		
+		//2: foo(u)
+		// 3: u.f = ... 
+		addFieldPush(node(0,"c"), f("g"), node(1,"a"));
+		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
+		addFieldPush(node(2,"u"), f("f"), node(3,"u"));
+		addReturnFlow(node(3,"u"),var("a"));
+		addFieldPop(node(4,"a"), f("f"), node(5,"e"));
+		addCallFlow(node(5,"e"), node(2,"u"), returnSite(6));
+		addReturnFlow(node(3,"u"),var("e"));
+		addFieldPop(node(6,"e"), f("f"), node(7,"h"));
+		solver.solve(node(0,"c"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(7,"h")));
+	}
+	
+	@Test
+	public void positiveSummaryFlowTest() {
+		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
+		addReturnFlow(node(2,"u"),var("e"));
+		addCallFlow(node(4,"e"), node(2,"u"), returnSite(6));
+		addReturnFlow(node(2,"u"),var("e"));
+		solver.solve(node(1,"a"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(6,"e")));
+	}
 	
 	@Test
 	public void negativeTestFieldPushAndPop() {

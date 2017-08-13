@@ -17,11 +17,11 @@ public abstract class PushdownSystem<N extends Location, D extends State>
   }
 
   @Override
-  public void addRule(Rule<N, D, NoWeight<N>> rule) {
+  public boolean addRule(Rule<N, D, NoWeight<N>> rule) {
     if (!(rule instanceof UNormalRule) && !(rule instanceof UPopRule)
         && !(rule instanceof UPushRule))
       throw new RuntimeException("Trying to add a weighted rule to an unweighted PDS!");
-    super.addRule(rule);
+    return super.addRule(rule);
   }
 
 }

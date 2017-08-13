@@ -1,6 +1,5 @@
 package analysis;
 
-import java.security.cert.PolicyQualifierInfo;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.LinkedList;
@@ -15,15 +14,11 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 import wpds.impl.PAutomaton;
-import wpds.impl.PopRule;
-import wpds.impl.PushRule;
 import wpds.impl.PushdownSystem;
-import wpds.impl.Rule;
 import wpds.impl.Transition;
 import wpds.impl.UNormalRule;
 import wpds.impl.UPopRule;
 import wpds.impl.UPushRule;
-import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 
@@ -60,7 +55,6 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 			reachedStates.add(curr);
 
 			Collection<State> successors = computeSuccessor(curr);
-			System.err.println(curr + " FLOWS TO " + successors);
 			for (State s : successors) {
 				if (s instanceof Node) {
 					Node<Stmt, Fact> succ = (Node<Stmt, Fact>) s;
@@ -122,7 +116,6 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 					node.location(), asFieldFact(node.asNode())));
 			setCallingContextReachable(new QueuedNode(node.asNode()));
 			checkFieldFeasibility(node.asNode());
-			// addNormalCallFlow(curr, succ);
 		} else if (system.equals(PDSSystem.METHODS)) {
 			// 
 			callingContextPDS
@@ -170,17 +163,6 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 			if (n.asNode().equals(node)) {
 				setFieldContextReachable(new QueuedNode(n.stmt(),n.fact()));
 			}
-		System.out.println(aut1);
-		for (Field retSite : fieldReturnSuccessors) {
-			// Collection<Transition<Stmt, INode<Fact>>> transitionsOutOf =
-			// aut1.getTransitionsOutOf(new SingleNode<Fact>(node));
-			// for(Transition<Stmt, INode<Fact>> t : transitionsOutOf){
-			// if(t.getLabel().equals(retSite)){
-			// setCallingContextReachable(new Node<Stmt, Fact>(retSite, node));
-			// }
-			// }
-		}
-
 	}
 
 	private void checkCallFeasibility(Node<Stmt,Fact> curr,Fact fact) {
@@ -198,8 +180,6 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		};
 		aut2.addTransition(new Transition<Stmt, INode<Fact>>(wrap(seed.variable), seed.stmt(), wrap(seed.variable)));
 		callingContextPDS.poststar(aut2);
-		System.out.println(aut2);
-		System.out.println(aut2.getStates());
 		for (Stmt retSite : callSuccessors) {
 			Collection<Transition<Stmt, INode<Fact>>> transitionsOutOf = aut2
 					.getTransitionsOutOf(new SingleNode<Fact>(fact));

@@ -18,13 +18,14 @@ public abstract class WeightedPushdownSystem<N extends Location, D extends State
   Set<NormalRule<N, D, W>> normalRules = Sets.newHashSet();
 
   @Override
-  public void addRule(Rule<N, D, W> rule) {
+  public boolean addRule(Rule<N, D, W> rule) {
     if (rule instanceof PushRule)
-      pushRules.add((PushRule) rule);
+      return pushRules.add((PushRule) rule);
     else if (rule instanceof PopRule)
-      popRules.add((PopRule) rule);
+      return popRules.add((PopRule) rule);
     else if (rule instanceof NormalRule)
-      normalRules.add((NormalRule) rule);
+      return normalRules.add((NormalRule) rule);
+    throw new RuntimeException("Try to add a rule of wrong type");
   }
 
   @Override
