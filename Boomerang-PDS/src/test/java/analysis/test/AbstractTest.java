@@ -89,7 +89,6 @@ public class AbstractTest {
 			return new FieldWildCard();
 		}
 	};
-
 	@Test
 	public void test1() {
 		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
@@ -111,6 +110,19 @@ public class AbstractTest {
 		assertTrue(solver.getReachedStates().contains(node(5,"w")));
 		assertTrue(solver.getReachedStates().contains(node(6,"x")));
 		assertFalse(solver.getReachedStates().contains(node(7,"y")));
+	}
+	
+	@Test
+	public void test1Simple() {
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addCallFlow(node(2,"v"), node(3,"p"),returnSite(5));
+		addFieldPush(node(3,"p"), f("g"), node(4,"q"));
+		addReturnFlow(node(4,"q"), var("w"));
+		addFieldPop(node(5,"w"), f("g"), node(6,"x"));
+		addFieldPop(node(6,"x"), f("f"), node(7,"y"));
+		solver.solve(node(1,"u"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(6,"x")));
 	}
 	
 	@Test
