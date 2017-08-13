@@ -360,7 +360,7 @@ public class AbstractTest {
 
 	private static class FieldWildCard extends FieldRef implements Wildcard {
 		public FieldWildCard() {
-			super("*_f");
+			super("*");
 		}
 	}
 
