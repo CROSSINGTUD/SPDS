@@ -4,7 +4,7 @@ import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 
-public abstract class PushdownSystem<N extends Location, D extends State>
+public class PushdownSystem<N extends Location, D extends State>
     extends WeightedPushdownSystem<N, D, NoWeight<N>> {
   @Override
   public NoWeight getZero() {

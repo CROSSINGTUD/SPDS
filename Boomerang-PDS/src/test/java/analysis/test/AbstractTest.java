@@ -247,6 +247,29 @@ public class AbstractTest {
 	}
 	
 	@Test
+	public void positiveNoFieldsSummaryTest() {
+//		1 :a.g = c
+//		4: foo(a)
+//		5: e = a.f
+//		6: foo(e)
+//		7: h = e.f
+		
+		//2: foo(u)
+		// 3: u.f = ... 
+		addNormal(node(0,"c"), node(1,"a"));
+		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
+		addNormal(node(2,"u"),  node(3,"u"));
+		addReturnFlow(node(3,"u"),var("a"));
+		addNormal(node(4,"a"),  node(5,"e"));
+		addCallFlow(node(5,"e"), node(2,"u"), returnSite(6));
+		addReturnFlow(node(3,"u"),var("e"));
+		addNormal(node(6,"e"),  node(7,"h"));
+		solver.solve(node(0,"c"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(7,"h")));
+	}
+	
+	@Test
 	public void positiveSummaryFlowTest() {
 		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
 		addReturnFlow(node(2,"u"),var("e"));

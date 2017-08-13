@@ -30,16 +30,16 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		FIELDS, METHODS
 	}
 
-	private PushdownSystem<Stmt, INode<Fact>> callingPDS = new PushdownSystem<Stmt, INode<Fact>>() {
-	};
-	private PushdownSystem<Field, INode<StmtWithFact>> fieldPDS = new PushdownSystem<Field, INode<StmtWithFact>>() {
-	};
+	private PushdownSystem<Stmt, INode<Fact>> callingPDS = new PushdownSystem<Stmt, INode<Fact>>();
+	private PushdownSystem<Field, INode<StmtWithFact>> fieldPDS = new PushdownSystem<Field, INode<StmtWithFact>>();
 	private PAutomaton<Field, INode<StmtWithFact>> fieldPA;
 	private PAutomaton<Stmt, INode<Fact>> callPA;
+	
 	private LinkedList<Node<Stmt, Fact>> worklist = Lists.newLinkedList();
 	private Node<Stmt, Fact> seed;
 	private Set<Node<Stmt, Fact>> reachedStates = Sets.newHashSet();
-	private Set<Stmt> callSuccessors = Sets.newHashSet();
+	private Set<Stmt> returnSites = Sets.newHashSet();
+	private Multimap<Node<Stmt,Fact>, Fact> returningFacts = HashMultimap.create();
 	private Set<Node<Stmt, Fact>> callingContextReachable = Sets.newHashSet();
 	private Set<Node<Stmt, Fact>> fieldContextReachable = Sets.newHashSet();
 	private Multimap<Node<Stmt, Fact>, AvailableListener> onFieldContextReachable = HashMultimap.create();
@@ -91,6 +91,8 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 	private boolean processNormal(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
 		boolean added = addNormalFieldFlow(curr, succ);
 		added |= addNormalCallFlow(curr, succ);
+		fieldPDS.poststar(getOrCreateFieldAutomaton());
+		callingPDS.poststar(getOrCreateCallAutomaton());
 		return added;
 	}
 
@@ -121,6 +123,7 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		} else if (system.equals(PDSSystem.METHODS)) {
 			//
 			callingPDS.addRule(new UPopRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location)));
+			System.out.println("POPPING " + curr + location);
 			checkCallFeasibility(curr, location);
 		}
 	}
@@ -131,15 +134,17 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 			added |= fieldPDS.addRule(new UPushRule<Field, INode<StmtWithFact>>(asFieldFact(curr), fieldWildCard(),
 					asFieldFact(succ), fieldWildCard(), (Field) location));
 			added |= addNormalCallFlow(curr, succ);
+			fieldPDS.poststar(getOrCreateFieldAutomaton());
 		} else if (system.equals(PDSSystem.METHODS)) {
 			added |= addNormalFieldFlow(curr, succ);
 			added |= callingPDS.addRule(new UPushRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()),
 					succ.stmt(), (Stmt) location));
-			callSuccessors.add((Stmt) location);
-			System.out.println("CALL SUCCESSORS: "+ callSuccessors);
+			callingPDS.poststar(getOrCreateCallAutomaton());
+			addReturnSite((Stmt) location);
 		}
 		return added;
 	}
+
 
 	private void checkFieldFeasibility(Node<Stmt, Fact> node) {
 		System.out.println("CHECKING Field reachabilty for " + node);
@@ -221,13 +226,28 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 
 	private void checkCallFeasibility(Node<Stmt, Fact> curr, Fact fact) {
 		PAutomaton<Stmt, INode<Fact>> aut2 = getOrCreateCallAutomaton();
-
+		addReturningFact(curr,fact);
 		callingPDS.poststar(aut2);
-		for (Stmt retSite : callSuccessors) {
-			aut2.registerListener(new CallUpdateListener(curr, retSite, fact));
-		}
 	}
 	
+	private void addReturningFact(Node<Stmt, Fact> curr, Fact fact) {
+		if(!returningFacts.put(curr, fact)){
+			return;
+		}
+		for (Stmt retSite : returnSites) {
+			getOrCreateCallAutomaton().registerListener(new CallUpdateListener(curr, retSite, fact));
+		}
+	}
+
+	private void addReturnSite(Stmt location) {
+		if(!returnSites.add(location)){
+			return;
+		}
+		for (Entry<Node<Stmt, Fact>, Fact> retSite : returningFacts.entries()) {
+			getOrCreateCallAutomaton().registerListener(new CallUpdateListener(retSite.getKey(), location, retSite.getValue()));
+		}
+	}
+
 	private class CallUpdateListener implements WPAUpdateListener<Stmt, INode<Fact>, NoWeight<Stmt>>{
 		private Stmt retSite;
 		private Fact fact;
@@ -240,7 +260,7 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		}
 		@Override
 		public void onAddedTransition(Transition<Stmt, INode<Fact>> t) {
-			System.out.println("CALLUPDATE " + t  +"  " + fact + "   "+ retSite);
+//			System.out.println("CALLUPDATE " + t  +"  " + fact + "   "+ retSite);
 			if(t.getStart().equals(new SingleNode<Fact>(fact))){
 				if(t.getLabel().equals(retSite)){
 					addNormalFieldFlow(curr, new Node<Stmt, Fact>(retSite, fact));
