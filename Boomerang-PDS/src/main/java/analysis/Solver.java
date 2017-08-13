@@ -30,9 +30,9 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 
 	private PushdownSystem<Stmt, INode<Fact>> callingPDS = new PushdownSystem<Stmt, INode<Fact>>() {
 	};
-	private PushdownSystem<Field, NodeWithLocation<Stmt, Fact, Field>> fieldPDS = new PushdownSystem<Field, NodeWithLocation<Stmt, Fact, Field>>() {
+	private PushdownSystem<Field, INode<StmtWithFact>> fieldPDS = new PushdownSystem<Field, INode<StmtWithFact>>() {
 	};
-	private PAutomaton<Field, NodeWithLocation<Stmt, Fact, Field>> fieldPA;
+	private PAutomaton<Field, INode<StmtWithFact>> fieldPA;
 	private PAutomaton<Stmt, INode<Fact>> callPA;
 	private LinkedList<Node<Stmt, Fact>> worklist = Lists.newLinkedList();
 	private Node<Stmt, Fact> seed;
@@ -70,8 +70,8 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 						processPush(curr, location, pushNode, system);
 					} else {
 						processNormal(curr, succ);
-						setCallingContextReachable(new QueuedNode(succ.stmt(),succ.fact()));
-						setFieldContextReachable(new QueuedNode(succ.stmt(),succ.fact()));
+						setCallingContextReachable(new QueuedNode(succ.stmt(), succ.fact()));
+						setFieldContextReachable(new QueuedNode(succ.stmt(), succ.fact()));
 					}
 					addToWorklist(succ);
 				} else if (s instanceof PopNode) {
@@ -100,42 +100,41 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 
 	private void addNormalFieldFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
 		setFieldContextReachable(new QueuedNode(succ));
-		fieldPDS.addRule(new UNormalRule<Field, NodeWithLocation<Stmt, Fact, Field>>(asFieldFact(curr),
-				fieldWildCard(), asFieldFact(succ), fieldWildCard()));
+		fieldPDS.addRule(new UNormalRule<Field, INode<StmtWithFact>>(asFieldFact(curr), fieldWildCard(),
+				asFieldFact(succ), fieldWildCard()));
 	}
 
 	public abstract Field fieldWildCard();
 
-	private NodeWithLocation<Stmt, Fact, Field> asFieldFact(Node<Stmt, Fact> node) {
-		return new NodeWithLocation<Stmt, Fact, Field>(node.stmt, node.fact(), emptyField());
+	private INode<StmtWithFact> asFieldFact(Node<Stmt, Fact> node) {
+		return new SingleNode<StmtWithFact>(new StmtWithFact(node.stmt, node.fact()));
 	}
 
 	private void processPop(Node<Stmt, Fact> curr, Fact location, PDSSystem system) {
 		if (system.equals(PDSSystem.FIELDS)) {
 			System.out.println(curr + " HERE " + location);
 			NodeWithLocation<Stmt, Fact, Field> node = (NodeWithLocation) location;
-			fieldPDS.addRule(new UPopRule<Field, NodeWithLocation<Stmt, Fact, Field>>(asFieldFact(curr),
-					node.location(), asFieldFact(node.asNode())));
-			setCallingContextReachable(new QueuedNode(node.asNode()));
-			checkFieldFeasibility(node.asNode());
+			fieldPDS.addRule(new UPopRule<Field, INode<StmtWithFact>>(asFieldFact(curr), node.location(),
+					asFieldFact(node.fact())));
+			setCallingContextReachable(new QueuedNode(node.fact()));
+			checkFieldFeasibility(node.fact());
 		} else if (system.equals(PDSSystem.METHODS)) {
-			// 
-			callingPDS
-					.addRule(new UPopRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location)));
+			//
+			callingPDS.addRule(new UPopRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location)));
 			checkCallFeasibility(curr, location);
 		}
 	}
 
 	private void processPush(Node<Stmt, Fact> curr, Location location, Node<Stmt, Fact> succ, PDSSystem system) {
 		if (system.equals(PDSSystem.FIELDS)) {
-			fieldPDS.addRule(new UPushRule<Field, NodeWithLocation<Stmt, Fact, Field>>(asFieldFact(curr),
-					fieldWildCard(), asFieldFact(succ), fieldWildCard(), (Field) location));
+			fieldPDS.addRule(new UPushRule<Field, INode<StmtWithFact>>(asFieldFact(curr), fieldWildCard(),
+					asFieldFact(succ), fieldWildCard(), (Field) location));
 			addNormalCallFlow(curr, succ);
 			fieldReturnSuccessors.add((Field) location);
 		} else if (system.equals(PDSSystem.METHODS)) {
 			addNormalFieldFlow(curr, succ);
-			callingPDS.addRule(new UPushRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(),
-					wrap(succ.fact()), succ.stmt(), (Stmt) location));
+			callingPDS.addRule(new UPushRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()),
+					succ.stmt(), (Stmt) location));
 			callSuccessors.add((Stmt) location);
 		}
 	}
@@ -146,36 +145,38 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 
 	private void checkFieldFeasibility(Node<Stmt, Fact> node) {
 		System.out.println("CHECKING Field reachabilty for " + node);
-		
-		PAutomaton<Field, NodeWithLocation<Stmt, Fact, Field>> aut1 = getOrCreateFieldAutomaton();
+		PAutomaton<Field, INode<StmtWithFact>> aut1 = getOrCreateFieldAutomaton();
 		fieldPDS.poststar(aut1);
-		for (NodeWithLocation<Stmt, Fact, Field> n : aut1.getStates())
-			if (n.asNode().equals(node)) {
-				setFieldContextReachable(new QueuedNode(n.stmt(),n.fact()));
+		for (INode<StmtWithFact> n : aut1.getStates()) {
+			Solver<Stmt, Fact, Field>.StmtWithFact fact = n.fact();
+			if (fact != null && fact.asNode().equals(node)) {
+				setFieldContextReachable(new QueuedNode(fact.stmt(), fact.fact()));
 			}
+		}
 	}
 
-	private PAutomaton<Field, NodeWithLocation<Stmt, Fact, Field>> getOrCreateFieldAutomaton() {
-		if(fieldPA == null){
-			fieldPA = new PAutomaton<Field, NodeWithLocation<Stmt, Fact, Field>>(
-					withField(seed), withField(seed)) {
+	private PAutomaton<Field, INode<StmtWithFact>> getOrCreateFieldAutomaton() {
+		if (fieldPA == null) {
+			fieldPA = new PAutomaton<Field, INode<StmtWithFact>>(asFieldFact(seed), asFieldFact(seed)) {
 				@Override
-				public NodeWithLocation<Stmt, Fact, Field> createState(NodeWithLocation<Stmt, Fact, Field> d, Field loc) {
-					return new NodeWithLocation<Stmt, Fact, Field>(d.stmt, d.variable, loc);
+				public INode<StmtWithFact> createState(INode<StmtWithFact> d, Field loc) {
+					if (loc.equals(emptyField()))
+						return d;
+					return generateFieldState(d, loc);
 				}
-	
+
 				@Override
 				public Field epsilon() {
 					return epsilonField();
 				}
 			};
-			fieldPA.addTransition(new Transition<Field, NodeWithLocation<Stmt, Fact, Field>>(withField(seed), emptyField(),
-					withField(seed)));
-			}
+			fieldPA.addTransition(
+					new Transition<Field, INode<StmtWithFact>>(asFieldFact(seed), emptyField(), asFieldFact(seed)));
+		}
 		return fieldPA;
 	}
 
-	private void checkCallFeasibility(Node<Stmt,Fact> curr,Fact fact) {
+	private void checkCallFeasibility(Node<Stmt, Fact> curr, Fact fact) {
 		PAutomaton<Stmt, INode<Fact>> aut2 = getOrCreateCallAutomaton();
 		callingPDS.poststar(aut2);
 		for (Stmt retSite : callSuccessors) {
@@ -183,17 +184,16 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 					.getTransitionsOutOf(new SingleNode<Fact>(fact));
 			for (Transition<Stmt, INode<Fact>> t : transitionsOutOf) {
 				if (t.getLabel().equals(retSite)) {
-					addNormalFieldFlow(curr, new Node<Stmt,Fact>(retSite,fact));
+					addNormalFieldFlow(curr, new Node<Stmt, Fact>(retSite, fact));
 					setCallingContextReachable(new QueuedNode(retSite, fact));
 				}
 			}
 		}
 	}
-	
+
 	private PAutomaton<Stmt, INode<Fact>> getOrCreateCallAutomaton() {
-		if(callPA == null){
-			callPA = new PAutomaton<Stmt, INode<Fact>>(wrap(seed.variable),
-					wrap(seed.variable)) {
+		if (callPA == null) {
+			callPA = new PAutomaton<Stmt, INode<Fact>>(wrap(seed.variable), wrap(seed.variable)) {
 				@Override
 				public INode<Fact> createState(INode<Fact> d, Stmt loc) {
 					return generateState(d, loc);
@@ -204,16 +204,18 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 					return epsilonCallSite();
 				}
 			};
-			callPA.addTransition(new Transition<Stmt, INode<Fact>>(wrap(seed.variable), seed.stmt(), wrap(seed.variable)));
+			callPA.addTransition(
+					new Transition<Stmt, INode<Fact>>(wrap(seed.variable), seed.stmt(), wrap(seed.variable)));
 		}
-		return callPA;	
+		return callPA;
 	}
 
-	private class QueuedNode extends Node<Stmt,Fact> implements AvailableListener{
+	private class QueuedNode extends Node<Stmt, Fact> implements AvailableListener {
 		public QueuedNode(Stmt stmt, Fact variable) {
 			super(stmt, variable);
 		}
-		public QueuedNode(Node<Stmt,Fact> node) {
+
+		public QueuedNode(Node<Stmt, Fact> node) {
 			super(node.stmt(), node.fact());
 		}
 
@@ -221,22 +223,23 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		public void available() {
 			addToWorklist(this);
 		}
-		public Node<Stmt,Fact> asNode(){
-			return new Node<Stmt,Fact>(stmt(),fact());
-		} 
+
+		public Node<Stmt, Fact> asNode() {
+			return new Node<Stmt, Fact>(stmt(), fact());
+		}
 	}
 
 	private void setCallingContextReachable(QueuedNode queuedNode) {
 		Node<Stmt, Fact> node = queuedNode.asNode();
 		callingContextReachable.add(node);
-		System.out.println("Set Calling Context Reachable "+  node);
+		System.out.println("Set Calling Context Reachable " + node);
 		Collection<AvailableListener> listeners = onCallingContextReachable.get(node);
-		for(AvailableListener l : listeners){
+		for (AvailableListener l : listeners) {
 			l.available();
 		}
-		if (fieldContextReachable.contains(node)){
+		if (fieldContextReachable.contains(node)) {
 			queuedNode.available();
-		} else{
+		} else {
 			onCallingContextReachable.put(node, queuedNode);
 		}
 	}
@@ -244,14 +247,14 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 	private void setFieldContextReachable(QueuedNode queuedNode) {
 		Node<Stmt, Fact> node = queuedNode.asNode();
 		fieldContextReachable.add(node);
-		System.out.println("Set Field Context Reachable "+  node);
+		System.out.println("Set Field Context Reachable " + node);
 		Collection<AvailableListener> listeners = onFieldContextReachable.get(node);
-		for(AvailableListener l : listeners){
+		for (AvailableListener l : listeners) {
 			l.available();
 		}
-		if (callingContextReachable.contains(node)){
+		if (callingContextReachable.contains(node)) {
 			queuedNode.available();
-		} else{
+		} else {
 			onFieldContextReachable.put(node, queuedNode);
 		}
 	}
@@ -260,12 +263,12 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		return new SingleNode<Fact>(variable);
 	}
 
-	Map<Entry<INode<Fact>, Stmt>, INode<Fact>> generatedState = Maps.newHashMap();
+	Map<Entry<INode<Fact>, Stmt>, INode<Fact>> generatedCallState = Maps.newHashMap();
 
 	protected INode<Fact> generateState(final INode<Fact> d, final Stmt loc) {
 		Entry<INode<Fact>, Stmt> e = new AbstractMap.SimpleEntry<>(d, loc);
-		if (!generatedState.containsKey(e)) {
-			generatedState.put(e, new INode<Fact>() {
+		if (!generatedCallState.containsKey(e)) {
+			generatedCallState.put(e, new INode<Fact>() {
 				@Override
 				public Fact fact() {
 					throw new RuntimeException("System internal state");
@@ -277,11 +280,28 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 				}
 			});
 		}
-		return generatedState.get(e);
+		return generatedCallState.get(e);
 	}
 
-	private NodeWithLocation<Stmt, Fact, Field> withField(Node<Stmt, Fact> node) {
-		return new NodeWithLocation<Stmt, Fact, Field>(node.stmt, node.variable, emptyField());
+	Map<Entry<INode<StmtWithFact>, Field>, INode<StmtWithFact>> generatedFieldState = Maps.newHashMap();
+
+	protected INode<StmtWithFact> generateFieldState(final INode<StmtWithFact> d, final Field loc) {
+		Entry<INode<StmtWithFact>, Field> e = new AbstractMap.SimpleEntry<>(d, loc);
+		if (!generatedFieldState.containsKey(e)) {
+			generatedFieldState.put(e, new INode<StmtWithFact>() {
+				@Override
+				public StmtWithFact fact() {
+					return null;
+					// throw new RuntimeException("System internal state");
+				}
+
+				@Override
+				public String toString() {
+					return d + " " + loc;
+				}
+			});
+		}
+		return generatedFieldState.get(e);
 	}
 
 	public abstract Collection<State> computeSuccessor(Node<Stmt, Fact> node);
@@ -297,8 +317,19 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 	public Set<Node<Stmt, Fact>> getReachedStates() {
 		return Sets.newHashSet(reachedStates);
 	}
-	
-	private interface AvailableListener{
+
+	private interface AvailableListener {
 		void available();
+	}
+
+	private class StmtWithFact extends Node<Stmt, Fact> {
+
+		public StmtWithFact(Stmt stmt, Fact variable) {
+			super(stmt, variable);
+		}
+
+		public Node<Stmt, Fact> asNode() {
+			return new Node<Stmt, Fact>(stmt(), fact());
+		}
 	}
 }

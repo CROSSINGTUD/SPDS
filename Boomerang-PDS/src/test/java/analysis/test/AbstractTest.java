@@ -7,35 +7,25 @@ import java.util.Collection;
 
 import org.junit.Test;
 
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Table;
 
-import analysis.INode;
 import analysis.Node;
 import analysis.NodeWithLocation;
 import analysis.PopNode;
 import analysis.PushNode;
 import analysis.Solver;
 import analysis.Solver.PDSSystem;
-import wpds.impl.Rule;
-import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.wildcard.Wildcard;
 
 public class AbstractTest {
 	private Multimap<Node<Statement, Variable>, State> successorMap = HashMultimap.create();
-	private Table<Node<Statement, Variable>, Node<Statement, Variable>, Collection<Rule<Statement, INode<Variable>, NoWeight<Statement>>>> callSiteRuleMap = HashBasedTable
-			.create();
-	private Table<NodeWithLocation<Statement, Variable, FieldRef>, NodeWithLocation<Statement, Variable, FieldRef>, Collection<Rule<FieldRef, NodeWithLocation<Statement, Variable, FieldRef>, NoWeight<FieldRef>>>> fieldRefRuleMap = HashBasedTable
-			.create();
 
 	private void addFieldPop(Node<Statement, Variable> curr,FieldRef ref, Node<Statement, Variable> succ) {
-		addSucc(curr, new PopNode<NodeWithLocation<Statement,Variable, FieldRef>>(new NodeWithLocation<Statement, Variable, FieldRef>(succ.stmt(),succ.fact(),ref),PDSSystem.FIELDS));
+		addSucc(curr, new PopNode<NodeWithLocation<Statement,Variable,FieldRef>>(new NodeWithLocation<Statement,Variable,FieldRef>(succ.stmt(),succ.fact(), ref), PDSSystem.FIELDS));
 	}
-
 	private void addFieldPush(Node<Statement, Variable> curr, FieldRef push, Node<Statement, Variable> succ) {
 		addSucc(curr, new PushNode<Statement, Variable, FieldRef>(succ.stmt(),succ.fact(),push,PDSSystem.FIELDS));
 	}
@@ -293,6 +283,8 @@ public class AbstractTest {
 		assertTrue(solver.getReachedStates().contains(node(3,"w")));
 	}
 	
+	
+	
 	private Variable var(String v) {
 		return new Variable(v);
 	}
@@ -309,6 +301,46 @@ public class AbstractTest {
 		return new Node<Statement,Variable>(new Statement(stmt),new Variable(var));
 	}
 
+	private static class StmtWithVar{
+		private Variable var;
+		private Statement stmt;
+
+		public StmtWithVar(Statement stmt, Variable var){
+			this.stmt = stmt;
+			this.var = var;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
+			result = prime * result + ((var == null) ? 0 : var.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			StmtWithVar other = (StmtWithVar) obj;
+			if (stmt == null) {
+				if (other.stmt != null)
+					return false;
+			} else if (!stmt.equals(other.stmt))
+				return false;
+			if (var == null) {
+				if (other.var != null)
+					return false;
+			} else if (!var.equals(other.var))
+				return false;
+			return true;
+		}
+	}
 	private static class Statement extends StringBasedObj implements Location {
 		public Statement(int name) {
 			super(Integer.toString(name));
