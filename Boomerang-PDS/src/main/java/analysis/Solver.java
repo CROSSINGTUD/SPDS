@@ -120,6 +120,7 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 			fieldPDS.addRule(new UPopRule<Field, INode<StmtWithFact>>(asFieldFact(curr), node.location(),
 					asFieldFact(node.fact())));
 			setCallingContextReachable(new QueuedNode(node.fact()));
+			addNormalCallFlow(curr, node.fact());
 			checkFieldFeasibility(node.fact());
 		} else if (system.equals(PDSSystem.METHODS)) {
 			//
@@ -135,11 +136,17 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 			added |= fieldPDS.addRule(new UPushRule<Field, INode<StmtWithFact>>(asFieldFact(curr), fieldWildCard(),
 					asFieldFact(succ), fieldWildCard(), (Field) location));
 			added |= addNormalCallFlow(curr, succ);
+			
+			//TODO This call is unnecessary, why?
+			setFieldContextReachable(new QueuedNode(succ));
 			fieldPDS.poststar(getOrCreateFieldAutomaton());
 		} else if (system.equals(PDSSystem.METHODS)) {
 			added |= addNormalFieldFlow(curr, succ);
 			added |= callingPDS.addRule(new UPushRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()),
 					succ.stmt(), (Stmt) location));
+			
+			//TODO This call is unnecessary, why?
+			setCallingContextReachable(new QueuedNode(succ));
 			callingPDS.poststar(getOrCreateCallAutomaton());
 			addReturnSite((Stmt) location);
 		}
