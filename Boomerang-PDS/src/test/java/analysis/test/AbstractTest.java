@@ -257,25 +257,49 @@ public class AbstractTest {
 		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
 		addFieldPush(node(2,"u"), f("f"), node(3,"u"));
 		addReturnFlow(node(3,"u"),var("a"));
-		addFieldPop(node(4,"a"), f("f"), node(5,"e"));
+		addNormal(node(4,"a"), node(5,"e"));
 		addCallFlow(node(5,"e"), node(2,"u"), returnSite(6));
-		addReturnFlow(node(3,"u"),var("e"));
-		addFieldPop(node(6,"e"), f("f"), node(7,"h"));
+		addFieldPop(node(6,"a"), f("f"), node(7,"h"));
+		addFieldPop( node(7,"h"), f("f"), node(8,"g"));
+		addFieldPop( node(8,"g"), f("f"), node(9,"y"));
 		solver.solve(node(0,"c"));
 		System.out.println(solver.getReachedStates());
 		assertTrue(solver.getReachedStates().contains(node(7,"h")));
+		assertTrue(solver.getReachedStates().contains( node(8,"g")));
+		//assertFalse(solver.getReachedStates().contains( node(9,"y")));//False Positive
 	}
 	
 	@Test
+	public void positiveSummaryWithFieldTest() {
+		addFieldPush(node(0,"c"), f("g"), node(1,"a"));
+		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
+		addFieldPush(node(2,"u"), f("f"), node(3,"u"));
+		addReturnFlow(node(3,"u"),var("a"));
+		addFieldPop(node(4,"a"), f("f"), node(5,"e"));
+		addCallFlow(node(5,"e"), node(2,"u"), returnSite(6));
+//		addReturnFlow(node(3,"u"),var("e"));
+		addFieldPop(node(6,"a"), f("f"), node(7,"h"));//Due to the summary, we should be able to read f again.
+		addFieldPop(node(7,"h"), f("g"), node(8,"l"));//Due to the summary, we should be able to read f again.
+//		addNormal(node(6,"e"), node(7,"h"));
+		solver.solve(node(0,"c"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(7,"h")));
+		assertTrue(solver.getReachedStates().contains(node(8,"l")));
+	}
+	
+	@Test
+	public void simpleFieldPushAndPopAndContext() {
+		addFieldPush(node(0,"c"), f("g"), node(1,"a"));
+		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
+		addFieldPush(node(2,"u"), f("f"), node(3,"u"));
+		addReturnFlow(node(3,"u"),var("a"));
+		addFieldPop(node(4,"a"), f("f"), node(5,"e"));
+		addFieldPop(node(5,"e"), f("g"), node(6,"f")); //Should be possible
+		solver.solve(node(0,"c"));
+		assertTrue(solver.getReachedStates().contains(node(6,"f")));
+	}
+	@Test
 	public void positiveNoFieldsSummaryTest() {
-//		1 :a.g = c
-//		4: foo(a)
-//		5: e = a.f
-//		6: foo(e)
-//		7: h = e.f
-		
-		//2: foo(u)
-		// 3: u.f = ... 
 		addNormal(node(0,"c"), node(1,"a"));
 		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
 		addNormal(node(2,"u"),  node(3,"u"));

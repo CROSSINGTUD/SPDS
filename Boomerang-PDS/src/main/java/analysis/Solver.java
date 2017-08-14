@@ -49,6 +49,8 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		this.seed = curr;
 		worklist.add(curr);
 		awaitEmptyWorklist();
+		System.err.println("FINALLY CALLINGCONTEXT REACHABLE " + callingContextReachable);
+		System.err.println("FINALLY FIELD CONTEXt REACHABLE " + fieldContextReachable);
 	}
 
 	private void awaitEmptyWorklist() {
@@ -69,8 +71,6 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 						added = processPush(curr, location, pushNode, system);
 					} else {
 						added = processNormal(curr, succ);
-						setCallingContextReachable(new QueuedNode(succ.stmt(), succ.fact()));
-						setFieldContextReachable(new QueuedNode(succ.stmt(), succ.fact()));
 					}
 					if(added)
 						addToWorklist(succ);
@@ -97,6 +97,7 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 	}
 
 	private boolean addNormalCallFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
+		setCallingContextReachable(new QueuedNode(succ.stmt(), succ.fact()));
 		return callingPDS.addRule(
 				new UNormalRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt()));
 	}
