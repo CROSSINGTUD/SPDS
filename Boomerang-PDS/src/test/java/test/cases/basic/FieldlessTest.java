@@ -7,9 +7,6 @@ import test.core.selfrunning.AllocatedObject;
 
 public class FieldlessTest extends AbstractBoomerangTest {
 
-	public class Allocation implements AllocatedObject {
-
-	}
 
 	@Test
 	public void simpleAssignment1() {

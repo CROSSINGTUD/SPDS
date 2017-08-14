@@ -56,10 +56,12 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 	private void awaitEmptyWorklist() {
 		while (!worklist.isEmpty()) {
 			Node<Stmt, Fact> curr = worklist.poll();
-			reachedStates.add(curr);
+			if(reachedStates.add(curr)){
+				System.err.println("REACHBLE: " + curr);
+			}
 
 			Collection<? extends State> successors = computeSuccessor(curr);
-			System.out.println(curr+ " FLows tot \t\t\t "+successors);
+//			System.out.println(curr+ " FLows tot \t\t\t "+successors);
 			for (State s : successors) {
 				if (s instanceof Node) {
 					Node<Stmt, Fact> succ = (Node<Stmt, Fact>) s;
@@ -125,7 +127,6 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 		} else if (system.equals(PDSSystem.CALLS)) {
 			//
 			callingPDS.addRule(new UPopRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location)));
-			System.out.println("POPPING " + curr + location);
 			checkCallFeasibility(curr, location);
 		}
 	}
@@ -155,7 +156,7 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 
 
 	private void checkFieldFeasibility(Node<Stmt, Fact> node) {
-		System.out.println("CHECKING Field reachabilty for " + node);
+//		System.out.println("CHECKING Field reachabilty for " + node);
 		PAutomaton<Field, INode<StmtWithFact>> aut1 = getOrCreateFieldAutomaton();
 		aut1.registerListener(new FieldUpdateListener(node));
 		fieldPDS.poststar(aut1);
@@ -379,7 +380,7 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 		if(!fieldContextReachable.add(node)){
 			return;
 		}
-		System.out.println("Set Field Context Reachable " + node);
+//		System.out.println("Set Field Context Reachable " + node);
 		
 		if (callingContextReachable.contains(node)) {
 			queuedNode.available();

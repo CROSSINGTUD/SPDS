@@ -20,6 +20,15 @@ public class WritePOITest extends AbstractBoomerangTest {
 		Alloc alias = e.b;
 		queryFor(query);
 	}
+
 	
+	@Test
+	public void directAllocationSite(){
+		Alloc query = new Alloc();
+		A a = new A();
+		a.b = query;
+		Alloc alias = a.b;
+		queryFor(query);
+	}
 	private class Alloc implements AllocatedObject{};
 }

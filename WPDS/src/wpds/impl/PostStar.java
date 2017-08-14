@@ -26,7 +26,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
     for (Transition<N, D> trans : worklist)
       fa.addWeightForTransition(trans, pds.getOne());
-    System.out.println(pds);
+//    System.out.println(pds);
 
     saturate();
 
@@ -106,8 +106,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
     W newLt = (W) lt.combineWithIn(weight);
     fa.addWeightForTransition(trans, newLt);
     if (!lt.equals(newLt)) {
-      System.out.println("\t"+
-          trans + "\t as of \t" + triggeringRule + " \t and " + newLt);
+//      System.out.println("\t"+
+//          trans + "\t as of \t" + triggeringRule + " \t and " + newLt);
       worklist.add(trans);
     }
   }
