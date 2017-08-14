@@ -101,7 +101,25 @@ public class AbstractTest {
 		assertTrue(solver.getReachedStates().contains(node(6,"x")));
 		assertFalse(solver.getReachedStates().contains(node(7,"y")));
 	}
-	
+	@Test
+	public void branching() {
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addFieldPush(node(1,"u"), f("g"), node(3,"x"));
+		
+		//can pop
+		addFieldPop(node(2,"v"), f("h"), node(5,"y"));
+		addFieldPop(node(3,"x"), f("g"), node(4,"y"));
+		
+		//but cannot pop
+		addFieldPop( node(5,"y"), f("g"), node(6,"y"));
+		addFieldPop( node(4,"y"), f("g"), node(7,"y"));
+		solver.solve(node(1,"u"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(5,"y")));
+		assertTrue(solver.getReachedStates().contains( node(4,"y")));
+		assertFalse(solver.getReachedStates().contains(node(6,"y")));
+		assertFalse(solver.getReachedStates().contains(node(7,"y")));
+	}
 	@Test
 	public void test1Simple() {
 		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
@@ -260,12 +278,14 @@ public class AbstractTest {
 		addNormal(node(4,"a"), node(5,"e"));
 		addCallFlow(node(5,"e"), node(2,"u"), returnSite(6));
 		addFieldPop(node(6,"a"), f("f"), node(7,"h"));
-		addFieldPop( node(7,"h"), f("f"), node(8,"g"));
-		addFieldPop( node(8,"g"), f("f"), node(9,"y"));
+		addFieldPop(node(7,"h"), f("f"), node(8,"g"));
+		addFieldPop(node(8,"g"), f("g"), node(9,"z"));
+		addFieldPop(node(8,"g"), f("f"), node(9,"y"));
 		solver.solve(node(0,"c"));
 		System.out.println(solver.getReachedStates());
 		assertTrue(solver.getReachedStates().contains(node(7,"h")));
 		assertTrue(solver.getReachedStates().contains( node(8,"g")));
+		assertTrue(solver.getReachedStates().contains(node(9,"z")));
 		//assertFalse(solver.getReachedStates().contains( node(9,"y")));//False Positive
 	}
 	
