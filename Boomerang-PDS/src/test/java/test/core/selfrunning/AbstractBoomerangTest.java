@@ -219,7 +219,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework{
 					if (allocatesObjectOfInterest(expr)) {
 						Local local = (Local) as.getLeftOp();
 						for(Unit succ : icfg.getSuccsOf(as))
-							queries.add(new Node<Statement,Value>(new Statement((Stmt)succ), local));
+							queries.add(new Node<Statement,Value>(new Statement((Stmt)succ,m), local));
 					}
 				}
 			}

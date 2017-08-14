@@ -42,8 +42,6 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 	private static List<Value> parameterVals = Lists.newLinkedList();
 	private InterproceduralCFG<Unit, SootMethod> icfg;
 	
-	
-	
 	public BoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg){
 		this.icfg = icfg;
 	}
@@ -62,7 +60,7 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 			SootMethod method = icfg.getMethodOf(curr);
 			if(node.stmt() instanceof ReturnSite){
 				ReturnSite returnSite = (ReturnSite) node.stmt();
-				return mapValuesToCaller(returnSite.getCallSite(),value, curr);
+				return mapValuesToCaller(method,returnSite.getCallSite(),value, curr);
 			}
 			if(killFlow(curr, value)){
 				return Collections.emptySet();
@@ -78,25 +76,25 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 		return Collections.emptySet();
 	}
 
-	private Collection<? extends State> mapValuesToCaller(Stmt callSite, Value value, Stmt curr) {
+	private Collection<? extends State> mapValuesToCaller(SootMethod method, Stmt callSite, Value value, Stmt curr) {
 		if(value.equals(thisVal())){
 			InvokeExpr invokeExpr = callSite.getInvokeExpr();
 			if(invokeExpr instanceof InstanceInvokeExpr){
 				InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
-				return Collections.singleton(new Node<Statement,Value>(new Statement(curr),iie.getBase()));
+				return Collections.singleton(new Node<Statement,Value>(new Statement(curr, method),iie.getBase()));
 			}
 		}
 		if(value.equals(returnVal())){
 			if(callSite instanceof AssignStmt){
 				AssignStmt as = (AssignStmt) callSite;
-				return Collections.singleton(new Node<Statement,Value>(new Statement(curr), as.getLeftOp()));
+				return Collections.singleton(new Node<Statement,Value>(new Statement(curr, method), as.getLeftOp()));
 			}
 		}
 		if(value instanceof ParameterValue){
 			ParameterValue paramVal = (ParameterValue) value;
 			int index = paramVal.getIndex();
 			InvokeExpr invokeExpr = callSite.getInvokeExpr();
-			return Collections.singleton(new Node<Statement,Value>(new Statement(curr),invokeExpr.getArg(index)));
+			return Collections.singleton(new Node<Statement,Value>(new Statement(curr, method),invokeExpr.getArg(index)));
 		}
 		return Collections.emptySet();
 	}
@@ -104,7 +102,7 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 		Set<State> out = Sets.newHashSet();
 		for(Unit succ : icfg.getSuccsOf(curr)){
 			//always maitain data-flow // killFow has been taken care of
-			out.add(new Node<Statement,Value>(new Statement((Stmt) succ),fact));
+			out.add(new Node<Statement,Value>(new Statement((Stmt) succ, method),fact));
 			out.addAll(computeNormalFlow(method,curr, fact, (Stmt) succ));
 		}
 		return out;
@@ -169,7 +167,7 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 		for(SootMethod callee : icfg.getCalleesOfCallAt(callSite)){
 			for(Unit calleeSp : icfg.getStartPointsOf(callee)){
 				for(Unit returnSite : icfg.getSuccsOf(callSite)){
-					out.addAll(computeCallFlow(caller,new ReturnSite((Stmt) returnSite, callSite), invokeExpr, value, callee, (Stmt) calleeSp));
+					out.addAll(computeCallFlow(caller,new ReturnSite((Stmt) returnSite,caller, callSite), invokeExpr, value, callee, (Stmt) calleeSp));
 				}
 			}
 		}
@@ -186,16 +184,16 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 			if(rightOp.equals(fact)){
 				if(leftOp instanceof InstanceFieldRef){
 					InstanceFieldRef ifr = (InstanceFieldRef) leftOp;
-					out.add(new PushNode<Statement, Value, Field>(new Statement(succ),ifr.getBase(), new Field(ifr.getField()), PDSSystem.FIELDS));
+					out.add(new PushNode<Statement, Value, Field>(new Statement(succ, method),ifr.getBase(), new Field(ifr.getField()), PDSSystem.FIELDS));
 				} else{
-					out.add(new Node<Statement,Value>(new Statement(succ),leftOp));
+					out.add(new Node<Statement,Value>(new Statement(succ, method),leftOp));
 				}
 			}
 			if(rightOp instanceof InstanceFieldRef){
 				InstanceFieldRef ifr = (InstanceFieldRef) rightOp;
 				Value base = ifr.getBase();
 				if(base.equals(fact)){
-					NodeWithLocation<Statement, Value, Field> succNode = new NodeWithLocation<>(new Statement(succ), leftOp, new Field(ifr.getField()));
+					NodeWithLocation<Statement, Value, Field> succNode = new NodeWithLocation<>(new Statement(succ, method), leftOp, new Field(ifr.getField()));
 					out.add(new PopNode<NodeWithLocation<Statement, Value, Field>>(succNode, PDSSystem.FIELDS));
 				}
 			}
@@ -211,14 +209,14 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 			InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
 			if(iie.getBase().equals(fact) && !callee.isStatic()){
 				// TODO Do we need the return site? 
-				return Collections.singleton(new PushNode<Statement, Value, Statement>(new Statement(calleeSp), calleeBody.getThisLocal(),returnSite, PDSSystem.CALLS));
+				return Collections.singleton(new PushNode<Statement, Value, Statement>(new Statement(calleeSp,callee), calleeBody.getThisLocal(),returnSite, PDSSystem.CALLS));
 			}
 		}
 		int i = 0;
 		for(Value arg : invokeExpr.getArgs()){
 			if(arg.equals(fact)){
 				Local param = calleeBody.getParameterLocal(i);
-				return Collections.singleton(new PushNode<Statement, Value, Statement>(new Statement(calleeSp), param,returnSite, PDSSystem.CALLS));
+				return Collections.singleton(new PushNode<Statement, Value, Statement>(new Statement(calleeSp,callee), param,returnSite, PDSSystem.CALLS));
 			}
 			i++;
 		}

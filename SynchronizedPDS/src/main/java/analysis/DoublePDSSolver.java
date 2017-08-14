@@ -2,6 +2,7 @@ package analysis;
 
 import java.util.AbstractMap;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -30,6 +31,8 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 		FIELDS, CALLS
 	}
 
+	private static final boolean DEBUG = true;
+
 	private PushdownSystem<Stmt, INode<Fact>> callingPDS = new PushdownSystem<Stmt, INode<Fact>>();
 	private PushdownSystem<Field, INode<StmtWithFact>> fieldPDS = new PushdownSystem<Field, INode<StmtWithFact>>();
 	private PAutomaton<Field, INode<StmtWithFact>> fieldPA;
@@ -48,17 +51,19 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 	public void solve(Node<Stmt, Fact> curr) {
 		this.seed = curr;
 		worklist.add(curr);
+		
 		awaitEmptyWorklist();
-		System.err.println("FINALLY CALLINGCONTEXT REACHABLE " + callingContextReachable);
-		System.err.println("FINALLY FIELD CONTEXt REACHABLE " + fieldContextReachable);
+		if(DEBUG){
+			debugOutput();
+		}
 	}
+
 
 	private void awaitEmptyWorklist() {
 		while (!worklist.isEmpty()) {
 			Node<Stmt, Fact> curr = worklist.poll();
-			if(reachedStates.add(curr)){
-				System.err.println("REACHBLE: " + curr);
-			}
+			reachedStates.add(curr);
+			
 
 			Collection<? extends State> successors = computeSuccessor(curr);
 //			System.out.println(curr+ " FLows tot \t\t\t "+successors);
@@ -463,5 +468,43 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 		public Node<Stmt, Fact> asNode() {
 			return new Node<Stmt, Fact>(stmt(), fact());
 		}
+	}
+	
+	
+
+	private void debugOutput() {
+		System.out.println("All reachable states");
+		prettyPrintSet(reachedStates);
+		
+		HashSet<Node<Stmt, Fact>> notFieldReachable = Sets.newHashSet(callingContextReachable);
+		notFieldReachable.removeAll(reachedStates);
+		HashSet<Node<Stmt, Fact>> notCallingContextReachable = Sets.newHashSet(fieldContextReachable);
+		notCallingContextReachable.removeAll(reachedStates);
+		if(!notFieldReachable.isEmpty()){
+			System.out.println("Calling context matching reachable but not field reachable");
+			prettyPrintSet(notFieldReachable);
+		}
+		if(!notCallingContextReachable.isEmpty()){
+			System.out.println("Field matching reachable");
+			prettyPrintSet(notCallingContextReachable);
+		}
+		System.out.println(fieldPDS);
+		System.out.println(fieldPA);
+		System.out.println(callingPDS);
+		System.out.println(callPA);
+	}
+
+
+	private void prettyPrintSet(Collection<? extends Object> set) {
+		int j = 0;
+		for(Object reachableState : set){
+			System.out.print(reachableState);
+			System.out.print("\t");
+			if(j++ > 5){
+				System.out.print("\n");
+				j = 0;
+			}
+		}
+		System.out.println();
 	}
 }

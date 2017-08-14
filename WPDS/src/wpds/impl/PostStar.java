@@ -34,12 +34,11 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
   private void saturate() {
     // PHASE 1: Is done automatically
-
+	  
     while (!worklist.isEmpty()) {
       iterationCount++;
       Transition<N, D> t = worklist.removeFirst();
       Set<Rule<N, D, W>> rules = pds.getRulesStarting(t.getStart(), t.getString());
-//      System.out.println(t.getStart() + " " +t.getString()  + " "+ rules);
 
       W currWeight = getOrCreateWeight(t);
       for (Rule<N, D, W> rule : rules) {
