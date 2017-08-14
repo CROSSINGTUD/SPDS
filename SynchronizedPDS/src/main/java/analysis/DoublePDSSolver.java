@@ -58,7 +58,7 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 			Node<Stmt, Fact> curr = worklist.poll();
 			reachedStates.add(curr);
 
-			Collection<State> successors = computeSuccessor(curr);
+			Collection<? extends State> successors = computeSuccessor(curr);
 			System.out.println(curr+ " FLows tot \t\t\t "+successors);
 			for (State s : successors) {
 				if (s instanceof Node) {
@@ -330,7 +330,7 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 
 				@Override
 				public Stmt epsilon() {
-					return epsilonCallSite();
+					return epsilonStmt();
 				}
 			};
 			callPA.addTransition(
@@ -437,13 +437,13 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 		return generatedFieldState.get(e);
 	}
 
-	public abstract Collection<State> computeSuccessor(Node<Stmt, Fact> node);
+	public abstract Collection<? extends State> computeSuccessor(Node<Stmt, Fact> node);
 
 	public abstract Field epsilonField();
 
 	public abstract Field emptyField();
 
-	public abstract Stmt epsilonCallSite();
+	public abstract Stmt epsilonStmt();
 
 	public Set<Node<Stmt, Fact>> getReachedStates() {
 		return Sets.newHashSet(reachedStates);

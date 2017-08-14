@@ -60,7 +60,7 @@ public class DoublePDSTest {
 		}
 
 		@Override
-		public Statement epsilonCallSite() {
+		public Statement epsilonStmt() {
 			return epsilonCallSite;
 		}
 
