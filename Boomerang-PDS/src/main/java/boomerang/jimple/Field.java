@@ -3,30 +3,24 @@ package boomerang.jimple;
 import soot.SootField;
 import wpds.interfaces.Location;
 
-public class Field implements Location{
+public class Field implements Location {
 	private static Field wildcard;
+	private static Field epsilon;
+	private static Field empty;
 	private SootField delegate;
 	private String rep;
 
-	public Field(SootField delegate){
+	public Field(SootField delegate) {
 		this.delegate = delegate;
 	}
-	
-	private Field(String rep){
+
+	private Field(String rep) {
 		this.rep = rep;
 		this.delegate = null;
 	}
+
 	
-	public static Field wildcard(){
-		if(wildcard == null)
-			wildcard = new Field("*");
-		return wildcard;
-	}
-	public static Field empty(){
-		if(wildcard == null)
-			wildcard = new Field("*");
-		return wildcard;
-	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -56,5 +50,33 @@ public class Field implements Location{
 		} else if (!rep.equals(other.rep))
 			return false;
 		return true;
+	}
+
+	@Override
+	public String toString() {
+		if(delegate == null)
+			return rep;
+		return delegate.toString();
+	}
+	
+	public static Field wildcard() {
+		if (wildcard == null){
+			wildcard = new Field("*");
+		}
+		return wildcard;
+	}
+
+	public static Field empty() {
+		if (empty == null){
+			empty = new Field("{}");
+		}
+		return empty;
+	}
+
+	public static Field epsilon() {
+		if (epsilon == null){
+			epsilon = new Field("eps_f");
+		}
+		return epsilon;
 	}
 }
