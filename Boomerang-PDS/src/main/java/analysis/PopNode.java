@@ -1,6 +1,6 @@
 package analysis;
 
-import analysis.Solver.PDSSystem;
+import analysis.DoublePDSSolver.PDSSystem;
 import wpds.interfaces.State;
 
 public class PopNode<Location> implements State{

@@ -14,13 +14,13 @@ import analysis.Node;
 import analysis.NodeWithLocation;
 import analysis.PopNode;
 import analysis.PushNode;
-import analysis.Solver;
-import analysis.Solver.PDSSystem;
+import analysis.DoublePDSSolver;
+import analysis.DoublePDSSolver.PDSSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.wildcard.Wildcard;
 
-public class AbstractTest {
+public class DoublePDSTest {
 	private Multimap<Node<Statement, Variable>, State> successorMap = HashMultimap.create();
 
 	private void addFieldPop(Node<Statement, Variable> curr,FieldRef ref, Node<Statement, Variable> succ) {
@@ -35,11 +35,11 @@ public class AbstractTest {
 	}
 
 	private void addReturnFlow(Node<Statement, Variable> curr, Variable returns) {
-		addSucc(curr, new PopNode<Variable>(returns, PDSSystem.METHODS));
+		addSucc(curr, new PopNode<Variable>(returns, PDSSystem.CALLS));
 	}
 	
 	private void addCallFlow(Node<Statement, Variable> curr, Node<Statement, Variable> succ, Statement returnSite) {
-		addSucc(curr, new PushNode<Statement, Variable, Statement>(succ.stmt(),succ.fact(),returnSite, PDSSystem.METHODS));
+		addSucc(curr, new PushNode<Statement, Variable, Statement>(succ.stmt(),succ.fact(),returnSite, PDSSystem.CALLS));
 	} 
 	private void addSucc(Node<Statement, Variable> curr, State succ) {
 		successorMap.put(curr, succ);
@@ -47,7 +47,7 @@ public class AbstractTest {
 	private FieldRef epsilonField = new FieldRef("eps_f");
 	private Statement epsilonCallSite = new Statement(-1);
 	
-	private Solver<Statement, Variable, FieldRef> solver = new Solver<Statement, Variable, FieldRef>() {
+	private DoublePDSSolver<Statement, Variable, FieldRef> solver = new DoublePDSSolver<Statement, Variable, FieldRef>() {
 
 		@Override
 		public Collection<State> computeSuccessor(Node<Statement, Variable> node) {

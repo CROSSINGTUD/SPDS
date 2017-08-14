@@ -1,6 +1,6 @@
 package analysis;
 
-import analysis.Solver.PDSSystem;
+import analysis.DoublePDSSolver.PDSSystem;
 
 public class PushNode<Stmt,Fact,Location> extends Node<Stmt,Fact>{
 

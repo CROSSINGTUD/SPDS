@@ -24,10 +24,10 @@ import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
-public abstract class Solver<Stmt extends Location, Fact, Field extends Location> {
+public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends Location> {
 
 	public enum PDSSystem {
-		FIELDS, METHODS
+		FIELDS, CALLS
 	}
 
 	private PushdownSystem<Stmt, INode<Fact>> callingPDS = new PushdownSystem<Stmt, INode<Fact>>();
@@ -122,7 +122,7 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 			setCallingContextReachable(new QueuedNode(node.fact()));
 			addNormalCallFlow(curr, node.fact());
 			checkFieldFeasibility(node.fact());
-		} else if (system.equals(PDSSystem.METHODS)) {
+		} else if (system.equals(PDSSystem.CALLS)) {
 			//
 			callingPDS.addRule(new UPopRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location)));
 			System.out.println("POPPING " + curr + location);
@@ -140,7 +140,7 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 			//TODO This call is unnecessary, why?
 			setFieldContextReachable(new QueuedNode(succ));
 			fieldPDS.poststar(getOrCreateFieldAutomaton());
-		} else if (system.equals(PDSSystem.METHODS)) {
+		} else if (system.equals(PDSSystem.CALLS)) {
 			added |= addNormalFieldFlow(curr, succ);
 			added |= callingPDS.addRule(new UPushRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()),
 					succ.stmt(), (Stmt) location));
@@ -170,7 +170,7 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 		}
 
 		@Override
-		public void onAddedTransition(Transition<Field, INode<Solver<Stmt, Fact, Field>.StmtWithFact>> t) {
+		public void onAddedTransition(Transition<Field, INode<DoublePDSSolver<Stmt, Fact, Field>.StmtWithFact>> t) {
 			INode<StmtWithFact> n = t.getStart();
 			StmtWithFact fact = n.fact();
 			if (fact != null && fact.asNode().equals(node)) {
@@ -206,8 +206,8 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 			return true;
 		}
 
-		private Solver getOuterType() {
-			return Solver.this;
+		private DoublePDSSolver getOuterType() {
+			return DoublePDSSolver.this;
 		}
 		
 	}
@@ -314,8 +314,8 @@ public abstract class Solver<Stmt extends Location, Fact, Field extends Location
 				return false;
 			return true;
 		}
-		private Solver getOuterType() {
-			return Solver.this;
+		private DoublePDSSolver getOuterType() {
+			return DoublePDSSolver.this;
 		}
 		
 	}
