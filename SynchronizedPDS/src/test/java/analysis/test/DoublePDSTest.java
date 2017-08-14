@@ -70,11 +70,6 @@ public class DoublePDSTest {
 		}
 
 		@Override
-		public Statement emptyCallSite() {
-			return new Statement(0);
-		}
-
-		@Override
 		public FieldRef fieldWildCard() {
 			return new FieldWildCard();
 		}

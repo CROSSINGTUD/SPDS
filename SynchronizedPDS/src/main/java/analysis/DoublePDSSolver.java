@@ -445,8 +445,6 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 
 	public abstract Stmt epsilonCallSite();
 
-	public abstract Stmt emptyCallSite();
-
 	public Set<Node<Stmt, Fact>> getReachedStates() {
 		return Sets.newHashSet(reachedStates);
 	}

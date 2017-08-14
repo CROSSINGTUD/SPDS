@@ -1,0 +1,3 @@
+[submodule "soot"]
+	path = soot
+	url = https://github.com/Sable/soot.git
