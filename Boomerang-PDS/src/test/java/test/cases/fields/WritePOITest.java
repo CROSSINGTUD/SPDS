@@ -8,6 +8,7 @@ import test.core.selfrunning.AllocatedObject;
 public class WritePOITest extends AbstractBoomerangTest {
 	private class A{
 		Alloc b = null;
+		Alloc c = null;
 	}
 	
 	
@@ -18,7 +19,7 @@ public class WritePOITest extends AbstractBoomerangTest {
 		A e = a;
 		a.b = query;
 		Alloc alias = e.b;
-		queryFor(query);
+		queryFor(alias);
 	}
 
 	
@@ -28,7 +29,7 @@ public class WritePOITest extends AbstractBoomerangTest {
 		A a = new A();
 		a.b = query;
 		Alloc alias = a.b;
-		queryFor(query);
+		queryFor(alias);
 	}
 	private class Alloc implements AllocatedObject{};
 }

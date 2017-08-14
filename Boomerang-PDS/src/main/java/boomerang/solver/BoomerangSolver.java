@@ -3,11 +3,13 @@ package boomerang.solver;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
 
 import analysis.DoublePDSSolver;
 import analysis.Node;
@@ -39,7 +41,7 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 
 	private static Local returnVal;
 	private static Value thisVal;
-	private static List<Value> parameterVals = Lists.newLinkedList();
+	private static Map<Integer,Value> parameterVals = Maps.newHashMap();
 	private InterproceduralCFG<Unit, SootMethod> icfg;
 	
 	public BoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg){
@@ -101,7 +103,7 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 	private Collection<State> normalFlow(SootMethod method, Stmt curr, Value fact) {
 		Set<State> out = Sets.newHashSet();
 		for(Unit succ : icfg.getSuccsOf(curr)){
-			//always maitain data-flow // killFow has been taken care of
+			//always maitain data-flow // killFlow has been taken care of
 			out.add(new Node<Statement,Value>(new Statement((Stmt) succ, method),fact));
 			out.addAll(computeNormalFlow(method,curr, fact, (Stmt) succ));
 		}
@@ -251,19 +253,17 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 	
 	private static Value param(int index){
 		Value val = null;
-		if(parameterVals.size() > index){
-			val = parameterVals.get(index);
-		}
+		val = parameterVals.get(index);
 		
 		if(val == null){
 			Local paramVal = new ParameterValue("PARAM" + index, Scene.v().getType("java.lang.String"), index);
-			parameterVals.add(index, paramVal);
+			parameterVals.put(index,paramVal);
 		}
 		return parameterVals.get(index);
 	}
 	
 	private static class ParameterValue extends JimpleLocal{
-
+		private static final long serialVersionUID = 1L;
 		private int index;
 
 		public ParameterValue(String name, Type type, int index) {

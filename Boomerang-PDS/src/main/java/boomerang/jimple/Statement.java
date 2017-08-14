@@ -68,9 +68,12 @@ public class Statement implements Location {
 		if (delegate == null) {
 			return rep;
 		}
+		if(DEBUG)
+			return method +" " + delegate;
 		return "[" + Integer.toString(methodToInt(method)) + "]" + Integer.toString(stmtToInt(delegate));
 	}
 
+	private static boolean DEBUG = true;
 	private static Map<SootMethod, Integer> methodToInteger = new HashMap<>();
 	private static Map<Stmt, Integer> statementToInteger = new HashMap<>();
 

@@ -31,7 +31,7 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 		FIELDS, CALLS
 	}
 
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 
 	private PushdownSystem<Stmt, INode<Fact>> callingPDS = new PushdownSystem<Stmt, INode<Fact>>();
 	private PushdownSystem<Field, INode<StmtWithFact>> fieldPDS = new PushdownSystem<Field, INode<StmtWithFact>>();
@@ -499,11 +499,11 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 		int j = 0;
 		for(Object reachableState : set){
 			System.out.print(reachableState);
-			System.out.print("\t");
-			if(j++ > 5){
-				System.out.print("\n");
-				j = 0;
-			}
+			System.out.print("\n");
+//			if(j++ > 0){
+//				System.out.print("\n");
+//				j = 0;
+//			}
 		}
 		System.out.println();
 	}
