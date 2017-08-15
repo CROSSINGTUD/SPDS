@@ -36,14 +36,14 @@ import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import wpds.interfaces.State;
 
-public class BoomerangSolver extends SyncPDSSolver<Statement, Value, Field>{
+public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, Value, Field>{
 
 	private static Local returnVal;
 	private static Value thisVal;
 	private static Map<Integer,Value> parameterVals = Maps.newHashMap();
 	private InterproceduralCFG<Unit, SootMethod> icfg;
 	
-	public BoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg){
+	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg){
 		this.icfg = icfg;
 	}
 	@Override
@@ -97,23 +97,16 @@ public class BoomerangSolver extends SyncPDSSolver<Statement, Value, Field>{
 	private Collection<State> normalFlow(SootMethod method, Stmt curr, Value fact) {
 		Set<State> out = Sets.newHashSet();
 		for(Unit succ : icfg.getSuccsOf(curr)){
-			//always maitain data-flow // killFlow has been taken care of
-			if(isFieldWriteWithBase(curr,fact)){
-				out.add(new ExclusionNode<Statement,Value,Field>(new Statement((Stmt) succ, method),fact,getWrittenField(curr)));
-			}
-			else{
-				out.add(new Node<Statement,Value>(new Statement((Stmt) succ, method),fact));
-			}
 			out.addAll(computeNormalFlow(method,curr, fact, (Stmt) succ));
 		}
 		return out;
 	}
-	private Field getWrittenField(Stmt curr) {
+	protected Field getWrittenField(Stmt curr) {
 		AssignStmt as = (AssignStmt) curr;
 		InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
 		return new Field(ifr.getField());
 	}
-	private boolean isFieldWriteWithBase(Stmt curr, Value base) {
+	protected boolean isFieldWriteWithBase(Stmt curr, Value base) {
 		if(curr instanceof AssignStmt){
 			AssignStmt as = (AssignStmt) curr;
 			if(as.getLeftOp() instanceof InstanceFieldRef){
@@ -123,23 +116,8 @@ public class BoomerangSolver extends SyncPDSSolver<Statement, Value, Field>{
 		}
 		return false;
 	}
-	private boolean killFlow(Stmt curr, Value value) {
-		if(curr instanceof AssignStmt){
-			AssignStmt as = (AssignStmt) curr;
-			//Kill x at any statement x = * during propagation.
-			if(as.getLeftOp().equals(value)){
-				//But not for a statement x = x.f
-				if(as.getRightOp() instanceof InstanceFieldRef){
-					InstanceFieldRef iie = (InstanceFieldRef) as.getRightOp();
-					if(iie.getBase().equals(value)){
-						return false;
-					}
-				}
-				return true;
-			}
-		}
-		return false;
-	}
+	protected abstract boolean killFlow(Stmt curr, Value value);
+	
 	private boolean valueUsedInStatement(SootMethod method, Stmt u, InvokeExpr invokeExpr, Value fact) {
 		//TODO what about assignment?
 		if(invokeExpr instanceof InstanceInvokeExpr){
@@ -154,29 +132,7 @@ public class BoomerangSolver extends SyncPDSSolver<Statement, Value, Field>{
 		}
 		return false;
 	}
-	private Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Value value) {
-		if(curr instanceof ReturnStmt){
-			Value op = ((ReturnStmt) curr).getOp();
-	
-			if(op.equals(value)){
-				return Collections.singleton(new PopNode<Value>(returnVal(), PDSSystem.CALLS));
-			}
-		}
-		if(!method.isStatic()){
-			if(value.equals(method.getActiveBody().getThisLocal())){
-				return Collections.singleton(new PopNode<Value>(thisVal(), PDSSystem.CALLS));
-			}
-		}
-		int index = 0;
-		for(Local param : method.getActiveBody().getParameterLocals()){
-			if(param.equals(value)){
-				return Collections.singleton(new PopNode<Value>(param(index), PDSSystem.CALLS));	
-			}
-			index++;
-		}
-		
-		return Collections.emptySet();
-	}
+	protected abstract Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Value value);
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Value value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
@@ -191,52 +147,10 @@ public class BoomerangSolver extends SyncPDSSolver<Statement, Value, Field>{
 	}
 
 
-	private Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Value fact, Stmt succ) {
-		Set<State> out = Sets.newHashSet();
-		if(curr instanceof AssignStmt){
-			AssignStmt assignStmt = (AssignStmt) curr;
-			Value leftOp = assignStmt.getLeftOp();
-			Value rightOp = assignStmt.getRightOp();
-			if(rightOp.equals(fact)){
-				if(leftOp instanceof InstanceFieldRef){
-					InstanceFieldRef ifr = (InstanceFieldRef) leftOp;
-					out.add(new PushNode<Statement, Value, Field>(new Statement(succ, method),ifr.getBase(), new Field(ifr.getField()), PDSSystem.FIELDS));
-				} else{
-					out.add(new Node<Statement,Value>(new Statement(succ, method),leftOp));
-				}
-			}
-			if(rightOp instanceof InstanceFieldRef){
-				InstanceFieldRef ifr = (InstanceFieldRef) rightOp;
-				Value base = ifr.getBase();
-				if(base.equals(fact)){
-					NodeWithLocation<Statement, Value, Field> succNode = new NodeWithLocation<>(new Statement(succ, method), leftOp, new Field(ifr.getField()));
-					out.add(new PopNode<NodeWithLocation<Statement, Value, Field>>(succNode, PDSSystem.FIELDS));
-				}
-			}
-		}
-		return out;
-	}
+	protected abstract Collection<? extends State> computeCallFlow(SootMethod caller, ReturnSite returnSite, InvokeExpr invokeExpr,
+			Value value, SootMethod callee, Stmt calleeSp);
+	protected abstract Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Value fact, Stmt succ);
 
-	private Collection<? extends State> computeCallFlow(SootMethod caller, ReturnSite returnSite, InvokeExpr invokeExpr, Value fact, SootMethod callee, Stmt calleeSp) {
-		if(!callee.hasActiveBody())
-			return Collections.emptySet();
-		Body calleeBody = callee.getActiveBody();
-		if(invokeExpr instanceof InstanceInvokeExpr){
-			InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
-			if(iie.getBase().equals(fact) && !callee.isStatic()){
-				return Collections.singleton(new PushNode<Statement, Value, Statement>(new Statement(calleeSp,callee), calleeBody.getThisLocal(),returnSite, PDSSystem.CALLS));
-			}
-		}
-		int i = 0;
-		for(Value arg : invokeExpr.getArgs()){
-			if(arg.equals(fact)){
-				Local param = calleeBody.getParameterLocal(i);
-				return Collections.singleton(new PushNode<Statement, Value, Statement>(new Statement(calleeSp,callee), param,returnSite, PDSSystem.CALLS));
-			}
-			i++;
-		}
-		return Collections.emptySet();
-	}
 	@Override
 	public Field epsilonField() {
 		return Field.epsilon();
@@ -252,19 +166,19 @@ public class BoomerangSolver extends SyncPDSSolver<Statement, Value, Field>{
 		return Statement.epsilon();
 	}
 	
-	private static Value returnVal(){
+	protected static Value returnVal(){
 		if(returnVal == null)
 			returnVal = Jimple.v().newLocal("RET", Scene.v().getType("java.lang.String"));
 		return returnVal;
 	}
 	
-	private static Value thisVal(){
+	protected static Value thisVal(){
 		if(thisVal == null)
 			thisVal = Jimple.v().newLocal("THIS", Scene.v().getType("java.lang.String"));
 		return thisVal;
 	}
 	
-	private static Value param(int index){
+	protected static Value param(int index){
 		Value val = null;
 		val = parameterVals.get(index);
 		

@@ -2,18 +2,19 @@ package test.core.selfrunning;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import com.beust.jcommander.internal.Sets;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
+import boomerang.BackwardQuery;
+import boomerang.Boomerang;
+import boomerang.ForwardQuery;
+import boomerang.Query;
 import boomerang.jimple.Statement;
-import boomerang.solver.BoomerangSolver;
+import heros.InterproceduralCFG;
 import soot.Body;
 import soot.Local;
 import soot.RefType;
@@ -27,101 +28,89 @@ import soot.jimple.AssignStmt;
 import soot.jimple.InvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.Stmt;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.nodes.Node;
 
-public class AbstractBoomerangTest extends AbstractTestingFramework{
+public class AbstractBoomerangTest extends AbstractTestingFramework {
 	private JimpleBasedInterproceduralCFG icfg;
-
-	private boolean useIDEViz() {
-		return !getTestCaseClassName().contains("LongTest");
-	}
 
 	protected SceneTransformer createAnalysisTransformer() {
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				icfg = new JimpleBasedInterproceduralCFG(true);
-				Collection<Node<Statement, Value>> q = extractQuery(new ValueOfInterestInUnit(){
-					@Override
-					public Optional<Value> test(Stmt unit) {
-						if(unit instanceof AssignStmt){
-							AssignStmt as = (AssignStmt) unit;
-							if (as.getLeftOp() instanceof Local && as.getRightOp() instanceof NewExpr) {
-								NewExpr expr = ((NewExpr) as.getRightOp());
-								if (allocatesObjectOfInterest(expr)) {
-									Local local = (Local) as.getLeftOp();
-									return Optional.<Value>of(local);
-								}
-							}
-						}
-						return Optional.empty();
-					}
-
-					@Override
-					public boolean atSuccessor() {
-						return true;
-					}} );
-
-				Collection<Node<Statement,Value>> expectedResults = extractQuery(new ValueOfInterestInUnit() {
-					@Override
-					public Optional<? extends Value> test(Stmt unit) {
-						Stmt stmt = (Stmt) unit;
-						if (!(stmt.containsInvokeExpr()))
-							return Optional.empty();
-						InvokeExpr invokeExpr = stmt.getInvokeExpr();
-						if (!invokeExpr.getMethod().getName().matches("(queryFor|reachable)"))
-							return Optional.empty();
-						Value param = invokeExpr.getArg(0);
-						if (!(param instanceof Local))
-							return Optional.empty();
-						return Optional.<Value>of(param);
-					}
-
-					@Override
-					public boolean atSuccessor() {
-						return false;
-					}
-				});
-				Collection<Node<Statement,Value>> unreachableNodes = extractQuery(new ValueOfInterestInUnit() {
-					@Override
-					public Optional<? extends Value> test(Stmt unit) {
-						Stmt stmt = (Stmt) unit;
-						if (!(stmt.containsInvokeExpr()))
-							return Optional.empty();
-						InvokeExpr invokeExpr = stmt.getInvokeExpr();
-						if (!invokeExpr.getMethod().getName().equals("unreachable"))
-							return Optional.empty();
-						Value param = invokeExpr.getArg(0);
-						if (!(param instanceof Local))
-							return Optional.empty();
-						return Optional.<Value>of(param);
-					}
-
-					@Override
-					public boolean atSuccessor() {
-						return false;
-					}
-				});
-				Collection<Node<Statement,Value>> results = runQuery(q);
-				compareQuery(q, expectedResults, unreachableNodes, results);
+				Collection<? extends Query> queries = extractQuery(new AllocationSiteOf());
+				Collection<? extends Query> expectedResults = extractQuery(
+						new FirstArgumentOf("(queryFor|reachable)"));
+				Collection<? extends Query> unreachableNodes = extractQuery(
+						new FirstArgumentOf("unreachable"));
+				Collection<Node<Statement, Value>> results = runQuery(queries);
+				compareQuery(queries, expectedResults, unreachableNodes, results);
 			}
 		};
 	}
 
-	private void compareQuery(Collection<Node<Statement, Value>> q, Collection<Node<Statement,Value>> expectedResults,Collection<Node<Statement,Value>> unreachableNodes, Collection<Node<Statement,Value>> results) {
+	private class AllocationSiteOf implements ValueOfInterestInUnit {
+		public Optional<? extends Query> test(Stmt unit) {
+			if (unit instanceof AssignStmt) {
+				AssignStmt as = (AssignStmt) unit;
+				if (as.getLeftOp() instanceof Local && as.getRightOp() instanceof NewExpr) {
+					NewExpr expr = ((NewExpr) as.getRightOp());
+					if (allocatesObjectOfInterest(expr)) {
+						Local local = (Local) as.getLeftOp();
+						return Optional.<Query>of(new ForwardQuery(new Statement(unit, icfg.getMethodOf(unit)), local));
+					}
+				}
+			}
+			return Optional.empty();
+		}
+	}
+
+	private class FirstArgumentOf implements ValueOfInterestInUnit {
+
+		private String methodNameMatcher;
+
+		public FirstArgumentOf(String methodNameMatcher) {
+			this.methodNameMatcher = methodNameMatcher;
+		}
+
+		@Override
+		public Optional<? extends Query> test(Stmt unit) {
+			Stmt stmt = (Stmt) unit;
+			if (!(stmt.containsInvokeExpr()))
+				return Optional.empty();
+			InvokeExpr invokeExpr = stmt.getInvokeExpr();
+			if (!invokeExpr.getMethod().getName().matches(methodNameMatcher))
+				return Optional.empty();
+			Value param = invokeExpr.getArg(0);
+			if (!(param instanceof Local))
+				return Optional.empty();
+			return Optional.<Query>of(new BackwardQuery(new Statement(unit, icfg.getMethodOf(unit)), param));
+		}
+	}
+
+	private void compareQuery(Collection<? extends Query> q,
+			Collection<? extends Query> expectedResults,
+			Collection<? extends Query> unreachableNodes,
+			Collection<? extends Node<Statement, Value>> results) {
 		System.out.println("Boomerang Allocations Sites: " + results);
 		System.out.println("Boomerang Results: " + results);
 		System.out.println("Expected Results: " + expectedResults);
-		Collection<Node<Statement,Value>> falseNegativeAllocationSites = new HashSet<>(expectedResults);
-		falseNegativeAllocationSites.removeAll(results);
-		Collection<Node<Statement,Value>> falsePositiveAllocationSites = new HashSet<>(results);
-		falsePositiveAllocationSites.removeAll(expectedResults);
-		for(Node<Statement, Value> n : unreachableNodes){
-			if(results.contains(n)){
-				throw new RuntimeException("Unreachable node discovered "+ n);
+		Collection<Query> falseNegativeAllocationSites = new HashSet<>();
+		for(Query res : expectedResults){
+			if(!results.contains(res.asNode()))
+				falseNegativeAllocationSites.add(res);
+		}
+		Collection<? extends Node<Statement, Value>> falsePositiveAllocationSites = new HashSet<>(results);
+		for(Query res : expectedResults){
+			falsePositiveAllocationSites.remove(res.asNode());
+		}
+		for (Query n : unreachableNodes) {
+			if (results.contains(n.asNode())) {
+				throw new RuntimeException("Unreachable node discovered " + n);
 			}
 		}
-		
+
 		String answer = (falseNegativeAllocationSites.isEmpty() ? "" : "\nFN:" + falseNegativeAllocationSites)
 				+ (falsePositiveAllocationSites.isEmpty() ? "" : "\nFP:" + falsePositiveAllocationSites + "\n");
 		if (!falseNegativeAllocationSites.isEmpty()) {
@@ -129,45 +118,21 @@ public class AbstractBoomerangTest extends AbstractTestingFramework{
 		}
 	}
 
-	private Set<Node<Statement, Value>> runQuery(Collection<Node<Statement, Value>> queries) {
-		Set<Node<Statement,Value>> results = Sets.newHashSet();
-		for(Node<Statement, Value> query : queries){
-			BoomerangSolver solver = new BoomerangSolver(icfg);
-			solver.solve(new Node<Statement, Value>(query.stmt(),query.fact()));
-			results.addAll(solver.getReachedStates());
+	private Set<Node<Statement, Value>> runQuery(Collection<? extends Query> queries) {
+		Set<Node<Statement, Value>> results = Sets.newHashSet();
+		for (Query query : queries) {
+			Boomerang solver = new Boomerang() {
+				@Override
+				public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+					return icfg;
+				}
+			};
+			solver.solve(query);
+			results.addAll(solver.getForwardReachableStates());
 		}
 		return results;
 	}
 
-//	private AliasResults associateVariableAliasesToAllocationSites(
-//			Set<Pair<Unit, AccessGraph>> allocationSiteWithCallStack, Set<Local> aliasedVariables) {
-//		AliasResults res = new AliasResults();
-//		for (Pair<Unit, AccessGraph> allocatedVariableWithStack : allocationSiteWithCallStack) {
-//			for (Local l : aliasedVariables) {
-//				res.put(allocatedVariableWithStack, new AccessGraph(l));
-//			}
-//		}
-//		return res;
-//	}
-//
-//	private Set<Local> parseAliasedVariables() {
-//		Set<Local> out = new HashSet<>();
-//		Body activeBody = sootTestMethod.getActiveBody();
-//		for (Unit u : activeBody.getUnits()) {
-//			if (!(u instanceof AssignStmt))
-//				continue;
-//			AssignStmt assignStmt = (AssignStmt) u;
-//			if (!(assignStmt.getLeftOp() instanceof Local))
-//				continue;
-//			if (!assignStmt.getLeftOp().toString().contains("alias")
-//					&& !assignStmt.getLeftOp().toString().contains("query"))
-//				continue;
-//			Local aliasedVar = (Local) assignStmt.getLeftOp();
-//			out.add(aliasedVar);
-//		}
-//		return out;
-//	}
-//
 
 	private boolean allocatesObjectOfInterest(NewExpr rightOp) {
 		SootClass interfaceType = Scene.v().getSootClass("test.core.selfrunning.AllocatedObject");
@@ -177,42 +142,14 @@ public class AbstractBoomerangTest extends AbstractTestingFramework{
 		return Scene.v().getActiveHierarchy().getImplementersOf(interfaceType).contains(allocatedType.getSootClass());
 	}
 
-//	private Set<AccessGraph> transitivelyReachableAllocationSite(Unit call, Set<SootMethod> visited) {
-//		Set<AccessGraph> out = new HashSet<>();
-//		for (SootMethod m : icfg.getCalleesOfCallAt(call)) {
-//			if (visited.contains(m))
-//				continue;
-//			visited.add(m);
-//			if (!m.hasActiveBody())
-//				continue;
-//			for (Unit u : m.getActiveBody().getUnits()) {
-//				if (!(u instanceof AssignStmt))
-//					continue;
-//				AssignStmt as = (AssignStmt) u;
-//
-//				if (as.getLeftOp() instanceof Local && as.getRightOp() instanceof NewExpr) {
-//					NewExpr expr = ((NewExpr) as.getRightOp());
-//					if (allocatesObjectOfInterest(expr)) {
-//						Local local = (Local) as.getLeftOp();
-//						AccessGraph accessGraph = new AccessGraph(local);
-//						out.add(accessGraph.deriveWithAllocationSite(as, expr.getType(), true));
-//					}
-//				}
-//
-//			}
-//			for (Unit u : icfg.getCallsFromWithin(m))
-//				out.addAll(transitivelyReachableAllocationSite(u, visited));
-//		}
-//		return out;
-//	}
-
-	private Collection<Node<Statement, Value>> extractQuery(ValueOfInterestInUnit predicate) {
-		Set<Node<Statement,Value>> queries = Sets.newHashSet();
+	private Collection<? extends Query> extractQuery(ValueOfInterestInUnit predicate) {
+		Set<Query> queries = Sets.newHashSet();
 		extractQuery(sootTestMethod, predicate, queries, new HashSet<SootMethod>());
 		return queries;
 	}
 
-	private void extractQuery(SootMethod m, ValueOfInterestInUnit predicate, Collection<Node<Statement,Value>> queries, Set<SootMethod> visited) {
+	private void extractQuery(SootMethod m, ValueOfInterestInUnit predicate, Collection<Query> queries,
+			Set<SootMethod> visited) {
 		if (!m.hasActiveBody() || visited.contains(m))
 			return;
 		visited.add(m);
@@ -224,22 +161,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework{
 		for (Unit u : activeBody.getUnits()) {
 			if (!(u instanceof Stmt))
 				continue;
-			Optional<? extends Value> optOfVal = predicate.test((Stmt) u);
-			if(optOfVal.isPresent()){
-				if(!predicate.atSuccessor()){
-					queries.add(new Node<Statement,Value>(new Statement((Stmt)u,m), optOfVal.get()));
-				} else{
-					for(Unit succ : icfg.getSuccsOf(u)){
-						queries.add(new Node<Statement,Value>(new Statement((Stmt)succ,m), optOfVal.get()));
-					}
-				}
+			Optional<? extends Query> optOfVal = predicate.test((Stmt) u);
+			if (optOfVal.isPresent()) {
+				queries.add(optOfVal.get());
 			}
 		}
-	}
-	
-
-	private String getTestCaseClassName() {
-		return this.getClass().getName().replace("class ", "");
 	}
 
 	protected Collection<String> errorOnVisitMethod() {
@@ -250,7 +176,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework{
 		return true;
 	}
 
-
 	/**
 	 * The methods parameter describes the variable that a query is issued for.
 	 * Note: We misuse the @Deprecated annotation to highlight the method in the
@@ -260,22 +185,27 @@ public class AbstractBoomerangTest extends AbstractTestingFramework{
 	protected void queryFor(Object variable) {
 
 	}
-	
+
 	/**
-	 * A call to this method flags the object as at the call statement as not reachable by the analysis.
+	 * A call to this method flags the object as at the call statement as not
+	 * reachable by the analysis.
+	 * 
 	 * @param variable
 	 */
 	protected void unreachable(Object variable) {
 
 	}
-	
+
 	/**
-	 * A call to this method flags the object as at the call statement as reachable by the analysis.
+	 * A call to this method flags the object as at the call statement as
+	 * reachable by the analysis.
+	 * 
 	 * @param variable
 	 */
 	protected void reachable(Object variable) {
 
 	}
+
 	/**
 	 * This method can be used in test cases to create branching. It is not
 	 * optimized away.
@@ -286,8 +216,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework{
 		return true;
 	}
 
-	private interface ValueOfInterestInUnit{
-		Optional<? extends Value> test(Stmt unit);
-		boolean atSuccessor();
+	private interface ValueOfInterestInUnit {
+		Optional<? extends Query> test(Stmt unit);
 	}
 }
