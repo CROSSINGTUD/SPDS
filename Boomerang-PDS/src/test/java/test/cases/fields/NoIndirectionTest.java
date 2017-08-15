@@ -99,6 +99,17 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		Alloc alias = a.b;
 		unreachable(alias);
 	}
+
+
+	@Test
+	public void overwriteButPositiveFieldTest(){
+		Alloc query = new Alloc();
+		A a = new A();
+		a.b = query;
+		a.c = null;
+		Alloc alias = a.b;
+		reachable(alias);
+	}
 	
 	
 	private class Alloc implements AllocatedObject{};
