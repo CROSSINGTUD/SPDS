@@ -16,7 +16,7 @@ public class TestHelper {
   static Abstraction ACC = a(999);
 
   static PAutomaton<StackSymbol, Abstraction> accepts(int a, String c) {
-    PAutomaton<StackSymbol, Abstraction> aut = new PAutomaton<StackSymbol, Abstraction>(a(a), ACC) {
+    PAutomaton<StackSymbol, Abstraction> aut = new PAutomaton<StackSymbol, Abstraction>() {
 
       @Override
       public Abstraction createState(Abstraction d, StackSymbol loc) {
@@ -28,6 +28,8 @@ public class TestHelper {
         return s("EPS");
       }
     };
+    aut.setInitialState(a(a));
+    aut.addFinalState(ACC);
     aut.addTransition(t(a, c, ACC));
     return aut;
   }
@@ -35,8 +37,7 @@ public class TestHelper {
   static WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>> waccepts(int a,
       String c, NumWeight<StackSymbol> weight) {
     WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>> aut =
-        new WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>>(a(a),
-        ACC) {
+        new WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>>() {
 
       @Override
       public Abstraction createState(Abstraction d, StackSymbol loc) {
@@ -48,6 +49,8 @@ public class TestHelper {
         return s("EPS");
       }
     };
+    aut.setInitialState(a(a));
+    aut.addFinalState(ACC);
     aut.addTransition(t(a, c, ACC));
     aut.addWeightForTransition(t(a, c, ACC), weight);
     return aut;

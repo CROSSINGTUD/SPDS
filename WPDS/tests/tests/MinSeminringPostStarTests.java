@@ -116,7 +116,7 @@ public class MinSeminringPostStarTests {
   static WeightedPAutomaton<StackSymbol, Abstraction, MinSemiring<StackSymbol>> waccepts(int a,
       String c, MinSemiring<StackSymbol> weight) {
     WeightedPAutomaton<StackSymbol, Abstraction, MinSemiring<StackSymbol>> aut =
-        new WeightedPAutomaton<StackSymbol, Abstraction, MinSemiring<StackSymbol>>(a(a), ACC) {
+        new WeightedPAutomaton<StackSymbol, Abstraction, MinSemiring<StackSymbol>>() {
 
           @Override
           public Abstraction createState(Abstraction d, StackSymbol loc) {
@@ -128,6 +128,8 @@ public class MinSeminringPostStarTests {
             return s("EPS");
           }
         };
+        aut.setInitialState(a(a));
+        aut.addFinalState(ACC);
     aut.addTransition(t(a, c, ACC));
     aut.addWeightForTransition(t(a, c, ACC), weight);
     return aut;

@@ -3,18 +3,13 @@ package wpds.impl;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.base.Joiner;
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
 
 import pathexpression.Edge;
 import pathexpression.IRegEx;
@@ -33,7 +28,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	// Dataflow Analysis
 	protected Set<Transition<N, D>> transitions = Sets.newHashSet();
 	// set F in paper [Reps2003]
-	protected Set<D> finalState;
+	protected Set<D> finalState = Sets.newHashSet();
 	// set P in paper [Reps2003]
 	protected D initialState;
 	protected Set<D> states = Sets.newHashSet();
@@ -136,5 +131,13 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		for(Transition<N, D > t : getTransitions()){
 			listener.onAddedTransition(t);
 		}
+	}
+
+	public void setInitialState(D state) {
+		this.initialState = state;
+	}
+	
+	public void addFinalState(D state) {
+		this.finalState.add(state);
 	}
 }
