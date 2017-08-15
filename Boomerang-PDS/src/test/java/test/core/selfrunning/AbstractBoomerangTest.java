@@ -127,6 +127,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					return icfg;
 				}
 			};
+			System.out.println(query.asNode().stmt().getMethod().getActiveBody());
 			solver.solve(query);
 			results.addAll(solver.getForwardReachableStates());
 		}

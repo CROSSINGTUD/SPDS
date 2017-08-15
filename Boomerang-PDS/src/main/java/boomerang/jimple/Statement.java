@@ -90,4 +90,8 @@ public class Statement implements Location {
 		}
 		return methodToInteger.get(method);
 	}
+
+	public SootMethod getMethod() {
+		return method;
+	}
 }

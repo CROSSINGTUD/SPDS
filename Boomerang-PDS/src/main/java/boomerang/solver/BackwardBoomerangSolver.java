@@ -31,7 +31,7 @@ import wpds.interfaces.State;
 public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 
 	public BackwardBoomerangSolver(BiDiInterproceduralCFG<Unit, SootMethod> icfg){
-		super(new BackwardsInterproceduralCFG(icfg));
+		super(icfg);
 	}
 
 	@Override
@@ -112,11 +112,13 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 //			out.add(new ExclusionNode<Statement, Value, Field>(new Statement((Stmt) succ, method), fact,
 //					getWrittenField(curr)));
 //		}
+		boolean leftSideMatches = false;
 		if (curr instanceof AssignStmt) {
 			AssignStmt assignStmt = (AssignStmt) curr;
 			Value leftOp = assignStmt.getLeftOp();
 			Value rightOp = assignStmt.getRightOp();
 			if (leftOp.equals(fact)) {
+				leftSideMatches = true;
 				if (rightOp instanceof InstanceFieldRef) {
 					InstanceFieldRef ifr = (InstanceFieldRef) rightOp;
 					out.add(new PushNode<Statement, Value, Field>(new Statement(succ, method), ifr.getBase(),
@@ -132,9 +134,12 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 					NodeWithLocation<Statement, Value, Field> succNode = new NodeWithLocation<>(
 							new Statement(succ, method), rightOp, new Field(ifr.getField()));
 					out.add(new PopNode<NodeWithLocation<Statement, Value, Field>>(succNode, PDSSystem.FIELDS));
+//					leftSideMatches = true;
 				}
 			}
 		}
+		if(!leftSideMatches)
+			out.add(new Node<Statement, Value>(new Statement(succ, method), fact));
 		return out;
 	}
 	

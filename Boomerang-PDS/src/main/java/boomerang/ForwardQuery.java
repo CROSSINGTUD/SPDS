@@ -9,4 +9,8 @@ public class ForwardQuery extends Query{
 	public ForwardQuery(Statement stmt, Value variable) {
 		super(stmt, variable);
 	}
+	@Override
+	public String toString() {
+		return "ForwardQuery: "+ super.toString();
+	}
 }
