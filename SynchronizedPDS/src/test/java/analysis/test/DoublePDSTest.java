@@ -10,12 +10,12 @@ import org.junit.Test;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
-import analysis.Node;
-import analysis.NodeWithLocation;
-import analysis.PopNode;
-import analysis.PushNode;
-import analysis.DoublePDSSolver;
-import analysis.DoublePDSSolver.PDSSystem;
+import sync.pds.solver.SyncPDSSolver;
+import sync.pds.solver.SyncPDSSolver.PDSSystem;
+import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.NodeWithLocation;
+import sync.pds.solver.nodes.PopNode;
+import sync.pds.solver.nodes.PushNode;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.wildcard.Wildcard;
@@ -47,7 +47,7 @@ public class DoublePDSTest {
 	private FieldRef epsilonField = new FieldRef("eps_f");
 	private Statement epsilonCallSite = new Statement(-1);
 	
-	private DoublePDSSolver<Statement, Variable, FieldRef> solver = new DoublePDSSolver<Statement, Variable, FieldRef>() {
+	private SyncPDSSolver<Statement, Variable, FieldRef> solver = new SyncPDSSolver<Statement, Variable, FieldRef>() {
 
 		@Override
 		public Collection<State> computeSuccessor(Node<Statement, Variable> node) {

@@ -1,4 +1,4 @@
-package analysis;
+package sync.pds.solver.nodes;
 
 import wpds.interfaces.State;
 

@@ -1,6 +1,6 @@
-package analysis;
+package sync.pds.solver.nodes;
 
-import analysis.DoublePDSSolver.PDSSystem;
+import sync.pds.solver.SyncPDSSolver.PDSSystem;
 
 public class PushNode<Stmt, Fact, Location> extends Node<Stmt, Fact> {
 

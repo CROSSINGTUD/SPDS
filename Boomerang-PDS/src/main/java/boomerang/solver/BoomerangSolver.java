@@ -9,12 +9,6 @@ import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 
-import analysis.DoublePDSSolver;
-import analysis.ExclusionNode;
-import analysis.Node;
-import analysis.NodeWithLocation;
-import analysis.PopNode;
-import analysis.PushNode;
 import boomerang.jimple.Field;
 import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
@@ -34,9 +28,15 @@ import soot.jimple.Jimple;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.internal.JimpleLocal;
+import sync.pds.solver.SyncPDSSolver;
+import sync.pds.solver.nodes.ExclusionNode;
+import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.NodeWithLocation;
+import sync.pds.solver.nodes.PopNode;
+import sync.pds.solver.nodes.PushNode;
 import wpds.interfaces.State;
 
-public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
+public class BoomerangSolver extends SyncPDSSolver<Statement, Value, Field>{
 
 	private static Local returnVal;
 	private static Value thisVal;

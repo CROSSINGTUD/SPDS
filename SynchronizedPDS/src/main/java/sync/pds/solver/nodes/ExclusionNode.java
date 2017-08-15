@@ -1,4 +1,4 @@
-package analysis;
+package sync.pds.solver.nodes;
 
 public class ExclusionNode<Stmt, Fact, Location> extends Node<Stmt, Fact> {
 

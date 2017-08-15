@@ -1,4 +1,4 @@
-package analysis;
+package sync.pds.solver;
 
 import java.util.AbstractMap;
 import java.util.Collection;
@@ -14,6 +14,13 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
+import sync.pds.solver.nodes.ExclusionNode;
+import sync.pds.solver.nodes.INode;
+import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.NodeWithLocation;
+import sync.pds.solver.nodes.PopNode;
+import sync.pds.solver.nodes.PushNode;
+import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.PAutomaton;
 import wpds.impl.PushdownSystem;
 import wpds.impl.Transition;
@@ -25,7 +32,7 @@ import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
-public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends Location> {
+public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends Location> {
 
 	public enum PDSSystem {
 		FIELDS, CALLS
@@ -125,7 +132,7 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 	public abstract Field fieldWildCard();
 
 	private INode<StmtWithFact> asFieldFact(Node<Stmt, Fact> node) {
-		return new SingleNode<StmtWithFact>(new StmtWithFact(node.stmt, node.fact()));
+		return new SingleNode<StmtWithFact>(new StmtWithFact(node.stmt(), node.fact()));
 	}
 
 	private void processPop(Node<Stmt, Fact> curr, Fact location, PDSSystem system) {
@@ -183,7 +190,7 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 		}
 
 		@Override
-		public void onAddedTransition(Transition<Field, INode<DoublePDSSolver<Stmt, Fact, Field>.StmtWithFact>> t) {
+		public void onAddedTransition(Transition<Field, INode<SyncPDSSolver<Stmt, Fact, Field>.StmtWithFact>> t) {
 			INode<StmtWithFact> n = t.getStart();
 			StmtWithFact fact = n.fact();
 			if (fact != null && fact.asNode().equals(node)) {
@@ -219,8 +226,8 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 			return true;
 		}
 
-		private DoublePDSSolver getOuterType() {
-			return DoublePDSSolver.this;
+		private SyncPDSSolver getOuterType() {
+			return SyncPDSSolver.this;
 		}
 		
 	}
@@ -327,8 +334,8 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 				return false;
 			return true;
 		}
-		private DoublePDSSolver getOuterType() {
-			return DoublePDSSolver.this;
+		private SyncPDSSolver getOuterType() {
+			return SyncPDSSolver.this;
 		}
 		
 	}
@@ -347,7 +354,7 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 				}
 			};
 			callPA.addTransition(
-					new Transition<Stmt, INode<Fact>>(wrap(seed.variable), seed.stmt(), wrap(seed.variable)));
+					new Transition<Stmt, INode<Fact>>(wrap(seed.fact()), seed.stmt(), wrap(seed.fact())));
 		}
 		return callPA;
 	}

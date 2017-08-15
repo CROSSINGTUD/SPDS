@@ -12,7 +12,6 @@ import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 
-import analysis.Node;
 import boomerang.jimple.Statement;
 import boomerang.solver.BoomerangSolver;
 import soot.Body;
@@ -29,6 +28,7 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
+import sync.pds.solver.nodes.Node;
 
 public class AbstractBoomerangTest extends AbstractTestingFramework{
 	private JimpleBasedInterproceduralCFG icfg;
