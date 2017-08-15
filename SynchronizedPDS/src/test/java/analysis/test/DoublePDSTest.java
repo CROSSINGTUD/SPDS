@@ -73,6 +73,11 @@ public class DoublePDSTest {
 		public FieldRef fieldWildCard() {
 			return new FieldWildCard();
 		}
+
+		@Override
+		public FieldRef exclusionFieldWildCard(FieldRef exclusion) {
+			throw new RuntimeException("Not implemented for those test cases");
+		}
 	};
 	@Test
 	public void test1() {

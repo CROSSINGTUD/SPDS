@@ -111,9 +111,16 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 
 	private boolean addNormalFieldFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
 		setFieldContextReachable(new QueuedNode(succ));
+		if(succ instanceof ExclusionNode){
+			ExclusionNode<Stmt,Fact,Field> exNode = (ExclusionNode) succ;
+			return fieldPDS.addRule(new UNormalRule<Field, INode<StmtWithFact>>(asFieldFact(curr), fieldWildCard(),
+					asFieldFact(succ), exclusionFieldWildCard(exNode.exclusion())));
+		} 
 		return fieldPDS.addRule(new UNormalRule<Field, INode<StmtWithFact>>(asFieldFact(curr), fieldWildCard(),
 				asFieldFact(succ), fieldWildCard()));
 	}
+
+	public abstract Field exclusionFieldWildCard(Field exclusion);
 
 	public abstract Field fieldWildCard();
 
@@ -219,7 +226,7 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 	}
 	private PAutomaton<Field, INode<StmtWithFact>> getOrCreateFieldAutomaton() {
 		if (fieldPA == null) {
-			fieldPA = new PAutomaton<Field, INode<StmtWithFact>>(asFieldFact(seed), asFieldFact(seed)) {
+			fieldPA = new PAutomaton<Field, INode<StmtWithFact>>() {
 				@Override
 				public INode<StmtWithFact> createState(INode<StmtWithFact> d, Field loc) {
 					if (loc.equals(emptyField()))
@@ -328,7 +335,7 @@ public abstract class DoublePDSSolver<Stmt extends Location, Fact, Field extends
 
 	private PAutomaton<Stmt, INode<Fact>> getOrCreateCallAutomaton() {
 		if (callPA == null) {
-			callPA = new PAutomaton<Stmt, INode<Fact>>(wrap(seed.variable), wrap(seed.variable)) {
+			callPA = new PAutomaton<Stmt, INode<Fact>>() {
 				@Override
 				public INode<Fact> createState(INode<Fact> d, Stmt loc) {
 					return generateState(d, loc);

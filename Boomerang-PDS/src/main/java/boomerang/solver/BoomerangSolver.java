@@ -2,16 +2,15 @@ package boomerang.solver;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 
 import analysis.DoublePDSSolver;
+import analysis.ExclusionNode;
 import analysis.Node;
 import analysis.NodeWithLocation;
 import analysis.PopNode;
@@ -47,11 +46,6 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 	public BoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg){
 		this.icfg = icfg;
 	}
-	@Override
-	public Field fieldWildCard() {
-		return Field.wildcard();
-	}
-
 	@Override
 	public Collection<? extends State> computeSuccessor(Node<Statement, Value> node) {
 		Statement stmt = node.stmt();
@@ -104,10 +98,30 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 		Set<State> out = Sets.newHashSet();
 		for(Unit succ : icfg.getSuccsOf(curr)){
 			//always maitain data-flow // killFlow has been taken care of
-			out.add(new Node<Statement,Value>(new Statement((Stmt) succ, method),fact));
+			if(isFieldWriteWithBase(curr,fact)){
+				out.add(new ExclusionNode<Statement,Value,Field>(new Statement((Stmt) succ, method),fact,getWrittenField(curr)));
+			}
+			else{
+				out.add(new Node<Statement,Value>(new Statement((Stmt) succ, method),fact));
+			}
 			out.addAll(computeNormalFlow(method,curr, fact, (Stmt) succ));
 		}
 		return out;
+	}
+	private Field getWrittenField(Stmt curr) {
+		AssignStmt as = (AssignStmt) curr;
+		InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
+		return new Field(ifr.getField());
+	}
+	private boolean isFieldWriteWithBase(Stmt curr, Value base) {
+		if(curr instanceof AssignStmt){
+			AssignStmt as = (AssignStmt) curr;
+			if(as.getLeftOp() instanceof InstanceFieldRef){
+				InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
+				return ifr.getBase().equals(base);
+			}
+		}
+		return false;
 	}
 	private boolean killFlow(Stmt curr, Value value) {
 		if(curr instanceof AssignStmt){
@@ -210,7 +224,6 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 		if(invokeExpr instanceof InstanceInvokeExpr){
 			InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
 			if(iie.getBase().equals(fact) && !callee.isStatic()){
-				// TODO Do we need the return site? 
 				return Collections.singleton(new PushNode<Statement, Value, Statement>(new Statement(calleeSp,callee), calleeBody.getThisLocal(),returnSite, PDSSystem.CALLS));
 			}
 		}
@@ -275,5 +288,15 @@ public class BoomerangSolver extends DoublePDSSolver<Statement, Value, Field>{
 			return index;
 		}
 		
+	}
+
+	@Override
+	public Field fieldWildCard() {
+		return Field.wildcard();
+	}
+
+	@Override
+	public Field exclusionFieldWildCard(Field exclusion) {
+		return Field.exclusionWildcard(exclusion);
 	}
 }

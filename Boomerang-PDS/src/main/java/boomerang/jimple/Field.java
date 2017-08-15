@@ -1,7 +1,12 @@
 package boomerang.jimple;
 
+import java.util.Map;
+
+import com.beust.jcommander.internal.Maps;
+
 import soot.SootField;
 import wpds.interfaces.Location;
+import wpds.wildcard.ExclusionWildcard;
 import wpds.wildcard.Wildcard;
 
 public class Field implements Location {
@@ -80,9 +85,30 @@ public class Field implements Location {
 	}
 
 	private static class WildcardField extends Field implements Wildcard {
-
 		public WildcardField() {
 			super("*");
 		}
+	}
+	
+	private static class ExclusionWildcardField extends Field implements ExclusionWildcard<Field> {
+		private final Field excludes;
+
+		public ExclusionWildcardField(Field excl) {
+			super(excl.delegate);
+			this.excludes = excl;
+		}
+
+		@Override
+		public Field excludes() {
+			return (Field) excludes;
+		}
+	}
+	private static Map<Field,ExclusionWildcardField> exclusionWildcards = Maps.newHashMap();
+	
+	public static Field exclusionWildcard(Field exclusion) {
+		if(!exclusionWildcards.containsKey(exclusion)){
+			exclusionWildcards.put(exclusion, new ExclusionWildcardField(exclusion));
+		}
+		return exclusionWildcards.get(exclusion);
 	}
 }

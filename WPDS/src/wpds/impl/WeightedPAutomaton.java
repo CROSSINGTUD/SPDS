@@ -20,6 +20,7 @@ import pathexpression.Edge;
 import pathexpression.IRegEx;
 import pathexpression.LabeledGraph;
 import pathexpression.PathExpressionComputer;
+import pathexpression.RegEx;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
@@ -32,7 +33,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	// Dataflow Analysis
 	protected Set<Transition<N, D>> transitions = Sets.newHashSet();
 	// set F in paper [Reps2003]
-	protected D finalState;
+	protected Set<D> finalState;
 	// set P in paper [Reps2003]
 	protected D initialState;
 	protected Set<D> states = Sets.newHashSet();
@@ -40,9 +41,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private final Multimap<D, Transition<N, D>> transitionsInto = HashMultimap.create();
 	private Set<WPAUpdateListener<N, D, W>> listeners = Sets.newHashSet();
 
-	public WeightedPAutomaton(D initialState, D finalState) {
-		this.initialState = initialState;
-		this.finalState = finalState;
+	public WeightedPAutomaton() {
 	}
 
 	public abstract D createState(D d, N loc);
@@ -77,7 +76,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		return initialState;
 	}
 
-	public D getFinalState() {
+	public Set<D> getFinalState() {
 		return finalState;
 	}
 
@@ -94,7 +93,18 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 
 	public IRegEx<N> extractLanguage(D from) {
 		PathExpressionComputer<D, N> expr = new PathExpressionComputer<>(this);
-		return expr.getExpressionBetween(from, getFinalState());
+		IRegEx<N> res = null;
+		for(D finalState : getFinalState()){
+			IRegEx<N> regEx = expr.getExpressionBetween(from, finalState);
+			if(res == null){
+				res = regEx;
+			} else {
+				res = RegEx.<N>union(res, regEx);
+			}
+		}
+		if(res == null)
+			return new RegEx.EmptySet<N>();
+		return res;
 	}
 
 	public Set<D> getStates() {
