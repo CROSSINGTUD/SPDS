@@ -3,9 +3,13 @@ package boomerang.jimple;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 
 import soot.SootMethod;
+import soot.jimple.AssignStmt;
+import soot.jimple.IdentityStmt;
+import soot.jimple.InstanceFieldRef;
 import soot.jimple.Stmt;
 import wpds.interfaces.Location;
 
@@ -69,8 +73,29 @@ public class Statement implements Location {
 			return rep;
 		}
 		if(DEBUG)
-			return method +" " + delegate;
+			return /*method.getName() +" " +*/ shortName(delegate);
 		return "[" + Integer.toString(methodToInt(method)) + "]" + Integer.toString(stmtToInt(delegate));
+	}
+
+	private String shortName(Stmt s) {
+		if(s.containsInvokeExpr()){
+			return s.getInvokeExpr().getMethod().getName() + "(" +Joiner.on(",").join(s.getInvokeExpr().getArgs())+")";
+		}
+		if(s instanceof IdentityStmt){
+			return "id";
+		}
+		if(s instanceof AssignStmt){
+			AssignStmt assignStmt = (AssignStmt) s;
+			if(assignStmt.getLeftOp() instanceof InstanceFieldRef){
+				InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getLeftOp();
+				return ifr.getBase() +"."+ifr.getField().getName() +" = " + assignStmt.getRightOp();
+			}
+			if(assignStmt.getRightOp() instanceof InstanceFieldRef){
+				InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
+				return assignStmt.getLeftOp()  +" = " +ifr.getBase() +"."+ifr.getField().getName();
+			}
+		}
+		return s.toString();
 	}
 
 	private static boolean DEBUG = true;

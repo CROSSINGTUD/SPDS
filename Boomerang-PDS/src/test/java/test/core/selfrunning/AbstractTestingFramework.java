@@ -104,6 +104,7 @@ public abstract class AbstractTestingFramework {
 			Options.v().set_allow_phantom_refs(true);
 			// Options.v().setPhaseOption("cg", "all-reachable:true");
 		}
+		Options.v().setPhaseOption("jb", "use-original-names:true");
 
 		Options.v().set_exclude(excludedPackages());
 		Options.v().set_soot_classpath(sootCp);

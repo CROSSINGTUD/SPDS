@@ -43,7 +43,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	private static final boolean DEBUG = true;
 
-	private final WeightedPushdownSystem<Stmt, INode<Fact>, Weight<Stmt>> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, Weight<Stmt>>() {
+	protected final WeightedPushdownSystem<Stmt, INode<Fact>, Weight<Stmt>> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, Weight<Stmt>>() {
 		@Override
 		public Weight<Stmt> getZero() {
 			return SetDomain.zero();
@@ -54,7 +54,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			return SetDomain.one();
 		}
 	};
-	private final WeightedPushdownSystem<Field, INode<StmtWithFact>, Weight<Field>> fieldPDS = new WeightedPushdownSystem<Field, INode<StmtWithFact>, Weight<Field>>() {
+	protected final WeightedPushdownSystem<Field, INode<StmtWithFact>, Weight<Field>> fieldPDS = new WeightedPushdownSystem<Field, INode<StmtWithFact>, Weight<Field>>() {
 
 		@Override
 		public Weight<Field> getZero() {
@@ -66,7 +66,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			return SetDomain.one();
 		}
 	};
-	private final WeightedPAutomaton<Field, INode<StmtWithFact>, Weight<Field>> fieldAutomaton = new WeightedPAutomaton<Field, INode<StmtWithFact>, Weight<Field>>() {
+	protected final WeightedPAutomaton<Field, INode<StmtWithFact>, Weight<Field>> fieldAutomaton = new WeightedPAutomaton<Field, INode<StmtWithFact>, Weight<Field>>() {
 		@Override
 		public INode<StmtWithFact> createState(INode<StmtWithFact> d, Field loc) {
 			if (loc.equals(emptyField()))
@@ -80,7 +80,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	};
 
-	private final WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>> callAutomaton = new WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>>() {
+	protected final WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>> callAutomaton = new WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>>() {
 		@Override
 		public INode<Fact> createState(INode<Fact> d, Stmt loc) {
 			return generateState(d, loc);
@@ -140,7 +140,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 	
 	public void solve(Node<Stmt, Fact> curr) {
-		Transition<Field, INode<SyncPDSSolver<Stmt, Fact, Field>.StmtWithFact>> fieldTrans = new Transition<Field, INode<StmtWithFact>>(asFieldFact(curr), emptyField(), asFieldFact(curr));
+		Transition<Field, INode<SyncPDSSolver<Stmt, Fact, Field>.StmtWithFact>> fieldTrans = new Transition<Field, INode<StmtWithFact>>(asFieldFact(curr), epsilonField(), asFieldFact(curr));
 		fieldAutomaton.addTransition(fieldTrans);
 		fieldAutomaton.addWeightForTransition(fieldTrans, new SetDomain<Field,Stmt,Fact>(curr));
 		Transition<Stmt, INode<Fact>> callTrans = new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(curr.fact()));
@@ -225,7 +225,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	public abstract Field fieldWildCard();
 
-	private INode<StmtWithFact> asFieldFact(Node<Stmt, Fact> node) {
+	protected INode<StmtWithFact> asFieldFact(Node<Stmt, Fact> node) {
 		return new SingleNode<StmtWithFact>(new StmtWithFact(node.stmt(), node.fact()));
 	}
 
@@ -571,15 +571,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		void available();
 	}
 
-	private class StmtWithFact extends Node<Stmt, Fact> {
+	public class StmtWithFact extends Node<Stmt, Fact> {
 
 		public StmtWithFact(Stmt stmt, Fact variable) {
 			super(stmt, variable);
 		}
 
-		public Node<Stmt, Fact> asNode() {
-			return new Node<Stmt, Fact>(stmt(), fact());
-		}
 	}
 
 	private void debugOutput() {

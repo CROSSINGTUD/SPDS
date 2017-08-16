@@ -22,10 +22,13 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import sync.pds.solver.nodes.ExclusionNode;
+import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
+import wpds.impl.PushRule;
+import wpds.impl.Weight;
 import wpds.interfaces.State;
 
 public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
@@ -138,5 +141,12 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 		}
 
 		return Collections.emptySet();
+	}
+
+	public void injectAliasAtFieldWrite(Node<Statement, Value> alias, AssignStmt as, InstanceFieldRef ifr, Stmt succ) {
+		Node<Statement,Value> sourceNode = new Node<Statement,Value>(new Statement(as, icfg.getMethodOf(as)), as.getRightOp());
+		Node<Statement,Value> targetNode = new Node<Statement,Value>(new Statement(succ, icfg.getMethodOf(succ)), alias.fact());
+		fieldPDS.addRule(new PushRule<Field, INode<StmtWithFact>, Weight<Field>>(asFieldFact(sourceNode), Field.wildcard(), asFieldFact(targetNode), new Field(ifr.getField()), Field.wildcard(), fieldPDS.getOne()));
+		fieldPDS.poststar(fieldAutomaton);
 	}
 }

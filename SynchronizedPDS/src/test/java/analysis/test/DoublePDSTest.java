@@ -121,6 +121,16 @@ public class DoublePDSTest {
 		assertFalse(solver.getReachedStates().contains(node(7,"y")));
 	}
 	@Test
+	public void tooMuchPopping() {
+		addFieldPush(node(1,"u"), f("g"), node(3,"x"));
+		addFieldPop(node(3,"x"), f("g"), node(3,"y"));
+		addFieldPop(node(3,"y"), f("g"), node(3,"z"));
+		solver.solve(node(1,"u"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains( node(3,"y")));
+		assertFalse(solver.getReachedStates().contains(node(3,"z")));
+	}
+	@Test
 	public void test1Simple() {
 		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
 		addCallFlow(node(2,"v"), node(3,"p"),returnSite(5));

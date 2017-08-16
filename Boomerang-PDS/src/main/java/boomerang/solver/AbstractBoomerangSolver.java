@@ -41,7 +41,8 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	private static Local returnVal;
 	private static Value thisVal;
 	private static Map<Integer,Value> parameterVals = Maps.newHashMap();
-	private InterproceduralCFG<Unit, SootMethod> icfg;
+	protected final InterproceduralCFG<Unit, SootMethod> icfg;
+	private boolean INTERPROCEDURAL = false;
 	
 	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg){
 		this.icfg = icfg;
@@ -61,7 +62,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			if(killFlow(curr, value)){
 				return Collections.emptySet();
 			}
-			if(curr.containsInvokeExpr() && valueUsedInStatement(method,curr,curr.getInvokeExpr(), value)){
+			if(curr.containsInvokeExpr() && valueUsedInStatement(method,curr,curr.getInvokeExpr(), value) && INTERPROCEDURAL){
 				return callFlow(method, curr, curr.getInvokeExpr(), value);
 			} else if(icfg.isExitStmt(curr)){
 				return computeReturnFlow(method,curr, value);

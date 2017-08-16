@@ -1,12 +1,10 @@
 package boomerang;
 
 import java.util.Collection;
-import java.util.Set;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -30,7 +28,7 @@ public abstract class Boomerang {
 	private final ForwardBoomerangSolver forwardSolver = new ForwardBoomerangSolver(icfg());
 	private final BackwardBoomerangSolver backwardSolver = new BackwardBoomerangSolver(bwicfg());
 	private BackwardsInterproceduralCFG bwicfg;
-	private Multimap<Node<Statement,Value>,Node<Statement,Value>> allAllocationSiteAtFieldWrite = HashMultimap.create(); 
+	private Multimap<AllocAtStmt, Node<Statement,Value>> allAllocationSiteAtFieldWrite = HashMultimap.create(); 
 	private Multimap<Stmt,Node<Statement,Value>> activeAllocationSiteAtFieldWrite = HashMultimap.create();
 	
 	public Boomerang(){
@@ -43,8 +41,8 @@ public abstract class Boomerang {
 					if(stmt instanceof AssignStmt){
 						AssignStmt as = (AssignStmt) stmt;
 						if(as.getLeftOp() instanceof InstanceFieldRef){
-							InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
-							handleFieldWrite(node,ifr,as);
+								InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
+								handleFieldWrite(node,ifr,as);
 						}
 					}
 				}
@@ -78,22 +76,25 @@ public abstract class Boomerang {
 	private void addAllocationSite(Node<Statement, Value> alloc, Node<Statement, Value> target, InstanceFieldRef ifr, AssignStmt as) {
 		if(target.fact().equals(ifr.getBase())){
 			if(activeAllocationSiteAtFieldWrite.put(as, alloc)){
-				Collection<Node<Statement, Value>> aliases = allAllocationSiteAtFieldWrite.removeAll(alloc);
+				System.err.println("ADDEDINg ALLOC SITE " + alloc + as);
+				Collection<Node<Statement, Value>> aliases = allAllocationSiteAtFieldWrite.removeAll(new AllocAtStmt(alloc,as));
 				for(Node<Statement, Value> alias : aliases){
-					injectAlias(alloc, alias, as);
+					injectAlias(alloc, alias, as, ifr);
 				}
-				System.out.println(aliases);
 			}
 		}
 		
 		if(activeAllocationSiteAtFieldWrite.get(as).contains(alloc)){
-			injectAlias(alloc, target, as);
+			injectAlias(alloc, target, as, ifr);
 		} else{
-			allAllocationSiteAtFieldWrite.put(alloc,target);
+			allAllocationSiteAtFieldWrite.put(new AllocAtStmt(alloc, as),target);
 		}
 	}
-	private void injectAlias(Node<Statement, Value> alloc, Node<Statement, Value> alias, AssignStmt as) {
-		System.out.println("INJECTION ALIAS " + alias.fact() + " aliases " + alloc.fact() +" " + as);
+	private void injectAlias(Node<Statement, Value> alloc, Node<Statement, Value> alias, AssignStmt as, InstanceFieldRef ifr) {
+		System.out.println("INJECTION " + alias + as);
+		for(Unit succ : icfg().getSuccsOf(as)){
+			forwardSolver.injectAliasAtFieldWrite(alias, as, ifr, (Stmt) succ);
+		}
 	}
 	private BiDiInterproceduralCFG<Unit, SootMethod> bwicfg() {
 		if(bwicfg == null)

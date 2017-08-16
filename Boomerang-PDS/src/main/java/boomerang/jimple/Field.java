@@ -60,7 +60,7 @@ public class Field implements Location {
 	public String toString() {
 		if (delegate == null)
 			return rep;
-		return delegate.toString();
+		return delegate.getName().toString();
 	}
 
 	public static Field wildcard() {
