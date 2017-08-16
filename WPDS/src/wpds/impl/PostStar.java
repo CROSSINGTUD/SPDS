@@ -24,8 +24,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		worklist = Lists.newLinkedList(initialAutomaton.getTransitions());
 		fa = initialAutomaton;
 
-		for (Transition<N, D> trans : worklist)
-			fa.addWeightForTransition(trans, pds.getOne());
 		// System.out.println(pds);
 
 		saturate();

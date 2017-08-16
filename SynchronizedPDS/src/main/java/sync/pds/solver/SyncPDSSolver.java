@@ -21,13 +21,20 @@ import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
+import sync.pds.weights.SetDomain;
+import wpds.impl.NormalRule;
 import wpds.impl.PAutomaton;
+import wpds.impl.PopRule;
+import wpds.impl.PushRule;
 import wpds.impl.PushdownSystem;
 import wpds.impl.Transition;
 import wpds.impl.UNormalRule;
 import wpds.impl.UPopRule;
 import wpds.impl.UPushRule;
+import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
+import wpds.impl.WeightedPAutomaton;
+import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
@@ -38,11 +45,32 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		FIELDS, CALLS
 	}
 
-	private static final boolean DEBUG = false;
+	private static final boolean DEBUG = true;
 
-	private final PushdownSystem<Stmt, INode<Fact>> callingPDS = new PushdownSystem<Stmt, INode<Fact>>();
-	private final PushdownSystem<Field, INode<StmtWithFact>> fieldPDS = new PushdownSystem<Field, INode<StmtWithFact>>();
-	private final PAutomaton<Field, INode<StmtWithFact>> fieldAutomaton = new PAutomaton<Field, INode<StmtWithFact>>() {
+	private final WeightedPushdownSystem<Stmt, INode<Fact>, Weight<Stmt>> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, Weight<Stmt>>() {
+		@Override
+		public Weight<Stmt> getZero() {
+			return SetDomain.zero();
+		}
+
+		@Override
+		public Weight<Stmt> getOne() {
+			return SetDomain.one();
+		}
+	};
+	private final WeightedPushdownSystem<Field, INode<StmtWithFact>, Weight<Field>> fieldPDS = new WeightedPushdownSystem<Field, INode<StmtWithFact>, Weight<Field>>() {
+
+		@Override
+		public Weight<Field> getZero() {
+			return SetDomain.zero();
+		}
+
+		@Override
+		public Weight<Field> getOne() {
+			return SetDomain.one();
+		}
+	};
+	private final WeightedPAutomaton<Field, INode<StmtWithFact>, Weight<Field>> fieldAutomaton = new WeightedPAutomaton<Field, INode<StmtWithFact>, Weight<Field>>() {
 		@Override
 		public INode<StmtWithFact> createState(INode<StmtWithFact> d, Field loc) {
 			if (loc.equals(emptyField()))
@@ -56,7 +84,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	};
 
-	private final PAutomaton<Stmt, INode<Fact>> callAutomaton = new PAutomaton<Stmt, INode<Fact>>() {
+	private final WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>> callAutomaton = new WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>>() {
 		@Override
 		public INode<Fact> createState(INode<Fact> d, Stmt loc) {
 			return generateState(d, loc);
@@ -67,11 +95,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			return epsilonStmt();
 		}
 	};
-	
+
 	private final LinkedList<Node<Stmt, Fact>> worklist = Lists.newLinkedList();
 	private final Set<Node<Stmt, Fact>> reachedStates = Sets.newHashSet();
 	private final Set<Stmt> returnSites = Sets.newHashSet();
-	private final Multimap<Node<Stmt,Fact>, Fact> returningFacts = HashMultimap.create();
+	private final Multimap<Node<Stmt, Fact>, Fact> returningFacts = HashMultimap.create();
 	private final Set<Node<Stmt, Fact>> callingContextReachable = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> fieldContextReachable = Sets.newHashSet();
 	private final Multimap<Node<Stmt, Fact>, AvailableListener> onFieldContextReachable = HashMultimap.create();
@@ -79,26 +107,27 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private final Set<SyncPDSUpdateListener<Stmt, Fact, Field>> updateListeners = Sets.newHashSet();
 
 	public void solve(Node<Stmt, Fact> curr) {
-		fieldAutomaton.addTransition(
-				new Transition<Field, INode<StmtWithFact>>(asFieldFact(curr), emptyField(), asFieldFact(curr)));
-		callAutomaton.addTransition(
-				new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(curr.fact())));
+		Transition<Field, INode<SyncPDSSolver<Stmt, Fact, Field>.StmtWithFact>> fieldTrans = new Transition<Field, INode<StmtWithFact>>(asFieldFact(curr), emptyField(), asFieldFact(curr));
+		fieldAutomaton.addTransition(fieldTrans);
+		fieldAutomaton.addWeightForTransition(fieldTrans, new SetDomain<Field,Stmt,Fact>(curr));
+		Transition<Stmt, INode<Fact>> callTrans = new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(curr.fact()));
+		callAutomaton
+				.addTransition(callTrans);
+		callAutomaton.addWeightForTransition(callTrans, new SetDomain<Stmt,Stmt,Fact>(curr));
 		worklist.add(curr);
 		awaitEmptyWorklist();
-		if(DEBUG){
+		if (DEBUG) {
 			debugOutput();
 		}
 	}
-
 
 	private void awaitEmptyWorklist() {
 		while (!worklist.isEmpty()) {
 			Node<Stmt, Fact> curr = worklist.poll();
 			addReachableState(curr);
-			
 
 			Collection<? extends State> successors = computeSuccessor(curr);
-//			System.out.println(curr+ " FLows tot \t\t\t "+successors);
+			// System.out.println(curr+ " FLows tot \t\t\t "+successors);
 			for (State s : successors) {
 				if (s instanceof Node) {
 					Node<Stmt, Fact> succ = (Node<Stmt, Fact>) s;
@@ -111,7 +140,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 					} else {
 						added = processNormal(curr, succ);
 					}
-					if(added)
+					if (added)
 						addToWorklist(succ);
 				} else if (s instanceof PopNode) {
 					PopNode<Fact> popNode = (PopNode<Fact>) s;
@@ -124,13 +153,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 	private void addReachableState(Node<Stmt, Fact> curr) {
-		if(!reachedStates.add(curr))
+		if (!reachedStates.add(curr))
 			return;
-		for(SyncPDSUpdateListener<Stmt, Fact, Field> l : updateListeners){
+		for (SyncPDSUpdateListener<Stmt, Fact, Field> l : updateListeners) {
 			l.onReachableNodeAdded(curr);
 		}
 	}
-
 
 	private void addToWorklist(Node<Stmt, Fact> curr) {
 		worklist.add(new Node<Stmt, Fact>(curr.stmt(), curr.fact()));
@@ -147,18 +175,18 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private boolean addNormalCallFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
 		setCallingContextReachable(new QueuedNode(succ.stmt(), succ.fact()));
 		return callingPDS.addRule(
-				new UNormalRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt()));
+				new NormalRule<Stmt, INode<Fact>,Weight<Stmt>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt(),callingPDS.getOne()));
 	}
 
 	private boolean addNormalFieldFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
 		setFieldContextReachable(new QueuedNode(succ));
-		if(succ instanceof ExclusionNode){
-			ExclusionNode<Stmt,Fact,Field> exNode = (ExclusionNode) succ;
-			return fieldPDS.addRule(new UNormalRule<Field, INode<StmtWithFact>>(asFieldFact(curr), fieldWildCard(),
-					asFieldFact(succ), exclusionFieldWildCard(exNode.exclusion())));
-		} 
-		return fieldPDS.addRule(new UNormalRule<Field, INode<StmtWithFact>>(asFieldFact(curr), fieldWildCard(),
-				asFieldFact(succ), fieldWildCard()));
+		if (succ instanceof ExclusionNode) {
+			ExclusionNode<Stmt, Fact, Field> exNode = (ExclusionNode) succ;
+			return fieldPDS.addRule(new NormalRule<Field, INode<StmtWithFact>, Weight<Field>>(asFieldFact(curr),
+					fieldWildCard(), asFieldFact(succ), exclusionFieldWildCard(exNode.exclusion()), fieldPDS.getOne()));
+		}
+		return fieldPDS.addRule(new NormalRule<Field, INode<StmtWithFact>, Weight<Field>>(asFieldFact(curr),
+				fieldWildCard(), asFieldFact(succ), fieldWildCard(), fieldPDS.getOne()));
 	}
 
 	public abstract Field exclusionFieldWildCard(Field exclusion);
@@ -172,14 +200,14 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private void processPop(Node<Stmt, Fact> curr, Fact location, PDSSystem system) {
 		if (system.equals(PDSSystem.FIELDS)) {
 			NodeWithLocation<Stmt, Fact, Field> node = (NodeWithLocation) location;
-			fieldPDS.addRule(new UPopRule<Field, INode<StmtWithFact>>(asFieldFact(curr), node.location(),
-					asFieldFact(node.fact())));
+			fieldPDS.addRule(new PopRule<Field, INode<StmtWithFact>, Weight<Field>>(asFieldFact(curr), node.location(),
+					asFieldFact(node.fact()), fieldPDS.getOne()));
 			setCallingContextReachable(new QueuedNode(node.fact()));
 			addNormalCallFlow(curr, node.fact());
 			checkFieldFeasibility(node.fact());
 		} else if (system.equals(PDSSystem.CALLS)) {
 			//
-			callingPDS.addRule(new UPopRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location)));
+			callingPDS.addRule(new PopRule<Stmt, INode<Fact>, Weight<Stmt>>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location),callingPDS.getOne()));
 			checkCallFeasibility(curr, location);
 		}
 	}
@@ -187,19 +215,19 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private boolean processPush(Node<Stmt, Fact> curr, Location location, Node<Stmt, Fact> succ, PDSSystem system) {
 		boolean added = false;
 		if (system.equals(PDSSystem.FIELDS)) {
-			added |= fieldPDS.addRule(new UPushRule<Field, INode<StmtWithFact>>(asFieldFact(curr), fieldWildCard(),
-					asFieldFact(succ), fieldWildCard(), (Field) location));
+			added |= fieldPDS.addRule(new PushRule<Field, INode<StmtWithFact>, Weight<Field>>(asFieldFact(curr),
+					fieldWildCard(), asFieldFact(succ), fieldWildCard(), (Field) location, fieldPDS.getOne()));
 			added |= addNormalCallFlow(curr, succ);
-			
-			//TODO This call is unnecessary, why?
+
+			// TODO This call is unnecessary, why?
 			setFieldContextReachable(new QueuedNode(succ));
 			fieldPDS.poststar(fieldAutomaton);
 		} else if (system.equals(PDSSystem.CALLS)) {
 			added |= addNormalFieldFlow(curr, succ);
-			added |= callingPDS.addRule(new UPushRule<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()),
-					succ.stmt(), (Stmt) location));
-			
-			//TODO This call is unnecessary, why?
+			added |= callingPDS.addRule(new PushRule<Stmt, INode<Fact>, Weight<Stmt>>(wrap(curr.fact()), curr.stmt(),
+					wrap(succ.fact()), succ.stmt(), (Stmt) location,callingPDS.getOne()));
+
+			// TODO This call is unnecessary, why?
 			setCallingContextReachable(new QueuedNode(succ));
 			callingPDS.poststar(callAutomaton);
 			addReturnSite((Stmt) location);
@@ -207,14 +235,13 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		return added;
 	}
 
-
 	private void checkFieldFeasibility(Node<Stmt, Fact> node) {
-//		System.out.println("CHECKING Field reachabilty for " + node);
+		// System.out.println("CHECKING Field reachabilty for " + node);
 		fieldAutomaton.registerListener(new FieldUpdateListener(node));
 		fieldPDS.poststar(fieldAutomaton);
 	}
 
-	private class FieldUpdateListener implements WPAUpdateListener<Field, INode<StmtWithFact>, NoWeight<Field>>{
+	private class FieldUpdateListener implements WPAUpdateListener<Field, INode<StmtWithFact>, Weight<Field>> {
 
 		private Node<Stmt, Fact> node;
 
@@ -262,16 +289,16 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		private SyncPDSSolver getOuterType() {
 			return SyncPDSSolver.this;
 		}
-		
+
 	}
 
 	private void checkCallFeasibility(Node<Stmt, Fact> curr, Fact fact) {
-		addReturningFact(curr,fact);
+		addReturningFact(curr, fact);
 		callingPDS.poststar(callAutomaton);
 	}
-	
+
 	private void addReturningFact(Node<Stmt, Fact> curr, Fact fact) {
-		if(!returningFacts.put(curr, fact)){
+		if (!returningFacts.put(curr, fact)) {
 			return;
 		}
 		for (Stmt retSite : returnSites) {
@@ -280,7 +307,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 	private void addReturnSite(Stmt location) {
-		if(!returnSites.add(location)){
+		if (!returnSites.add(location)) {
 			return;
 		}
 		for (Entry<Node<Stmt, Fact>, Fact> retSite : returningFacts.entries()) {
@@ -288,26 +315,28 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	}
 
-	private class CallUpdateListener implements WPAUpdateListener<Stmt, INode<Fact>, NoWeight<Stmt>>{
+	private class CallUpdateListener implements WPAUpdateListener<Stmt, INode<Fact>, Weight<Stmt>> {
 		private Stmt retSite;
 		private Fact fact;
 		private Node<Stmt, Fact> curr;
-		
+
 		public CallUpdateListener(Node<Stmt, Fact> curr, Stmt retSite, Fact fact) {
 			this.curr = curr;
 			this.retSite = retSite;
 			this.fact = fact;
 		}
+
 		@Override
 		public void onAddedTransition(Transition<Stmt, INode<Fact>> t) {
-//			System.out.println("CALLUPDATE " + t  +"  " + fact + "   "+ retSite);
-			if(t.getStart().equals(new SingleNode<Fact>(fact))){
-				if(t.getLabel().equals(retSite)){
+			// System.out.println("CALLUPDATE " + t +" " + fact + " "+ retSite);
+			if (t.getStart().equals(new SingleNode<Fact>(fact))) {
+				if (t.getLabel().equals(retSite)) {
 					addNormalFieldFlow(curr, new Node<Stmt, Fact>(retSite, fact));
 					setCallingContextReachable(new QueuedNode(retSite, fact));
 				}
 			}
 		}
+
 		@Override
 		public int hashCode() {
 			final int prime = 31;
@@ -318,6 +347,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			result = prime * result + ((retSite == null) ? 0 : retSite.hashCode());
 			return result;
 		}
+
 		@Override
 		public boolean equals(Object obj) {
 			if (this == obj)
@@ -346,10 +376,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				return false;
 			return true;
 		}
+
 		private SyncPDSSolver getOuterType() {
 			return SyncPDSSolver.this;
 		}
-		
+
 	}
 
 	private class QueuedNode extends Node<Stmt, Fact> implements AvailableListener {
@@ -373,11 +404,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	private void setCallingContextReachable(QueuedNode queuedNode) {
 		Node<Stmt, Fact> node = queuedNode.asNode();
-		if(!callingContextReachable.add(node))
+		if (!callingContextReachable.add(node))
 			return;
-	
+
 		if (fieldContextReachable.contains(node)) {
-			queuedNode.available();	
+			queuedNode.available();
 			Collection<AvailableListener> listeners = onCallingContextReachable.removeAll(node);
 			for (AvailableListener l : listeners) {
 				l.available();
@@ -389,11 +420,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	private void setFieldContextReachable(QueuedNode queuedNode) {
 		Node<Stmt, Fact> node = queuedNode.asNode();
-		if(!fieldContextReachable.add(node)){
+		if (!fieldContextReachable.add(node)) {
 			return;
 		}
-//		System.out.println("Set Field Context Reachable " + node);
-		
+		// System.out.println("Set Field Context Reachable " + node);
+
 		if (callingContextReachable.contains(node)) {
 			queuedNode.available();
 			Collection<AvailableListener> listeners = onFieldContextReachable.removeAll(node);
@@ -405,18 +436,15 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	}
 
-	
-	public void registerListener(SyncPDSUpdateListener<Stmt, Fact, Field> listener){
-		if(!updateListeners.add(listener)){
+	public void registerListener(SyncPDSUpdateListener<Stmt, Fact, Field> listener) {
+		if (!updateListeners.add(listener)) {
 			return;
 		}
-		for(Node<Stmt, Fact> reachableNode : reachedStates){
+		for (Node<Stmt, Fact> reachableNode : reachedStates) {
 			listener.onReachableNodeAdded(reachableNode);
 		}
 	}
-	
-	
-	
+
 	private INode<Fact> wrap(Fact variable) {
 		return new SingleNode<Fact>(variable);
 	}
@@ -488,22 +516,20 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			return new Node<Stmt, Fact>(stmt(), fact());
 		}
 	}
-	
-	
 
 	private void debugOutput() {
 		System.out.println("All reachable states");
 		prettyPrintSet(reachedStates);
-		
+
 		HashSet<Node<Stmt, Fact>> notFieldReachable = Sets.newHashSet(callingContextReachable);
 		notFieldReachable.removeAll(reachedStates);
 		HashSet<Node<Stmt, Fact>> notCallingContextReachable = Sets.newHashSet(fieldContextReachable);
 		notCallingContextReachable.removeAll(reachedStates);
-		if(!notFieldReachable.isEmpty()){
+		if (!notFieldReachable.isEmpty()) {
 			System.out.println("Calling context matching reachable but not field reachable");
 			prettyPrintSet(notFieldReachable);
 		}
-		if(!notCallingContextReachable.isEmpty()){
+		if (!notCallingContextReachable.isEmpty()) {
 			System.out.println("Field matching reachable");
 			prettyPrintSet(notCallingContextReachable);
 		}
@@ -513,16 +539,15 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		System.out.println(callAutomaton);
 	}
 
-
 	private void prettyPrintSet(Collection<? extends Object> set) {
 		int j = 0;
-		for(Object reachableState : set){
+		for (Object reachableState : set) {
 			System.out.print(reachableState);
 			System.out.print("\n");
-//			if(j++ > 0){
-//				System.out.print("\n");
-//				j = 0;
-//			}
+			// if(j++ > 0){
+			// System.out.print("\n");
+			// j = 0;
+			// }
 		}
 		System.out.println();
 	}
