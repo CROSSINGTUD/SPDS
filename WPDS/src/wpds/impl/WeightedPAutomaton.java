@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.base.Joiner;
@@ -118,7 +119,12 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	};
 
 	public void addWeightForTransition(Transition<N, D> trans, W weight) {
-		transitionToWeights.put(trans, weight);
+		W w = transitionToWeights.get(trans);
+		if(w == null || !w.equals(weight)){
+			transitionToWeights.put(trans, weight);
+			for(WPAUpdateListener<N, D, W> l : listeners)
+				l.onWeightAdded(trans, weight);
+		}
 	}
 
 	public W getWeightFor(Transition<N, D> trans) {
@@ -130,6 +136,9 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			return;
 		for(Transition<N, D > t : getTransitions()){
 			listener.onAddedTransition(t);
+		}
+		for(Entry<Transition<N, D>, W> transAndWeight : transitionToWeights.entrySet()){
+			listener.onWeightAdded(transAndWeight.getKey(), transAndWeight.getValue());
 		}
 	}
 

@@ -104,4 +104,8 @@ public class SetDomain<N extends Location,Stmt,Fact> extends Weight<N>{
 			return false;
 		return true;
 	}
+
+	public Collection<Node<Stmt, Fact>> elements() {
+		return Sets.newHashSet(nodes);
+	}
 }

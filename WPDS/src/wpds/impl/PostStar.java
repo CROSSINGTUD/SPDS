@@ -113,6 +113,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		if (!lt.equals(newLt)) {
 			// System.out.println("\t"+
 			// trans + "\t as of \t" + triggeringRule + " \t and " + newLt);
+			
 			worklist.add(trans);
 		}
 	}
