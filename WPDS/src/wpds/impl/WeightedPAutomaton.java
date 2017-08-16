@@ -3,12 +3,14 @@ package wpds.impl;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
@@ -82,9 +84,43 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		s += "\tFinalStates:" + finalState + "\n";
 		s += "\tWeightToTransitions:\n\t\t";
 		s += Joiner.on("\n\t\t").join(transitionToWeights.entrySet());
+		
+		
 		return s;
 	}
 
+
+	private String wrapIfInitialOrFinalState(D s) {
+		return s.equals(initialState) ? "ENTRY: " + wrapFinalState(s) : wrapFinalState(s);
+	}
+
+	private String wrapFinalState(D s) {
+		return finalState.contains(s) ? "TO: " + s + "" : s.toString();
+	}
+
+	public String toDotString() {
+		String s = "digraph {\n";
+		for(D source : states){
+			Collection<Transition<N, D>> collection = transitionsOutOf.get(source);
+			for(D target : states){
+				List<N> labels = Lists.newLinkedList();
+				for(Transition<N, D> t : collection){
+					if(t.getTarget().equals(target)){
+						labels.add(t.getString());
+					}
+				}
+				if(!labels.isEmpty()){
+					s += "\t\"" + wrapIfInitialOrFinalState(source) + "\"";
+					s += " -> \"" + wrapIfInitialOrFinalState(target) + "\"";
+					s += "[label=\"" + Joiner.on(",").join(labels) + "\"];\n";
+				}
+			}
+		}
+		s += "}\n";
+		s += "Initial State:" + initialState + "\n";
+		s += "Final States:" + finalState + "\n";
+		return s;
+	}
 	public abstract N epsilon();
 
 	public IRegEx<N> extractLanguage(D from) {

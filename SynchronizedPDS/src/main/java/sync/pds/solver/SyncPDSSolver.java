@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Queue;
 import java.util.Set;
 
 import com.google.common.collect.HashMultimap;
@@ -249,7 +248,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		boolean added = false;
 		if (system.equals(PDSSystem.FIELDS)) {
 			added |= fieldPDS.addRule(new PushRule<Field, INode<StmtWithFact>, Weight<Field>>(asFieldFact(curr),
-					fieldWildCard(), asFieldFact(succ), fieldWildCard(), (Field) location, fieldPDS.getOne()));
+					fieldWildCard(), asFieldFact(succ),  (Field) location,fieldWildCard(), fieldPDS.getOne()));
 			added |= addNormalCallFlow(curr, succ);
 
 			fieldPDS.poststar(fieldAutomaton);
@@ -584,6 +583,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 	private void debugOutput() {
+		System.out.println(this.getClass());
 		System.out.println("All reachable states");
 		prettyPrintSet(reachedStates);
 
@@ -600,9 +600,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			prettyPrintSet(notCallingContextReachable);
 		}
 		System.out.println(fieldPDS);
-		System.out.println(fieldAutomaton);
+		System.out.println(fieldAutomaton.toDotString());
 		System.out.println(callingPDS);
-		System.out.println(callAutomaton);
+		System.out.println(callAutomaton.toDotString());
+		System.out.println("===== end === "+ this.getClass());
 	}
 
 	private void prettyPrintSet(Collection<? extends Object> set) {

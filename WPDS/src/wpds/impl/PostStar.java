@@ -85,18 +85,25 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 					previous.add(t);
 					update(rule, new Transition<N, D>(p, gammaPrime, irState),
 							(W) currWeight.extendWithIn(pushRule.getWeight()), previous);
-
+					 N callSite = pushRule.getCallSite();
+						N transitionLabel;
+						if (callSite instanceof Wildcard) {
+							transitionLabel = t.getString();
+						} else {
+							transitionLabel = callSite;
+						}
 					Collection<Transition<N, D>> into = fa.getTransitionsInto(irState);
 					for (Transition<N, D> ts : into) {
 						if (ts.getString().equals(fa.epsilon())) {
 							LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
 							prev.add(t);
 							prev.add(ts);
-							update(rule, new Transition<N, D>(ts.getStart(), pushRule.getCallSite(), t.getTarget()),
+							update(rule, new Transition<N, D>(ts.getStart(), transitionLabel, t.getTarget()),
 									(W) getOrCreateWeight(ts).extendWithIn(newWeight), prev);
 						}
 					}
-					update(rule, new Transition<N, D>(irState, pushRule.getCallSite(), t.getTarget()), (W) currWeight,
+				
+					update(rule, new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W) currWeight,
 							previous);
 				}
 			}
