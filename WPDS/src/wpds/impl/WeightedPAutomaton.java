@@ -158,7 +158,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		W w = transitionToWeights.get(trans);
 		if(w == null || !w.equals(weight)){
 			transitionToWeights.put(trans, weight);
-			for(WPAUpdateListener<N, D, W> l : listeners)
+			for(WPAUpdateListener<N, D, W> l : Lists.newLinkedList(listeners))
 				l.onWeightAdded(trans, weight);
 		}
 	}

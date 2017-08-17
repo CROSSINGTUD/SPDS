@@ -30,10 +30,13 @@ import soot.jimple.Stmt;
 import soot.jimple.internal.JimpleLocal;
 import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.nodes.ExclusionNode;
+import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
+import wpds.impl.Weight;
+import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.State;
 
 public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, Value, Field>{
@@ -213,5 +216,13 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	@Override
 	public Field exclusionFieldWildCard(Field exclusion) {
 		return Field.exclusionWildcard(exclusion);
+	}
+	
+	public WeightedPAutomaton<Field, INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>, Weight<Field>> getFieldAutomaton(){
+		return fieldAutomaton;
+	}
+	
+	public WeightedPAutomaton<Statement, INode<Value>, Weight<Statement>> getCallAutomaton(){
+		return callAutomaton;
 	}
 }
