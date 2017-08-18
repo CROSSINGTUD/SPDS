@@ -40,7 +40,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	private static Value thisVal;
 	private static Map<Integer,Value> parameterVals = Maps.newHashMap();
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
-	private boolean INTERPROCEDURAL = false;
+	private boolean INTERPROCEDURAL = true;
 	
 	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg){
 		this.icfg = icfg;
@@ -217,8 +217,19 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return fieldAutomaton;
 	}
 
+	public void injectFieldRule(Node<Statement,Value> source, Field field, Node<Statement,Value> target){
+//		System.out.println("INJECTION OF RULE " + this.getClass()  + rule);
+		processPush(source, field, target, PDSSystem.FIELDS);
+//		fieldPDS.addRule(rule);
+		
+//		maintainWitness(source,target);
+//		fieldPDS.poststar(fieldAutomaton);
+	}
 	public void injectFieldRule(Rule<Field, INode<Node<Statement,Value>>, Weight<Field>> rule){
+		System.out.println("INJECTION OF RULE " + this.getClass()  + rule);
 		fieldPDS.addRule(rule);
+		
+//		maintainWitness(source,target);
 		fieldPDS.poststar(fieldAutomaton);
 	}
 }

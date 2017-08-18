@@ -40,10 +40,10 @@ public class WitnessNode<Stmt extends Location, Fact, Field extends Location> {
 	public void registerListener(WitnessListener<Stmt,Fact,Field> listener){
 		if(!listeners.add(listener))
 			return;
-		for(Transition<Stmt, INode<Fact>> t : callWitnessTransitions){
+		for(Transition<Stmt, INode<Fact>> t : Lists.newArrayList(callWitnessTransitions)){
 			listener.onAddCallWitnessTransition(t);
 		}
-		for(Transition<Field, INode<Node<Stmt,Fact>>> t : fieldWitnessTransitions){
+		for(Transition<Field, INode<Node<Stmt,Fact>>> t : Lists.newArrayList(fieldWitnessTransitions)){
 			listener.onAddFieldWitnessTransition(t);
 		}
 	}

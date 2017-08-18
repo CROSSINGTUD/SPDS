@@ -42,6 +42,8 @@ public abstract class Boomerang {
 	private BackwardsInterproceduralCFG bwicfg;
 	private Multimap<AllocAtStmt, Node<Statement,Value>> allAllocationSiteAtFieldWrite = HashMultimap.create(); 
 	private Multimap<Stmt,Node<Statement,Value>> activeAllocationSiteAtFieldWrite = HashMultimap.create();
+	private Multimap<AllocAtStmt, Node<Statement,Value>> allAllocationSiteAtFieldRead = HashMultimap.create(); 
+	private Multimap<Stmt,Node<Statement,Value>> activeAllocationSiteAtFieldRead = HashMultimap.create();
 	private Map<Node<Statement,Value>, AllocationSiteDFSVisitor> allocationSite = Maps.newHashMap();
 	
 	public Boomerang(){
@@ -56,6 +58,10 @@ public abstract class Boomerang {
 						if(as.getLeftOp() instanceof InstanceFieldRef){
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
 							handleFieldWrite(node,ifr,as);
+						}
+						if(as.getRightOp() instanceof InstanceFieldRef){
+							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
+							attachHandlerFieldRead(node, ifr, as);
 						}
 					}
 				}
@@ -72,10 +78,43 @@ public abstract class Boomerang {
 						if(node.fact().equals(as.getLeftOp()) && isAllocationValue(as.getRightOp())){
 							addForwardQuery(new ForwardQuery(node.stmt(), as.getLeftOp()));
 						}
+						
+						if(as.getRightOp() instanceof InstanceFieldRef){
+							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
+							handleFieldRead(node,ifr,as);
+						}
 					}
 				}
 			}
 		});
+	}
+	protected void handleFieldRead(WitnessNode<Statement, Value, Field> node, final InstanceFieldRef ifr, final AssignStmt as) {
+		if(node.fact().equals(as.getLeftOp())){
+			addBackwardQuery(new BackwardQuery(node.stmt(), ifr.getBase()), new WitnessListener<Statement, Value, Field>() {
+				@Override
+				public void onAddCallWitnessTransition(Transition<Statement, INode<Value>> t) {
+				}
+
+				@Override
+				public void onAddFieldWitnessTransition(
+						Transition<Field, INode<Node<Statement,Value>>> t) {
+					if(!(t.getTarget() instanceof GeneratedState)){
+						//otherwise we do have some fields on the stack and do not care
+						Node<Statement,Value> target = t.getTarget().fact();
+						Node<Statement, Value> alloc = new Node<Statement,Value>(target.stmt(),target.fact());
+						if(activeAllocationSiteAtFieldRead.put(as, target)){
+							System.out.println("ACTIVATING  " + as + " " + target);
+							System.out.println("GET   " + new AllocAtStmt(alloc,as));
+							Collection<Node<Statement, Value>> aliases = allAllocationSiteAtFieldRead.get(new AllocAtStmt(alloc,as));
+							System.out.println("BACKWARD INJECTION OF " + aliases);
+							for(Node<Statement, Value> alias : aliases){
+								injectBackwardAlias(alias, as, new Field(ifr.getField()));
+							}
+						}
+					}
+				}
+			});
+		}
 	}
 	public static boolean isAllocationValue(Value val) {
 		return val instanceof NullConstant || val instanceof NewExpr;
@@ -98,7 +137,7 @@ public abstract class Boomerang {
 						if(activeAllocationSiteAtFieldWrite.put(as, target)){
 							Collection<Node<Statement, Value>> aliases = allAllocationSiteAtFieldWrite.get(new AllocAtStmt(alloc,as));
 							for(Node<Statement, Value> alias : aliases){
-								injectAlias( alias, as, new Field(ifr.getField()));
+								injectForwardAlias(alias, as, new Field(ifr.getField()));
 							}
 						}
 					}
@@ -123,7 +162,7 @@ public abstract class Boomerang {
 
 					System.out.println("Field WITNESS ALIASED " + node + "   " + t);
 					if(activeAllocationSiteAtFieldWrite.get(as).contains(target)){
-						injectAlias(node.asNode(), as, new Field(ifr.getField()));
+						injectForwardAlias(node.asNode(), as, new Field(ifr.getField()));
 					} else{
 						allAllocationSiteAtFieldWrite.put(new AllocAtStmt(alloc, as),node.asNode());
 					}
@@ -131,11 +170,11 @@ public abstract class Boomerang {
 					//TODO only do so, if we have an alias
 					System.out.println("NOT WITNESSS ALISAES FIELD " + t);
 					System.out.println("asdasdINJECTION source" + node.asNode() + "\n \t at "+as + ifr);
-					injectAlias2(t.getTarget(), as, t.getLabel());
+					injectAliasWithStack(t.getTarget(), as, t.getLabel());
 				}
 			}
 
-			private void injectAlias2(INode<Node<Statement,Value>> alias, AssignStmt as,
+			private void injectAliasWithStack(INode<Node<Statement,Value>> alias, AssignStmt as,
 					Field label) {
 				System.out.println("INJECTION " + alias + as + ifr);
 				for(Unit succ : icfg().getSuccsOf(as)){	
@@ -146,19 +185,55 @@ public abstract class Boomerang {
 					forwardSolver.injectFieldRule(new PushRule<Field, INode<Node<Statement,Value>>, Weight<Field>>(source, Field.wildcard(), alias,  new Field(ifr.getField()), Field.wildcard(),one));
 				}
 			}
-
-			
 		});
 	}
-	private void injectAlias(Node<Statement, Value> alias, AssignStmt as, Field ifr) {
+	
+	private void attachHandlerFieldRead(final WitnessNode<Statement, Value, Field> node, final InstanceFieldRef ifr, final AssignStmt fieldRead) {
+		node.registerListener(new WitnessListener<Statement, Value, Field>() {
+
+			@Override
+			public void onAddCallWitnessTransition(Transition<Statement, INode<Value>> t) {
+			}
+
+			@Override
+			public void onAddFieldWitnessTransition(
+					Transition<Field, INode<Node<Statement,Value>>> t) {
+				if(!(t.getTarget() instanceof GeneratedState)){
+					Node<Statement,Value> target = t.getTarget().fact();
+					Node<Statement, Value> alloc = new Node<Statement,Value>(target.stmt(),target.fact());
+
+					System.out.println("Field Backward WITNESS ALIASED " + node + "   " + t);
+					if(activeAllocationSiteAtFieldRead.get(fieldRead).contains(target)){
+						System.out.println("Exec");
+						injectBackwardAlias(node.asNode(), fieldRead, new Field(ifr.getField()));
+					} else{
+						System.out.println("Queue");
+						System.out.println("Q  " + new AllocAtStmt(alloc, fieldRead));
+						allAllocationSiteAtFieldRead.put(new AllocAtStmt(alloc, fieldRead),node.asNode());
+					}
+				} else{
+					//TODO only do so, if we have an alias
+//					System.out.println("NOT WITNESSS ALISAES FIELD " + t);
+//					System.out.println("asdasdINJECTION source" + node.asNode() + "\n \t at "+as + ifr);
+				}
+			}
+		});
+	}
+	private void injectForwardAlias(Node<Statement, Value> alias, AssignStmt as, Field ifr) {
 		System.out.println("INJECTION " + alias + as + ifr);
 		for(Unit succ : icfg().getSuccsOf(as)){
 			Node<Statement,Value> sourceNode = new Node<Statement,Value>(new Statement(as, icfg().getMethodOf(as)),  as.getRightOp());
 			Node<Statement,Value>  targetNode = new Node<Statement,Value>(new Statement((Stmt) succ, icfg().getMethodOf(succ)), alias.fact());
-			SetDomain<Field, Statement, Value> one = SetDomain.<Field,Statement,Value>one();
-			INode<Node<Statement,Value>> source = new SingleNode<>(sourceNode);
-			INode<Node<Statement,Value>> target = new SingleNode<>(targetNode);
-			forwardSolver.injectFieldRule(new PushRule<Field, INode<Node<Statement,Value>>, Weight<Field>>(source, Field.wildcard(), target,  ifr, Field.wildcard(),one));
+			forwardSolver.injectFieldRule(sourceNode, ifr, targetNode);
+		}
+	}
+	
+	private void injectBackwardAlias(Node<Statement, Value> alias, AssignStmt as, Field ifr) {
+		System.out.println("BAckward INJECTION " + alias + as + ifr);
+		for(Unit succ : bwicfg().getSuccsOf(as)){
+			Node<Statement,Value> source = new Node<Statement,Value>(new Statement(as, icfg().getMethodOf(as)),  as.getLeftOp());
+			Node<Statement,Value>  target = new Node<Statement,Value>(new Statement((Stmt) succ, icfg().getMethodOf(succ)), alias.fact());
+			backwardSolver.injectFieldRule(source,  ifr,target);
 		}
 	}
 	private BiDiInterproceduralCFG<Unit, SootMethod> bwicfg() {

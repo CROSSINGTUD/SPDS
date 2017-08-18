@@ -54,18 +54,19 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						new FirstArgumentOf("reachable"));
 				Collection<? extends Query> unreachableNodes = extractQuery(
 						new FirstArgumentOf("unreachable"));
-				Collection<Node<Statement, Value>> results = runQuery(allocationSites);
-				compareQuery( expectedResults, unreachableNodes, results, "Forward");
+//				Collection<Node<Statement, Value>> results = runQuery(allocationSites);
+//				compareQuery( expectedResults, unreachableNodes, results, "Forward");
 				if(!queryForCallSites.isEmpty()){
 					//Run backward analysis
 					if(queryForCallSites.size() > 1)
 						throw new RuntimeException("Found more than one backward query to execute!");
+					System.out.println("STARING BACKWARD ");
 //					Collection<? extends Query> expectedResults = extractQuery(
 //							new FirstArgumentOf("reachable"));
 					unreachableNodes = extractQuery(
 							new FirstArgumentOf("unreachable"));
-					results = runQuery(queryForCallSites);
-					compareQuery(allocationSites, unreachableNodes, results, "Backward");
+					Set<Node<Statement, Value>> backwardResults = runQuery(queryForCallSites);
+					compareQuery(allocationSites, unreachableNodes, backwardResults, "Backward");
 				}
 				
 			}
@@ -137,6 +138,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		if (!falseNegativeAllocationSites.isEmpty()) {
 			throw new RuntimeException(analysis + " Unsound results for:" + answer);
 		}
+		if(!falsePositiveAllocationSites.isEmpty())
+			throw new AssertionError(analysis +"Imprecise " + falsePositiveAllocationSites);
 	}
 
 	private Set<Node<Statement, Value>> runQuery(Collection<? extends Query> queries) {

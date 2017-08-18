@@ -42,7 +42,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		FIELDS, CALLS
 	}
 
-	private static final boolean DEBUG = false;
+	private static final boolean DEBUG = true;
 
 	protected final WeightedPushdownSystem<Stmt, INode<Fact>, Weight<Stmt>> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, Weight<Stmt>>() {
 		@Override
@@ -198,7 +198,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			return;
 		System.out.println(this.getClass() + " " + curr);
 		reachedStates.put(curr,curr);
-		for (SyncPDSUpdateListener<Stmt, Fact, Field> l : updateListeners) {
+		for (SyncPDSUpdateListener<Stmt, Fact, Field> l : Lists.newLinkedList(updateListeners)) {
 			l.onReachableNodeAdded(curr);
 		}
 	}
@@ -248,7 +248,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	}
 
-	private boolean processPush(Node<Stmt,Fact> curr, Location location, Node<Stmt, Fact> succ, PDSSystem system) {
+	public boolean processPush(Node<Stmt,Fact> curr, Location location, Node<Stmt, Fact> succ, PDSSystem system) {
 		boolean added = false;
 		if (system.equals(PDSSystem.FIELDS)) {
 			added |= fieldPDS.addRule(new PushRule<Field, INode<Node<Stmt,Fact>>, Weight<Field>>(asFieldFact(curr),
@@ -309,7 +309,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		if (!returnSites.add(location)) {
 			return;
 		}
-		for (Entry<Node<Stmt,Fact>, Fact> retSite : returningFacts.entries()) {
+		for (Entry<Node<Stmt,Fact>, Fact> retSite : Lists.newLinkedList(returningFacts.entries())) {
 			callAutomaton.registerListener(new CallUpdateListener(retSite.getKey(), location, retSite.getValue()));
 		}
 	}
