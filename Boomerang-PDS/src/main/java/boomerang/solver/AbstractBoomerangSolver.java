@@ -13,7 +13,6 @@ import boomerang.jimple.Field;
 import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
 import heros.InterproceduralCFG;
-import soot.Body;
 import soot.Local;
 import soot.Scene;
 import soot.SootMethod;
@@ -25,18 +24,11 @@ import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Jimple;
-import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.internal.JimpleLocal;
 import sync.pds.solver.SyncPDSSolver;
-import sync.pds.solver.SyncPDSSolver.StmtWithFact;
-import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import sync.pds.solver.nodes.NodeWithLocation;
-import sync.pds.solver.nodes.PopNode;
-import sync.pds.solver.nodes.PushNode;
-import wpds.impl.PushRule;
 import wpds.impl.Rule;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -221,11 +213,11 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return Field.exclusionWildcard(exclusion);
 	}
 	
-	public WeightedPAutomaton<Field, INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>, Weight<Field>> getFieldAutomaton(){
+	public WeightedPAutomaton<Field, INode<Node<Statement,Value>>, Weight<Field>> getFieldAutomaton(){
 		return fieldAutomaton;
 	}
 
-	public void injectFieldRule(Rule<Field, INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>, Weight<Field>> rule){
+	public void injectFieldRule(Rule<Field, INode<Node<Statement,Value>>, Weight<Field>> rule){
 		fieldPDS.addRule(rule);
 		fieldPDS.poststar(fieldAutomaton);
 	}

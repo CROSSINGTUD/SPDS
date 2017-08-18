@@ -12,18 +12,16 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
-import soot.SootField;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.AssignStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.NewExpr;
+import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-import sync.pds.solver.SyncPDSSolver;
-import sync.pds.solver.SyncPDSSolver.StmtWithFact;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;
 import sync.pds.solver.WitnessNode.WitnessListener;
@@ -56,24 +54,22 @@ public abstract class Boomerang {
 					if(stmt instanceof AssignStmt){
 						AssignStmt as = (AssignStmt) stmt;
 						if(as.getLeftOp() instanceof InstanceFieldRef){
-								InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
-								handleFieldWrite(node,ifr,as);
+							InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
+							handleFieldWrite(node,ifr,as);
 						}
 					}
 				}
 			}
-
 		});
 		backwardSolver.registerListener(new SyncPDSUpdateListener<Statement, Value, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Value, Field> node) {
 				Optional<Stmt> optUnit = node.stmt().getUnit();
-				System.out.println("BACKWARD SOLVER " + node);
 				if(optUnit.isPresent()){
 					Stmt stmt = optUnit.get();
 					if(stmt instanceof AssignStmt){
 						AssignStmt as = (AssignStmt) stmt;
-						if(node.fact().equals(as.getLeftOp()) && as.getRightOp() instanceof NewExpr){
+						if(node.fact().equals(as.getLeftOp()) && isAllocationValue(as.getRightOp())){
 							addForwardQuery(new ForwardQuery(node.stmt(), as.getLeftOp()));
 						}
 					}
@@ -81,31 +77,25 @@ public abstract class Boomerang {
 			}
 		});
 	}
-	protected void handleFieldWrite(WitnessNode<Statement, Value, Field> node, InstanceFieldRef ifr,
-			AssignStmt as) {
-		if(node.fact().equals(as.getRightOp())){
-			addBackwardQuery(new BackwardQuery(node.stmt(), ifr.getBase()));
-		}
-		addAllocationSite(node, ifr,as);
+	public static boolean isAllocationValue(Value val) {
+		return val instanceof NullConstant || val instanceof NewExpr;
 	}
-	private void addAllocationSite(final WitnessNode<Statement, Value, Field> node, final InstanceFieldRef ifr, final AssignStmt as) {
-		if(node.fact().equals(ifr.getBase())){
-			node.registerListener(new WitnessListener<Statement, Value, Field>() {
+	protected void handleFieldWrite(WitnessNode<Statement, Value, Field> node, final InstanceFieldRef ifr,
+			final AssignStmt as) {
+		if(node.fact().equals(as.getRightOp())){
+			addBackwardQuery(new BackwardQuery(node.stmt(), ifr.getBase()), new WitnessListener<Statement, Value, Field>() {
 				@Override
 				public void onAddCallWitnessTransition(Transition<Statement, INode<Value>> t) {
-					System.out.println("CALL WITNESS " + node + "   " + t);
 				}
 
 				@Override
 				public void onAddFieldWitnessTransition(
-						Transition<Field, INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>> t) {
-					System.out.println("Field WITNESS " + node + "   " + t);
+						Transition<Field, INode<Node<Statement,Value>>> t) {
 					if(!(t.getTarget() instanceof GeneratedState)){
-						//otherwise we do have some fields on the stack
-						SyncPDSSolver<Statement, Value, Field>.StmtWithFact target = t.getTarget().fact();
+						//otherwise we do have some fields on the stack and do not care
+						Node<Statement,Value> target = t.getTarget().fact();
 						Node<Statement, Value> alloc = new Node<Statement,Value>(target.stmt(),target.fact());
 						if(activeAllocationSiteAtFieldWrite.put(as, target)){
-							System.err.println("ADDEDINg ALLOC SITE " + alloc + as);
 							Collection<Node<Statement, Value>> aliases = allAllocationSiteAtFieldWrite.get(new AllocAtStmt(alloc,as));
 							for(Node<Statement, Value> alias : aliases){
 								injectAlias( alias, as, new Field(ifr.getField()));
@@ -115,7 +105,9 @@ public abstract class Boomerang {
 				}
 			});
 		}
-
+		addAllocationSite(node, ifr,as);
+	}
+	private void addAllocationSite(final WitnessNode<Statement, Value, Field> node, final InstanceFieldRef ifr, final AssignStmt as) {
 		node.registerListener(new WitnessListener<Statement, Value, Field>() {
 
 			@Override
@@ -124,9 +116,9 @@ public abstract class Boomerang {
 
 			@Override
 			public void onAddFieldWitnessTransition(
-					Transition<Field, INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>> t) {
+					Transition<Field, INode<Node<Statement,Value>>> t) {
 				if(!(t.getTarget() instanceof GeneratedState)){
-					SyncPDSSolver<Statement, Value, Field>.StmtWithFact target = t.getTarget().fact();
+					Node<Statement,Value> target = t.getTarget().fact();
 					Node<Statement, Value> alloc = new Node<Statement,Value>(target.stmt(),target.fact());
 
 					System.out.println("Field WITNESS ALIASED " + node + "   " + t);
@@ -136,7 +128,6 @@ public abstract class Boomerang {
 						allAllocationSiteAtFieldWrite.put(new AllocAtStmt(alloc, as),node.asNode());
 					}
 				} else{
-					
 					//TODO only do so, if we have an alias
 					System.out.println("NOT WITNESSS ALISAES FIELD " + t);
 					System.out.println("asdasdINJECTION source" + node.asNode() + "\n \t at "+as + ifr);
@@ -144,15 +135,15 @@ public abstract class Boomerang {
 				}
 			}
 
-			private void injectAlias2(INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact> alias, AssignStmt as,
+			private void injectAlias2(INode<Node<Statement,Value>> alias, AssignStmt as,
 					Field label) {
 				System.out.println("INJECTION " + alias + as + ifr);
 				for(Unit succ : icfg().getSuccsOf(as)){	
 					//TODO Why don't we need succ here?
-					SyncPDSSolver<Statement, Value, Field>.StmtWithFact sourceNode = forwardSolver.new StmtWithFact(new Statement(as, icfg().getMethodOf(as)),  as.getRightOp());
+					Node<Statement,Value> sourceNode = new Node<Statement,Value>(new Statement(as, icfg().getMethodOf(as)),  as.getRightOp());
 					SetDomain<Field, Statement, Value> one = SetDomain.<Field,Statement,Value>one();
-					INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact> source = new SingleNode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>(sourceNode);
-					forwardSolver.injectFieldRule(new PushRule<Field, INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>, Weight<Field>>(source, Field.wildcard(), alias,  new Field(ifr.getField()), Field.wildcard(),one));
+					INode<Node<Statement,Value>> source = new SingleNode<Node<Statement,Value>>(sourceNode);
+					forwardSolver.injectFieldRule(new PushRule<Field, INode<Node<Statement,Value>>, Weight<Field>>(source, Field.wildcard(), alias,  new Field(ifr.getField()), Field.wildcard(),one));
 				}
 			}
 
@@ -162,12 +153,12 @@ public abstract class Boomerang {
 	private void injectAlias(Node<Statement, Value> alias, AssignStmt as, Field ifr) {
 		System.out.println("INJECTION " + alias + as + ifr);
 		for(Unit succ : icfg().getSuccsOf(as)){
-			SyncPDSSolver<Statement, Value, Field>.StmtWithFact sourceNode = forwardSolver.new StmtWithFact(new Statement(as, icfg().getMethodOf(as)),  as.getRightOp());
-			SyncPDSSolver<Statement, Value, Field>.StmtWithFact targetNode = forwardSolver.new StmtWithFact(new Statement((Stmt) succ, icfg().getMethodOf(succ)), alias.fact());
+			Node<Statement,Value> sourceNode = new Node<Statement,Value>(new Statement(as, icfg().getMethodOf(as)),  as.getRightOp());
+			Node<Statement,Value>  targetNode = new Node<Statement,Value>(new Statement((Stmt) succ, icfg().getMethodOf(succ)), alias.fact());
 			SetDomain<Field, Statement, Value> one = SetDomain.<Field,Statement,Value>one();
-			INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact> source = new SingleNode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>(sourceNode);
-			INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact> target = new SingleNode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>(targetNode);
-			forwardSolver.injectFieldRule(new PushRule<Field, INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>, Weight<Field>>(source, Field.wildcard(), target,  ifr, Field.wildcard(),one));
+			INode<Node<Statement,Value>> source = new SingleNode<>(sourceNode);
+			INode<Node<Statement,Value>> target = new SingleNode<>(targetNode);
+			forwardSolver.injectFieldRule(new PushRule<Field, INode<Node<Statement,Value>>, Weight<Field>>(source, Field.wildcard(), target,  ifr, Field.wildcard(),one));
 		}
 	}
 	private BiDiInterproceduralCFG<Unit, SootMethod> bwicfg() {
@@ -178,8 +169,17 @@ public abstract class Boomerang {
 	protected void addForwardQuery(ForwardQuery query) {
 		forwardSolve(query);
 	}
-	protected void addBackwardQuery(BackwardQuery backwardQuery) {
-		backwardSolve(backwardQuery);
+	public void addBackwardQuery(final BackwardQuery backwardQueryNode, final WitnessListener<Statement, Value, Field> listener) {
+		backwardSolve(backwardQueryNode);
+		forwardSolver.registerListener(new SyncPDSUpdateListener<Statement, Value, Field>() {
+
+			@Override
+			public void onReachableNodeAdded(WitnessNode<Statement, Value, Field> node) {
+				if(node.asNode().equals(backwardQueryNode.asNode())){
+					node.registerListener(listener);
+				}
+			}
+		});
 	}
 	public void solve(Query query) {
 		if (query instanceof ForwardQuery) {
@@ -195,10 +195,9 @@ public abstract class Boomerang {
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
 		if(unit.isPresent()){
 			for(Unit succ : new BackwardsInterproceduralCFG(icfg()).getSuccsOf(unit.get())){
-				backwardSolver.solve(new Node<Statement,Value>(new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact()));
+				backwardSolver.solve(query.asNode(), new Node<Statement,Value>(new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact()));
 			}
 		}
-//		backwardSolver.solve(query.asNode());
 	}
 
 	private void forwardSolve(ForwardQuery query) {
@@ -207,7 +206,7 @@ public abstract class Boomerang {
 		if(unit.isPresent()){
 			for(Unit succ : icfg().getSuccsOf(unit.get())){
 				Node<Statement, Value> source = new Node<Statement,Value>(new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact());
-				forwardSolver.solve(source);
+				forwardSolver.solve(query.asNode(), source);
 				addAllocationSite(source);
 			}
 		}
@@ -216,17 +215,17 @@ public abstract class Boomerang {
 	private void addAllocationSite(Node<Statement, Value> source) {
 		if(allocationSite.containsKey(source))
 			return;
-		allocationSite.put(source,new AllocationSiteDFSVisitor(forwardSolver.getFieldAutomaton(),new SingleNode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>(forwardSolver.new StmtWithFact(source.stmt(),source.fact()))));
+		allocationSite.put(source,new AllocationSiteDFSVisitor(forwardSolver.getFieldAutomaton(),new SingleNode<Node<Statement,Value>>(new Node<Statement,Value>(source.stmt(),source.fact()))));
 	}
 	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
 
 	public Collection<? extends Node<Statement, Value>> getForwardReachableStates() {
 		return forwardSolver.getReachedStates();
 	}
-	public class AllocationSiteDFSVisitor extends ForwardDFSVisitor<Field,  INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>, Weight<Field>>{
+	public class AllocationSiteDFSVisitor extends ForwardDFSVisitor<Field,  INode<Node<Statement,Value>>, Weight<Field>>{
 
-		public AllocationSiteDFSVisitor(WeightedPAutomaton<Field, INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>, Weight<Field>> aut,
-				INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact> startState) {
+		public AllocationSiteDFSVisitor(WeightedPAutomaton<Field, INode<Node<Statement,Value>>, Weight<Field>> aut,
+				INode<Node<Statement,Value>> startState) {
 			super(aut, startState);
 		}
 

@@ -12,7 +12,7 @@ import wpds.interfaces.Location;
 
 public class WitnessNode<Stmt extends Location, Fact, Field extends Location> {
 	private Set<Transition<Stmt, INode<Fact>>> callWitnessTransitions = Sets.newHashSet();
-	private Set<Transition<Field, INode<SyncPDSSolver<Stmt, Fact,Field>.StmtWithFact>>> fieldWitnessTransitions = Sets.newHashSet();
+	private Set<Transition<Field, INode<Node<Stmt,Fact>>>> fieldWitnessTransitions = Sets.newHashSet();
 	private Set<WitnessListener<Stmt,Fact,Field>> listeners = Sets.newHashSet();
 	private Stmt stmt;
 	private Fact fact;
@@ -22,7 +22,7 @@ public class WitnessNode<Stmt extends Location, Fact, Field extends Location> {
 		this.fact = fact;
 	}
 	
-	public void addFieldWitness(Transition<Field, INode<SyncPDSSolver<Stmt, Fact,Field>.StmtWithFact>> t) {
+	public void addFieldWitness(Transition<Field, INode<Node<Stmt,Fact>>> t) {
 		if(!fieldWitnessTransitions.add(t))
 			return;
 		for(WitnessListener<Stmt,Fact,Field> l : Lists.newLinkedList(listeners)){
@@ -43,14 +43,14 @@ public class WitnessNode<Stmt extends Location, Fact, Field extends Location> {
 		for(Transition<Stmt, INode<Fact>> t : callWitnessTransitions){
 			listener.onAddCallWitnessTransition(t);
 		}
-		for(Transition<Field, INode<SyncPDSSolver<Stmt, Fact,Field>.StmtWithFact>> t : fieldWitnessTransitions){
+		for(Transition<Field, INode<Node<Stmt,Fact>>> t : fieldWitnessTransitions){
 			listener.onAddFieldWitnessTransition(t);
 		}
 	}
 	
 	public interface WitnessListener<Stmt extends Location, Fact, Field extends Location>{
 		void onAddCallWitnessTransition(Transition<Stmt, INode<Fact>> t);
-		void onAddFieldWitnessTransition(Transition<Field, INode<SyncPDSSolver<Stmt, Fact,Field>.StmtWithFact>> t);
+		void onAddFieldWitnessTransition(Transition<Field, INode<Node<Stmt,Fact>>> t);
 	}
 	
 	public Node<Stmt,Fact> asNode(){

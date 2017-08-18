@@ -6,6 +6,7 @@ import java.util.Set;
 
 import com.beust.jcommander.internal.Sets;
 
+import boomerang.Boomerang;
 import boomerang.jimple.Field;
 import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
@@ -18,6 +19,8 @@ import soot.jimple.AssignStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
+import soot.jimple.NewExpr;
+import soot.jimple.NullConstant;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
@@ -102,6 +105,9 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 
 	@Override
 	protected Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Value fact, Stmt succ) {
+		if(Boomerang.isAllocationValue(fact)){
+			return Collections.emptySet();
+		}
 		Set<State> out = Sets.newHashSet();
 
 //		if (!isFieldWriteWithBase(curr, fact)) {
@@ -134,7 +140,6 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 					NodeWithLocation<Statement, Value, Field> succNode = new NodeWithLocation<>(
 							new Statement(succ, method), rightOp, new Field(ifr.getField()));
 					out.add(new PopNode<NodeWithLocation<Statement, Value, Field>>(succNode, PDSSystem.FIELDS));
-//					leftSideMatches = true;
 				}
 			}
 		}
