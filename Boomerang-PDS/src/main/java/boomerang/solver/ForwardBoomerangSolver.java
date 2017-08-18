@@ -144,19 +144,4 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 
 		return Collections.emptySet();
 	}
-
-	public void injectAliasAtFieldWrite(Node<Statement, Value> alias, AssignStmt as, Field ifr, Stmt succ) {
-		Node<Statement,Value> sourceNode = new Node<Statement,Value>(new Statement(as, icfg.getMethodOf(as)), as.getRightOp());
-		Node<Statement,Value> targetNode = new Node<Statement,Value>(new Statement(succ, icfg.getMethodOf(succ)), alias.fact());
-		fieldPDS.addRule(new PushRule<Field, INode<StmtWithFact>, Weight<Field>>(asFieldFact(sourceNode), Field.wildcard(), asFieldFact(targetNode),  ifr, Field.wildcard(), fieldPDS.getOne()));
-		fieldPDS.poststar(fieldAutomaton);
-	}
-
-	public void injectAliasAtFieldWrite(INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact> alias, AssignStmt as,
-			Field ifr, Stmt succ) {
-		Node<Statement,Value> sourceNode = new Node<Statement,Value>(new Statement(as, icfg.getMethodOf(as)), as.getRightOp());
-		INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact> asFieldFact = asFieldFact(sourceNode);
-		fieldPDS.addRule(new PushRule<Field, INode<StmtWithFact>, Weight<Field>>(asFieldFact, Field.wildcard(), alias,  ifr, Field.wildcard(), fieldPDS.getOne()));
-		fieldPDS.poststar(fieldAutomaton);
-	}
 }

@@ -31,6 +31,7 @@ import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
+import sync.pds.weights.SetDomain;
 import wpds.impl.PushRule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
@@ -135,6 +136,8 @@ public abstract class Boomerang {
 						allAllocationSiteAtFieldWrite.put(new AllocAtStmt(alloc, as),node.asNode());
 					}
 				} else{
+					
+					//TODO only do so, if we have an alias
 					System.out.println("NOT WITNESSS ALISAES FIELD " + t);
 					System.out.println("asdasdINJECTION source" + node.asNode() + "\n \t at "+as + ifr);
 					injectAlias2(t.getTarget(), as, t.getLabel());
@@ -144,8 +147,12 @@ public abstract class Boomerang {
 			private void injectAlias2(INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact> alias, AssignStmt as,
 					Field label) {
 				System.out.println("INJECTION " + alias + as + ifr);
-				for(Unit succ : icfg().getSuccsOf(as)){
-					forwardSolver.injectAliasAtFieldWrite(alias, as,new Field(ifr.getField()), (Stmt) succ);
+				for(Unit succ : icfg().getSuccsOf(as)){	
+					//TODO Why don't we need succ here?
+					SyncPDSSolver<Statement, Value, Field>.StmtWithFact sourceNode = forwardSolver.new StmtWithFact(new Statement(as, icfg().getMethodOf(as)),  as.getRightOp());
+					SetDomain<Field, Statement, Value> one = SetDomain.<Field,Statement,Value>one();
+					INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact> source = new SingleNode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>(sourceNode);
+					forwardSolver.injectFieldRule(new PushRule<Field, INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>, Weight<Field>>(source, Field.wildcard(), alias,  new Field(ifr.getField()), Field.wildcard(),one));
 				}
 			}
 
@@ -155,7 +162,12 @@ public abstract class Boomerang {
 	private void injectAlias(Node<Statement, Value> alias, AssignStmt as, Field ifr) {
 		System.out.println("INJECTION " + alias + as + ifr);
 		for(Unit succ : icfg().getSuccsOf(as)){
-			forwardSolver.injectAliasAtFieldWrite(alias, as, ifr, (Stmt) succ);
+			SyncPDSSolver<Statement, Value, Field>.StmtWithFact sourceNode = forwardSolver.new StmtWithFact(new Statement(as, icfg().getMethodOf(as)),  as.getRightOp());
+			SyncPDSSolver<Statement, Value, Field>.StmtWithFact targetNode = forwardSolver.new StmtWithFact(new Statement((Stmt) succ, icfg().getMethodOf(succ)), alias.fact());
+			SetDomain<Field, Statement, Value> one = SetDomain.<Field,Statement,Value>one();
+			INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact> source = new SingleNode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>(sourceNode);
+			INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact> target = new SingleNode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>(targetNode);
+			forwardSolver.injectFieldRule(new PushRule<Field, INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact>, Weight<Field>>(source, Field.wildcard(), target,  ifr, Field.wildcard(),one));
 		}
 	}
 	private BiDiInterproceduralCFG<Unit, SootMethod> bwicfg() {
