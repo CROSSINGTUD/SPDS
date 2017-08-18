@@ -32,6 +32,19 @@ public class WritePOITest extends AbstractBoomerangTest {
 	@Test
 	public void doubleIndirectAllocationSite(){
 		Level1 base = new Level1();
+		
+		Alloc query = new Alloc();
+		Level2 level2 = new Level2();
+		base.l2 = level2;
+		level2.a = query;
+		Alloc samesame = base.l2.a;
+		queryFor(samesame);
+	}
+	
+	
+	@Test
+	public void doubleIndirectAllocationSiteMoreComplex(){
+		Level1 base = new Level1();
 		Level1 baseAlias = base;
 		
 		Alloc query = new Alloc();

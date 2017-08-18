@@ -63,18 +63,15 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 					LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
 					previous.add(t);
 					N l2 = normalRule.getL2();
-					N transitionLabel = null;
 					if (l2 instanceof Wildcard) {
 						if (l2 instanceof ExclusionWildcard) {
 							ExclusionWildcard<N> ex = (ExclusionWildcard<N>) l2;
 							if (t.getString().equals(ex.excludes()))
 								continue;
 						}
-						transitionLabel = t.getString();
-					} else {
-						transitionLabel = normalRule.getL2();
+						l2 = t.getString();
 					}
-					update(rule, new Transition<N, D>(p, transitionLabel, t.getTarget()), newWeight, previous);
+					update(rule, new Transition<N, D>(p, l2, t.getTarget()), newWeight, previous);
 				} else if (rule instanceof PushRule) {
 					PushRule<N, D, W> pushRule = (PushRule<N, D, W>) rule;
 					N gammaPrime = pushRule.getL2();

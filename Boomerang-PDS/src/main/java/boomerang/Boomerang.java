@@ -31,6 +31,7 @@ import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
+import wpds.impl.PushRule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -106,7 +107,7 @@ public abstract class Boomerang {
 							System.err.println("ADDEDINg ALLOC SITE " + alloc + as);
 							Collection<Node<Statement, Value>> aliases = allAllocationSiteAtFieldWrite.get(new AllocAtStmt(alloc,as));
 							for(Node<Statement, Value> alias : aliases){
-								injectAlias( alias, as, ifr);
+								injectAlias( alias, as, new Field(ifr.getField()));
 							}
 						}
 					}
@@ -129,18 +130,30 @@ public abstract class Boomerang {
 
 					System.out.println("Field WITNESS ALIASED " + node + "   " + t);
 					if(activeAllocationSiteAtFieldWrite.get(as).contains(target)){
-						injectAlias(node.asNode(), as, ifr);
+						injectAlias(node.asNode(), as, new Field(ifr.getField()));
 					} else{
 						allAllocationSiteAtFieldWrite.put(new AllocAtStmt(alloc, as),node.asNode());
 					}
 				} else{
 					System.out.println("NOT WITNESSS ALISAES FIELD " + t);
+					System.out.println("asdasdINJECTION source" + node.asNode() + "\n \t at "+as + ifr);
+					injectAlias2(t.getTarget(), as, t.getLabel());
 				}
 			}
+
+			private void injectAlias2(INode<SyncPDSSolver<Statement, Value, Field>.StmtWithFact> alias, AssignStmt as,
+					Field label) {
+				System.out.println("INJECTION " + alias + as + ifr);
+				for(Unit succ : icfg().getSuccsOf(as)){
+					forwardSolver.injectAliasAtFieldWrite(alias, as,new Field(ifr.getField()), (Stmt) succ);
+				}
+			}
+
+			
 		});
 	}
-	private void injectAlias(Node<Statement, Value> alias, AssignStmt as, InstanceFieldRef ifr) {
-		System.out.println("INJECTION " + alias + as);
+	private void injectAlias(Node<Statement, Value> alias, AssignStmt as, Field ifr) {
+		System.out.println("INJECTION " + alias + as + ifr);
 		for(Unit succ : icfg().getSuccsOf(as)){
 			forwardSolver.injectAliasAtFieldWrite(alias, as, ifr, (Stmt) succ);
 		}

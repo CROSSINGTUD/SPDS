@@ -196,6 +196,7 @@ public class DoublePDSTest {
 		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
 		addFieldPush(node(2,"v"), f("g"), node(3,"w"));
 		addFieldPop(node(3,"w"),f("g"), node(4,"x"));
+		addNormal(node(3,"w"),node(4,"kkk"));
 		addFieldPop(node(4,"x"),f("h"), node(5,"y"));
 		solver.solve(node(1,"u"));
 		System.out.println(solver.getReachedStates());
@@ -255,8 +256,10 @@ public class DoublePDSTest {
 		addFieldPush(node(2,"v"), f("h"), node(2,"v"));
 		addFieldPop(node(2,"v"), f("h"), node(3,"w"));
 		addFieldPop(node(3,"w"), f("h"), node(4,"x"));
+		addFieldPop(node(4,"x"), f("h"), node(5,"y"));
 		solver.solve(node(1,"u"));
 		assertTrue(solver.getReachedStates().contains(node(4,"x")));
+		assertTrue(solver.getReachedStates().contains(node(5,"y")));
 	}
 	
 	@Test
