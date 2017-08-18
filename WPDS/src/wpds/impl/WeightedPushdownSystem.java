@@ -24,7 +24,7 @@ public abstract class WeightedPushdownSystem<N extends Location, D extends State
 	@Override
 	public boolean addRule(Rule<N, D, W> rule) {
 		if(addRuleInternal(rule)){
-			for(WPDSUpdateListener<N, D, W> l : listeners){
+			for(WPDSUpdateListener<N, D, W> l : Lists.newArrayList(listeners)){
 				l.onRuleAdded(rule);
 			}
 			return true;

@@ -134,6 +134,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			}
 		}
 	}
+
+	public void solve(Node<Stmt,Fact> source) {
+		solve(source,source);
+	}
 	
 	public void solve(Node<Stmt,Fact> source, Node<Stmt, Fact> curr) {
 		Transition<Field, INode<Node<Stmt,Fact>>> fieldTrans = new Transition<Field, INode<Node<Stmt,Fact>>>(asFieldFact(curr), emptyField(), asFieldFact(source));
