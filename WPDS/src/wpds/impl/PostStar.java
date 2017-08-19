@@ -29,30 +29,13 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 			@Override
 			public void onRuleAdded(Rule<N, D, W> rule) {
-				for(Transition<N, D> t : fa.getTransitions()){
-					update(t, rule);
+				Collection<Transition<N, D>> trans = fa.getTransitionsOutOf(rule.getS1());
+				for(Transition<N, D> t : Lists.newLinkedList(trans)){
+					if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard)
+						update(t, rule);
 				}
 			}
 		});
-		// System.out.println(pds);
-
-//		saturate();
-
-	}
-
-	private void saturate() {
-		// PHASE 1: Is done automatically
-
-		while (!worklist.isEmpty()) {
-			iterationCount++;
-			Transition<N, D> t = worklist.removeFirst();
-			Set<Rule<N, D, W>> rules = pds.getRulesStarting(t.getStart(), t.getString());
-
-			for (Rule<N, D, W> rule : rules) {
-				update(t, rule);
-			}
-
-		}
 	}
 
 	private void update(Transition<N, D> t, Rule<N, D, W> rule) {
