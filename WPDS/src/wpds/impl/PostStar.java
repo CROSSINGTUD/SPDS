@@ -10,6 +10,7 @@ import com.google.common.collect.Lists;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
+import wpds.interfaces.WPDSUpdateListener;
 import wpds.wildcard.ExclusionWildcard;
 import wpds.wildcard.Wildcard;
 
@@ -24,9 +25,18 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		worklist = Lists.newLinkedList(initialAutomaton.getTransitions());
 		fa = initialAutomaton;
 
+		pds.registerUpdateListener(new WPDSUpdateListener<N, D, W>() {
+
+			@Override
+			public void onRuleAdded(Rule<N, D, W> rule) {
+				for(Transition<N, D> t : fa.getTransitions()){
+					update(t, rule);
+				}
+			}
+		});
 		// System.out.println(pds);
 
-		saturate();
+//		saturate();
 
 	}
 
@@ -38,73 +48,77 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			Transition<N, D> t = worklist.removeFirst();
 			Set<Rule<N, D, W>> rules = pds.getRulesStarting(t.getStart(), t.getString());
 
-			W currWeight = getOrCreateWeight(t);
 			for (Rule<N, D, W> rule : rules) {
-				W newWeight = (W) currWeight.extendWithIn(rule.getWeight());
-				// if (newWeight.equals(pds.getZero()))
-				// continue;
-				D p = rule.getS2();
-				if (rule instanceof PopRule) {
-					LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
-					previous.add(t);
-					// System.err.println(new Transition<N, D>(p, fa.epsilon(),
-					// t.getTarget()));
-					update(rule, new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight, previous);
-
-					Collection<Transition<N, D>> trans = fa.getTransitionsOutOf(t.getTarget());
-					for (Transition<N, D> tq : trans) {
-						LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
-						prev.add(t);
-						prev.add(tq);
-						update(rule, new Transition<N, D>(p, tq.getString(), tq.getTarget()), (W) newWeight, prev);
-					}
-				} else if (rule instanceof NormalRule) {
-					NormalRule<N, D, W> normalRule = (NormalRule<N, D, W>) rule;
-					LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
-					previous.add(t);
-					N l2 = normalRule.getL2();
-					if (l2 instanceof Wildcard) {
-						if (l2 instanceof ExclusionWildcard) {
-							ExclusionWildcard<N> ex = (ExclusionWildcard<N>) l2;
-							if (t.getString().equals(ex.excludes()))
-								continue;
-						}
-						l2 = t.getString();
-					}
-					update(rule, new Transition<N, D>(p, l2, t.getTarget()), newWeight, previous);
-				} else if (rule instanceof PushRule) {
-					PushRule<N, D, W> pushRule = (PushRule<N, D, W>) rule;
-					N gammaPrime = pushRule.getL2();
-					if (gammaPrime instanceof Wildcard)
-						gammaPrime = t.getString();
-					D irState = fa.createState(p, gammaPrime);
-					LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
-					previous.add(t);
-					update(rule, new Transition<N, D>(p, gammaPrime, irState),
-							(W) currWeight.extendWithIn(pushRule.getWeight()), previous);
-					N callSite = pushRule.getCallSite();
-					N transitionLabel;
-					if (callSite instanceof Wildcard) {
-						transitionLabel = t.getString();
-					} else {
-						transitionLabel = callSite;
-					}
-					Collection<Transition<N, D>> into = fa.getTransitionsInto(irState);
-					for (Transition<N, D> ts : into) {
-						if (ts.getString().equals(fa.epsilon())) {
-							LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
-							prev.add(t);
-							prev.add(ts);
-							update(rule, new Transition<N, D>(ts.getStart(), transitionLabel, t.getTarget()),
-									(W) getOrCreateWeight(ts).extendWithIn(newWeight), prev);
-						}
-					}
-				
-					update(rule, new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W) currWeight,
-							previous);
-				}
+				update(t, rule);
 			}
 
+		}
+	}
+
+	private void update(Transition<N, D> t, Rule<N, D, W> rule) {
+		W currWeight = getOrCreateWeight(t);
+		W newWeight = (W) currWeight.extendWithIn(rule.getWeight());
+		// if (newWeight.equals(pds.getZero()))
+		// continue;
+		D p = rule.getS2();
+		if (rule instanceof PopRule) {
+			LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
+			previous.add(t);
+			// System.err.println(new Transition<N, D>(p, fa.epsilon(),
+			// t.getTarget()));
+			update(rule, new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight, previous);
+
+			Collection<Transition<N, D>> trans = fa.getTransitionsOutOf(t.getTarget());
+			for (Transition<N, D> tq : trans) {
+				LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
+				prev.add(t);
+				prev.add(tq);
+				update(rule, new Transition<N, D>(p, tq.getString(), tq.getTarget()), (W) newWeight, prev);
+			}
+		} else if (rule instanceof NormalRule) {
+			NormalRule<N, D, W> normalRule = (NormalRule<N, D, W>) rule;
+			LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
+			previous.add(t);
+			N l2 = normalRule.getL2();
+			if (l2 instanceof Wildcard) {
+				if (l2 instanceof ExclusionWildcard) {
+					ExclusionWildcard<N> ex = (ExclusionWildcard<N>) l2;
+					if (t.getString().equals(ex.excludes()))
+						return;
+				}
+				l2 = t.getString();
+			}
+			update(rule, new Transition<N, D>(p, l2, t.getTarget()), newWeight, previous);
+		} else if (rule instanceof PushRule) {
+			PushRule<N, D, W> pushRule = (PushRule<N, D, W>) rule;
+			N gammaPrime = pushRule.getL2();
+			if (gammaPrime instanceof Wildcard)
+				gammaPrime = t.getString();
+			D irState = fa.createState(p, gammaPrime);
+			LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
+			previous.add(t);
+			update(rule, new Transition<N, D>(p, gammaPrime, irState),
+					(W) currWeight.extendWithIn(pushRule.getWeight()), previous);
+			N callSite = pushRule.getCallSite();
+			N transitionLabel;
+			if (callSite instanceof Wildcard) {
+				transitionLabel = t.getString();
+			} else {
+				transitionLabel = callSite;
+			}
+			Collection<Transition<N, D>> into = fa.getTransitionsInto(irState);
+			for (Transition<N, D> ts : into) {
+				if (ts.getString().equals(fa.epsilon())) {
+					LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
+					prev.add(t);
+					prev.add(ts);
+					update(rule, new Transition<N, D>(ts.getStart(), transitionLabel, t.getTarget()),
+							(W) getOrCreateWeight(ts).extendWithIn(newWeight), prev);
+				}
+			}
+		
+			update(rule, new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W) currWeight,
+					previous);
 		}
 	}
 
@@ -118,7 +132,14 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			 System.out.println("\t"+
 			 trans + "\t as of \t" + triggeringRule + " \t and " + newLt);
 			
-			worklist.add(trans);
+			update(trans);
+		}
+	}
+
+	private void update(Transition<N, D> t) {
+		Set<Rule<N, D, W>> rules = pds.getRulesStarting(t.getStart(), t.getString());
+		for(Rule<N, D, W> rule : rules){
+			update(t,rule);
 		}
 	}
 

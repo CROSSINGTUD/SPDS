@@ -233,6 +233,22 @@ public class DoublePDSTest {
 		assertFalse(solver.getReachedStates().contains(node(2,"x")));
 	}
 	@Test
+	public void negativeSinglePop() {
+		addNormal(node(0,"u"), node(1,"u"));
+		addFieldPop(node(1,"u"), f("h"), node(2,"v"));
+		solver.solve(node(0,"u"));
+		System.out.println(solver.getReachedStates());
+		assertFalse(solver.getReachedStates().contains(node(2,"v")));
+	}
+	
+	@Test
+	public void negativeJustPop() {
+		addFieldPop(node(0,"u"), f("h"), node(2,"v"));
+		solver.solve(node(0,"u"));
+		System.out.println(solver.getReachedStates());
+		assertFalse(solver.getReachedStates().contains(node(2,"v")));
+	}
+	@Test
 	public void positiveTestFieldPushAndPop() {
 		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
 		addFieldPop(node(2,"v"), f("h"),  node(2,"x"));

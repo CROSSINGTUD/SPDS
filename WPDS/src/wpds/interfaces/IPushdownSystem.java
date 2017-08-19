@@ -36,5 +36,7 @@ public interface IPushdownSystem<N extends Location, D extends State, W extends 
   public void prestar(WeightedPAutomaton<N, D, W> initialAutomaton);
 
   public void poststar(WeightedPAutomaton<N, D, W> initialAutomaton);
+  
+  public void registerUpdateListener(WPDSUpdateListener<N, D, W> listener);
 
 }
