@@ -7,9 +7,12 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 
 import soot.SootMethod;
+import soot.Value;
 import soot.jimple.AssignStmt;
 import soot.jimple.IdentityStmt;
 import soot.jimple.InstanceFieldRef;
+import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.NewExpr;
 import soot.jimple.Stmt;
 import wpds.interfaces.Location;
 
@@ -79,7 +82,12 @@ public class Statement implements Location {
 
 	private String shortName(Stmt s) {
 		if(s.containsInvokeExpr()){
-			return s.getInvokeExpr().getMethod().getName() + "(" +Joiner.on(",").join(s.getInvokeExpr().getArgs())+")";
+			String base = "";
+			if(s.getInvokeExpr() instanceof InstanceInvokeExpr){
+				InstanceInvokeExpr iie = (InstanceInvokeExpr) s.getInvokeExpr();
+				base = iie.getBase().toString()+".";
+			}
+			return base+s.getInvokeExpr().getMethod().getName() + "(" +Joiner.on(",").join(s.getInvokeExpr().getArgs())+")";
 		}
 		if(s instanceof IdentityStmt){
 			return "id";
@@ -93,6 +101,10 @@ public class Statement implements Location {
 			if(assignStmt.getRightOp() instanceof InstanceFieldRef){
 				InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
 				return assignStmt.getLeftOp()  +" = " +ifr.getBase() +"."+ifr.getField().getName();
+			}
+			if(assignStmt.getRightOp() instanceof NewExpr){
+				NewExpr newExpr = (NewExpr) assignStmt.getRightOp();
+				return assignStmt.getLeftOp()  +" = new " +newExpr.getBaseType().getSootClass().getShortName();
 			}
 		}
 		return s.toString();

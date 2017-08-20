@@ -32,6 +32,7 @@ import wpds.impl.PushRule;
 import wpds.impl.Rule;
 import wpds.impl.Weight;
 import wpds.interfaces.State;
+import wpds.interfaces.WPAUpdateListener;
 
 public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	public ForwardBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg) {
@@ -85,7 +86,7 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	@Override
 	public Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Value fact, Stmt succ) {
 		Set<State> out = Sets.newHashSet();
-
+		assert !fact.equals(thisVal()) && !fact.equals(returnVal()) && !fact.equals(param(0));
 		if (!isFieldWriteWithBase(curr, fact)) {
 			// always maintain data-flow if not a field write // killFlow has
 			// been taken care of
@@ -144,4 +145,5 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 
 		return Collections.emptySet();
 	}
+
 }

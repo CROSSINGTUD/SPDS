@@ -13,11 +13,12 @@ public class Field implements Location {
 	private static Field wildcard;
 	private static Field epsilon;
 	private static Field empty;
-	private SootField delegate;
-	private String rep;
+	private final SootField delegate;
+	private final String rep;
 
 	public Field(SootField delegate) {
 		this.delegate = delegate;
+		this.rep = null;
 	}
 
 	private Field(String rep) {

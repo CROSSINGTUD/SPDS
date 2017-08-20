@@ -33,6 +33,7 @@ import wpds.impl.Rule;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.State;
+import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, Value, Field>{
 
@@ -110,6 +111,22 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			AssignStmt as = (AssignStmt) curr;
 			if(as.getLeftOp() instanceof InstanceFieldRef){
 				InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
+				return ifr.getBase().equals(base);
+			}
+		}
+		return false;
+	}
+	
+	protected Field getLoadedField(Stmt curr) {
+		AssignStmt as = (AssignStmt) curr;
+		InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
+		return new Field(ifr.getField());
+	}
+	protected boolean isFieldLoadWithBase(Stmt curr, Value base) {
+		if(curr instanceof AssignStmt){
+			AssignStmt as = (AssignStmt) curr;
+			if(as.getRightOp() instanceof InstanceFieldRef){
+				InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
 				return ifr.getBase().equals(base);
 			}
 		}
@@ -218,18 +235,16 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	}
 
 	public void injectFieldRule(Node<Statement,Value> source, Field field, Node<Statement,Value> target){
-//		System.out.println("INJECTION OF RULE " + this.getClass()  + rule);
 		processPush(source, field, target, PDSSystem.FIELDS);
-//		fieldPDS.addRule(rule);
-		
-//		maintainWitness(source,target);
-//		fieldPDS.poststar(fieldAutomaton);
 	}
 	public void injectFieldRule(Rule<Field, INode<Node<Statement,Value>>, Weight<Field>> rule){
-		System.out.println("INJECTION OF RULE " + this.getClass()  + rule);
 		fieldPDS.addRule(rule);
-		
-//		maintainWitness(source,target);
-		fieldPDS.poststar(fieldAutomaton);
+	}
+
+	public void addFieldAutomatonListener(WPAUpdateListener<Field, INode<Node<Statement, Value>>, Weight<Field>> listener) {
+		fieldAutomaton.registerListener(listener);
+	}
+	public void addCallAutomatonListener(WPAUpdateListener<Statement, INode<Value>, Weight<Statement>> listener) {
+		callAutomaton.registerListener(listener);
 	}
 }

@@ -25,6 +25,7 @@ import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
@@ -105,6 +106,7 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 
 	@Override
 	protected Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Value fact, Stmt succ) {
+		assert !fact.equals(thisVal()) && !fact.equals(returnVal()) && !fact.equals(param(0));
 		if(Boomerang.isAllocationValue(fact)){
 			return Collections.emptySet();
 		}
@@ -129,8 +131,13 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 					InstanceFieldRef ifr = (InstanceFieldRef) rightOp;
 					out.add(new PushNode<Statement, Value, Field>(new Statement(succ, method), ifr.getBase(),
 							new Field(ifr.getField()), PDSSystem.FIELDS));
-				} else {
-					out.add(new Node<Statement, Value>(new Statement(succ, method), rightOp));
+				} else {	
+					if(isFieldLoadWithBase(curr, fact)){
+						out.add(new ExclusionNode<Statement, Value, Field>(new Statement(succ, method), fact,
+							getLoadedField(curr)));
+					} else{
+						out.add(new Node<Statement, Value>(new Statement(succ, method), rightOp));
+					}
 				}
 			}
 			if (leftOp instanceof InstanceFieldRef) {

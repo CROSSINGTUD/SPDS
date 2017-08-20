@@ -3,7 +3,6 @@ package sync.pds.solver;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -26,7 +25,6 @@ import sync.pds.weights.SetDomain;
 import wpds.impl.NormalRule;
 import wpds.impl.PopRule;
 import wpds.impl.PushRule;
-import wpds.impl.Rule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -34,7 +32,6 @@ import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
-import wpds.interfaces.WPDSUpdateListener;
 
 public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends Location> {
 
@@ -138,12 +135,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				.addTransition(callTrans);
 		callAutomaton.addWeightForTransition(callTrans, new SetDomain<Stmt,Stmt,Fact>(curr));
 		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
-		startNode.addCallWitness(callTrans);
-		startNode.addFieldWitness(fieldTrans);
 		processNode(startNode);
-		if (DEBUG) {
-			debugOutput();
-		}
 	}
 
 	private void processNode(WitnessNode<Stmt, Fact,Field> witnessNode) {
@@ -190,7 +182,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		boolean existed = reachedStates.containsKey(curr);
 		if (existed)
 			return;
-		System.out.println(this.getClass() + " " + curr);
+//		System.out.println(this.getClass() + " " + curr);
 		reachedStates.put(curr,curr);
 		for (SyncPDSUpdateListener<Stmt, Fact, Field> l : Lists.newLinkedList(updateListeners)) {
 			l.onReachableNodeAdded(curr);
@@ -208,6 +200,63 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				new NormalRule<Stmt, INode<Fact>,Weight<Stmt>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt(),callingPDS.getOne()));
 	}
 
+	public void synchedEmptyStackReachable(final Node<Stmt,Fact> sourceNode, final WitnessListener<Stmt,Fact> listener){
+		registerListener(new SyncPDSUpdateListener<Stmt, Fact, Field>() {
+			Multimap<Fact, Node<Stmt,Fact>> potentialFieldCandidate = HashMultimap.create();
+			Set<Fact> potentialCallCandidate = Sets.newHashSet();
+			@Override
+			public void onReachableNodeAdded(WitnessNode<Stmt, Fact, Field> reachableNode) {
+				if(!reachableNode.asNode().equals(sourceNode))
+					return;
+				fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, Weight<Field>>() {
+					@Override
+					public void onAddedTransition(Transition<Field, INode<Node<Stmt, Fact>>> t) {
+						if(t.getStart() instanceof GeneratedState || t.getTarget() instanceof GeneratedState)
+							return;
+						if(!t.getStart().fact().equals(sourceNode))
+							return;
+						if(!t.getLabel().equals(emptyField()))
+							return;
+						Node<Stmt, Fact> targetFact = t.getTarget().fact();
+						if(!potentialFieldCandidate.put(targetFact.fact(),targetFact))
+							return;
+						if(potentialCallCandidate.contains(targetFact.fact())){
+							listener.witnessFound(targetFact);
+						}
+					}
+
+					@Override
+					public void onWeightAdded(Transition<Field, INode<Node<Stmt, Fact>>> t, Weight<Field> w) {
+					}
+				});
+				callAutomaton.registerListener(new WPAUpdateListener<Stmt, INode<Fact>, Weight<Stmt>>() {
+					@Override
+					public void onAddedTransition(Transition<Stmt, INode<Fact>> t) {
+						if(t.getStart() instanceof GeneratedState || t.getTarget() instanceof GeneratedState)
+							return;
+						if(!t.getStart().fact().equals(sourceNode.fact()))
+							return;
+						if(!t.getLabel().equals(sourceNode.stmt()))
+							return;
+						Fact targetFact = t.getTarget().fact();
+						if(!potentialCallCandidate.add(targetFact))
+							return;
+						if(potentialFieldCandidate.containsKey(targetFact)){
+							for(Node<Stmt, Fact> w : potentialFieldCandidate.get(targetFact)){
+								listener.witnessFound(w);
+							}
+						}
+					}
+
+					@Override
+					public void onWeightAdded(Transition<Stmt, INode<Fact>> t, Weight<Stmt> w) {
+						
+					}
+				});
+			}
+		});
+	}
+	
 	private boolean addNormalFieldFlow(Node<Stmt,Fact> curr, Node<Stmt, Fact> succ) {
 		if (succ instanceof ExclusionNode) {
 			ExclusionNode<Stmt, Fact, Field> exNode = (ExclusionNode) succ;
@@ -377,7 +426,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	
 
 	private void setCallingContextReachable(Node<Stmt,Fact> node, Transition<Stmt, INode<Fact>> t) {
-		addCallingContextWitness(node,t);
 		if (!callingContextReachable.add(node))
 			return;
 
@@ -386,38 +434,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	}
 
-	private void addCallingContextWitness(Node<Stmt, Fact> node, Transition<Stmt, INode<Fact>> t) {
-		WitnessNode<Stmt, Fact, Field> witness = new WitnessNode<Stmt,Fact,Field>(node.stmt(),node.fact());
-		if(reachedStates.containsKey(witness)){
-			WitnessNode<Stmt, Fact, Field> witnessNode = reachedStates.get(witness);
-			witnessNode.addCallWitness(t);
-		} else {
-			queuedCallWitness.put(witness,t);
-		}
-	}
 
 	private WitnessNode<Stmt, Fact, Field> createWitness(Node<Stmt, Fact> node) {
 		WitnessNode<Stmt, Fact, Field> witnessNode = new WitnessNode<Stmt,Fact,Field>(node.stmt(),node.fact());
-
-		Collection<Transition<Stmt, INode<Fact>>> callWitnesses = queuedCallWitness.get(witnessNode);
-		for(Transition<Stmt, INode<Fact>> w : callWitnesses)
-			witnessNode.addCallWitness(w);
-		Collection<Transition<Field, INode<Node<Stmt,Fact>>>> fieldWitnesses = queuedFieldWitness.get(witnessNode);
-		for(Transition<Field, INode<Node<Stmt,Fact>>> w : fieldWitnesses)
-			witnessNode.addFieldWitness(w);
 		return witnessNode;
 	}
-	private void addFieldContextWitness(Node<Stmt, Fact> node, Transition<Field, INode<Node<Stmt,Fact>>> t) {
-		WitnessNode<Stmt, Fact, Field> witness = new WitnessNode<Stmt,Fact,Field>(node.stmt(),node.fact());
-		if(reachedStates.containsKey(witness)){
-			WitnessNode<Stmt, Fact, Field> witnessNode = reachedStates.get(witness);
-			witnessNode.addFieldWitness(t);
-		} else {
-			queuedFieldWitness.put(witness,t);
-		}
-	}
 	private void setFieldContextReachable(Node<Stmt,Fact> node, Transition<Field, INode<Node<Stmt,Fact>>> t) {
-		addFieldContextWitness(node,t);
 		if (!fieldContextReachable.add(node)) {
 			return;
 		}
@@ -475,7 +497,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		return res;
 	}
 
-	private void debugOutput() {
+	public void debugOutput() {
 		System.out.println(this.getClass());
 		System.out.println("All reachable states");
 		prettyPrintSet(getReachedStates());
@@ -503,11 +525,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		int j = 0;
 		for (Object reachableState : set) {
 			System.out.print(reachableState);
-			System.out.print("\n");
-			// if(j++ > 0){
-			// System.out.print("\n");
-			// j = 0;
-			// }
+			System.out.print("\t");
+			 if(j++ > 5){
+				 System.out.print("\n");
+				 j = 0;
+			 }
 		}
 		System.out.println();
 	}

@@ -3,6 +3,7 @@ package wpds.impl;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -63,7 +64,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		states.add(trans.getStart());
 		boolean added = transitions.add(trans);
 		if(added){
-			for(WPAUpdateListener<N, D, W> l : listeners){
+			for(WPAUpdateListener<N, D, W> l : Lists.newLinkedList(listeners)){
 				l.onAddedTransition(trans);
 			}
 		}
@@ -139,6 +140,13 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		return res;
 	}
 
+	public IRegEx<N> extractLanguage(D from, D to) {
+		PathExpressionComputer<D, N> expr = new PathExpressionComputer<>(this);
+		IRegEx<N> res = expr.getExpressionBetween(from, to);
+		if(res == null)
+			return new RegEx.EmptySet<N>();
+		return res;
+	}
 	public Set<D> getStates() {
 		return states;
 	}
@@ -184,5 +192,18 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	
 	public void addFinalState(D state) {
 		this.finalState.add(state);
+	}
+
+	public Set<Transition<N,D>> dfs(D state) {
+		Set<Transition<N,D>> visited = Sets.newHashSet();
+		LinkedList<Transition<N,D>> worklist = Lists.newLinkedList(getTransitionsInto(state));
+		while(!worklist.isEmpty()){
+			Transition<N, D> poll = worklist.poll();
+			if(!visited.add(poll)){
+				continue;
+			}
+			worklist.addAll(getTransitionsInto(poll.getTarget()));
+		}
+		return visited;
 	}
 }

@@ -107,13 +107,14 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 	private void update(Rule<N, D, W> triggeringRule, Transition<N, D> trans, W weight,
 			List<Transition<N, D>> previous) {
+
+//		 System.out.println("\t"+
+//		 trans + "\t as of \t" + triggeringRule + " \t and ");
 		fa.addTransition(trans);
 		W lt = getOrCreateWeight(trans);
 		W newLt = (W) lt.combineWithIn(weight);
 		fa.addWeightForTransition(trans, newLt);
 		if (!lt.equals(newLt)) {
-			 System.out.println("\t"+
-			 trans + "\t as of \t" + triggeringRule + " \t and " + newLt);
 			
 			update(trans);
 		}

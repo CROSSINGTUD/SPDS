@@ -15,7 +15,6 @@ import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
-import heros.InterproceduralCFG;
 import soot.Body;
 import soot.Local;
 import soot.RefType;
@@ -31,12 +30,13 @@ import soot.jimple.NewExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
-import sync.pds.solver.WitnessNode;
-import sync.pds.solver.WitnessNode.WitnessListener;
+import sync.pds.solver.WitnessListener;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.Transition;
+import wpds.impl.Weight;
+import wpds.interfaces.WPAUpdateListener;
 
 public class AbstractBoomerangTest extends AbstractTestingFramework {
 	private JimpleBasedInterproceduralCFG icfg;
@@ -60,7 +60,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					//Run backward analysis
 					if(queryForCallSites.size() > 1)
 						throw new RuntimeException("Found more than one backward query to execute!");
-					System.out.println("STARING BACKWARD ");
 //					Collection<? extends Query> expectedResults = extractQuery(
 //							new FirstArgumentOf("reachable"));
 					unreachableNodes = extractQuery(
@@ -153,25 +152,18 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			};
 			System.out.println(query.asNode().stmt().getMethod().getActiveBody());
 			if(query instanceof BackwardQuery){
-				WitnessListener<Statement, Value, Field> a;
-				solver.addBackwardQuery((BackwardQuery)query, new WitnessListener<Statement, Value, Field>() {
-
+				solver.addBackwardQuery((BackwardQuery)query,new WitnessListener<Statement, Value>() {
+					
 					@Override
-					public void onAddCallWitnessTransition(Transition<Statement, INode<Value>> t) {
-						// TODO Auto-generated method stub
-						
-					}
-
-					@Override
-					public void onAddFieldWitnessTransition(Transition<Field, INode<Node<Statement, Value>>> t) {
-						if(!(t.getTarget() instanceof GeneratedState))
-							results.add(t.getTarget().fact());
+					public void witnessFound(Node<Statement, Value> allocation) {
+						results.add(allocation);	
 					}
 				});
 			}else{
 				solver.solve(query);
 				results.addAll(solver.getForwardReachableStates());
 			}
+			solver.debugOutput();
 		}
 		return results;
 	}
