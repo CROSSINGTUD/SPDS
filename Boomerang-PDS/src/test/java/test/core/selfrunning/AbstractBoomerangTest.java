@@ -117,12 +117,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		System.out.println("Expected Results: " + expectedResults);
 		Collection<Node<Statement, Value>> falseNegativeAllocationSites = new HashSet<>();
 		for(Query res : expectedResults){
-			for(Node<Statement, Value> other : results){
-				if(other.toString().equals(res.asNode().toString())){
-					System.out.println(other.hashCode() + "    " + res.asNode().hashCode());
-					System.out.println(results.contains(res.asNode()));
-				}
-			}
 			if(!results.contains(res.asNode()))
 				falseNegativeAllocationSites.add(res.asNode());
 		}
@@ -176,7 +170,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					}
 				}
 			}
-			solver.debugOutput();
+//			solver.debugOutput();
 		}
 		return results;
 	}

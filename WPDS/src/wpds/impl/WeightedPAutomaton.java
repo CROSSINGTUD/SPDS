@@ -50,7 +50,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public Collection<Transition<N, D>> getTransitionsOutOf(D state) {
-		return transitionsOutOf.get(state);
+		return Sets.newHashSet(transitionsOutOf.get(state));
 	}
 
 	public Collection<Transition<N, D>> getTransitionsInto(D state) {
