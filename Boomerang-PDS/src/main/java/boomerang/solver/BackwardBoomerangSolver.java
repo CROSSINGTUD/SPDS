@@ -39,12 +39,12 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 	}
 
 	@Override
-	protected boolean killFlow(Stmt curr, Value value) {
+	protected boolean killFlow(SootMethod m, Stmt curr, Value value) {
 		return false;
 	}
 
 	@Override
-	protected Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Value value) {
+	protected Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Value value, Stmt callSite, Stmt returnSite) {
 //		if (curr instanceof ReturnStmt) {
 //			Value op = ((ReturnStmt) curr).getOp();
 //
@@ -54,13 +54,21 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 //		}
 		if (!method.isStatic()) {
 			if (value.equals(method.getActiveBody().getThisLocal())) {
-				return Collections.singleton(new PopNode<Value>(thisVal(), PDSSystem.CALLS));
+				if(callSite.containsInvokeExpr()){
+					if(callSite.getInvokeExpr() instanceof InstanceInvokeExpr){
+						InstanceInvokeExpr iie = (InstanceInvokeExpr) callSite.getInvokeExpr();
+						return Collections.singleton(new PopNode<Value>(iie.getBase(), PDSSystem.CALLS));
+					}
+				}
 			}
 		}
 		int index = 0;
 		for (Local param : method.getActiveBody().getParameterLocals()) {
 			if (param.equals(value)) {
-				return Collections.singleton(new PopNode<Value>(param(index), PDSSystem.CALLS));
+				if(callSite.containsInvokeExpr()){
+					InvokeExpr ie = callSite.getInvokeExpr();
+					return Collections.singleton(new PopNode<Value>(ie.getArg(index), PDSSystem.CALLS));
+				}
 			}
 			index++;
 		}
@@ -106,7 +114,7 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 
 	@Override
 	protected Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Value fact, Stmt succ) {
-		assert !fact.equals(thisVal()) && !fact.equals(returnVal()) && !fact.equals(param(0));
+//		assert !fact.equals(thisVal()) && !fact.equals(returnVal()) && !fact.equals(param(0));
 		if(Boomerang.isAllocationValue(fact)){
 			return Collections.emptySet();
 		}

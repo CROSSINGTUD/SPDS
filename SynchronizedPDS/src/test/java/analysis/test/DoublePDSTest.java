@@ -149,8 +149,8 @@ public class DoublePDSTest {
 		addCallFlow(node(2,"w"), node(3,"p"),returnSite(4));
 		addNormal(node(3,"p"),  node(5,"q"));
 		addNormal(node(5,"q"),  node(6,"x"));
-		addReturnFlow(node(6,"x"), var("p"));
-		addNormal(node(4,"p"),  node(6,"y"));
+		addReturnFlow(node(6,"x"), var("k"));
+		addNormal(node(4,"k"),  node(6,"y"));
 		
 		solver.solve(node(1,"v"));
 		System.out.println(solver.getReachedStates());

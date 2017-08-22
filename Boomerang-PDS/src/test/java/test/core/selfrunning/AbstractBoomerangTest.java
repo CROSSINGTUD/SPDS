@@ -50,12 +50,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				Collection<? extends Query> allocationSites = extractQuery(new AllocationSiteOf());
 
 				//Run forward analysis
-				Collection<? extends Query> expectedResults = extractQuery(
-						new FirstArgumentOf("reachable"));
 				Collection<? extends Query> unreachableNodes = extractQuery(
 						new FirstArgumentOf("unreachable"));
-//				Collection<Node<Statement, Value>> results = runQuery(allocationSites);
-//				compareQuery( expectedResults, unreachableNodes, results, "Forward");
+				Collection<Node<Statement, Value>> results = runQuery(allocationSites);
+				compareQuery( queryForCallSites, unreachableNodes, results, "Forward");
 				if(!queryForCallSites.isEmpty()){
 					//Run backward analysis
 					if(queryForCallSites.size() > 1)
@@ -117,10 +115,16 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		System.out.println("Boomerang Allocations Sites: " + results);
 		System.out.println("Boomerang Results: " + results);
 		System.out.println("Expected Results: " + expectedResults);
-		Collection<Query> falseNegativeAllocationSites = new HashSet<>();
+		Collection<Node<Statement, Value>> falseNegativeAllocationSites = new HashSet<>();
 		for(Query res : expectedResults){
+			for(Node<Statement, Value> other : results){
+				if(other.toString().equals(res.asNode().toString())){
+					System.out.println(other.hashCode() + "    " + res.asNode().hashCode());
+					System.out.println(results.contains(res.asNode()));
+				}
+			}
 			if(!results.contains(res.asNode()))
-				falseNegativeAllocationSites.add(res);
+				falseNegativeAllocationSites.add(res.asNode());
 		}
 		Collection<? extends Node<Statement, Value>> falsePositiveAllocationSites = new HashSet<>(results);
 		for(Query res : expectedResults){
@@ -150,10 +154,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					return icfg;
 				}
 			};
-			System.out.println(query.asNode().stmt().getMethod().getActiveBody());
 			if(query instanceof BackwardQuery){
 				solver.addBackwardQuery((BackwardQuery)query,new WitnessListener<Statement, Value>() {
-					
 					@Override
 					public void witnessFound(Node<Statement, Value> allocation) {
 						results.add(allocation);	
@@ -161,7 +163,18 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				});
 			}else{
 				solver.solve(query);
-				results.addAll(solver.getForwardReachableStates());
+				for(Node<Statement, Value> s : solver.getForwardReachableStates()){
+					if(s.stmt().getUnit().isPresent()){
+						Stmt stmt = s.stmt().getUnit().get();
+						if(stmt.toString().contains("queryFor")){
+							if(stmt.containsInvokeExpr()){
+								InvokeExpr invokeExpr = stmt.getInvokeExpr();
+								if(invokeExpr.getArg(0).equals(s.fact()))
+									results.add(s);
+							}
+						}
+					}
+				}
 			}
 			solver.debugOutput();
 		}
@@ -228,16 +241,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	 * @param variable
 	 */
 	protected void unreachable(Object variable) {
-
-	}
-
-	/**
-	 * A call to this method flags the object as at the call statement as
-	 * reachable by the analysis.
-	 * 
-	 * @param variable
-	 */
-	protected void reachable(Object variable) {
 
 	}
 

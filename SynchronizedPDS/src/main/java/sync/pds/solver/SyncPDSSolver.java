@@ -3,7 +3,6 @@ package sync.pds.solver;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -25,10 +24,7 @@ import sync.pds.solver.nodes.SingleNode;
 import sync.pds.weights.SetDomain;
 import wpds.impl.NormalRule;
 import wpds.impl.PopRule;
-import wpds.impl.PostStar;
-import wpds.impl.PostStarListener;
 import wpds.impl.PushRule;
-import wpds.impl.Rule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -107,18 +103,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	public SyncPDSSolver(){
 		callAutomaton.registerListener(new CallAutomatonListener());
 		fieldAutomaton.registerListener(new FieldUpdateListener());
-		PostStar<Stmt, INode<Fact>, Weight<Stmt>> postStar = new PostStar<Stmt, INode<Fact>, Weight<Stmt>>();
-		postStar.poststar(callingPDS, callAutomaton, new PostStarListener<Stmt, INode<Fact>, Weight<Stmt>>() {
-			@Override
-			public void update(Rule<Stmt, INode<Fact>, Weight<Stmt>> triggeringRule,
-					Transition<Stmt, INode<Fact>> trans, List<Transition<Stmt, INode<Fact>>> previous) {
-				System.out.println("CAll to UPDATe ");
-				if(triggeringRule instanceof PopRule && previous.size() == 2){
-					System.out.println("ERE" +previous);
-				}
-			}
-		});
-//		callingPDS.poststar(callAutomaton);
+		callingPDS.poststar(callAutomaton);
 		fieldPDS.poststar(fieldAutomaton);
 	}
 	
@@ -299,7 +284,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		} else if (system.equals(PDSSystem.CALLS)) {
 			//
 			callingPDS.addRule(new PopRule<Stmt, INode<Fact>, Weight<Stmt>>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location),callingPDS.getOne()));
-			checkCallFeasibility(curr, location);
+			addReturningFact(curr, location);
 		}
 	}
 
@@ -340,15 +325,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	}
 
-	private void checkCallFeasibility(Node<Stmt,Fact> curr, Fact fact) {
-		addReturningFact(curr, fact);
-	}
 
 	private void addReturningFact(Node<Stmt,Fact> curr, Fact fact) {
 		if (!returningFacts.put(curr, fact)) {
 			return;
 		}
-		for (Stmt retSite : returnSites) {
+		for (Stmt retSite : Lists.newArrayList(returnSites)) {
 			callAutomaton.registerListener(new CallUpdateListener(curr, retSite, fact));
 		}
 	}

@@ -11,6 +11,7 @@ import com.google.common.collect.Sets;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
+import wpds.interfaces.WPAUpdateListener;
 import wpds.interfaces.WPDSUpdateListener;
 import wpds.wildcard.ExclusionWildcard;
 import wpds.wildcard.Wildcard;
@@ -18,7 +19,6 @@ import wpds.wildcard.Wildcard;
 public class PostStar<N extends Location, D extends State, W extends Weight<N>> {
 	private IPushdownSystem<N, D, W> pds;
 	private WeightedPAutomaton<N, D, W> fa;
-	private Set<PostStarListener<N,D,W>> listeners = Sets.newHashSet();
 
 	public void poststar(IPushdownSystem<N, D, W> pds, WeightedPAutomaton<N, D, W> initialAutomaton) {
 		this.pds = pds;
@@ -29,15 +29,22 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			public void onRuleAdded(Rule<N, D, W> rule) {
 				Collection<Transition<N, D>> trans = fa.getTransitionsOutOf(rule.getS1());
 				for(Transition<N, D> t : Lists.newLinkedList(trans)){
-					if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard)
+					if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
 						update(t, rule);
+					}
 				}
 			}
 		});
-	}
-	public void poststar(IPushdownSystem<N, D, W> pds, WeightedPAutomaton<N, D, W> initialAutomaton, PostStarListener<N, D, W> listener) {
-		listeners.add(listener);
-		poststar(pds, initialAutomaton);
+		fa.registerListener(new WPAUpdateListener<N, D, W>() {
+			@Override
+			public void onAddedTransition(Transition<N, D> t) {
+				update(t);
+			}
+
+			@Override
+			public void onWeightAdded(Transition<N, D> t, Weight<N> w) {
+			}
+		});
 	}
 
 	private void update(Transition<N, D> t, Rule<N, D, W> rule) {
@@ -66,12 +73,14 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			previous.add(t);
 			N l2 = normalRule.getL2();
 			if (l2 instanceof Wildcard) {
+				l2 = t.getString();
 				if (l2 instanceof ExclusionWildcard) {
+					
 					ExclusionWildcard<N> ex = (ExclusionWildcard<N>) l2;
+					System.out.println("GERE " + l2 + t.getString() + ex.excludes());
 					if (t.getString().equals(ex.excludes()))
 						return;
 				}
-				l2 = t.getString();
 			}
 			update(rule, new Transition<N, D>(p, l2, t.getTarget()), newWeight, previous);
 		} else if (rule instanceof PushRule) {
@@ -117,8 +126,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		W newLt = (W) lt.combineWithIn(weight);
 		fa.addWeightForTransition(trans, newLt);
 		if (!lt.equals(newLt)) {
-			for(PostStarListener<N, D, W> l : listeners)
-				l.update(triggeringRule,trans, previous);
 			update(trans);
 		}
 	}

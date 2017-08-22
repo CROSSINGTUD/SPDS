@@ -54,17 +54,13 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			Stmt curr = unit.get();
 			Value value = node.fact();
 			SootMethod method = icfg.getMethodOf(curr);
-			if(node.stmt() instanceof ReturnSite){
-				ReturnSite returnSite = (ReturnSite) node.stmt();
-				return mapValuesToCaller(method,returnSite.getCallSite(),value, curr);
-			}
-			if(killFlow(curr, value)){
+			if(killFlow(method, curr, value)){
 				return Collections.emptySet();
 			}
 			if(curr.containsInvokeExpr() && valueUsedInStatement(method,curr,curr.getInvokeExpr(), value) && INTERPROCEDURAL){
 				return callFlow(method, curr, curr.getInvokeExpr(), value);
 			} else if(icfg.isExitStmt(curr)){
-				return computeReturnFlow(method,curr, value);
+				return returnFlow(method,curr, value);
 			} else{
 				return normalFlow(method, curr, value);
 			}
@@ -72,28 +68,6 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return Collections.emptySet();
 	}
 
-	private Collection<? extends State> mapValuesToCaller(SootMethod method, Stmt callSite, Value value, Stmt curr) {
-		if(value.equals(thisVal())){
-			InvokeExpr invokeExpr = callSite.getInvokeExpr();
-			if(invokeExpr instanceof InstanceInvokeExpr){
-				InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
-				return Collections.singleton(new Node<Statement,Value>(new Statement(curr, method),iie.getBase()));
-			}
-		}
-		if(value.equals(returnVal())){
-			if(callSite instanceof AssignStmt){
-				AssignStmt as = (AssignStmt) callSite;
-				return Collections.singleton(new Node<Statement,Value>(new Statement(curr, method), as.getLeftOp()));
-			}
-		}
-		if(value instanceof ParameterValue){
-			ParameterValue paramVal = (ParameterValue) value;
-			int index = paramVal.getIndex();
-			InvokeExpr invokeExpr = callSite.getInvokeExpr();
-			return Collections.singleton(new Node<Statement,Value>(new Statement(curr, method),invokeExpr.getArg(index)));
-		}
-		return Collections.emptySet();
-	}
 	private Collection<State> normalFlow(SootMethod method, Stmt curr, Value fact) {
 		Set<State> out = Sets.newHashSet();
 		for(Unit succ : icfg.getSuccsOf(curr)){
@@ -132,7 +106,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		}
 		return false;
 	}
-	protected abstract boolean killFlow(Stmt curr, Value value);
+	protected abstract boolean killFlow(SootMethod method, Stmt curr, Value value);
 	
 	private boolean valueUsedInStatement(SootMethod method, Stmt u, InvokeExpr invokeExpr, Value fact) {
 		//TODO what about assignment?
@@ -148,7 +122,18 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		}
 		return false;
 	}
-	protected abstract Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Value value);
+	protected abstract Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Value value, Stmt callSite, Stmt returnSite);
+
+	private Collection<? extends State> returnFlow(SootMethod method, Stmt curr, Value value) {
+		Set<State> out = Sets.newHashSet();
+		for(Unit callSite : icfg.getCallersOf(method)){
+			for(Unit returnSite : icfg.getSuccsOf(callSite)){
+				out.addAll(computeReturnFlow(method, curr, value, (Stmt) callSite, (Stmt) returnSite));
+			}
+		}
+		return out;
+	}
+	
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Value value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
@@ -182,44 +167,6 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return Statement.epsilon();
 	}
 	
-	protected static Value returnVal(){
-		if(returnVal == null)
-			returnVal = Jimple.v().newLocal("RET", Scene.v().getType("java.lang.String"));
-		return returnVal;
-	}
-	
-	protected static Value thisVal(){
-		if(thisVal == null)
-			thisVal = Jimple.v().newLocal("THIS", Scene.v().getType("java.lang.String"));
-		return thisVal;
-	}
-	
-	protected static Value param(int index){
-		Value val = null;
-		val = parameterVals.get(index);
-		
-		if(val == null){
-			Local paramVal = new ParameterValue("PARAM" + index, Scene.v().getType("java.lang.String"), index);
-			parameterVals.put(index,paramVal);
-		}
-		return parameterVals.get(index);
-	}
-	
-	private static class ParameterValue extends JimpleLocal{
-		private static final long serialVersionUID = 1L;
-		private int index;
-
-		public ParameterValue(String name, Type type, int index) {
-			super(name, type);
-			this.index = index;
-		}
-		
-		public int getIndex(){
-			return index;
-		}
-		
-	}
-
 	@Override
 	public Field fieldWildCard() {
 		return Field.wildcard();

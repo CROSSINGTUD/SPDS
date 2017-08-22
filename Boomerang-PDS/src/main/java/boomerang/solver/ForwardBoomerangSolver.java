@@ -65,7 +65,9 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	}
 
 	@Override
-	protected boolean killFlow(Stmt curr, Value value) {
+	protected boolean killFlow(SootMethod m, Stmt curr, Value value) {
+		if (!m.getActiveBody().getLocals().contains(value))
+			return true;
 		if (curr instanceof AssignStmt) {
 			AssignStmt as = (AssignStmt) curr;
 			// Kill x at any statement x = * during propagation.
@@ -86,7 +88,6 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	@Override
 	public Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Value fact, Stmt succ) {
 		Set<State> out = Sets.newHashSet();
-		assert !fact.equals(thisVal()) && !fact.equals(returnVal()) && !fact.equals(param(0));
 		if (!isFieldWriteWithBase(curr, fact)) {
 			// always maintain data-flow if not a field write // killFlow has
 			// been taken care of
@@ -122,23 +123,33 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	}
 
 	@Override
-	public Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Value value) {
+	public Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Value value, Stmt callSite,
+			Stmt returnSite) {
 		if (curr instanceof ReturnStmt) {
 			Value op = ((ReturnStmt) curr).getOp();
-
 			if (op.equals(value)) {
-				return Collections.singleton(new PopNode<Value>(returnVal(), PDSSystem.CALLS));
+				if(callSite instanceof AssignStmt){
+					return Collections.singleton(new PopNode<Value>(((AssignStmt)callSite).getLeftOp(), PDSSystem.CALLS));
+				}
 			}
 		}
 		if (!method.isStatic()) {
 			if (value.equals(method.getActiveBody().getThisLocal())) {
-				return Collections.singleton(new PopNode<Value>(thisVal(), PDSSystem.CALLS));
+				if (callSite.containsInvokeExpr()) {
+					if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
+						InstanceInvokeExpr iie = (InstanceInvokeExpr) callSite.getInvokeExpr();
+						return Collections.singleton(new PopNode<Value>(iie.getBase(), PDSSystem.CALLS));
+					}
+				}
 			}
 		}
 		int index = 0;
 		for (Local param : method.getActiveBody().getParameterLocals()) {
 			if (param.equals(value)) {
-				return Collections.singleton(new PopNode<Value>(param(index), PDSSystem.CALLS));
+				if (callSite.containsInvokeExpr()) {
+					InstanceInvokeExpr iie = (InstanceInvokeExpr) callSite.getInvokeExpr();
+					return Collections.singleton(new PopNode<Value>(iie.getArg(index), PDSSystem.CALLS));
+				}
 			}
 			index++;
 		}

@@ -18,18 +18,20 @@ import wpds.interfaces.Location;
 
 public class Statement implements Location {
 	private static Statement epsilon;
-	private Stmt delegate;
-	private SootMethod method;
-	private String rep;
+	private final Stmt delegate;
+	private final SootMethod method;
+	private final String rep;
 
 	public Statement(Stmt delegate, SootMethod m) {
 		this.delegate = delegate;
 		this.method = m;
+		this.rep = null;
 	}
 
 	private Statement(String rep) {
 		this.rep = rep;
 		this.delegate = null;
+		this.method = null;
 	}
 
 	public Optional<Stmt> getUnit() {
@@ -38,11 +40,14 @@ public class Statement implements Location {
 		return Optional.of(delegate);
 	}
 
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((delegate == null) ? 0 : delegate.hashCode());
+		result = prime * result + ((method == null) ? 0 : method.hashCode());
+		result = prime * result + ((rep == null) ? 0 : rep.hashCode());
 		return result;
 	}
 
@@ -52,13 +57,21 @@ public class Statement implements Location {
 			return true;
 		if (obj == null)
 			return false;
-		if (getClass() != obj.getClass())
-			return false;
 		Statement other = (Statement) obj;
 		if (delegate == null) {
 			if (other.delegate != null)
 				return false;
 		} else if (!delegate.equals(other.delegate))
+			return false;
+		if (method == null) {
+			if (other.method != null)
+				return false;
+		} else if (!method.equals(other.method))
+			return false;
+		if (rep == null) {
+			if (other.rep != null)
+				return false;
+		} else if (!rep.equals(other.rep))
 			return false;
 		return true;
 	}

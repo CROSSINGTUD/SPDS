@@ -24,7 +24,7 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		b.a = a;
 		A c = b.a;
 		Alloc alias = c.b;
-		reachable(alias);
+		queryFor(alias);
 	}
 	
 	@Test
@@ -45,7 +45,7 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		A a = new A();
 		call(a, query);
 		Alloc alias = a.b;
-		reachable(alias);
+		queryFor(alias);
 	}
 	@Test
 	public void writeWithinCallNegative(){
@@ -65,7 +65,7 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		A b = new A();
 		call(b, alias);
 		Alloc summarizedAlias = a.b;
-		reachable(summarizedAlias);
+		queryFor(summarizedAlias);
 	}
 	
 	private void call(A a, Alloc query) {
@@ -79,7 +79,7 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		B b = callAndReturn(a, query);
 		A first = b.a;
 		Alloc alias = first.b;
-		reachable(alias);
+		queryFor(alias);
 	}
 
 
@@ -108,7 +108,7 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		a.b = query;
 		a.c = null;
 		Alloc alias = a.b;
-		reachable(alias);
+		queryFor(alias);
 	}
 	
 	
