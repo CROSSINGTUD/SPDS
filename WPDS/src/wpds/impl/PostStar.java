@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
@@ -15,17 +16,14 @@ import wpds.wildcard.ExclusionWildcard;
 import wpds.wildcard.Wildcard;
 
 public class PostStar<N extends Location, D extends State, W extends Weight<N>> {
-	private LinkedList<Transition<N, D>> worklist = Lists.newLinkedList();
 	private IPushdownSystem<N, D, W> pds;
 	private WeightedPAutomaton<N, D, W> fa;
-	private int iterationCount;
+	private Set<PostStarListener<N,D,W>> listeners = Sets.newHashSet();
 
 	public void poststar(IPushdownSystem<N, D, W> pds, WeightedPAutomaton<N, D, W> initialAutomaton) {
 		this.pds = pds;
-		worklist = Lists.newLinkedList(initialAutomaton.getTransitions());
-		fa = initialAutomaton;
-
-		pds.registerUpdateListener(new WPDSUpdateListener<N, D, W>() {
+		this.fa = initialAutomaton;
+		this.pds.registerUpdateListener(new WPDSUpdateListener<N, D, W>() {
 
 			@Override
 			public void onRuleAdded(Rule<N, D, W> rule) {
@@ -36,6 +34,10 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 				}
 			}
 		});
+	}
+	public void poststar(IPushdownSystem<N, D, W> pds, WeightedPAutomaton<N, D, W> initialAutomaton, PostStarListener<N, D, W> listener) {
+		listeners.add(listener);
+		poststar(pds, initialAutomaton);
 	}
 
 	private void update(Transition<N, D> t, Rule<N, D, W> rule) {
@@ -115,7 +117,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		W newLt = (W) lt.combineWithIn(weight);
 		fa.addWeightForTransition(trans, newLt);
 		if (!lt.equals(newLt)) {
-			
+			for(PostStarListener<N, D, W> l : listeners)
+				l.update(triggeringRule,trans, previous);
 			update(trans);
 		}
 	}

@@ -3,6 +3,7 @@ package sync.pds.solver;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -24,7 +25,10 @@ import sync.pds.solver.nodes.SingleNode;
 import sync.pds.weights.SetDomain;
 import wpds.impl.NormalRule;
 import wpds.impl.PopRule;
+import wpds.impl.PostStar;
+import wpds.impl.PostStarListener;
 import wpds.impl.PushRule;
+import wpds.impl.Rule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -103,7 +107,18 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	public SyncPDSSolver(){
 		callAutomaton.registerListener(new CallAutomatonListener());
 		fieldAutomaton.registerListener(new FieldUpdateListener());
-		callingPDS.poststar(callAutomaton);
+		PostStar<Stmt, INode<Fact>, Weight<Stmt>> postStar = new PostStar<Stmt, INode<Fact>, Weight<Stmt>>();
+		postStar.poststar(callingPDS, callAutomaton, new PostStarListener<Stmt, INode<Fact>, Weight<Stmt>>() {
+			@Override
+			public void update(Rule<Stmt, INode<Fact>, Weight<Stmt>> triggeringRule,
+					Transition<Stmt, INode<Fact>> trans, List<Transition<Stmt, INode<Fact>>> previous) {
+				System.out.println("CAll to UPDATe ");
+				if(triggeringRule instanceof PopRule && previous.size() == 2){
+					System.out.println("ERE" +previous);
+				}
+			}
+		});
+//		callingPDS.poststar(callAutomaton);
 		fieldPDS.poststar(fieldAutomaton);
 	}
 	
@@ -281,7 +296,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			fieldPDS.addRule(new PopRule<Field, INode<Node<Stmt,Fact>>, Weight<Field>>(asFieldFact(curr), node.location(),
 					asFieldFact(node.fact()), fieldPDS.getOne()));
 			addNormalCallFlow(curr, node.fact());
-			checkFieldFeasibility(node.fact());
 		} else if (system.equals(PDSSystem.CALLS)) {
 			//
 			callingPDS.addRule(new PopRule<Stmt, INode<Fact>, Weight<Stmt>>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location),callingPDS.getOne()));
@@ -306,9 +320,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		return added;
 	}
 
-	private void checkFieldFeasibility(Node<Stmt, Fact> node) {
-		// System.out.println("CHECKING Field reachabilty for " + node);
-	}
 
 	private class FieldUpdateListener implements WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, Weight<Field>> {
 

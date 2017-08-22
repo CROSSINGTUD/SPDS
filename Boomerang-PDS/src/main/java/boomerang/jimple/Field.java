@@ -103,6 +103,10 @@ public class Field implements Location {
 		public Field excludes() {
 			return (Field) excludes;
 		}
+		@Override
+		public String toString() {
+			return "not " + super.toString();
+		}
 	}
 	private static Map<Field,ExclusionWildcardField> exclusionWildcards = Maps.newHashMap();
 	
