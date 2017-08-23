@@ -12,12 +12,14 @@ import com.google.common.collect.Multimap;
 
 import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.SyncPDSSolver.PDSSystem;
+import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
+import wpds.wildcard.ExclusionWildcard;
 import wpds.wildcard.Wildcard;
 
 public class DoublePDSTest {
@@ -44,6 +46,11 @@ public class DoublePDSTest {
 	private void addSucc(Node<Statement, Variable> curr, State succ) {
 		successorMap.put(curr, succ);
 	}
+	
+	private void addExcludeField(Node<Statement, Variable> curr, FieldRef push, Node<Statement, Variable> succ) {
+		addSucc(curr, new ExclusionNode<Statement, Variable, FieldRef>(succ.stmt(),succ.fact(),push));
+	}
+
 	private FieldRef epsilonField = new FieldRef("eps_f");
 	private Statement epsilonCallSite = new Statement(-1);
 	
@@ -76,7 +83,7 @@ public class DoublePDSTest {
 
 		@Override
 		public FieldRef exclusionFieldWildCard(FieldRef exclusion) {
-			throw new RuntimeException("Not implemented for those test cases");
+			return new ExclusionWildcardField(exclusion);
 		}
 	};
 	@Test
@@ -157,7 +164,78 @@ public class DoublePDSTest {
 		assertTrue(solver.getReachedStates().contains(node(6,"y")));
 	}
 	
+	@Test
+	public void simpleExclusionFieldFlow() {
+		addFieldPush(node(1,"v"), f("g"), node(4,"w"));
+		addExcludeField(node(4,"w"), f("g"), node(5,"w"));
+		addFieldPop(node(5,"w"), f("g"), node(7,"w"));
+		
+		solver.solve(node(1,"v"));
+		solver.debugOutput();
+		System.out.println(solver.getReachedStates());
+		assertFalse(solver.getReachedStates().contains(node(7,"w")));
+	}
+	@Test
+	public void simpleNegativeExclusionFieldFlow() {
+		addFieldPush(node(1,"v"), f("g"), node(4,"w"));
+		addExcludeField(node(4,"w"), f("h"), node(5,"w")); //overwrite of h should not affect the subsequent pop operation
+		addFieldPop(node(5,"w"), f("g"), node(7,"w"));
+		
+		solver.solve(node(1,"v"));
+		solver.debugOutput();
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(7,"w")));
+	}
 	
+	@Test
+	public void doubleNegativeExclusionFieldFlow() {
+		addFieldPush(node(1,"v"), f("g"), node(4,"w"));
+		addExcludeField(node(4,"w"), f("h"), node(5,"w")); //overwrite of h should not affect the subsequent pop operation
+		addExcludeField(node(5,"w"), f("i"), node(6,"w")); //overwrite of h should not affect the subsequent pop operation
+		addFieldPop(node(6,"w"), f("g"), node(7,"w"));
+		
+		solver.solve(node(1,"v"));
+		solver.debugOutput();
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(7,"w")));
+	}
+	
+	@Test
+	public void doubleExclusionFieldFlow() {
+		addFieldPush(node(1,"v"), f("g"), node(4,"w"));
+		addExcludeField(node(4,"w"), f("i"), node(5,"w")); //overwrite of i should not affect the subsequent pop operation
+		addExcludeField(node(5,"w"), f("g"), node(6,"w")); 
+		addFieldPop(node(6,"w"), f("g"), node(7,"w"));
+		
+		solver.solve(node(1,"v"));
+		solver.debugOutput();
+		System.out.println(solver.getReachedStates());
+		assertFalse(solver.getReachedStates().contains(node(7,"w")));
+	}
+	@Test
+	public void simpleTransitiveExclusionFieldFlow() {
+		addFieldPush(node(1,"v"), f("g"), node(4,"w"));
+		addExcludeField(node(4,"w"), f("g"), node(5,"w"));
+		addNormal( node(5,"w"),  node(6,"w"));
+		addFieldPop(node(6,"w"), f("g"), node(7,"w"));
+		
+		solver.solve(node(1,"v"));
+		solver.debugOutput();
+		System.out.println(solver.getReachedStates());
+		assertFalse(solver.getReachedStates().contains(node(7,"w")));
+	
+	}@Test
+	public void simpleNegativeTransitiveExclusionFieldFlow() {
+		addFieldPush(node(1,"v"), f("g"), node(4,"w"));
+		addExcludeField(node(4,"w"), f("h"), node(5,"w")); //overwrite of h should not affect the subsequent pop operation
+		addNormal( node(5,"w"),  node(6,"w"));
+		addFieldPop(node(6,"w"), f("g"), node(7,"w"));
+		
+		solver.solve(node(1,"v"));
+		solver.debugOutput();
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(7,"w")));
+	}
 	@Test
 	public void testWithTwoStacks() {
 		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
@@ -436,6 +514,25 @@ public class DoublePDSTest {
 			super("*");
 		}
 	}
+	
+
+	private static class ExclusionWildcardField extends FieldRef implements ExclusionWildcard<FieldRef> {
+		private final FieldRef excludes;
+
+		public ExclusionWildcardField(FieldRef excl) {
+			super(excl.name);
+			this.excludes = excl;
+		}
+
+		@Override
+		public FieldRef excludes() {
+			return (FieldRef) excludes;
+		}
+		@Override
+		public String toString() {
+			return "not " + super.toString();
+		}
+	}
 
 	private static class FieldRef extends StringBasedObj implements Location {
 		public FieldRef(String name) {
@@ -444,7 +541,7 @@ public class DoublePDSTest {
 	}
 
 	private static class StringBasedObj {
-		final private String name;
+		final String name;
 
 		public StringBasedObj(String name) {
 			this.name = name;

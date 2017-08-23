@@ -170,7 +170,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					}
 				}
 			}
-//			solver.debugOutput();
+			solver.debugOutput();
 		}
 		return results;
 	}

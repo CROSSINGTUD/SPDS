@@ -77,7 +77,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 				if (l2 instanceof ExclusionWildcard) {
 					
 					ExclusionWildcard<N> ex = (ExclusionWildcard<N>) l2;
-					System.out.println("GERE " + l2 + t.getString() + ex.excludes());
 					if (t.getString().equals(ex.excludes()))
 						return;
 				}

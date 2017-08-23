@@ -10,7 +10,9 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		Alloc b = null;
 		Alloc c = null;
 	}
+
 	
+	private class Alloc implements AllocatedObject{};
 	private class B{
 		A a;
 	}
@@ -111,6 +113,17 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		queryFor(alias);
 	}
 	
-	
-	private class Alloc implements AllocatedObject{};
+
+
+	@Test
+	public void overwriteButPositiveFieldTest2(){
+		Alloc query = new Alloc();
+		int x = 0;
+		A a = new A();
+		a.b = query;
+		a.b = null;
+		int y = x;
+		Alloc alias = a.b;
+		queryFor(alias);
+	}
 }
