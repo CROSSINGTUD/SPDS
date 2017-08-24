@@ -6,16 +6,6 @@ import test.core.selfrunning.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
 public class NoIndirectionTest extends AbstractBoomerangTest {
-	private class A{
-		Alloc b = null;
-		Alloc c = null;
-	}
-
-	
-	private class Alloc implements AllocatedObject{};
-	private class B{
-		A a;
-	}
 	
 	@Test
 	public void doubleWriteAndReadFieldPositive(){
@@ -108,7 +98,7 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		Alloc query = new Alloc();
 		A a = new A();
 		a.b = query;
-		a.c = null;
+//		a.c = null;
 		Alloc alias = a.b;
 		queryFor(alias);
 	}

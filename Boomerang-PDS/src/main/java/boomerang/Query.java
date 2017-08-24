@@ -1,18 +1,18 @@
 package boomerang;
 
 import boomerang.jimple.Statement;
-import soot.Value;
+import boomerang.jimple.Val;
 import sync.pds.solver.nodes.Node;
 
 public abstract class Query{
 
-	private final Node<Statement, Value> delegate;
+	private final Node<Statement, Val> delegate;
 
-	public Query(Statement stmt, Value variable) {
-		delegate = new Node<Statement,Value>(stmt,variable);
+	public Query(Statement stmt, Val variable) {
+		delegate = new Node<Statement,Val>(stmt,variable);
 	}
 
-	public Node<Statement,Value> asNode(){
+	public Node<Statement,Val> asNode(){
 		return delegate;
 	}
 	@Override

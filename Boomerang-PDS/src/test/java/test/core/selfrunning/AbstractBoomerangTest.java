@@ -15,6 +15,7 @@ import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
+import boomerang.jimple.Val;
 import soot.Body;
 import soot.Local;
 import soot.RefType;
@@ -52,7 +53,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				//Run forward analysis
 				Collection<? extends Query> unreachableNodes = extractQuery(
 						new FirstArgumentOf("unreachable"));
-				Collection<Node<Statement, Value>> results = runQuery(allocationSites);
+				Collection<Node<Statement, Val>> results = runQuery(allocationSites);
 				compareQuery( queryForCallSites, unreachableNodes, results, "Forward");
 				if(!queryForCallSites.isEmpty()){
 					//Run backward analysis
@@ -62,7 +63,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 //							new FirstArgumentOf("reachable"));
 					unreachableNodes = extractQuery(
 							new FirstArgumentOf("unreachable"));
-					Set<Node<Statement, Value>> backwardResults = runQuery(queryForCallSites);
+					Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
 					compareQuery(allocationSites, unreachableNodes, backwardResults, "Backward");
 				}
 				
@@ -78,7 +79,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					NewExpr expr = ((NewExpr) as.getRightOp());
 					if (allocatesObjectOfInterest(expr)) {
 						Local local = (Local) as.getLeftOp();
-						return Optional.<Query>of(new ForwardQuery(new Statement(unit, icfg.getMethodOf(unit)), local));
+						return Optional.<Query>of(new ForwardQuery(new Statement(unit, icfg.getMethodOf(unit)), new Val(local,icfg.getMethodOf(unit))));
 					}
 				}
 			}
@@ -105,22 +106,22 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			Value param = invokeExpr.getArg(0);
 			if (!(param instanceof Local))
 				return Optional.empty();
-			return Optional.<Query>of(new BackwardQuery(new Statement(unit, icfg.getMethodOf(unit)), param));
+			return Optional.<Query>of(new BackwardQuery(new Statement(unit, icfg.getMethodOf(unit)), new Val(param,icfg.getMethodOf(unit))));
 		}
 	}
 
 	private void compareQuery(Collection<? extends Query> expectedResults,
 			Collection<? extends Query> unreachableNodes,
-			Collection<? extends Node<Statement, Value>> results, String analysis) {
+			Collection<? extends Node<Statement, Val>> results, String analysis) {
 		System.out.println("Boomerang Allocations Sites: " + results);
 		System.out.println("Boomerang Results: " + results);
 		System.out.println("Expected Results: " + expectedResults);
-		Collection<Node<Statement, Value>> falseNegativeAllocationSites = new HashSet<>();
+		Collection<Node<Statement, Val>> falseNegativeAllocationSites = new HashSet<>();
 		for(Query res : expectedResults){
 			if(!results.contains(res.asNode()))
 				falseNegativeAllocationSites.add(res.asNode());
 		}
-		Collection<? extends Node<Statement, Value>> falsePositiveAllocationSites = new HashSet<>(results);
+		Collection<? extends Node<Statement, Val>> falsePositiveAllocationSites = new HashSet<>(results);
 		for(Query res : expectedResults){
 			falsePositiveAllocationSites.remove(res.asNode());
 		}
@@ -139,8 +140,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			throw new AssertionError(analysis +"Imprecise " + falsePositiveAllocationSites);
 	}
 
-	private Set<Node<Statement, Value>> runQuery(Collection<? extends Query> queries) {
-		final Set<Node<Statement, Value>> results = Sets.newHashSet();
+	private Set<Node<Statement, Val>> runQuery(Collection<? extends Query> queries) {
+		final Set<Node<Statement, Val>> results = Sets.newHashSet();
 		for (Query query : queries) {
 			Boomerang solver = new Boomerang() {
 				@Override
@@ -149,21 +150,21 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 			};
 			if(query instanceof BackwardQuery){
-				solver.addBackwardQuery((BackwardQuery)query,new WitnessListener<Statement, Value>() {
+				solver.addBackwardQuery((BackwardQuery)query,new WitnessListener<Statement, Val>() {
 					@Override
-					public void witnessFound(Node<Statement, Value> allocation) {
+					public void witnessFound(Node<Statement, Val> allocation) {
 						results.add(allocation);	
 					}
 				});
 			}else{
 				solver.solve(query);
-				for(Node<Statement, Value> s : solver.getForwardReachableStates()){
+				for(Node<Statement, Val> s : solver.getForwardReachableStates()){
 					if(s.stmt().getUnit().isPresent()){
 						Stmt stmt = s.stmt().getUnit().get();
 						if(stmt.toString().contains("queryFor")){
 							if(stmt.containsInvokeExpr()){
 								InvokeExpr invokeExpr = stmt.getInvokeExpr();
-								if(invokeExpr.getArg(0).equals(s.fact()))
+								if(invokeExpr.getArg(0).equals(s.fact().value()))
 									results.add(s);
 							}
 						}
@@ -171,6 +172,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 			}
 			solver.debugOutput();
+			System.out.println(solver.getForwardReachableStates());
+			
 		}
 		return results;
 	}

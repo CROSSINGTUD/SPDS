@@ -12,6 +12,7 @@ import com.google.common.collect.Maps;
 import boomerang.jimple.Field;
 import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
+import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
 import soot.Local;
 import soot.Scene;
@@ -35,7 +36,7 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
-public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, Value, Field>{
+public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, Val, Field>{
 
 	private static Local returnVal;
 	private static Value thisVal;
@@ -47,12 +48,13 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		this.icfg = icfg;
 	}
 	@Override
-	public Collection<? extends State> computeSuccessor(Node<Statement, Value> node) {
+	public Collection<? extends State> computeSuccessor(Node<Statement, Val> node) {
 		Statement stmt = node.stmt();
 		Optional<Stmt> unit = stmt.getUnit();
 		if(unit.isPresent()){
 			Stmt curr = unit.get();
-			Value value = node.fact();
+			System.out.println(curr);
+			Val value = node.fact();
 			SootMethod method = icfg.getMethodOf(curr);
 			if(killFlow(method, curr, value)){
 				return Collections.emptySet();
@@ -68,10 +70,10 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return Collections.emptySet();
 	}
 
-	private Collection<State> normalFlow(SootMethod method, Stmt curr, Value fact) {
+	private Collection<State> normalFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
 		for(Unit succ : icfg.getSuccsOf(curr)){
-			out.addAll(computeNormalFlow(method,curr, fact, (Stmt) succ));
+			out.addAll(computeNormalFlow(method,curr, value, (Stmt) succ));
 		}
 		return out;
 	}
@@ -106,25 +108,25 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		}
 		return false;
 	}
-	protected abstract boolean killFlow(SootMethod method, Stmt curr, Value value);
+	protected abstract boolean killFlow(SootMethod method, Stmt curr, Val value);
 	
-	private boolean valueUsedInStatement(SootMethod method, Stmt u, InvokeExpr invokeExpr, Value fact) {
+	private boolean valueUsedInStatement(SootMethod method, Stmt u, InvokeExpr invokeExpr, Val value) {
 		//TODO what about assignment?
 		if(invokeExpr instanceof InstanceInvokeExpr){
 			InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
-			if(iie.getBase().equals(fact))
+			if(iie.getBase().equals(value.value()))
 				return true;
 		}
 		for(Value arg : invokeExpr.getArgs()){
-			if(arg.equals(fact)){
+			if(arg.equals(value.value())){
 				return true;
 			}
 		}
 		return false;
 	}
-	protected abstract Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Value value, Stmt callSite, Stmt returnSite);
+	protected abstract Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite, Stmt returnSite);
 
-	private Collection<? extends State> returnFlow(SootMethod method, Stmt curr, Value value) {
+	private Collection<? extends State> returnFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
 		for(Unit callSite : icfg.getCallersOf(method)){
 			for(Unit returnSite : icfg.getSuccsOf(callSite)){
@@ -134,7 +136,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return out;
 	}
 	
-	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Value value) {
+	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
 		for(SootMethod callee : icfg.getCalleesOfCallAt(callSite)){
@@ -149,8 +151,8 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 
 
 	protected abstract Collection<? extends State> computeCallFlow(SootMethod caller, ReturnSite returnSite, InvokeExpr invokeExpr,
-			Value value, SootMethod callee, Stmt calleeSp);
-	protected abstract Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Value fact, Stmt succ);
+			Val value, SootMethod callee, Stmt calleeSp);
+	protected abstract Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Val value, Stmt succ);
 
 	@Override
 	public Field epsilonField() {
@@ -177,21 +179,21 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return Field.exclusionWildcard(exclusion);
 	}
 	
-	public WeightedPAutomaton<Field, INode<Node<Statement,Value>>, Weight<Field>> getFieldAutomaton(){
+	public WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight<Field>> getFieldAutomaton(){
 		return fieldAutomaton;
 	}
 
-	public void injectFieldRule(Node<Statement,Value> source, Field field, Node<Statement,Value> target){
+	public void injectFieldRule(Node<Statement,Val> source, Field field, Node<Statement,Val> target){
 		processPush(source, field, target, PDSSystem.FIELDS);
 	}
-	public void injectFieldRule(Rule<Field, INode<Node<Statement,Value>>, Weight<Field>> rule){
+	public void injectFieldRule(Rule<Field, INode<Node<Statement,Val>>, Weight<Field>> rule){
 		fieldPDS.addRule(rule);
 	}
 
-	public void addFieldAutomatonListener(WPAUpdateListener<Field, INode<Node<Statement, Value>>, Weight<Field>> listener) {
+	public void addFieldAutomatonListener(WPAUpdateListener<Field, INode<Node<Statement, Val>>, Weight<Field>> listener) {
 		fieldAutomaton.registerListener(listener);
 	}
-	public void addCallAutomatonListener(WPAUpdateListener<Statement, INode<Value>, Weight<Statement>> listener) {
+	public void addCallAutomatonListener(WPAUpdateListener<Statement, INode<Val>, Weight<Statement>> listener) {
 		callAutomaton.registerListener(listener);
 	}
 }

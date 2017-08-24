@@ -1,15 +1,16 @@
 package boomerang;
 
 import boomerang.jimple.Statement;
+import boomerang.jimple.Val;
 import soot.Value;
 import soot.jimple.AssignStmt;
 import sync.pds.solver.nodes.Node;
 
-public class AllocAtStmt extends Node<Statement, Value> {
+public class AllocAtStmt extends Node<Statement, Val> {
 
 	private AssignStmt fieldWriteStmt;
 
-	public AllocAtStmt(Node<Statement, Value> target, AssignStmt fieldWriteStmt) {
+	public AllocAtStmt(Node<Statement, Val> target, AssignStmt fieldWriteStmt) {
 		super(target.stmt(), target.fact());
 		this.fieldWriteStmt = fieldWriteStmt;
 	}

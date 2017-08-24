@@ -10,6 +10,7 @@ import boomerang.Boomerang;
 import boomerang.jimple.Field;
 import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
+import boomerang.jimple.Val;
 import soot.Body;
 import soot.Local;
 import soot.SootMethod;
@@ -39,12 +40,12 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 	}
 
 	@Override
-	protected boolean killFlow(SootMethod m, Stmt curr, Value value) {
+	protected boolean killFlow(SootMethod m, Stmt curr, Val value) {
 		return false;
 	}
 
 	@Override
-	protected Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Value value, Stmt callSite, Stmt returnSite) {
+	protected Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite, Stmt returnSite) {
 //		if (curr instanceof ReturnStmt) {
 //			Value op = ((ReturnStmt) curr).getOp();
 //
@@ -53,21 +54,21 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 //			}
 //		}
 		if (!method.isStatic()) {
-			if (value.equals(method.getActiveBody().getThisLocal())) {
+			if (value.value().equals(method.getActiveBody().getThisLocal())) {
 				if(callSite.containsInvokeExpr()){
 					if(callSite.getInvokeExpr() instanceof InstanceInvokeExpr){
 						InstanceInvokeExpr iie = (InstanceInvokeExpr) callSite.getInvokeExpr();
-						return Collections.singleton(new PopNode<Value>(iie.getBase(), PDSSystem.CALLS));
+						return Collections.singleton(new PopNode<Val>(new Val(iie.getBase(),icfg.getMethodOf(callSite)), PDSSystem.CALLS));
 					}
 				}
 			}
 		}
 		int index = 0;
 		for (Local param : method.getActiveBody().getParameterLocals()) {
-			if (param.equals(value)) {
+			if (param.equals(value.value())) {
 				if(callSite.containsInvokeExpr()){
 					InvokeExpr ie = callSite.getInvokeExpr();
-					return Collections.singleton(new PopNode<Value>(ie.getArg(index), PDSSystem.CALLS));
+					return Collections.singleton(new PopNode<Val>(new Val(ie.getArg(index),method), PDSSystem.CALLS));
 				}
 			}
 			index++;
@@ -78,24 +79,24 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 
 	@Override
 	protected Collection<? extends State> computeCallFlow(SootMethod caller, ReturnSite returnSite,
-			InvokeExpr invokeExpr, Value fact, SootMethod callee, Stmt calleeSp) {
+			InvokeExpr invokeExpr, Val fact, SootMethod callee, Stmt calleeSp) {
 		if (!callee.hasActiveBody())
 			return Collections.emptySet();
 		Body calleeBody = callee.getActiveBody();
 		
 		if (invokeExpr instanceof InstanceInvokeExpr) {
 			InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
-			if (iie.getBase().equals(fact) && !callee.isStatic()) {
-				return Collections.singleton(new PushNode<Statement, Value, Statement>(new Statement(calleeSp, callee),
-						calleeBody.getThisLocal(), returnSite, PDSSystem.CALLS));
+			if (iie.getBase().equals(fact.value()) && !callee.isStatic()) {
+				return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
+						new Val(calleeBody.getThisLocal(),callee), returnSite, PDSSystem.CALLS));
 			}
 		}
 		int i = 0;
 		for (Value arg : invokeExpr.getArgs()) {
-			if (arg.equals(fact)) {
+			if (arg.equals(fact.value())) {
 				Local param = calleeBody.getParameterLocal(i);
-				return Collections.singleton(new PushNode<Statement, Value, Statement>(new Statement(calleeSp, callee),
-						param, returnSite, PDSSystem.CALLS));
+				return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
+						new Val(param,callee), returnSite, PDSSystem.CALLS));
 			}
 			i++;
 		}
@@ -104,18 +105,18 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 		if(callSite instanceof AssignStmt && calleeSp instanceof ReturnStmt){
 			AssignStmt as = (AssignStmt) callSite;
 			ReturnStmt retStmt = (ReturnStmt) calleeSp;
-			if(as.getLeftOp().equals(fact)){
-				return Collections.singleton(new PushNode<Statement, Value, Statement>(new Statement(calleeSp, callee),
-						retStmt.getOp(), returnSite, PDSSystem.CALLS));
+			if(as.getLeftOp().equals(fact.value())){
+				return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
+						new Val(retStmt.getOp(),callee), returnSite, PDSSystem.CALLS));
 			}
 		}
 		return Collections.emptySet();
 	}
 
 	@Override
-	protected Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Value fact, Stmt succ) {
+	protected Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Val fact, Stmt succ) {
 //		assert !fact.equals(thisVal()) && !fact.equals(returnVal()) && !fact.equals(param(0));
-		if(Boomerang.isAllocationValue(fact)){
+		if(Boomerang.isAllocationVal(fact.value())){
 			return Collections.emptySet();
 		}
 		Set<State> out = Sets.newHashSet();
@@ -133,33 +134,33 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 			AssignStmt assignStmt = (AssignStmt) curr;
 			Value leftOp = assignStmt.getLeftOp();
 			Value rightOp = assignStmt.getRightOp();
-			if (leftOp.equals(fact)) {
+			if (leftOp.equals(fact.value())) {
 				leftSideMatches = true;
 				if (rightOp instanceof InstanceFieldRef) {
 					InstanceFieldRef ifr = (InstanceFieldRef) rightOp;
-					out.add(new PushNode<Statement, Value, Field>(new Statement(succ, method), ifr.getBase(),
+					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
 							new Field(ifr.getField()), PDSSystem.FIELDS));
 				} else {	
-					if(isFieldLoadWithBase(curr, fact)){
-						out.add(new ExclusionNode<Statement, Value, Field>(new Statement(succ, method), fact,
+					if(isFieldLoadWithBase(curr, fact.value())){
+						out.add(new ExclusionNode<Statement, Val, Field>(new Statement(succ, method), fact,
 							getLoadedField(curr)));
 					} else{
-						out.add(new Node<Statement, Value>(new Statement(succ, method), rightOp));
+						out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(rightOp,method)));
 					}
 				}
 			}
 			if (leftOp instanceof InstanceFieldRef) {
 				InstanceFieldRef ifr = (InstanceFieldRef) leftOp;
 				Value base = ifr.getBase();
-				if (base.equals(fact)) {
-					NodeWithLocation<Statement, Value, Field> succNode = new NodeWithLocation<>(
-							new Statement(succ, method), rightOp, new Field(ifr.getField()));
-					out.add(new PopNode<NodeWithLocation<Statement, Value, Field>>(succNode, PDSSystem.FIELDS));
+				if (base.equals(fact.value())) {
+					NodeWithLocation<Statement, Val, Field> succNode = new NodeWithLocation<>(
+							new Statement(succ, method), new Val(rightOp,method), new Field(ifr.getField()));
+					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
 				}
 			}
 		}
 		if(!leftSideMatches)
-			out.add(new Node<Statement, Value>(new Statement(succ, method), fact));
+			out.add(new Node<Statement, Val>(new Statement(succ, method), fact));
 		return out;
 	}
 	

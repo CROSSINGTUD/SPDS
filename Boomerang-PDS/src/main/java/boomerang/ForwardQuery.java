@@ -1,12 +1,11 @@
 package boomerang;
 
 import boomerang.jimple.Statement;
-import soot.Value;
-import sync.pds.solver.nodes.Node;
+import boomerang.jimple.Val;
 
 public class ForwardQuery extends Query{
 
-	public ForwardQuery(Statement stmt, Value variable) {
+	public ForwardQuery(Statement stmt, Val variable) {
 		super(stmt, variable);
 	}
 	@Override
