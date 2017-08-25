@@ -2,9 +2,11 @@ package boomerang.solver;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
@@ -74,6 +76,18 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		Set<State> out = Sets.newHashSet();
 		for(Unit succ : icfg.getSuccsOf(curr)){
 			out.addAll(computeNormalFlow(method,curr, value, (Stmt) succ));
+		}
+		List<Unit> succsOf = icfg.getSuccsOf(curr);
+		while(out.size() == 1 && succsOf.size() == 1){
+			List<State> l = Lists.newArrayList(out);
+			State state = l.get(0);
+			Unit succ = succsOf.get(0);
+			if(!state.equals(new Node<Statement,Val>(new Statement((Stmt)succ,method),value)))
+				break;
+			out.clear();
+			out.addAll(computeNormalFlow(method,curr, value, (Stmt) succ));
+			succsOf = icfg.getSuccsOf(succ);
+			curr = (Stmt) succ;
 		}
 		return out;
 	}

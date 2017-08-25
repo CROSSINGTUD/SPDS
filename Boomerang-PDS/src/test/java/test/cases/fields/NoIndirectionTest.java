@@ -102,8 +102,6 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		Alloc alias = a.b;
 		queryFor(alias);
 	}
-	
-
 
 	@Test
 	public void overwriteButPositiveFieldTest2(){

@@ -221,6 +221,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 						if(!potentialFieldCandidate.put(targetFact.fact(),targetFact))
 							return;
 						if(potentialCallCandidate.contains(targetFact.fact())){
+							
 							listener.witnessFound(targetFact);
 						}
 					}
@@ -243,6 +244,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 							return;
 						if(potentialFieldCandidate.containsKey(targetFact)){
 							for(Node<Stmt, Fact> w : potentialFieldCandidate.get(targetFact)){
+								System.err.println(t +" " + w);
 								listener.witnessFound(w);
 							}
 						}

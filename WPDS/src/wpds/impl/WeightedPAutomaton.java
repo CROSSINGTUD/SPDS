@@ -31,6 +31,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	// Weighted Pushdown Systems and their Application to Interprocedural
 	// Dataflow Analysis
 	protected Set<Transition<N, D>> transitions = Sets.newHashSet();
+	protected List<Transition<N, D>> sequentialTransitions = Lists.newArrayList();
 	// set F in paper [Reps2003]
 	protected Set<D> finalState = Sets.newHashSet();
 	// set P in paper [Reps2003]
@@ -63,6 +64,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		states.add(trans.getTarget());
 		states.add(trans.getStart());
 		boolean added = transitions.add(trans);
+		sequentialTransitions.add(trans);
 		if(added){
 			for(WPAUpdateListener<N, D, W> l : Lists.newLinkedList(listeners)){
 				l.onAddedTransition(trans);
@@ -120,6 +122,14 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		s += "}\n";
 		s += "Initial State:" + initialState + "\n";
 		s += "Final States:" + finalState + "\n";
+		s = "digraph {\n";
+
+		for(Transition<N, D> tran : sequentialTransitions){
+			s += "\t\"" + wrapIfInitialOrFinalState(tran.getStart()) + "\"";
+			s += " -> \"" + wrapIfInitialOrFinalState(tran.getTarget()) + "\"";
+			s += "[label=\"" + tran.getLabel() + "\"];\n";
+		}
+		s += "}\n";
 		return s;
 	}
 	public abstract N epsilon();

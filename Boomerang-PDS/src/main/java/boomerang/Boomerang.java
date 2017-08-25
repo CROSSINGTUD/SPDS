@@ -50,7 +50,6 @@ public abstract class Boomerang {
 	private Multimap<Stmt,Node<Statement,Val>> activeAllocationSiteAtFieldWrite = HashMultimap.create();
 	private Multimap<AllocAtStmt, Node<Statement,Val>> allAllocationSiteAtFieldRead = HashMultimap.create(); 
 	private Multimap<Stmt,Node<Statement,Val>> activeAllocationSiteAtFieldRead = HashMultimap.create();
-	private Map<Node<Statement,Val>, AllocationSiteDFSVisitor> allocationSite = Maps.newHashMap();
 	private Collection<ForwardQuery> forwardQueries = Sets.newHashSet();
 	private Collection<BackwardQuery> backwardQueries = Sets.newHashSet();
 	
@@ -226,41 +225,7 @@ public abstract class Boomerang {
 		backwardQueries.add(backwardQueryNode);
 		forwardSolver.synchedEmptyStackReachable(backwardQueryNode.asNode(), listener);
 	}
-	protected void addListeners(final BackwardQuery backwardQueryNode,
-			final WPAUpdateListener<Field, INode<Node<Statement, Val>>, Weight<Field>> fieldListener,
-			final WPAUpdateListener<Statement, INode<Val>, Weight<Statement>> callListener) {
-		forwardSolver.addFieldAutomatonListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 
-			@Override
-			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-				if(t.getStart() instanceof GeneratedState)
-					return;
-				if(t.getStart().fact().equals(backwardQueryNode.asNode())){
-					fieldListener.onAddedTransition(t);
-				}
-			}
-
-			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-			}
-		});
-		if(callListener != null)
-			forwardSolver.addCallAutomatonListener(new WPAUpdateListener<Statement, INode<Val>, Weight<Statement>>() {
-	
-				@Override
-				public void onAddedTransition(Transition<Statement, INode<Val>> t) {
-					if(t.getStart() instanceof GeneratedState)
-						return;
-					if(t.getLabel().equals(backwardQueryNode.asNode().stmt()) && backwardQueryNode.asNode().fact().equals(t.getStart().fact())){
-						callListener.onAddedTransition(t);
-					}
-				}
-	
-				@Override
-				public void onWeightAdded(Transition<Statement, INode<Val>> t, Weight<Statement> w) {
-				}
-			});
-	}
 	public void solve(Query query) {
 		if (query instanceof ForwardQuery) {
 			forwardSolve((ForwardQuery) query);
@@ -287,27 +252,14 @@ public abstract class Boomerang {
 			for(Unit succ : icfg().getSuccsOf(unit.get())){
 				Node<Statement, Val> source = new Node<Statement,Val>(new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact());
 				forwardSolver.solve(query.asNode(), source);
-				addAllocationSite(source);
 			}
 		}
 	}
 
-	private void addAllocationSite(Node<Statement, Val> source) {
-		if(allocationSite.containsKey(source))
-			return;
-		allocationSite.put(source,new AllocationSiteDFSVisitor(forwardSolver.getFieldAutomaton(),new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(source.stmt(),source.fact()))));
-	}
 	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
 
 	public Collection<? extends Node<Statement, Val>> getForwardReachableStates() {
 		return forwardSolver.getReachedStates();
-	}
-	public class AllocationSiteDFSVisitor extends ForwardDFSVisitor<Field,  INode<Node<Statement,Val>>, Weight<Field>>{
-
-		public AllocationSiteDFSVisitor(WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight<Field>> aut,
-				INode<Node<Statement,Val>> startState) {
-			super(aut, startState);
-		}
 	}
 	
 	public void debugOutput(){
