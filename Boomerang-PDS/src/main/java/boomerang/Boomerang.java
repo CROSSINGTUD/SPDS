@@ -26,7 +26,7 @@ import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.SyncPDSUpdateListener;
-import sync.pds.solver.WitnessListener;
+import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
@@ -114,7 +114,7 @@ public abstract class Boomerang {
 		if(node.fact().value().equals(as.getLeftOp())){
 			final BackwardQuery backwardQuery = new BackwardQuery(node.stmt(), new Val(ifr.getBase(), icfg().getMethodOf(as)));
 			backwardSolverAtFieldWrite.put(as, sourceQuery);
-			addBackwardQuery(backwardQuery, new WitnessListener<Statement, Val>() {
+			addBackwardQuery(backwardQuery, new EmptyStackWitnessListener<Statement, Val>() {
 				@Override
 				public void witnessFound(Node<Statement, Val> allocation) {
 					if(activeAllocationSiteAtFieldRead.put(as, allocation)){
@@ -123,6 +123,7 @@ public abstract class Boomerang {
 							injectBackwardAlias(alias, as, new Val(ifr.getBase(), icfg().getMethodOf(as)), new Field(ifr.getField()), backwardQuery);
 						}
 					}
+					System.out.println(allocation);
 				}
 			});
 		}
@@ -134,7 +135,7 @@ public abstract class Boomerang {
 			final AssignStmt as, final Query sourceQuery) {
 		if(node.fact().value().equals(as.getRightOp())){
 			BackwardQuery backwardQuery = new BackwardQuery(node.stmt(), new Val(ifr.getBase(), icfg().getMethodOf(as)));
-			addBackwardQuery(backwardQuery,new WitnessListener<Statement, Val>() {
+			addBackwardQuery(backwardQuery,new EmptyStackWitnessListener<Statement, Val>() {
 				@Override
 				public void witnessFound(Node<Statement, Val> alloc) {
 					if(activeAllocationSiteAtFieldWrite.put(as, alloc)){
@@ -150,7 +151,7 @@ public abstract class Boomerang {
 		addAllocationSite(node, ifr,as, sourceQuery);
 	}
 	private void addAllocationSite(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr, final AssignStmt as, final Query sourceQuery) {
-		queryToSolvers.getOrCreate(sourceQuery).synchedEmptyStackReachable(node.asNode(), new WitnessListener<Statement, Val>() {
+		queryToSolvers.getOrCreate(sourceQuery).synchedEmptyStackReachable(node.asNode(), new EmptyStackWitnessListener<Statement, Val>() {
 
 			@Override
 			public void witnessFound(Node<Statement, Val> alloc) {
@@ -196,7 +197,7 @@ public abstract class Boomerang {
 						allAllocationSiteAtFieldRead.put(new AllocAtStmt(alloc, fieldRead),node.asNode());
 					}
 				} else{
-					//TODO only do so, if we have an alias
+//					TODO only do so, if we have an alias
 //					System.out.println("NOT WITNESSS ALISAES FIELD " + t);
 //					System.out.println("asdasdINJECTION source" + node.asNode() + "\n \t at "+as + ifr);
 				}
@@ -238,7 +239,7 @@ public abstract class Boomerang {
 	protected void addForwardQuery(ForwardQuery query) {
 		forwardSolve(query);
 	}
-	public void addBackwardQuery(final BackwardQuery backwardQueryNode, WitnessListener<Statement, Val> listener) {
+	public void addBackwardQuery(final BackwardQuery backwardQueryNode, EmptyStackWitnessListener<Statement, Val> listener) {
 		backwardSolve(backwardQueryNode);
 		for(ForwardQuery fw : backwardToForwardQueries.get(backwardQueryNode)){
 			queryToSolvers.getOrCreate(fw).synchedEmptyStackReachable(backwardQueryNode.asNode(), listener);

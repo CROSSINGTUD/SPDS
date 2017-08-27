@@ -200,10 +200,40 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				new NormalRule<Stmt, INode<Fact>,Weight<Stmt>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt(),callingPDS.getOne()));
 	}
 
-	public void synchedEmptyStackReachable(final Node<Stmt,Fact> sourceNode, final WitnessListener<Stmt,Fact> listener){
-		registerListener(new SyncPDSUpdateListener<Stmt, Fact, Field>() {
+	public void synchedEmptyStackReachable(final Node<Stmt,Fact> sourceNode, final EmptyStackWitnessListener<Stmt,Fact> listener){
+		synchedReachable(sourceNode,new WitnessListener<Stmt, Fact, Field>() {
 			Multimap<Fact, Node<Stmt,Fact>> potentialFieldCandidate = HashMultimap.create();
 			Set<Fact> potentialCallCandidate = Sets.newHashSet();
+			@Override
+			public void fieldWitness(Transition<Field, INode<Node<Stmt, Fact>>> t) {
+				if(t.getTarget() instanceof GeneratedState)
+					return;
+				if(!t.getLabel().equals(emptyField()))
+					return;
+				Node<Stmt, Fact> targetFact = t.getTarget().fact();
+				if(!potentialFieldCandidate.put(targetFact.fact(),targetFact))
+					return;
+				if(potentialCallCandidate.contains(targetFact.fact())){
+					listener.witnessFound(targetFact);
+				}
+			}
+			@Override
+			public void callWitness(Transition<Stmt, INode<Fact>> t) {
+				if(t.getTarget() instanceof GeneratedState)
+					return;
+				Fact targetFact = t.getTarget().fact();
+				if(!potentialCallCandidate.add(targetFact))
+					return;
+				if(potentialFieldCandidate.containsKey(targetFact)){
+					for(Node<Stmt, Fact> w : potentialFieldCandidate.get(targetFact)){
+						listener.witnessFound(w);
+					}
+				}
+			}
+		});
+	}
+	public void synchedReachable(final Node<Stmt,Fact> sourceNode, final WitnessListener<Stmt,Fact,Field> listener){
+		registerListener(new SyncPDSUpdateListener<Stmt, Fact, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Stmt, Fact, Field> reachableNode) {
 				if(!reachableNode.asNode().equals(sourceNode))
@@ -211,19 +241,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, Weight<Field>>() {
 					@Override
 					public void onAddedTransition(Transition<Field, INode<Node<Stmt, Fact>>> t) {
-						if(t.getStart() instanceof GeneratedState || t.getTarget() instanceof GeneratedState)
+						if(t.getStart() instanceof GeneratedState)
 							return;
 						if(!t.getStart().fact().equals(sourceNode))
 							return;
-						if(!t.getLabel().equals(emptyField()))
-							return;
-						Node<Stmt, Fact> targetFact = t.getTarget().fact();
-						if(!potentialFieldCandidate.put(targetFact.fact(),targetFact))
-							return;
-						if(potentialCallCandidate.contains(targetFact.fact())){
-							
-							listener.witnessFound(targetFact);
-						}
+						listener.fieldWitness(t);
 					}
 
 					@Override
@@ -233,21 +255,13 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				callAutomaton.registerListener(new WPAUpdateListener<Stmt, INode<Fact>, Weight<Stmt>>() {
 					@Override
 					public void onAddedTransition(Transition<Stmt, INode<Fact>> t) {
-						if(t.getStart() instanceof GeneratedState || t.getTarget() instanceof GeneratedState)
+						if(t.getStart() instanceof GeneratedState)
 							return;
 						if(!t.getStart().fact().equals(sourceNode.fact()))
 							return;
 						if(!t.getLabel().equals(sourceNode.stmt()))
 							return;
-						Fact targetFact = t.getTarget().fact();
-						if(!potentialCallCandidate.add(targetFact))
-							return;
-						if(potentialFieldCandidate.containsKey(targetFact)){
-							for(Node<Stmt, Fact> w : potentialFieldCandidate.get(targetFact)){
-								System.err.println(t +" " + w);
-								listener.witnessFound(w);
-							}
-						}
+						listener.callWitness(t);
 					}
 
 					@Override
@@ -258,7 +272,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			}
 		});
 	}
-	
 	private boolean addNormalFieldFlow(Node<Stmt,Fact> curr, Node<Stmt, Fact> succ) {
 		if (succ instanceof ExclusionNode) {
 			ExclusionNode<Stmt, Fact, Field> exNode = (ExclusionNode) succ;

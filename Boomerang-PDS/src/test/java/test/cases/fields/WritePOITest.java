@@ -38,7 +38,8 @@ public class WritePOITest extends AbstractBoomerangTest {
 		Level2 level2 = new Level2();
 		base.l2 = level2;
 		level2.a = query;
-		Alloc samesame = base.l2.a;
+		Level2 intermediat = base.l2;
+		Alloc samesame = intermediat.a;
 		queryFor(samesame);
 	}
 	

@@ -31,7 +31,7 @@ import soot.jimple.NewExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
-import sync.pds.solver.WitnessListener;
+import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -150,7 +150,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 			};
 			if(query instanceof BackwardQuery){
-				solver.addBackwardQuery((BackwardQuery)query,new WitnessListener<Statement, Val>() {
+				solver.addBackwardQuery((BackwardQuery)query,new EmptyStackWitnessListener<Statement, Val>() {
 					@Override
 					public void witnessFound(Node<Statement, Val> allocation) {
 						results.add(allocation);	
