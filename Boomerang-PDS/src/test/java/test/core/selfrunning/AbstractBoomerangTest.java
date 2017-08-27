@@ -172,7 +172,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 			}
 			solver.debugOutput();
-			System.out.println(solver.getForwardReachableStates());
 			
 		}
 		return results;

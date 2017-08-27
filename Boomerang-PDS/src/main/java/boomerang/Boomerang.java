@@ -47,7 +47,7 @@ public abstract class Boomerang {
 			if(key instanceof BackwardQuery)
 				return createBackwardSolver((BackwardQuery) key);
 			else 
-				return createForwardSolver(key);
+				return createForwardSolver((ForwardQuery)key);
 		}
 	};
 	private BackwardsInterproceduralCFG bwicfg;
@@ -58,6 +58,7 @@ public abstract class Boomerang {
 	private Collection<ForwardQuery> forwardQueries = Sets.newHashSet();
 	private Collection<BackwardQuery> backwardQueries = Sets.newHashSet();
 	private Multimap<BackwardQuery, ForwardQuery> backwardToForwardQueries = HashMultimap.create();
+	private Multimap<AssignStmt, BackwardQuery> backwardSolverAtFieldWrite = HashMultimap.create();
 	
 	protected AbstractBoomerangSolver createBackwardSolver(final BackwardQuery key) {
 		BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg());
@@ -77,7 +78,7 @@ public abstract class Boomerang {
 						
 						if(as.getRightOp() instanceof InstanceFieldRef){
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
-							handleFieldRead(node,ifr,as);
+							handleFieldRead(node,ifr,as,key);
 						}
 					}
 				}
@@ -85,7 +86,7 @@ public abstract class Boomerang {
 		});
 		return solver;
 	}
-	protected AbstractBoomerangSolver createForwardSolver(final Query sourceQuery) {
+	protected AbstractBoomerangSolver createForwardSolver(final ForwardQuery sourceQuery) {
 		ForwardBoomerangSolver solver = new ForwardBoomerangSolver(icfg());
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
@@ -109,14 +110,15 @@ public abstract class Boomerang {
 		});
 		return solver;
 	}
-	protected void handleFieldRead(WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr, final AssignStmt as) {
+	protected void handleFieldRead(WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr, final AssignStmt as, BackwardQuery sourceQuery) {
 		if(node.fact().value().equals(as.getLeftOp())){
 			final BackwardQuery backwardQuery = new BackwardQuery(node.stmt(), new Val(ifr.getBase(), icfg().getMethodOf(as)));
+			backwardSolverAtFieldWrite.put(as, sourceQuery);
 			addBackwardQuery(backwardQuery, new WitnessListener<Statement, Val>() {
 				@Override
 				public void witnessFound(Node<Statement, Val> allocation) {
 					if(activeAllocationSiteAtFieldRead.put(as, allocation)){
-						Collection<Node<Statement, Val>> aliases = allAllocationSiteAtFieldRead.removeAll(new AllocAtStmt(allocation,as));
+						Collection<Node<Statement, Val>> aliases = allAllocationSiteAtFieldRead.get(new AllocAtStmt(allocation,as));
 						for(Node<Statement, Val> alias : aliases){
 							injectBackwardAlias(alias, as, new Val(ifr.getBase(), icfg().getMethodOf(as)), new Field(ifr.getField()), backwardQuery);
 						}
@@ -136,11 +138,12 @@ public abstract class Boomerang {
 				@Override
 				public void witnessFound(Node<Statement, Val> alloc) {
 					if(activeAllocationSiteAtFieldWrite.put(as, alloc)){
-						Collection<Node<Statement, Val>> aliases = allAllocationSiteAtFieldWrite.removeAll(new AllocAtStmt(alloc,as));
+						Collection<Node<Statement, Val>> aliases = allAllocationSiteAtFieldWrite.get(new AllocAtStmt(alloc,as));
 						for(Node<Statement, Val> alias : aliases){
 							injectForwardAlias(alias, as, new Val(ifr.getBase(), icfg().getMethodOf(as)),  new Field(ifr.getField()), sourceQuery);
 						}
 					}
+					
 				}
 			});
 		}
@@ -170,7 +173,7 @@ public abstract class Boomerang {
 //			forwardSolver.injectFieldRule(new PushRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(source, Field.wildcard(), alias,  new Field(ifr.getField()), Field.wildcard(),one));
 //		}
 //	}
-	private void attachHandlerFieldRead(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr, final AssignStmt fieldRead, Query sourceQuery) {
+	private void attachHandlerFieldRead(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr, final AssignStmt fieldRead, ForwardQuery sourceQuery) {
 		queryToSolvers.getOrCreate(sourceQuery).addFieldAutomatonListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 
 			@Override
@@ -180,12 +183,14 @@ public abstract class Boomerang {
 				if(!t.getStart().fact().equals(node.asNode()))
 					return;
 				if(!(t.getTarget() instanceof GeneratedState)){
-					Node<Statement,Val> target = t.getTarget().fact();
+					Node<Statement, Val> target = t.getTarget().fact();
 					Node<Statement, Val> alloc = new Node<Statement,Val>(target.stmt(),target.fact());
 
 					if(activeAllocationSiteAtFieldRead.get(fieldRead).contains(target)){
 						//TODO where to get the backward query for that requires this flow.
-//						injectBackwardAlias(node.asNode(), fieldRead, new Val(ifr.getBase(), icfg().getMethodOf(fieldRead)), new Field(ifr.getField()));
+						for(BackwardQuery backwardSourceQuery : backwardSolverAtFieldWrite.get(fieldRead)){
+							injectBackwardAlias(node.asNode(), fieldRead, new Val(ifr.getBase(), icfg().getMethodOf(fieldRead)), new Field(ifr.getField()), backwardSourceQuery);
+						}
 					} else{
 						System.out.println("Queuing alloc: " + alloc + fieldRead);
 						allAllocationSiteAtFieldRead.put(new AllocAtStmt(alloc, fieldRead),node.asNode());

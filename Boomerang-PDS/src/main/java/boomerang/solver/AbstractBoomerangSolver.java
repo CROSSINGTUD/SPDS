@@ -55,7 +55,6 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		Optional<Stmt> unit = stmt.getUnit();
 		if(unit.isPresent()){
 			Stmt curr = unit.get();
-			System.out.println(curr);
 			Val value = node.fact();
 			SootMethod method = icfg.getMethodOf(curr);
 			if(killFlow(method, curr, value)){
