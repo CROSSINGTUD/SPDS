@@ -11,6 +11,7 @@ import com.google.common.collect.Multimap;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.poi.AbstractPOI;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
@@ -25,8 +26,8 @@ import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.EmptyStackWitnessListener;
+import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
@@ -39,46 +40,49 @@ import wpds.impl.Weight;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-//	private final ForwardBoomerangSolver forwardSolver = new ForwardBoomerangSolver(icfg());
-//	private final BackwardBoomerangSolver backwardSolver = new BackwardBoomerangSolver(bwicfg());
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
 		@Override
 		protected AbstractBoomerangSolver createItem(Query key) {
-			if(key instanceof BackwardQuery)
+			if (key instanceof BackwardQuery)
 				return createBackwardSolver((BackwardQuery) key);
-			else 
-				return createForwardSolver((ForwardQuery)key);
+			else
+				return createForwardSolver((ForwardQuery) key);
 		}
 	};
 	private BackwardsInterproceduralCFG bwicfg;
-	private Multimap<AllocAtStmt, Node<Statement,Val>> allAllocationSiteAtFieldWrite = HashMultimap.create(); 
-	private Multimap<Stmt,Node<Statement,Val>> activeAllocationSiteAtFieldWrite = HashMultimap.create();
-	private Multimap<AllocAtStmt, Node<Statement,Val>> allAllocationSiteAtFieldRead = HashMultimap.create(); 
-	private Multimap<Stmt,Node<Statement,Val>> activeAllocationSiteAtFieldRead = HashMultimap.create();
+	private Multimap<AllocAtStmt, Node<Statement, Val>> allAllocationSiteAtFieldRead = HashMultimap.create();
+	private Multimap<Stmt, Node<Statement, Val>> activeAllocationSiteAtFieldRead = HashMultimap.create();
 	private Collection<ForwardQuery> forwardQueries = Sets.newHashSet();
 	private Collection<BackwardQuery> backwardQueries = Sets.newHashSet();
 	private Multimap<BackwardQuery, ForwardQuery> backwardToForwardQueries = HashMultimap.create();
 	private Multimap<AssignStmt, BackwardQuery> backwardSolverAtFieldWrite = HashMultimap.create();
-	
+	private DefaultValueMap<FieldWritePOI, FieldWritePOI> fieldWrites = new DefaultValueMap<FieldWritePOI, FieldWritePOI>() {
+		@Override
+		protected FieldWritePOI createItem(FieldWritePOI key) {
+			return key;
+		}
+	};
+
 	protected AbstractBoomerangSolver createBackwardSolver(final BackwardQuery key) {
 		BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg());
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
 				Optional<Stmt> optUnit = node.stmt().getUnit();
-				if(optUnit.isPresent()){
+				if (optUnit.isPresent()) {
 					Stmt stmt = optUnit.get();
-					if(stmt instanceof AssignStmt){
+					if (stmt instanceof AssignStmt) {
 						AssignStmt as = (AssignStmt) stmt;
-						if(node.fact().value().equals(as.getLeftOp()) && isAllocationVal(as.getRightOp())){
-							ForwardQuery forwardQuery = new ForwardQuery(node.stmt(), new Val(as.getLeftOp(), icfg().getMethodOf(stmt)));
+						if (node.fact().value().equals(as.getLeftOp()) && isAllocationVal(as.getRightOp())) {
+							ForwardQuery forwardQuery = new ForwardQuery(node.stmt(),
+									new Val(as.getLeftOp(), icfg().getMethodOf(stmt)));
 							backwardToForwardQueries.put(key, forwardQuery);
 							addForwardQuery(forwardQuery);
 						}
-						
-						if(as.getRightOp() instanceof InstanceFieldRef){
+
+						if (as.getRightOp() instanceof InstanceFieldRef) {
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
-							handleFieldRead(node,ifr,as,key);
+							handleFieldRead(node, ifr, as, key);
 						}
 					}
 				}
@@ -86,21 +90,22 @@ public abstract class Boomerang {
 		});
 		return solver;
 	}
+
 	protected AbstractBoomerangSolver createForwardSolver(final ForwardQuery sourceQuery) {
 		ForwardBoomerangSolver solver = new ForwardBoomerangSolver(icfg());
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
 				Optional<Stmt> optUnit = node.stmt().getUnit();
-				if(optUnit.isPresent()){
+				if (optUnit.isPresent()) {
 					Stmt stmt = optUnit.get();
-					if(stmt instanceof AssignStmt){
+					if (stmt instanceof AssignStmt) {
 						AssignStmt as = (AssignStmt) stmt;
-						if(as.getLeftOp() instanceof InstanceFieldRef){
+						if (as.getLeftOp() instanceof InstanceFieldRef) {
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
-							handleFieldWrite(node,ifr,as, sourceQuery);
+							handleFieldWrite(node, ifr, as, sourceQuery);
 						}
-						if(as.getRightOp() instanceof InstanceFieldRef){
+						if (as.getRightOp() instanceof InstanceFieldRef) {
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
 							attachHandlerFieldRead(node, ifr, as, sourceQuery);
 						}
@@ -110,138 +115,156 @@ public abstract class Boomerang {
 		});
 		return solver;
 	}
-	protected void handleFieldRead(WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr, final AssignStmt as, BackwardQuery sourceQuery) {
-		if(node.fact().value().equals(as.getLeftOp())){
-			final BackwardQuery backwardQuery = new BackwardQuery(node.stmt(), new Val(ifr.getBase(), icfg().getMethodOf(as)));
+
+	protected void handleFieldRead(WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
+			final AssignStmt as, BackwardQuery sourceQuery) {
+		if (node.fact().value().equals(as.getLeftOp())) {
+			final BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
+					new Val(ifr.getBase(), icfg().getMethodOf(as)));
 			backwardSolverAtFieldWrite.put(as, sourceQuery);
 			addBackwardQuery(backwardQuery, new EmptyStackWitnessListener<Statement, Val>() {
 				@Override
 				public void witnessFound(Node<Statement, Val> allocation) {
-					if(activeAllocationSiteAtFieldRead.put(as, allocation)){
-						Collection<Node<Statement, Val>> aliases = allAllocationSiteAtFieldRead.get(new AllocAtStmt(allocation,as));
-						for(Node<Statement, Val> alias : aliases){
-							injectBackwardAlias(alias, as, new Val(ifr.getBase(), icfg().getMethodOf(as)), new Field(ifr.getField()), backwardQuery);
+					if (activeAllocationSiteAtFieldRead.put(as, allocation)) {
+						Collection<Node<Statement, Val>> aliases = allAllocationSiteAtFieldRead
+								.get(new AllocAtStmt(allocation, as));
+						for (Node<Statement, Val> alias : aliases) {
+							injectBackwardAlias(alias, as, new Val(ifr.getBase(), icfg().getMethodOf(as)),
+									new Field(ifr.getField()), backwardQuery);
 						}
 					}
-					System.out.println(allocation);
 				}
 			});
 		}
 	}
+
 	public static boolean isAllocationVal(Value val) {
 		return val instanceof NullConstant || val instanceof NewExpr;
 	}
+
 	protected void handleFieldWrite(WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
-			final AssignStmt as, final Query sourceQuery) {
-		if(node.fact().value().equals(as.getRightOp())){
-			BackwardQuery backwardQuery = new BackwardQuery(node.stmt(), new Val(ifr.getBase(), icfg().getMethodOf(as)));
-			addBackwardQuery(backwardQuery,new EmptyStackWitnessListener<Statement, Val>() {
+			final AssignStmt as, final ForwardQuery sourceQuery) {
+		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
+				new Val(ifr.getBase(), icfg().getMethodOf(as)));
+		Field field = new Field(ifr.getField());
+		if (node.fact().value().equals(as.getRightOp())) {
+			addBackwardQuery(backwardQuery, new EmptyStackWitnessListener<Statement, Val>() {
 				@Override
 				public void witnessFound(Node<Statement, Val> alloc) {
-					if(activeAllocationSiteAtFieldWrite.put(as, alloc)){
-						Collection<Node<Statement, Val>> aliases = allAllocationSiteAtFieldWrite.get(new AllocAtStmt(alloc,as));
-						for(Node<Statement, Val> alias : aliases){
-							injectForwardAlias(alias, as, new Val(ifr.getBase(), icfg().getMethodOf(as)),  new Field(ifr.getField()), sourceQuery);
-						}
-					}
-					
 				}
 			});
+			fieldWrites.getOrCreate(new FieldWritePOI(backwardQuery.asNode(), field, as)).addFlowAllocation(sourceQuery);
 		}
-		addAllocationSite(node, ifr,as, sourceQuery);
+		if (node.fact().value().equals(ifr.getBase())) {
+			fieldWrites.getOrCreate(new FieldWritePOI(backwardQuery.asNode(),field,as)).addBaseAllocation(sourceQuery);
+		}
 	}
-	private void addAllocationSite(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr, final AssignStmt as, final Query sourceQuery) {
-		queryToSolvers.getOrCreate(sourceQuery).synchedEmptyStackReachable(node.asNode(), new EmptyStackWitnessListener<Statement, Val>() {
 
-			@Override
-			public void witnessFound(Node<Statement, Val> alloc) {
-				if(activeAllocationSiteAtFieldWrite.get(as).contains(alloc)){
-					injectForwardAlias(node.asNode(), as, new Val(ifr.getBase(), icfg().getMethodOf(as)), new Field(ifr.getField()), sourceQuery);
-				} else{
-					allAllocationSiteAtFieldWrite.put(new AllocAtStmt(alloc, as),node.asNode());
-				}
-			}
-		});
+
+
+	private void injectAliasWithStack(INode<Node<Statement, Val>> alias, AssignStmt as, Field label,
+			Query sourceQuery) {
+		// System.out.println("INJECTION " + alias + as + ifr);
+		for (Unit succ : icfg().getSuccsOf(as)) {
+			// TODO Why don't we need succ here?
+			Node<Statement, Val> sourceNode = new Node<Statement, Val>(new Statement(as, icfg().getMethodOf(as)),
+					new Val(as.getRightOp(), icfg().getMethodOf(as)));
+			SetDomain<Field, Statement, Val> one = SetDomain.<Field, Statement, Val> one();
+			INode<Node<Statement, Val>> source = new SingleNode<Node<Statement, Val>>(sourceNode);
+			Node<Statement, Val> targetNode = new Node<Statement, Val>(
+					new Statement((Stmt) succ, icfg().getMethodOf(as)), alias.fact().fact());
+			INode<Node<Statement, Val>> target = new SingleNode<Node<Statement, Val>>(targetNode);
+			queryToSolvers.getOrCreate(sourceQuery)
+					.injectFieldRule(new PushRule<Field, INode<Node<Statement, Val>>, Weight<Field>>(source,
+							Field.wildcard(), alias, label, Field.wildcard(), one));
+		}
 	}
-//	private void injectAliasWithStack(INode<Node<Statement,Val>> alias, AssignStmt as,
-//			Field label, InstanceFieldRef ifr) {
-////		System.out.println("INJECTION " + alias + as + ifr);
-//		for(Unit succ : icfg().getSuccsOf(as)){	
-//			//TODO Why don't we need succ here?
-//			Node<Statement,Val> sourceNode = new Node<Statement,Val>(new Statement(as, icfg().getMethodOf(as)),  new Val(as.getRightOp(), icfg().getMethodOf(as)));
-//			SetDomain<Field, Statement, Val> one = SetDomain.<Field,Statement,Val>one();
-//			INode<Node<Statement,Val>> source = new SingleNode<Node<Statement,Val>>(sourceNode);
-//			forwardSolver.injectFieldRule(new PushRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(source, Field.wildcard(), alias,  new Field(ifr.getField()), Field.wildcard(),one));
-//		}
-//	}
-	private void attachHandlerFieldRead(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr, final AssignStmt fieldRead, ForwardQuery sourceQuery) {
-		queryToSolvers.getOrCreate(sourceQuery).addFieldAutomatonListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 
-			@Override
-			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-				if(t.getStart() instanceof GeneratedState)
-					return;
-				if(!t.getStart().fact().equals(node.asNode()))
-					return;
-				if(!(t.getTarget() instanceof GeneratedState)){
-					Node<Statement, Val> target = t.getTarget().fact();
-					Node<Statement, Val> alloc = new Node<Statement,Val>(target.stmt(),target.fact());
+	private void attachHandlerFieldRead(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
+			final AssignStmt fieldRead, ForwardQuery sourceQuery) {
+		queryToSolvers.getOrCreate(sourceQuery)
+				.addFieldAutomatonListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, Weight<Field>>() {
 
-					if(activeAllocationSiteAtFieldRead.get(fieldRead).contains(target)){
-						//TODO where to get the backward query for that requires this flow.
-						for(BackwardQuery backwardSourceQuery : backwardSolverAtFieldWrite.get(fieldRead)){
-							injectBackwardAlias(node.asNode(), fieldRead, new Val(ifr.getBase(), icfg().getMethodOf(fieldRead)), new Field(ifr.getField()), backwardSourceQuery);
+					@Override
+					public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+						if (t.getStart() instanceof GeneratedState)
+							return;
+						if (!t.getStart().fact().equals(node.asNode()))
+							return;
+						if (!(t.getTarget() instanceof GeneratedState)) {
+							Node<Statement, Val> target = t.getTarget().fact();
+							Node<Statement, Val> alloc = new Node<Statement, Val>(target.stmt(), target.fact());
+
+							if (activeAllocationSiteAtFieldRead.get(fieldRead).contains(target)) {
+								// TODO where to get the backward query for that
+								// requires this flow.
+								for (BackwardQuery backwardSourceQuery : backwardSolverAtFieldWrite.get(fieldRead)) {
+									injectBackwardAlias(node.asNode(), fieldRead,
+											new Val(ifr.getBase(), icfg().getMethodOf(fieldRead)),
+											new Field(ifr.getField()), backwardSourceQuery);
+								}
+							} else {
+								System.out.println("Queuing alloc: " + alloc + fieldRead);
+								allAllocationSiteAtFieldRead.put(new AllocAtStmt(alloc, fieldRead), node.asNode());
+							}
+						} else {
+							// TODO only do so, if we have an alias
+							// System.out.println("NOT WITNESSS ALISAES FIELD "
+							// + t);
+							// System.out.println("asdasdINJECTION source" +
+							// node.asNode() + "\n \t at "+as + ifr);
 						}
-					} else{
-						System.out.println("Queuing alloc: " + alloc + fieldRead);
-						allAllocationSiteAtFieldRead.put(new AllocAtStmt(alloc, fieldRead),node.asNode());
 					}
-				} else{
-//					TODO only do so, if we have an alias
-//					System.out.println("NOT WITNESSS ALISAES FIELD " + t);
-//					System.out.println("asdasdINJECTION source" + node.asNode() + "\n \t at "+as + ifr);
-				}
-			}
 
-			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-				// TODO Auto-generated method stub
-				
-			}
-		});
+					@Override
+					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+						// TODO Auto-generated method stub
+
+					}
+				});
 	}
+
 	private void injectForwardAlias(Node<Statement, Val> alias, AssignStmt as, Val base, Field ifr, Query sourceQuery) {
-		if(alias.fact().equals(base))
+		if (alias.fact().equals(base))
 			return;
 		System.out.println("Injecting forward alias " + alias + ifr);
-		for(Unit succ : icfg().getSuccsOf(as)){
-			Node<Statement,Val> sourceNode = new Node<Statement,Val>(new Statement(as, icfg().getMethodOf(as)),  new Val(as.getRightOp(),icfg().getMethodOf(as)));
-			Node<Statement,Val>  targetNode = new Node<Statement,Val>(new Statement((Stmt) succ, icfg().getMethodOf(succ)), alias.fact());
+		for (Unit succ : icfg().getSuccsOf(as)) {
+			Node<Statement, Val> sourceNode = new Node<Statement, Val>(new Statement(as, icfg().getMethodOf(as)),
+					new Val(as.getRightOp(), icfg().getMethodOf(as)));
+			Node<Statement, Val> targetNode = new Node<Statement, Val>(
+					new Statement((Stmt) succ, icfg().getMethodOf(succ)), alias.fact());
 			queryToSolvers.getOrCreate(sourceQuery).injectFieldRule(sourceNode, ifr, targetNode);
 		}
 	}
-	
-	private void injectBackwardAlias(Node<Statement, Val> alias, AssignStmt as, Val base, Field ifr, BackwardQuery backwardQuery) {
-		if(alias.fact().equals(base))
+
+	private void injectBackwardAlias(Node<Statement, Val> alias, AssignStmt as, Val base, Field ifr,
+			BackwardQuery backwardQuery) {
+		if (alias.fact().equals(base))
 			return;
 		System.out.println("Injecting backward alias " + alias + ifr);
-		for(Unit succ : bwicfg().getSuccsOf(as)){
-			Node<Statement,Val> source = new Node<Statement,Val>(new Statement(as, icfg().getMethodOf(as)),  new Val(as.getLeftOp(),icfg().getMethodOf(as)));
-			Node<Statement,Val>  target = new Node<Statement,Val>(new Statement((Stmt) succ, icfg().getMethodOf(succ)), alias.fact());
-			queryToSolvers.getOrCreate(backwardQuery).injectFieldRule(source,  ifr,target);
+		for (Unit succ : bwicfg().getSuccsOf(as)) {
+			Node<Statement, Val> source = new Node<Statement, Val>(new Statement(as, icfg().getMethodOf(as)),
+					new Val(as.getLeftOp(), icfg().getMethodOf(as)));
+			Node<Statement, Val> target = new Node<Statement, Val>(new Statement((Stmt) succ, icfg().getMethodOf(succ)),
+					alias.fact());
+			queryToSolvers.getOrCreate(backwardQuery).injectFieldRule(source, ifr, target);
 		}
 	}
+
 	private BiDiInterproceduralCFG<Unit, SootMethod> bwicfg() {
-		if(bwicfg == null)
+		if (bwicfg == null)
 			bwicfg = new BackwardsInterproceduralCFG(icfg());
 		return bwicfg;
 	}
+
 	protected void addForwardQuery(ForwardQuery query) {
 		forwardSolve(query);
 	}
-	public void addBackwardQuery(final BackwardQuery backwardQueryNode, EmptyStackWitnessListener<Statement, Val> listener) {
+
+	public void addBackwardQuery(final BackwardQuery backwardQueryNode,
+			EmptyStackWitnessListener<Statement, Val> listener) {
 		backwardSolve(backwardQueryNode);
-		for(ForwardQuery fw : backwardToForwardQueries.get(backwardQueryNode)){
+		for (ForwardQuery fw : backwardToForwardQueries.get(backwardQueryNode)) {
 			queryToSolvers.getOrCreate(fw).synchedEmptyStackReachable(backwardQueryNode.asNode(), listener);
 		}
 	}
@@ -260,9 +283,10 @@ public abstract class Boomerang {
 		backwardQueries.add(query);
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
 		AbstractBoomerangSolver solver = queryToSolvers.getOrCreate(query);
-		if(unit.isPresent()){
-			for(Unit succ : new BackwardsInterproceduralCFG(icfg()).getSuccsOf(unit.get())){
-				solver.solve(query.asNode(), new Node<Statement,Val>(new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact()));
+		if (unit.isPresent()) {
+			for (Unit succ : new BackwardsInterproceduralCFG(icfg()).getSuccsOf(unit.get())) {
+				solver.solve(query.asNode(), new Node<Statement, Val>(
+						new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact()));
 			}
 		}
 	}
@@ -272,49 +296,100 @@ public abstract class Boomerang {
 		System.out.println("Forward solving query: " + query);
 		forwardQueries.add(query);
 		AbstractBoomerangSolver solver = queryToSolvers.getOrCreate(query);
-		if(unit.isPresent()){
-			for(Unit succ : icfg().getSuccsOf(unit.get())){
-				Node<Statement, Val> source = new Node<Statement,Val>(new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact());
+		if (unit.isPresent()) {
+			for (Unit succ : icfg().getSuccsOf(unit.get())) {
+				Node<Statement, Val> source = new Node<Statement, Val>(
+						new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact());
 				solver.solve(query.asNode(), source);
 			}
 		}
-		solver.getFieldAutomaton().addFinalState(new SingleNode<Node<Statement,Val>>(query.asNode()));
+		solver.getFieldAutomaton().addFinalState(new SingleNode<Node<Statement, Val>>(query.asNode()));
 
+	}
+
+	private class FieldWritePOI extends AbstractPOI<Statement, Val, Field> {
+
+		private Field field;
+		private AssignStmt fieldWriteStatement;
+
+		public FieldWritePOI(Node<Statement,Val> node, Field field, AssignStmt fieldWriteStatement) {
+			super(node);
+			this.field = field;
+			this.fieldWriteStatement = fieldWriteStatement;
+		}
+
+		@Override
+		public void execute(final ForwardQuery baseAllocation, final ForwardQuery flowAllocation) {
+			System.out.println(baseAllocation + " +" +  flowAllocation + "   " );
+			System.out.println(getNode());
+			queryToSolvers.get(baseAllocation).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+
+				@Override
+				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+					if(t.getTarget() instanceof GeneratedState){
+//						injectAliasWithStack(t.getTarget(), fieldWriteStatement, field, flowAllocation);
+						System.out.println("HERE" + t);
+						return;
+					}
+					if(t.getTarget().fact().equals(baseAllocation.asNode()) && t.getLabel().equals(Field.empty())){
+						injectForwardAlias(t.getStart().fact(),fieldWriteStatement, getNode().fact(), field, flowAllocation);
+					}
+//					System.out.println(t);	
+				}
+
+				@Override
+				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+				}
+			});
+		}
 	}
 
 	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
 
 	public Collection<? extends Node<Statement, Val>> getForwardReachableStates() {
-		Set<Node<Statement,Val>> res = Sets.newHashSet();
-		for(Query q : queryToSolvers.keySet()){
-			if(q instanceof ForwardQuery)
+		Set<Node<Statement, Val>> res = Sets.newHashSet();
+		for (Query q : queryToSolvers.keySet()) {
+			if (q instanceof ForwardQuery)
 				res.addAll(queryToSolvers.getOrCreate(q).getReachedStates());
 		}
 		return res;
 	}
-	
-	public void debugOutput(){
-//		backwardSolver.debugOutput();
-//		forwardSolver.debugOutput();
-//		for(ForwardQuery fq : forwardQueries){
-//			for(Node<Statement, Val> bq : forwardSolver.getReachedStates()){
-//				IRegEx<Field> extractLanguage = forwardSolver.getFieldAutomaton().extractLanguage(new SingleNode<Node<Statement,Val>>(bq),new SingleNode<Node<Statement,Val>>(fq.asNode()));
-//				System.out.println(bq + " "+ fq +" "+ extractLanguage);
-//			}
-//		}
-//		for(final BackwardQuery bq : backwardQueries){
-//			forwardSolver.synchedEmptyStackReachable(bq.asNode(), new WitnessListener<Statement, Val>() {
-//				
-//				@Override
-//				public void witnessFound(Node<Statement, Val> targetFact) {
-//					System.out.println(bq + " is allocated at " +targetFact);
-//				}
-//			});
-//		}
 
-//		for(ForwardQuery fq : forwardQueries){
-//			System.out.println(fq);
-//			System.out.println(Joiner.on("\n\t").join(forwardSolver.getFieldAutomaton().dfs(new SingleNode<Node<Statement,Val>>(fq.asNode()))));
-//		}
+	public void debugOutput() {
+		for (Query q : queryToSolvers.keySet()) {
+			if (q instanceof ForwardQuery) {
+				System.out.println("========================");
+				System.out.println(q);
+				System.out.println("========================");
+				 queryToSolvers.getOrCreate(q).debugOutput();
+			}
+		}
+		// backwardSolver.debugOutput();
+		// forwardSolver.debugOutput();
+		// for(ForwardQuery fq : forwardQueries){
+		// for(Node<Statement, Val> bq : forwardSolver.getReachedStates()){
+		// IRegEx<Field> extractLanguage =
+		// forwardSolver.getFieldAutomaton().extractLanguage(new
+		// SingleNode<Node<Statement,Val>>(bq),new
+		// SingleNode<Node<Statement,Val>>(fq.asNode()));
+		// System.out.println(bq + " "+ fq +" "+ extractLanguage);
+		// }
+		// }
+		// for(final BackwardQuery bq : backwardQueries){
+		// forwardSolver.synchedEmptyStackReachable(bq.asNode(), new
+		// WitnessListener<Statement, Val>() {
+		//
+		// @Override
+		// public void witnessFound(Node<Statement, Val> targetFact) {
+		// System.out.println(bq + " is allocated at " +targetFact);
+		// }
+		// });
+		// }
+
+		// for(ForwardQuery fq : forwardQueries){
+		// System.out.println(fq);
+		// System.out.println(Joiner.on("\n\t").join(forwardSolver.getFieldAutomaton().dfs(new
+		// SingleNode<Node<Statement,Val>>(fq.asNode()))));
+		// }
 	}
 }

@@ -3,32 +3,25 @@ package boomerang.solver;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
 
 import boomerang.jimple.Field;
 import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
-import soot.Local;
-import soot.Scene;
 import soot.SootMethod;
-import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.AssignStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
-import soot.jimple.Jimple;
 import soot.jimple.Stmt;
-import soot.jimple.internal.JimpleLocal;
 import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -40,9 +33,6 @@ import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, Val, Field>{
 
-	private static Local returnVal;
-	private static Value thisVal;
-	private static Map<Integer,Value> parameterVals = Maps.newHashMap();
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	private boolean INTERPROCEDURAL = true;
 	
