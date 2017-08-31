@@ -21,6 +21,15 @@ public class SummaryTest extends AbstractBoomerangTest{
 		queryFor(query);
 	}
 	
+
+	@Test
+	public void simpleNoReuse(){
+		A x = new A();
+		x.f = new B();
+		B query = load(x);
+		queryFor(query);
+	}
+	
 	private B load(A x) {
 		return x.f;
 	}

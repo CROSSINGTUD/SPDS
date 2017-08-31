@@ -115,6 +115,11 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	
 	private boolean valueUsedInStatement(SootMethod method, Stmt u, InvokeExpr invokeExpr, Val value) {
 		//TODO what about assignment?
+		if(u instanceof AssignStmt && isBackward()){
+			AssignStmt assignStmt = (AssignStmt) u;
+			if(assignStmt.getLeftOp().equals(value.value()))
+				return true;
+		}
 		if(invokeExpr instanceof InstanceInvokeExpr){
 			InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
 			if(iie.getBase().equals(value.value()))
@@ -127,6 +132,11 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		}
 		return false;
 	}
+	
+	private boolean isBackward(){
+		return this instanceof BackwardBoomerangSolver;
+	}
+	
 	protected abstract Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite, Stmt returnSite);
 
 	private Collection<? extends State> returnFlow(SootMethod method, Stmt curr, Val value) {
