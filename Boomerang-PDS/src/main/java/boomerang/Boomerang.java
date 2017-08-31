@@ -144,8 +144,9 @@ public abstract class Boomerang {
 
 	protected void handleFieldWrite(WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
 			final AssignStmt as, final ForwardQuery sourceQuery) {
+		Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
-				new Val(ifr.getBase(), icfg().getMethodOf(as)));
+				base);
 		Field field = new Field(ifr.getField());
 		if (node.fact().value().equals(as.getRightOp())) {
 			addBackwardQuery(backwardQuery, new EmptyStackWitnessListener<Statement, Val>() {
@@ -153,30 +154,39 @@ public abstract class Boomerang {
 				public void witnessFound(Node<Statement, Val> alloc) {
 				}
 			});
-			fieldWrites.getOrCreate(new FieldWritePOI(backwardQuery.asNode(), field, as)).addFlowAllocation(sourceQuery);
+			fieldWrites.getOrCreate(new FieldWritePOI(backwardQuery.asNode(), field, as, base)).addFlowAllocation(sourceQuery);
 		}
 		if (node.fact().value().equals(ifr.getBase())) {
-			fieldWrites.getOrCreate(new FieldWritePOI(backwardQuery.asNode(),field,as)).addBaseAllocation(sourceQuery);
+			fieldWrites.getOrCreate(new FieldWritePOI(backwardQuery.asNode(),field,as, base)).addBaseAllocation(sourceQuery);
 		}
 	}
 
 
 
-	private void injectAliasWithStack(INode<Node<Statement, Val>> alias, AssignStmt as, Field label,
-			Query sourceQuery) {
-		// System.out.println("INJECTION " + alias + as + ifr);
+	private void injectAliasWithStack(ForwardQuery baseAllocation, Transition<Field, INode<Node<Statement, Val>>> t, AssignStmt as, Field label,
+			Query sourceQuery, Val base) {
+		SetDomain<Field, Statement, Val> one = SetDomain.<Field, Statement, Val>one();
+		INode<Node<Statement, Val>> target = t.getTarget();
+		INode<Node<Statement, Val>> start = t.getStart();
 		for (Unit succ : icfg().getSuccsOf(as)) {
 			// TODO Why don't we need succ here?
+			Node<Statement, Val> curr = new Node<Statement, Val>(new Statement((Stmt)succ, icfg().getMethodOf(as)),
+					base);
+			Node<Statement, Val> startWithSucc = new Node<Statement, Val>(new Statement((Stmt)succ, icfg().getMethodOf(as)),
+					start.fact().fact());
+			queryToSolvers.getOrCreate(sourceQuery).injectFieldRule(curr, t.getLabel(), startWithSucc);
+//			.injectFieldRule(new PushRule<Field, INode<Node<Statement, Val>>, Weight<Field>>( new SingleNode<Node<Statement, Val>>(curr),
+//					Field.wildcard(), new SingleNode<Node<Statement, Val>>(startWithSucc), t.getLabel(), Field.wildcard(), one));
+		
+			 System.out.println("INJECTION " + new PushRule<Field, INode<Node<Statement, Val>>, Weight<Field>>( new SingleNode<Node<Statement, Val>>(curr),
+						label, start, t.getLabel(), label, one));
+						
 			Node<Statement, Val> sourceNode = new Node<Statement, Val>(new Statement(as, icfg().getMethodOf(as)),
 					new Val(as.getRightOp(), icfg().getMethodOf(as)));
-			SetDomain<Field, Statement, Val> one = SetDomain.<Field, Statement, Val> one();
 			INode<Node<Statement, Val>> source = new SingleNode<Node<Statement, Val>>(sourceNode);
-			Node<Statement, Val> targetNode = new Node<Statement, Val>(
-					new Statement((Stmt) succ, icfg().getMethodOf(as)), alias.fact().fact());
-			INode<Node<Statement, Val>> target = new SingleNode<Node<Statement, Val>>(targetNode);
 			queryToSolvers.getOrCreate(sourceQuery)
 					.injectFieldRule(new PushRule<Field, INode<Node<Statement, Val>>, Weight<Field>>(source,
-							Field.wildcard(), alias, label, Field.wildcard(), one));
+							Field.wildcard(), new SingleNode<Node<Statement, Val>>(startWithSucc), label, Field.wildcard(), one));
 		}
 	}
 
@@ -311,11 +321,13 @@ public abstract class Boomerang {
 
 		private Field field;
 		private AssignStmt fieldWriteStatement;
+		private Val base;
 
-		public FieldWritePOI(Node<Statement,Val> node, Field field, AssignStmt fieldWriteStatement) {
+		public FieldWritePOI(Node<Statement,Val> node, Field field, AssignStmt fieldWriteStatement, Val base) {
 			super(node);
 			this.field = field;
 			this.fieldWriteStatement = fieldWriteStatement;
+			this.base = base;
 		}
 
 		@Override
@@ -327,12 +339,21 @@ public abstract class Boomerang {
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					if(t.getTarget() instanceof GeneratedState){
-//						injectAliasWithStack(t.getTarget(), fieldWriteStatement, field, flowAllocation);
 						System.out.println("HERE" + t);
+						if(t.getStart() instanceof GeneratedState)
+							return;
+						if(t.getStart().fact().stmt().equals(getNode().stmt())){
+							injectAliasWithStack(baseAllocation, t, fieldWriteStatement, field, flowAllocation, base);
+							System.out.println("THERE " + t);
+						}
+						return;
+					}
+					if(t.getStart() instanceof GeneratedState){
 						return;
 					}
 					if(t.getTarget().fact().equals(baseAllocation.asNode()) && t.getLabel().equals(Field.empty())){
-						injectForwardAlias(t.getStart().fact(),fieldWriteStatement, getNode().fact(), field, flowAllocation);
+						if(t.getStart().fact().stmt().equals(getNode().stmt()))
+							injectForwardAlias(t.getStart().fact(),fieldWriteStatement, getNode().fact(), field, flowAllocation);
 					}
 //					System.out.println(t);	
 				}
