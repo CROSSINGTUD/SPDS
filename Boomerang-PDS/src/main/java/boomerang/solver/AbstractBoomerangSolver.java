@@ -9,6 +9,7 @@ import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
 
+import boomerang.Query;
 import boomerang.jimple.Field;
 import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
@@ -34,10 +35,13 @@ import wpds.interfaces.WPAUpdateListener;
 public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, Val, Field>{
 
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
+	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
 	
-	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg){
+	
+	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query){
 		this.icfg = icfg;
+		this.query = query;
 	}
 	@Override
 	public Collection<? extends State> computeSuccessor(Node<Statement, Val> node) {
@@ -114,7 +118,6 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	protected abstract boolean killFlow(SootMethod method, Stmt curr, Val value);
 	
 	private boolean valueUsedInStatement(SootMethod method, Stmt u, InvokeExpr invokeExpr, Val value) {
-		//TODO what about assignment?
 		if(u instanceof AssignStmt && isBackward()){
 			AssignStmt assignStmt = (AssignStmt) u;
 			if(assignStmt.getLeftOp().equals(value.value()))

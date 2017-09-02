@@ -43,6 +43,6 @@ public class Val {
 	
 	@Override
 	public String toString() {
-		return v.toString() + " (" + m.getDeclaringClass().getShortName() +"." + m.getName() +")";
+		return v.toString() ;//+ " (" + m.getDeclaringClass().getShortName() +"." + m.getName() +")";
 	}
 }

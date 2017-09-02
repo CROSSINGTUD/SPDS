@@ -6,6 +6,7 @@ import java.util.Set;
 
 import com.beust.jcommander.internal.Sets;
 
+import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.jimple.Field;
 import boomerang.jimple.ReturnSite;
@@ -20,11 +21,8 @@ import soot.jimple.AssignStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
-import soot.jimple.NewExpr;
-import soot.jimple.NullConstant;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.Node;
@@ -35,8 +33,8 @@ import wpds.interfaces.State;
 
 public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 
-	public BackwardBoomerangSolver(BiDiInterproceduralCFG<Unit, SootMethod> icfg){
-		super(icfg);
+	public BackwardBoomerangSolver(BiDiInterproceduralCFG<Unit, SootMethod> icfg, BackwardQuery query){
+		super(icfg, query);
 	}
 
 	@Override

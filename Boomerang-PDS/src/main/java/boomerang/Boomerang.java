@@ -64,7 +64,7 @@ public abstract class Boomerang {
 	};
 
 	protected AbstractBoomerangSolver createBackwardSolver(final BackwardQuery key) {
-		BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg());
+		BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg(), key);
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
@@ -92,7 +92,7 @@ public abstract class Boomerang {
 	}
 
 	protected AbstractBoomerangSolver createForwardSolver(final ForwardQuery sourceQuery) {
-		ForwardBoomerangSolver solver = new ForwardBoomerangSolver(icfg());
+		ForwardBoomerangSolver solver = new ForwardBoomerangSolver(icfg(), sourceQuery);
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
@@ -166,21 +166,14 @@ public abstract class Boomerang {
 	private void injectAliasWithStack(ForwardQuery baseAllocation, Transition<Field, INode<Node<Statement, Val>>> t, AssignStmt as, Field label,
 			Query sourceQuery, Val base) {
 		SetDomain<Field, Statement, Val> one = SetDomain.<Field, Statement, Val>one();
-		INode<Node<Statement, Val>> target = t.getTarget();
 		INode<Node<Statement, Val>> start = t.getStart();
 		for (Unit succ : icfg().getSuccsOf(as)) {
-			// TODO Why don't we need succ here?
 			Node<Statement, Val> curr = new Node<Statement, Val>(new Statement((Stmt)succ, icfg().getMethodOf(as)),
 					base);
 			Node<Statement, Val> startWithSucc = new Node<Statement, Val>(new Statement((Stmt)succ, icfg().getMethodOf(as)),
 					start.fact().fact());
 			queryToSolvers.getOrCreate(sourceQuery).injectFieldRule(curr, t.getLabel(), startWithSucc);
-//			.injectFieldRule(new PushRule<Field, INode<Node<Statement, Val>>, Weight<Field>>( new SingleNode<Node<Statement, Val>>(curr),
-//					Field.wildcard(), new SingleNode<Node<Statement, Val>>(startWithSucc), t.getLabel(), Field.wildcard(), one));
 		
-			 System.out.println("INJECTION " + new PushRule<Field, INode<Node<Statement, Val>>, Weight<Field>>( new SingleNode<Node<Statement, Val>>(curr),
-						label, start, t.getLabel(), label, one));
-						
 			Node<Statement, Val> sourceNode = new Node<Statement, Val>(new Statement(as, icfg().getMethodOf(as)),
 					new Val(as.getRightOp(), icfg().getMethodOf(as)));
 			INode<Node<Statement, Val>> source = new SingleNode<Node<Statement, Val>>(sourceNode);

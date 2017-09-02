@@ -6,6 +6,7 @@ import java.util.Set;
 
 import com.beust.jcommander.internal.Sets;
 
+import boomerang.ForwardQuery;
 import boomerang.jimple.Field;
 import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
@@ -22,22 +23,16 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
-import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.nodes.ExclusionNode;
-import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
-import wpds.impl.PushRule;
-import wpds.impl.Rule;
-import wpds.impl.Weight;
 import wpds.interfaces.State;
-import wpds.interfaces.WPAUpdateListener;
 
 public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
-	public ForwardBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg) {
-		super(icfg);
+	public ForwardBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, ForwardQuery query) {
+		super(icfg, query);
 	}
 
 	@Override

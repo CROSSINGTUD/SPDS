@@ -40,11 +40,22 @@ public class ReadPOITest extends AbstractBoomerangTest {
 			query = a.right;
 		queryFor(query);
 	}
-	
 
 	private void init(Node a) {
 		a.left = new AllocNode();
 		a.right = new AllocNode();		
+	}
+
+	@Test
+	public void oneFieldBranched(){
+		A a = new A();
+		set(a);
+		Alloc query = a.b;
+		queryFor(query);
+	}
+
+	private void set(A p) {
+		p.b = new Alloc();
 	}
 
 
