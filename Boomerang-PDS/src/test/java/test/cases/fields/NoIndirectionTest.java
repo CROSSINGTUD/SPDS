@@ -56,7 +56,7 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		Alloc alias = a.b;
 		A b = new A();
 		call(b, alias);
-		Alloc summarizedAlias = a.b;
+		Alloc summarizedAlias = b.b;
 		queryFor(summarizedAlias);
 	}
 	

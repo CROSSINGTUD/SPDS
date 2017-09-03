@@ -24,6 +24,7 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
@@ -44,19 +45,13 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 
 	@Override
 	protected Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite, Stmt returnSite) {
-//		if (curr instanceof ReturnStmt) {
-//			Value op = ((ReturnStmt) curr).getOp();
-//
-//			if (op.equals(value)) {
-//				return Collections.singleton(new PopNode<Value>(returnVal(), PDSSystem.CALLS));
-//			}
-//		}
+		Statement returnSiteStatement = new Statement(returnSite,icfg.getMethodOf(returnSite));
 		if (!method.isStatic()) {
 			if (value.value().equals(method.getActiveBody().getThisLocal())) {
 				if(callSite.containsInvokeExpr()){
 					if(callSite.getInvokeExpr() instanceof InstanceInvokeExpr){
 						InstanceInvokeExpr iie = (InstanceInvokeExpr) callSite.getInvokeExpr();
-						return Collections.singleton(new PopNode<Val>(new Val(iie.getBase(),icfg.getMethodOf(callSite)), PDSSystem.CALLS));
+						return Collections.singleton(new CallPopNode<Val,Statement>(new Val(iie.getBase(),icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 					}
 				}
 			}
@@ -66,7 +61,7 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 			if (param.equals(value.value())) {
 				if(callSite.containsInvokeExpr()){
 					InvokeExpr ie = callSite.getInvokeExpr();
-					return Collections.singleton(new PopNode<Val>(new Val(ie.getArg(index),method), PDSSystem.CALLS));
+					return Collections.singleton(new CallPopNode<Val,Statement>(new Val(ie.getArg(index),method), PDSSystem.CALLS,returnSiteStatement));
 				}
 			}
 			index++;

@@ -12,6 +12,7 @@ import com.google.common.collect.Multimap;
 
 import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.SyncPDSSolver.PDSSystem;
+import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
@@ -36,8 +37,8 @@ public class DoublePDSTest {
 		addSucc(curr, succ);
 	}
 
-	private void addReturnFlow(Node<Statement, Variable> curr, Variable returns) {
-		addSucc(curr, new PopNode<Variable>(returns, PDSSystem.CALLS));
+	private void addReturnFlow(Node<Statement, Variable> curr, Variable returns, Statement returnSite) {
+		addSucc(curr, new CallPopNode<Variable,Statement>(returns, PDSSystem.CALLS,returnSite));
 	}
 	
 	private void addCallFlow(Node<Statement, Variable> curr, Node<Statement, Variable> succ, Statement returnSite) {
@@ -91,14 +92,14 @@ public class DoublePDSTest {
 		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
 		addCallFlow(node(2,"v"), node(3,"p"),returnSite(5));
 		addFieldPush(node(3,"p"), f("g"), node(4,"q"));
-		addReturnFlow(node(4,"q"), var("w"));
+		addReturnFlow(node(4,"q"), var("w"),returnSite(5));
 		addFieldPop(node(5,"w"), f("g"), node(6,"x"));
 		addFieldPop(node(6,"x"), f("f"), node(7,"y"));
 		
 //		second branch
 		addFieldPush(node(8,"r"), f("f"), node(9,"s"));
 		addCallFlow(node(9,"s"),node(3,"p"),returnSite(10));
-		addReturnFlow(node(4,"q"), var("t"));
+		addReturnFlow(node(4,"q"), var("t"),returnSite(10));
 		addFieldPush(node(10,"t"), f("f"), node(11,"s"));
 		
 		solver.solve(node(1,"u"));
@@ -142,7 +143,7 @@ public class DoublePDSTest {
 		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
 		addCallFlow(node(2,"v"), node(3,"p"),returnSite(5));
 		addFieldPush(node(3,"p"), f("g"), node(4,"q"));
-		addReturnFlow(node(4,"q"), var("w"));
+		addReturnFlow(node(4,"q"), var("w"),returnSite(5));
 		addFieldPop(node(5,"w"), f("g"), node(6,"x"));
 		addFieldPop(node(6,"x"), f("f"), node(7,"y"));
 		solver.solve(node(1,"u"));
@@ -156,7 +157,7 @@ public class DoublePDSTest {
 		addCallFlow(node(2,"w"), node(3,"p"),returnSite(4));
 		addNormal(node(3,"p"),  node(5,"q"));
 		addNormal(node(5,"q"),  node(6,"x"));
-		addReturnFlow(node(6,"x"), var("k"));
+		addReturnFlow(node(6,"x"), var("k"),returnSite(4));
 		addNormal(node(4,"k"),  node(6,"y"));
 		
 		solver.solve(node(1,"v"));
@@ -241,7 +242,7 @@ public class DoublePDSTest {
 		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
 		addCallFlow(node(2,"v"),  node(3,"p"), returnSite(4));
 		addFieldPush(node(3,"p"), f("g"), node(5,"q"));
-		addReturnFlow(node(5,"q"), var("w"));
+		addReturnFlow(node(5,"q"), var("w"),returnSite(4));
 		addNormal(node(4,"w"),node(7,"t"));
 		solver.solve(node(1,"u"));
 		System.out.println(solver.getReachedStates());
@@ -253,7 +254,7 @@ public class DoublePDSTest {
 		addCallFlow(node(2,"v"),  node(3,"p"), returnSite(4));
 		addFieldPush(node(3,"p"), f("g"), node(5,"q"));
 		addFieldPush(node(5,"q"), f("f"), node(6,"q"));
-		addReturnFlow(node(6,"q"), var("w"));
+		addReturnFlow(node(6,"q"), var("w"),returnSite(4));
 		addNormal(node(4,"w"),node(7,"t"));
 		addFieldPop(node(7,"t"), f("f"),node(8,"s"));
 		addFieldPop(node(8,"s"), f("g"),node(9,"x"));
@@ -381,9 +382,11 @@ public class DoublePDSTest {
 		addFieldPush(node(0,"c"), f("g"), node(1,"a"));
 		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
 		addFieldPush(node(2,"u"), f("f"), node(3,"u"));
-		addReturnFlow(node(3,"u"),var("a"));
+		addReturnFlow(node(3,"u"),var("a"),returnSite(4));
+		
 		addNormal(node(4,"a"), node(5,"e"));
 		addCallFlow(node(5,"e"), node(2,"u"), returnSite(6));
+		addReturnFlow(node(3,"u"),var("a"),returnSite(6));
 		addFieldPop(node(6,"a"), f("f"), node(7,"h"));
 		addFieldPop(node(7,"h"), f("f"), node(8,"g"));
 		addFieldPop(node(8,"g"), f("g"), node(9,"z"));
@@ -401,9 +404,10 @@ public class DoublePDSTest {
 		addFieldPush(node(0,"c"), f("g"), node(1,"a"));
 		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
 		addFieldPush(node(2,"u"), f("f"), node(3,"u"));
-		addReturnFlow(node(3,"u"),var("a"));
+		addReturnFlow(node(3,"u"),var("a"), returnSite(4));
 		addFieldPop(node(4,"a"), f("f"), node(5,"e"));
 		addCallFlow(node(5,"e"), node(2,"u"), returnSite(6));
+		addReturnFlow(node(3,"u"),var("a"), returnSite(6));
 //		addReturnFlow(node(3,"u"),var("e"));
 		addFieldPop(node(6,"a"), f("f"), node(7,"h"));//Due to the summary, we should be able to read f again.
 		addFieldPop(node(7,"h"), f("g"), node(8,"l"));//Due to the summary, we should be able to read f again.
@@ -419,7 +423,7 @@ public class DoublePDSTest {
 		addFieldPush(node(0,"c"), f("g"), node(1,"a"));
 		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
 		addFieldPush(node(2,"u"), f("f"), node(3,"u"));
-		addReturnFlow(node(3,"u"),var("a"));
+		addReturnFlow(node(3,"u"),var("a"),returnSite(4));
 		addFieldPop(node(4,"a"), f("f"), node(5,"e"));
 		addFieldPop(node(5,"e"), f("g"), node(6,"f")); //Should be possible
 		solver.solve(node(0,"c"));
@@ -430,10 +434,10 @@ public class DoublePDSTest {
 		addNormal(node(0,"c"), node(1,"a"));
 		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
 		addNormal(node(2,"u"),  node(3,"u"));
-		addReturnFlow(node(3,"u"),var("a"));
+		addReturnFlow(node(3,"u"),var("a"),returnSite(4));
 		addNormal(node(4,"a"),  node(5,"e"));
 		addCallFlow(node(5,"e"), node(2,"u"), returnSite(6));
-		addReturnFlow(node(3,"u"),var("e"));
+		addReturnFlow(node(3,"u"),var("e"),returnSite(6));
 		addNormal(node(6,"e"),  node(7,"h"));
 		solver.solve(node(0,"c"));
 		System.out.println(solver.getReachedStates());
@@ -443,9 +447,9 @@ public class DoublePDSTest {
 	@Test
 	public void positiveSummaryFlowTest() {
 		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
-		addReturnFlow(node(2,"u"),var("e"));
+		addReturnFlow(node(2,"u"),var("e"),returnSite(4));
 		addCallFlow(node(4,"e"), node(2,"u"), returnSite(6));
-		addReturnFlow(node(2,"u"),var("e"));
+		addReturnFlow(node(2,"u"),var("e"),returnSite(6));
 		solver.solve(node(1,"a"));
 		System.out.println(solver.getReachedStates());
 		assertTrue(solver.getReachedStates().contains(node(6,"e")));
@@ -461,7 +465,7 @@ public class DoublePDSTest {
 	@Test
 	public void negativeTestCallSitePushAndPop() {
 		addCallFlow(node(1,"u"), node(2,"v"),returnSite(4));
-		addReturnFlow(node(2,"v"),var("w"));
+		addReturnFlow(node(2,"v"),var("w"),returnSite(4));
 		addNormal(node(3,"w"), node(4,"w"));
 		solver.solve(node(1,"u"));
 		System.out.println(solver.getReachedStates());
@@ -471,7 +475,7 @@ public class DoublePDSTest {
 	@Test
 	public void positiveTestCallSitePushAndPop() {
 		addCallFlow(node(1,"u"), node(4,"v"),returnSite(2));
-		addReturnFlow(node(4,"v"), var("w"));
+		addReturnFlow(node(4,"v"), var("w"),returnSite(2));
 		addNormal(node(2,"w"), node(3,"w"));
 		solver.solve(node(1,"u"));
 		System.out.println(solver.getReachedStates());

@@ -13,6 +13,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
+import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
@@ -91,8 +92,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	};
 
 	private final Map<WitnessNode<Stmt,Fact,Field>,WitnessNode<Stmt,Fact,Field>> reachedStates = Maps.newHashMap();
-	private final Set<Stmt> returnSites = Sets.newHashSet();
-	private final Multimap<Node<Stmt,Fact>, Fact> returningFacts = HashMultimap.create();
 	private final Set<Node<Stmt, Fact>> callingContextReachable = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> fieldContextReachable = Sets.newHashSet();
 	private final Set<SyncPDSUpdateListener<Stmt, Fact, Field>> updateListeners = Sets.newHashSet();
@@ -161,9 +160,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				}
 			} else if (s instanceof PopNode) {
 				PopNode<Fact> popNode = (PopNode<Fact>) s;
-				PDSSystem system = popNode.system();
-				Fact location = popNode.location();
-				processPop(curr, location, system);
+				processPop(curr, popNode);
 			}
 		}
 	}
@@ -290,16 +287,20 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		return new SingleNode<Node<Stmt,Fact>>(new Node<Stmt,Fact>(node.stmt(), node.fact()));
 	}
 
-	private void processPop(Node<Stmt,Fact> curr, Fact location, PDSSystem system) {
+	private void processPop(Node<Stmt,Fact> curr, PopNode<Fact> popNode) {
+		PDSSystem system = popNode.system();
+		Fact location = popNode.location();
 		if (system.equals(PDSSystem.FIELDS)) {
 			NodeWithLocation<Stmt, Fact, Field> node = (NodeWithLocation) location;
 			fieldPDS.addRule(new PopRule<Field, INode<Node<Stmt,Fact>>, Weight<Field>>(asFieldFact(curr), node.location(),
 					asFieldFact(node.fact()), fieldPDS.getOne()));
 			addNormalCallFlow(curr, node.fact());
 		} else if (system.equals(PDSSystem.CALLS)) {
-			//
 			callingPDS.addRule(new PopRule<Stmt, INode<Fact>, Weight<Stmt>>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location),callingPDS.getOne()));
-			addReturningFact(curr, location);
+			//TODO we have an unchecked cast here, branch directly based on PopNode type?
+			CallPopNode<Fact, Stmt> callPopNode = (CallPopNode) popNode;
+			Stmt returnSite = callPopNode.getReturnSite();
+			addNormalFieldFlow(curr, new Node<Stmt,Fact>(returnSite,location));
 		}
 	}
 
@@ -315,7 +316,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			added |= callingPDS.addRule(new PushRule<Stmt, INode<Fact>, Weight<Stmt>>(wrap(curr.fact()), curr.stmt(),
 					wrap(succ.fact()), succ.stmt(), (Stmt) location,callingPDS.getOne()));
 
-			addReturnSite((Stmt) location);
 		}
 		return added;
 	}
@@ -337,101 +337,8 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				setFieldContextReachable(new Node<Stmt,Fact>(fact.stmt(), fact.fact()),t);
 			}
 		}
-
 	}
 
-
-	private void addReturningFact(Node<Stmt,Fact> curr, Fact fact) {
-		if (!returningFacts.put(curr, fact)) {
-			return;
-		}
-		for (Stmt retSite : Lists.newArrayList(returnSites)) {
-			callAutomaton.registerListener(new CallUpdateListener(curr, retSite, fact));
-		}
-	}
-
-	private void addReturnSite(Stmt location) {
-		if (!returnSites.add(location)) {
-			return;
-		}
-		for (Entry<Node<Stmt,Fact>, Fact> retSite : Lists.newLinkedList(returningFacts.entries())) {
-			callAutomaton.registerListener(new CallUpdateListener(retSite.getKey(), location, retSite.getValue()));
-		}
-	}
-
-	private class CallUpdateListener implements WPAUpdateListener<Stmt, INode<Fact>, Weight<Stmt>> {
-		private Stmt retSite;
-		private Fact fact;
-		private Node<Stmt,Fact> curr;
-
-		public CallUpdateListener(Node<Stmt,Fact> curr, Stmt retSite, Fact fact) {
-			this.curr = curr;
-			this.retSite = retSite;
-			this.fact = fact;
-		}
-
-		@Override
-		public void onAddedTransition(Transition<Stmt, INode<Fact>> t) {
-			// System.out.println("CALLUPDATE " + t +" " + fact + " "+ retSite);
-			if (t.getStart().equals(new SingleNode<Fact>(fact))) {
-				if (t.getLabel().equals(retSite)) {
-					addNormalFieldFlow(curr, new Node<Stmt, Fact>(retSite, fact));
-				}
-			}
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((curr == null) ? 0 : curr.hashCode());
-			result = prime * result + ((fact == null) ? 0 : fact.hashCode());
-			result = prime * result + ((retSite == null) ? 0 : retSite.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			CallUpdateListener other = (CallUpdateListener) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (curr == null) {
-				if (other.curr != null)
-					return false;
-			} else if (!curr.equals(other.curr))
-				return false;
-			if (fact == null) {
-				if (other.fact != null)
-					return false;
-			} else if (!fact.equals(other.fact))
-				return false;
-			if (retSite == null) {
-				if (other.retSite != null)
-					return false;
-			} else if (!retSite.equals(other.retSite))
-				return false;
-			return true;
-		}
-
-		private SyncPDSSolver getOuterType() {
-			return SyncPDSSolver.this;
-		}
-
-		@Override
-		public void onWeightAdded(Transition<Stmt, INode<Fact>> t, Weight<Stmt> w) {
-			
-		}
-
-	}
-
-	
 
 	private void setCallingContextReachable(Node<Stmt,Fact> node, Transition<Stmt, INode<Fact>> t) {
 		if (!callingContextReachable.add(node))

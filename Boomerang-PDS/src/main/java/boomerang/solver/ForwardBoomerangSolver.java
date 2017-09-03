@@ -23,6 +23,7 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
+import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
@@ -122,11 +123,12 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	@Override
 	public Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite,
 			Stmt returnSite) {
+		Statement returnSiteStatement = new Statement(returnSite,icfg.getMethodOf(returnSite));
 		if (curr instanceof ReturnStmt) {
 			Value op = ((ReturnStmt) curr).getOp();
 			if (op.equals(value.value())) {
 				if(callSite instanceof AssignStmt){
-					return Collections.singleton(new PopNode<Val>(new Val(((AssignStmt)callSite).getLeftOp(), icfg.getMethodOf(callSite)), PDSSystem.CALLS));
+					return Collections.singleton(new CallPopNode<Val,Statement>(new Val(((AssignStmt)callSite).getLeftOp(), icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 				}
 			}
 		}
@@ -135,7 +137,7 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 				if (callSite.containsInvokeExpr()) {
 					if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
 						InstanceInvokeExpr iie = (InstanceInvokeExpr) callSite.getInvokeExpr();
-						return Collections.singleton(new PopNode<Val>(new Val(iie.getBase(), icfg.getMethodOf(callSite)), PDSSystem.CALLS));
+						return Collections.singleton(new CallPopNode<Val,Statement>(new Val(iie.getBase(), icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 					}
 				}
 			}
@@ -145,7 +147,7 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 			if (param.equals(value.value())) {
 				if (callSite.containsInvokeExpr()) {
 					InstanceInvokeExpr iie = (InstanceInvokeExpr) callSite.getInvokeExpr();
-					return Collections.singleton(new PopNode<Val>(new Val(iie.getArg(index),icfg.getMethodOf(callSite)), PDSSystem.CALLS));
+					return Collections.singleton(new CallPopNode<Val,Statement>(new Val(iie.getArg(index),icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 				}
 			}
 			index++;
