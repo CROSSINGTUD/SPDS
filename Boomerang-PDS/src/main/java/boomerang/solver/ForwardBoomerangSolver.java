@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Set;
 
 import com.beust.jcommander.internal.Sets;
+import com.google.common.base.Optional;
 
 import boomerang.ForwardQuery;
 import boomerang.Query;
@@ -24,12 +25,16 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
+import sync.pds.solver.SyncPDSSolver.PDSSystem;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
+import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
+import sync.pds.solver.nodes.SingleNode;
+import wpds.impl.Transition;
 import wpds.interfaces.State;
 
 public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
@@ -158,15 +163,19 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	}
 	
 	@Override
-	public void solve(Node<Statement, Val> source, Node<Statement, Val> curr) {
-
-		Node<Statement, Val> asNode = query.asNode();
-		for(Unit callSite : icfg.getCallersOf(query.asNode().stmt().getMethod())){
-			for(Unit returnSite : icfg.getSuccsOf(callSite)){
-				this.processPush(curr, new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), curr, PDSSystem.CALLS);
+	public void addUnbalancedFlow(Statement location) {
+		Optional<Stmt> unit = query.asNode().stmt().getUnit();
+		if (unit.isPresent()) {
+			for (Unit succ : icfg.getSuccsOf(unit.get())) {
+				Node<Statement, Val> curr = new Node<Statement, Val>(
+						new Statement((Stmt) succ, icfg.getMethodOf(succ)), query.asNode().fact());
+				for(Unit callSite : icfg.getCallersOf(location.getMethod())){
+					for(Unit returnSite : icfg.getSuccsOf(callSite)){
+						this.processPush(curr, new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), curr, PDSSystem.CALLS);
+					}
+				}
 			}
 		}
-		super.solve(source, curr);
 	}
-
+	
 }

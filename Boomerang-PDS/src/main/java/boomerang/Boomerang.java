@@ -29,6 +29,7 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;
+import sync.pds.solver.SyncPDSSolver.PDSSystem;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -63,8 +64,8 @@ public abstract class Boomerang {
 		}
 	};
 
-	protected AbstractBoomerangSolver createBackwardSolver(final BackwardQuery key) {
-		BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg(), key);
+	protected AbstractBoomerangSolver createBackwardSolver(final BackwardQuery backwardQuery) {
+		BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg(), backwardQuery);
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
@@ -74,15 +75,30 @@ public abstract class Boomerang {
 					if (stmt instanceof AssignStmt) {
 						AssignStmt as = (AssignStmt) stmt;
 						if (node.fact().value().equals(as.getLeftOp()) && isAllocationVal(as.getRightOp())) {
-							ForwardQuery forwardQuery = new ForwardQuery(node.stmt(),
+							final ForwardQuery forwardQuery = new ForwardQuery(node.stmt(),
 									new Val(as.getLeftOp(), icfg().getMethodOf(stmt)));
-							backwardToForwardQueries.put(key, forwardQuery);
+							backwardToForwardQueries.put(backwardQuery, forwardQuery);
 							addForwardQuery(forwardQuery);
+							queryToSolvers.getOrCreate(backwardQuery).addCallAutomatonListener(new WPAUpdateListener<Statement, INode<Val>, Weight<Statement>>() {
+
+								@Override
+								public void onAddedTransition(Transition<Statement, INode<Val>> t) {
+									if(t.getTarget() instanceof GeneratedState){
+										GeneratedState<Val,Statement> generatedState = (GeneratedState) t.getTarget();
+										queryToSolvers.getOrCreate(forwardQuery).addUnbalancedFlow(generatedState.location());
+									}
+								}
+
+								@Override
+								public void onWeightAdded(Transition<Statement, INode<Val>> t, Weight<Statement> w) {
+									
+								}
+							});
 						}
 
 						if (as.getRightOp() instanceof InstanceFieldRef) {
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
-							handleFieldRead(node, ifr, as, key);
+							handleFieldRead(node, ifr, as, backwardQuery);
 						}
 					}
 				}
@@ -371,12 +387,12 @@ public abstract class Boomerang {
 
 	public void debugOutput() {
 		for (Query q : queryToSolvers.keySet()) {
-			if (q instanceof ForwardQuery) {
+//			if (q instanceof ForwardQuery) {
 				System.out.println("========================");
 				System.out.println(q);
 				System.out.println("========================");
 				 queryToSolvers.getOrCreate(q).debugOutput();
-			}
+//			}
 		}
 		// backwardSolver.debugOutput();
 		// forwardSolver.debugOutput();

@@ -82,7 +82,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	protected final WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>> callAutomaton = new WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>>() {
 		@Override
 		public INode<Fact> createState(INode<Fact> d, Stmt loc) {
-			return generateState(d, loc);
+			return generateCallState(d, loc);
 		}
 
 		@Override
@@ -373,13 +373,13 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	}
 
-	private INode<Fact> wrap(Fact variable) {
+	protected INode<Fact> wrap(Fact variable) {
 		return new SingleNode<Fact>(variable);
 	}
 
 	Map<Entry<INode<Fact>, Stmt>, INode<Fact>> generatedCallState = Maps.newHashMap();
 
-	protected INode<Fact> generateState(final INode<Fact> d, final Stmt loc) {
+	protected INode<Fact> generateCallState(final INode<Fact> d, final Stmt loc) {
 		Entry<INode<Fact>, Stmt> e = new AbstractMap.SimpleEntry<>(d, loc);
 		if (!generatedCallState.containsKey(e)) {
 			generatedCallState.put(e, new GeneratedState<Fact,Stmt>(d,loc));

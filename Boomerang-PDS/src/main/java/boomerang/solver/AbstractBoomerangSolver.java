@@ -146,7 +146,8 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		Set<State> out = Sets.newHashSet();
 		for(Unit callSite : icfg.getCallersOf(method)){
 			for(Unit returnSite : icfg.getSuccsOf(callSite)){
-				out.addAll(computeReturnFlow(method, curr, value, (Stmt) callSite, (Stmt) returnSite));
+				Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) callSite, (Stmt) returnSite);
+				out.addAll(outFlow);
 			}
 		}
 		return out;
@@ -211,5 +212,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	}
 	public void addCallAutomatonListener(WPAUpdateListener<Statement, INode<Val>, Weight<Statement>> listener) {
 		callAutomaton.registerListener(listener);
+	}
+	public void addUnbalancedFlow(Statement location) {
 	}
 }

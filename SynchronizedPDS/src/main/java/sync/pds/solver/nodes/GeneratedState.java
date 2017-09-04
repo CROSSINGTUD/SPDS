@@ -15,6 +15,10 @@ public class GeneratedState<L,N> implements INode<L>{
 	public L fact() {
 		throw new RuntimeException("System internal state");
 	}
+	
+	public N location(){
+		return loc;
+	}
 
 	@Override
 	public String toString() {
