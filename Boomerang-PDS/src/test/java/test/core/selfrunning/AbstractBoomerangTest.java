@@ -53,8 +53,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				//Run forward analysis
 				Collection<? extends Query> unreachableNodes = extractQuery(
 						new FirstArgumentOf("unreachable"));
-				Collection<Node<Statement, Val>> results = runQuery(allocationSites);
-				compareQuery( queryForCallSites, unreachableNodes, results, "Forward");
+//				Collection<Node<Statement, Val>> results = runQuery(allocationSites);
+//				compareQuery( queryForCallSites, unreachableNodes, results, "Forward");
 				if(!queryForCallSites.isEmpty()){
 					//Run backward analysis
 					if(queryForCallSites.size() > 1)

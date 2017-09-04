@@ -7,6 +7,7 @@ import java.util.Set;
 import com.beust.jcommander.internal.Sets;
 
 import boomerang.ForwardQuery;
+import boomerang.Query;
 import boomerang.jimple.Field;
 import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
@@ -154,6 +155,18 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 		}
 
 		return Collections.emptySet();
+	}
+	
+	@Override
+	public void solve(Node<Statement, Val> source, Node<Statement, Val> curr) {
+
+		Node<Statement, Val> asNode = query.asNode();
+		for(Unit callSite : icfg.getCallersOf(query.asNode().stmt().getMethod())){
+			for(Unit returnSite : icfg.getSuccsOf(callSite)){
+				this.processPush(curr, new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), curr, PDSSystem.CALLS);
+			}
+		}
+		super.solve(source, curr);
 	}
 
 }

@@ -422,7 +422,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		HashSet<Node<Stmt, Fact>> notCallingContextReachable = Sets.newHashSet(fieldContextReachable);
 		notCallingContextReachable.removeAll(getReachedStates());
 		if (!notFieldReachable.isEmpty()) {
-			System.out.println("Calling context matching reachable but not field reachable");
+			System.out.println("Calling context reachable");
 			prettyPrintSet(notFieldReachable);
 		}
 		if (!notCallingContextReachable.isEmpty()) {
