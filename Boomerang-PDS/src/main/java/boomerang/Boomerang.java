@@ -51,12 +51,9 @@ public abstract class Boomerang {
 		}
 	};
 	private BackwardsInterproceduralCFG bwicfg;
-	private Multimap<AllocAtStmt, Node<Statement, Val>> allAllocationSiteAtFieldRead = HashMultimap.create();
-	private Multimap<Stmt, Node<Statement, Val>> activeAllocationSiteAtFieldRead = HashMultimap.create();
 	private Collection<ForwardQuery> forwardQueries = Sets.newHashSet();
 	private Collection<BackwardQuery> backwardQueries = Sets.newHashSet();
 	private Multimap<BackwardQuery, ForwardQuery> backwardToForwardQueries = HashMultimap.create();
-	private Multimap<AssignStmt, BackwardQuery> backwardSolverAtFieldWrite = HashMultimap.create();
 	private DefaultValueMap<FieldWritePOI, FieldWritePOI> fieldWrites = new DefaultValueMap<FieldWritePOI, FieldWritePOI>() {
 		@Override
 		protected FieldWritePOI createItem(FieldWritePOI key) {
@@ -286,8 +283,6 @@ public abstract class Boomerang {
 				solver.solve(query.asNode(), source);
 			}
 		}
-		solver.getFieldAutomaton().addFinalState(new SingleNode<Node<Statement, Val>>(query.asNode()));
-
 	}
 
 	private class FieldWritePOI extends AbstractPOI<Statement, Val, Field> {

@@ -113,7 +113,6 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 				InstanceFieldRef ifr = (InstanceFieldRef) rightOp;
 				Value base = ifr.getBase();
 				if (base.equals(fact.value())) {
-					out.clear();
 					NodeWithLocation<Statement, Val, Field> succNode = new NodeWithLocation<>(
 							new Statement(succ, method), new Val(leftOp,method), new Field(ifr.getField()));
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));

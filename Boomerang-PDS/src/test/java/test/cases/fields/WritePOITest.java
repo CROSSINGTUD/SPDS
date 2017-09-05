@@ -74,5 +74,14 @@ public class WritePOITest extends AbstractBoomerangTest {
 		a.b = query;
 		queryFor(query);
 	}
+	@Test
+	public void loadTwice(){
+		Alloc alloc = new Alloc();
+		A a = new A();
+		a.b = alloc;
+		Object query1 = a.b;
+		Object query2 = a.b;
+		queryFor(query2);
+	}
 	private static class Alloc implements AllocatedObject{};
 }

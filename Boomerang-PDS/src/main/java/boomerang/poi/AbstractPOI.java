@@ -2,6 +2,7 @@ package boomerang.poi;
 
 import java.util.Set;
 
+import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
 
 import boomerang.ForwardQuery;
@@ -23,7 +24,7 @@ public abstract class AbstractPOI<Statement, Val, Field> implements PointOfIndir
 	@Override
 	public void addBaseAllocation(Query baseAllocation) {
 		if(actualBaseAllocations.add(baseAllocation)){
-			for(Query flowAllocation : flowAllocations){
+			for(Query flowAllocation : Lists.newArrayList(flowAllocations)){
 				execute(baseAllocation, flowAllocation);
 			}
 		}
@@ -32,7 +33,7 @@ public abstract class AbstractPOI<Statement, Val, Field> implements PointOfIndir
 	@Override
 	public void addFlowAllocation(Query flowAllocation) {
 		if(flowAllocations.add(flowAllocation)){
-			for(Query baseAllocation : actualBaseAllocations){
+			for(Query baseAllocation : Lists.newArrayList(actualBaseAllocations)){
 				execute(baseAllocation, flowAllocation);
 			}
 		}

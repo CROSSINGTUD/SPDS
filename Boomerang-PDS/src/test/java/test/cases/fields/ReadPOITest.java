@@ -19,7 +19,16 @@ public class ReadPOITest extends AbstractBoomerangTest {
 		Alloc query = a.b;
 		queryFor(query);
 	}
-	
+
+	@Test
+	public void indirectAllocationSiteTwoFields3Address(){
+		Node a = new Node();
+		Node load = a.left;
+		load.right = new AllocNode();
+		Node loadAgain = a.left;
+		Node query = loadAgain.right;
+		queryFor(query);
+	}
 	
 
 	@Test
