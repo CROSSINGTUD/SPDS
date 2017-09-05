@@ -148,7 +148,7 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 		for (Local param : method.getActiveBody().getParameterLocals()) {
 			if (param.equals(value.value())) {
 				if (callSite.containsInvokeExpr()) {
-					InstanceInvokeExpr iie = (InstanceInvokeExpr) callSite.getInvokeExpr();
+					InvokeExpr iie = (InvokeExpr) callSite.getInvokeExpr();
 					return Collections.singleton(new CallPopNode<Val,Statement>(new Val(iie.getArg(index),icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 				}
 			}

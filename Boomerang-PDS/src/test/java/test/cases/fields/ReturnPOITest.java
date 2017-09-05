@@ -69,7 +69,18 @@ public class ReturnPOITest extends AbstractBoomerangTest {
 		C alias = a2.b.c;
 		queryFor(c);
 	}
-
+	@Test
+	public void whysRecursiveReturnPOIIsNecessary(){
+		C c = new C();
+		B b =  new B();
+		A a = new A();
+		A a2 = a;
+		a2.b = b;
+		B b2 = b;
+		setFieldTwo(a,c);
+		C alias = a2.b.c;
+		queryFor(alias);
+	}
 	private void setFieldTwo(A b, C a) {
 		b.b.c = a;
 	}

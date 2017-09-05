@@ -10,7 +10,7 @@ public class CallPOITest extends AbstractBoomerangTest {
 		B b = new B();
 	}
 	private static class B{
-		C c;
+		C c = new C();
 	}
 	private static class C implements AllocatedObject{
 		
@@ -23,10 +23,11 @@ public class CallPOITest extends AbstractBoomerangTest {
 	}
 	
 	@Test
-	public void indirectAllocationSite(){
+	public void indirectAllocationSite3Address(){
 		A a = new A();
 		allocation(a);
-		C alias = a.b.c;
+		B load = a.b;
+		C alias = load.c;
 		queryFor(alias);
 	}
 

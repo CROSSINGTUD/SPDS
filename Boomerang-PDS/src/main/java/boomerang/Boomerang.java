@@ -155,12 +155,12 @@ public abstract class Boomerang {
 		return val instanceof NullConstant || val instanceof NewExpr;
 	}
 
-	protected void handleFieldWrite(WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
+	protected void handleFieldWrite(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
 			final AssignStmt as, final ForwardQuery sourceQuery) {
 		Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
 				base);
-		Field field = new Field(ifr.getField());
+		final Field field = new Field(ifr.getField());
 		if (node.fact().value().equals(as.getRightOp())) {
 			addBackwardQuery(backwardQuery, new EmptyStackWitnessListener<Statement, Val>() {
 				@Override
@@ -171,6 +171,36 @@ public abstract class Boomerang {
 		}
 		if (node.fact().value().equals(ifr.getBase())) {
 			fieldWrites.getOrCreate(new FieldWritePOI(backwardQuery.asNode(),field,as, base)).addBaseAllocation(sourceQuery);
+			queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+
+				@Override
+				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+					if(t.getStart() instanceof GeneratedState)
+						return;
+					Node<Statement, Val> start = t.getStart().fact();
+					if(start.fact().value().equals(ifr.getBase()) && start.stmt().equals(node.stmt())){
+						if(t.getLabel().equals(field)){
+							System.out.println("TUERN AROUNG " + start.stmt());
+							Val base = new Val(as.getRightOp(), icfg().getMethodOf(as));
+							BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
+									base);
+							addBackwardQuery(backwardQuery, new EmptyStackWitnessListener<Statement, Val>() {
+
+								@Override
+								public void witnessFound(Node<Statement, Val> targetFact) {
+									// TODO Auto-generated method stub
+									
+								}
+
+							});
+						}
+					}
+				}
+
+				@Override
+				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+				}
+			});
 		}
 	}
 
@@ -345,15 +375,17 @@ public abstract class Boomerang {
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					if(t.getStart() instanceof GeneratedState)
 						return;
+
 					if(t.getTarget() instanceof GeneratedState){
 						if(t.getStart().fact().stmt().equals(getNode().stmt())){
-//							injectAliasWithStack(baseAllocation, t, fieldWriteStatement, field, flowAllocation, base);
+							//injectAliasWithStack(baseAllocation, t, fieldWriteStatement, field, flowAllocation, base);
 						}
 						return;
 					}
 					if(t.getTarget().fact().equals(baseAllocation.asNode()) && t.getLabel().equals(Field.empty())){
-						if(t.getStart().fact().stmt().equals(getNode().stmt()))
+						if(t.getStart().fact().stmt().equals(getNode().stmt())){
 							injectBackwardAlias(t.getStart().fact(),fieldWriteStatement, getNode().fact(), field, flowAllocation);
+						}
 					}
 				}
 
