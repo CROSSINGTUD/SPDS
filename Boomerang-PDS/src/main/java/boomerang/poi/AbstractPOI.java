@@ -5,33 +5,34 @@ import java.util.Set;
 import com.beust.jcommander.internal.Sets;
 
 import boomerang.ForwardQuery;
+import boomerang.Query;
 import sync.pds.solver.nodes.Node;
 
 public abstract class AbstractPOI<Statement, Val, Field> implements PointOfIndirection<Statement, Val, Field> {
 
 	private final Node<Statement,Val> node;
-	private Set<ForwardQuery> actualBaseAllocations = Sets.newHashSet();
-	private Set<ForwardQuery> flowAllocations = Sets.newHashSet();
+	private Set<Query> actualBaseAllocations = Sets.newHashSet();
+	private Set<Query> flowAllocations = Sets.newHashSet();
 	
 	public AbstractPOI(Node<Statement,Val> node) {
 		this.node = node;
 	}
 
-	public abstract void execute(ForwardQuery baseAllocation, ForwardQuery flowAllocation);
+	public abstract void execute(Query baseAllocation, Query flowAllocation);
 
 	@Override
-	public void addBaseAllocation(ForwardQuery baseAllocation) {
+	public void addBaseAllocation(Query baseAllocation) {
 		if(actualBaseAllocations.add(baseAllocation)){
-			for(ForwardQuery flowAllocation : flowAllocations){
+			for(Query flowAllocation : flowAllocations){
 				execute(baseAllocation, flowAllocation);
 			}
 		}
 	}
 
 	@Override
-	public void addFlowAllocation(ForwardQuery flowAllocation) {
+	public void addFlowAllocation(Query flowAllocation) {
 		if(flowAllocations.add(flowAllocation)){
-			for(ForwardQuery baseAllocation : actualBaseAllocations){
+			for(Query baseAllocation : actualBaseAllocations){
 				execute(baseAllocation, flowAllocation);
 			}
 		}
