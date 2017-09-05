@@ -2,6 +2,7 @@ package boomerang.solver;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import com.beust.jcommander.internal.Sets;
@@ -84,10 +85,11 @@ public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 						new Val(calleeBody.getThisLocal(),callee), returnSite, PDSSystem.CALLS));
 			}
 		}
+		List<Local> parameterLocals = calleeBody.getParameterLocals();
 		int i = 0;
 		for (Value arg : invokeExpr.getArgs()) {
-			if (arg.equals(fact.value())) {
-				Local param = calleeBody.getParameterLocal(i);
+			if (arg.equals(fact.value()) && parameterLocals.size() > i) {
+				Local param = parameterLocals.get(i);
 				return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
 						new Val(param,callee), returnSite, PDSSystem.CALLS));
 			}

@@ -2,13 +2,13 @@ package boomerang.solver;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
 
 import boomerang.ForwardQuery;
-import boomerang.Query;
 import boomerang.jimple.Field;
 import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
@@ -25,16 +25,12 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
-import sync.pds.solver.SyncPDSSolver.PDSSystem;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
-import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
-import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.Transition;
 import wpds.interfaces.State;
 
 public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
@@ -56,9 +52,10 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 			}
 		}
 		int i = 0;
+		List<Local> parameterLocals = calleeBody.getParameterLocals();
 		for (Value arg : invokeExpr.getArgs()) {
-			if (arg.equals(fact.value())) {
-				Local param = calleeBody.getParameterLocal(i);
+			if (arg.equals(fact.value()) && parameterLocals.size() > i) {
+				Local param = parameterLocals.get(i);
 				return Collections.singleton(new PushNode<Statement,  Val, Statement>(new Statement(calleeSp, callee),
 						new Val(param,callee), returnSite, PDSSystem.CALLS));
 			}
