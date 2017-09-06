@@ -9,17 +9,16 @@ import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 
-public abstract class ForwardDFSVisitor<N extends Location,D extends State, W extends Weight<N>> implements WPAUpdateListener<N, D, W>{
+public class ForwardDFSVisitor<N extends Location,D extends State, W extends Weight<N>> implements WPAUpdateListener<N, D, W>{
 	
-	private D startState;
 	private Set<D> reachable = Sets.newHashSet();
-	private Set<ReachabilityListener<D>> listeners = Sets.newHashSet();
+	private ReachabilityListener<N,D> listener;
 	private WeightedPAutomaton<N, D, W> aut;
 	
 	
-	public ForwardDFSVisitor(WeightedPAutomaton<N,D,W> aut, D startState){
+	public ForwardDFSVisitor(WeightedPAutomaton<N,D,W> aut, D startState, ReachabilityListener<N,D> listener){
 		this.aut = aut;
-		this.startState = startState;
+		this.listener = listener;
 		addReachable(startState, Sets.<D>newHashSet());
 	}
 	
@@ -29,11 +28,9 @@ public abstract class ForwardDFSVisitor<N extends Location,D extends State, W ex
 			return;
 		if(!visited.add(s))
 			return;
-		for(ReachabilityListener<D> l : listeners){
-			l.reachable(s);
-		}
 		Collection<Transition<N, D>> trans = aut.getTransitionsOutOf(s);
-		for(Transition<N, D> t : trans ){
+		for(Transition<N, D> t : trans){
+			listener.reachable(t);
 			addReachable(t.getTarget(),visited);
 		}
 	}

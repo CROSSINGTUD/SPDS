@@ -120,8 +120,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			}
 		}
 		s += "}\n";
-		s += "Initial State:" + initialState + "\n";
-		s += "Final States:" + finalState + "\n";
+//		s += "Initial State:" + initialState + "\n";
+//		s += "Final States:" + finalState + "\n";
 //		s = "digraph {\n";
 //
 //		for(Transition<N, D> tran : sequentialTransitions){

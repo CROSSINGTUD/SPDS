@@ -186,13 +186,13 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	}
 
-	private boolean processNormal(Node<Stmt,Fact> curr, Node<Stmt, Fact> succ) {
+	public boolean processNormal(Node<Stmt,Fact> curr, Node<Stmt, Fact> succ) {
 		boolean added = addNormalFieldFlow(curr, succ);
 		added |= addNormalCallFlow(curr, succ);
 		return added;
 	}
 
-	private boolean addNormalCallFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
+	public boolean addNormalCallFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
 		return callingPDS.addRule(
 				new NormalRule<Stmt, INode<Fact>,Weight<Stmt>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt(),callingPDS.getOne()));
 	}
@@ -269,7 +269,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			}
 		});
 	}
-	private boolean addNormalFieldFlow(Node<Stmt,Fact> curr, Node<Stmt, Fact> succ) {
+	public boolean addNormalFieldFlow(Node<Stmt,Fact> curr, Node<Stmt, Fact> succ) {
 		if (succ instanceof ExclusionNode) {
 			ExclusionNode<Stmt, Fact, Field> exNode = (ExclusionNode) succ;
 			return fieldPDS.addRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, Weight<Field>>(asFieldFact(curr),

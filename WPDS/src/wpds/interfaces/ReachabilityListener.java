@@ -1,5 +1,7 @@
 package wpds.interfaces;
 
-public interface ReachabilityListener<D extends State> {
-	void reachable(D node);
+import wpds.impl.Transition;
+
+public interface ReachabilityListener<N extends Location, D extends State> {
+	void reachable(Transition<N, D> t);
 }

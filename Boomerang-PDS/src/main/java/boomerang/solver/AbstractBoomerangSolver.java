@@ -24,11 +24,16 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import sync.pds.solver.SyncPDSSolver;
+import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Rule;
+import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
+import wpds.interfaces.ForwardDFSVisitor;
+import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
@@ -37,6 +42,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
+	private Collection<Node<Statement, Val>> fieldFlows = Sets.newHashSet();
 	
 	
 	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query){
@@ -214,5 +220,66 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		callAutomaton.registerListener(listener);
 	}
 	public void addUnbalancedFlow(Statement location) {
+	}
+	public boolean addFieldFlow(Node<Statement, Val> fieldFlow) {
+		return fieldFlows.add(fieldFlow);
+	}
+	public void debugFieldAutomaton(final Statement statement) {
+		final WeightedPAutomaton<Field, INode<Node<Val,Field>>, Weight<Field>> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Val,Field>>, Weight<Field>>(){
+
+			@Override
+			public INode<Node<Val,Field>> createState(INode<Node<Val,Field>> d, Field loc) {
+				return new SingleNode<Node<Val,Field>>(new Node<Val,Field>(d.fact().stmt(),loc));
+			}
+
+			@Override
+			public Field epsilon() {
+				return Field.epsilon();
+			}};
+		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+			
+			@Override
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+				
+			}
+			
+			@Override
+			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+				if(t.getStart().fact().stmt().equals(statement) && !(t.getStart() instanceof GeneratedState)){
+					new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(fieldAutomaton,t.getStart(),new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
+						@Override
+						public void reachable(Transition<Field, INode<Node<Statement,Val>>> t) {
+							INode<Node<Val, Field>> start;
+							INode<Node<Val, Field>> target;
+							if(t.getStart() instanceof GeneratedState){
+								GeneratedState genState = (GeneratedState) t.getStart();
+								start = new SingleNode<Node<Val,Field>>(new Node<Val,Field>(t.getStart().fact().fact(),(Field)genState.location()));
+							} else{
+								start = new SingleNode<Node<Val,Field>>(new Node<Val,Field>(t.getStart().fact().fact(),Field.epsilon()));
+							}
+							if(t.getTarget() instanceof GeneratedState){
+								GeneratedState genState = (GeneratedState) t.getTarget();
+								target = new SingleNode<Node<Val,Field>>(new Node<Val,Field>(t.getTarget().fact().fact(),(Field)genState.location()));
+							} else{
+								target = new SingleNode<Node<Val,Field>>(new Node<Val,Field>(t.getTarget().fact().fact(),Field.epsilon()));
+							}
+							weightedPAutomaton.addTransition(new Transition<Field, INode<Node<Val,Field>>>(start, t.getLabel(), target));
+						}
+					});
+				}
+			}
+		});
+		if(!weightedPAutomaton.getTransitions().isEmpty()){
+			INode<Node<Val, Field>> start = new SingleNode<Node<Val,Field>>(new Node<Val,Field>(query.asNode().fact(),Field.epsilon()));
+			if(!weightedPAutomaton.getTransitionsInto(start).isEmpty())
+				weightedPAutomaton.addFinalState(start);
+			System.out.println(statement);
+			System.out.println(weightedPAutomaton.toDotString());
+			for(Transition<Field, INode<Node<Val, Field>>> t : weightedPAutomaton.getTransitions()){
+				if(t.getStart().fact().fact().equals(Field.epsilon()))
+					System.out.println(t.getStart().fact().stmt() + "\t" + weightedPAutomaton.extractLanguage(t.getStart()));
+			}
+//			System.out.println(weightedPAutomaton.toDotString());
+		}
 	}
 }
