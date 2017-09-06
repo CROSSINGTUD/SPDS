@@ -18,7 +18,8 @@ public class CallPOITest extends AbstractBoomerangTest {
 
 	private static void allocation(A a) {
 		B intermediate = a.b;
-		C d = new C();
+		C e = new C();
+		C d = e;
 		intermediate.c = d;
 	}
 	

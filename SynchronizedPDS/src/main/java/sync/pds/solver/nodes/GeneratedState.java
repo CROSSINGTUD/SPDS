@@ -13,7 +13,12 @@ public class GeneratedState<L,N> implements INode<L>{
 	}
 	@Override
 	public L fact() {
-		throw new RuntimeException("System internal state");
+		return node.fact();
+//		throw new RuntimeException("System internal state");
+	}
+	
+	public INode<L> node(){
+		return node;
 	}
 	
 	public N location(){

@@ -287,9 +287,9 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		return new SingleNode<Node<Stmt,Fact>>(new Node<Stmt,Fact>(node.stmt(), node.fact()));
 	}
 
-	private void processPop(Node<Stmt,Fact> curr, PopNode<Fact> popNode) {
+	public void processPop(Node<Stmt,Fact> curr, PopNode popNode) {
 		PDSSystem system = popNode.system();
-		Fact location = popNode.location();
+		Object location = popNode.location();
 		if (system.equals(PDSSystem.FIELDS)) {
 			NodeWithLocation<Stmt, Fact, Field> node = (NodeWithLocation) location;
 			fieldPDS.addRule(new PopRule<Field, INode<Node<Stmt,Fact>>, Weight<Field>>(asFieldFact(curr), node.location(),
@@ -300,7 +300,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			//TODO we have an unchecked cast here, branch directly based on PopNode type?
 			CallPopNode<Fact, Stmt> callPopNode = (CallPopNode) popNode;
 			Stmt returnSite = callPopNode.getReturnSite();
-			addNormalFieldFlow(curr, new Node<Stmt,Fact>(returnSite,location));
+			addNormalFieldFlow(curr, new Node<Stmt,Fact>(returnSite,(Fact)location));
 		}
 	}
 
@@ -379,7 +379,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	Map<Entry<INode<Fact>, Stmt>, INode<Fact>> generatedCallState = Maps.newHashMap();
 
-	protected INode<Fact> generateCallState(final INode<Fact> d, final Stmt loc) {
+	public INode<Fact> generateCallState(final INode<Fact> d, final Stmt loc) {
 		Entry<INode<Fact>, Stmt> e = new AbstractMap.SimpleEntry<>(d, loc);
 		if (!generatedCallState.containsKey(e)) {
 			generatedCallState.put(e, new GeneratedState<Fact,Stmt>(d,loc));
@@ -389,12 +389,18 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	Map<Entry<INode<Node<Stmt,Fact>>, Field>, INode<Node<Stmt,Fact>>> generatedFieldState = Maps.newHashMap();
 
-	protected INode<Node<Stmt,Fact>> generateFieldState(final INode<Node<Stmt,Fact>> d, final Field loc) {
+	public INode<Node<Stmt,Fact>> generateFieldState(final INode<Node<Stmt,Fact>> d, final Field loc) {
 		Entry<INode<Node<Stmt,Fact>>, Field> e = new AbstractMap.SimpleEntry<>(d, loc);
 		if (!generatedFieldState.containsKey(e)) {
 			generatedFieldState.put(e, new GeneratedState<Node<Stmt,Fact>,Field>(d,loc));
 		}
 		return generatedFieldState.get(e);
+	}
+	
+
+	public void addGeneratedFieldState(GeneratedState<Node<Stmt,Fact>,Field> state) {
+		Entry<INode<Node<Stmt,Fact>>, Field> e = new AbstractMap.SimpleEntry<>(state.node(), state.location());
+		generatedFieldState.put(e,state);
 	}
 
 	public abstract Collection<? extends State> computeSuccessor(Node<Stmt, Fact> node);
