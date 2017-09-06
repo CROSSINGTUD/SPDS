@@ -22,6 +22,15 @@ public class WritePOITest extends AbstractBoomerangTest {
 		Object alias = e.b;
 		queryFor(alias);
 	}
+	@Test
+	public void indirectAllocationSite2(){
+		Alloc query = new Alloc();
+		A a = new A();
+		A e = a;
+		a.b = query;
+		Object alias = e.b;
+		queryFor(alias);
+	}
 	
 	@Test
 	public void indirectAllocationSite3(){
@@ -51,7 +60,16 @@ public class WritePOITest extends AbstractBoomerangTest {
 		Alloc samesame = intermediat.a;
 		queryFor(samesame);
 	}
-	
+	@Test
+	public void simpleIndirectAllocationSite(){
+		Level1 base = new Level1();
+		
+		Alloc query = new Alloc();
+		Level2 level2 = new Level2();
+		base.l2 = level2;
+		level2.a = query;
+		queryFor(query);
+	}
 	
 	@Test
 	public void doubleIndirectAllocationSiteMoreComplex(){
