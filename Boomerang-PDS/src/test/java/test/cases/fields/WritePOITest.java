@@ -40,11 +40,11 @@ public class WritePOITest extends AbstractBoomerangTest {
 		a.b = query;
 		queryFor(query);
 	}
-	private class Level1{
+	private static class Level1{
 		Level2 l2;
 	}
 	
-	private class Level2{
+	private static class Level2{
 		Alloc a;
 	}
 	

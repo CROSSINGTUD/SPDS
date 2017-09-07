@@ -30,11 +30,19 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			return;
 		Collection<Transition<N, D>> trans = aut.getTransitionsOutOf(s);
 		for(Transition<N, D> t : trans){
+			if(!continueWith(t)){
+				continue;
+			}
 			listener.reachable(t);
 			addReachable(t.getTarget(),visited);
 		}
 	}
 
+
+
+	protected boolean continueWith(Transition<N, D> t) {
+		return true;
+	}
 
 
 	@Override

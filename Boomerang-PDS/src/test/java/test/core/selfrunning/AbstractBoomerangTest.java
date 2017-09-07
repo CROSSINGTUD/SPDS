@@ -13,9 +13,12 @@ import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.ForwardQuery;
 import boomerang.Query;
+import boomerang.WholeProgramBoomerang;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.solver.AbstractBoomerangSolver;
+import heros.utilities.DefaultValueMap;
 import soot.Body;
 import soot.Local;
 import soot.RefType;
@@ -53,19 +56,21 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				//Run forward analysis
 				Collection<? extends Query> unreachableNodes = extractQuery(
 						new FirstArgumentOf("unreachable"));
-//				Collection<Node<Statement, Val>> results = runQuery(allocationSites);
+				Collection<Node<Statement, Val>> results = runWholeProgram();
+				compareQuery( allocationSites, unreachableNodes, results, "WholeProgramForward");
+//				results = runQuery(allocationSites);
 //				compareQuery( queryForCallSites, unreachableNodes, results, "Forward");
-				if(!queryForCallSites.isEmpty()){
-					//Run backward analysis
-					if(queryForCallSites.size() > 1)
-						throw new RuntimeException("Found more than one backward query to execute!");
-//					Collection<? extends Query> expectedResults = extractQuery(
-//							new FirstArgumentOf("reachable"));
-					unreachableNodes = extractQuery(
-							new FirstArgumentOf("unreachable"));
-					Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
-					compareQuery(allocationSites, unreachableNodes, backwardResults, "Backward");
-				}
+//				if(!queryForCallSites.isEmpty()){
+//					//Run backward analysis
+//					if(queryForCallSites.size() > 1)
+//						throw new RuntimeException("Found more than one backward query to execute!");
+////					Collection<? extends Query> expectedResults = extractQuery(
+////							new FirstArgumentOf("reachable"));
+//					unreachableNodes = extractQuery(
+//							new FirstArgumentOf("unreachable"));
+//					Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
+//					compareQuery(allocationSites, unreachableNodes, backwardResults, "Backward");
+//				}
 				
 			}
 		};
@@ -174,6 +179,35 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			solver.debugOutput();
 			
 		}
+		return results;
+	}
+	private Set<Node<Statement, Val>> runWholeProgram() {
+		final Set<Node<Statement, Val>> results = Sets.newHashSet();
+		WholeProgramBoomerang solver = new WholeProgramBoomerang() {
+			@Override
+			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+				return icfg;
+			}
+		};
+		solver.wholeProgramAnalysis();
+		DefaultValueMap<Query, AbstractBoomerangSolver> solvers = solver.getSolvers();
+		for(Query q : solvers.keySet()){
+			if(!(q instanceof ForwardQuery))
+				throw new RuntimeException("Unexpected solver found, whole program analysis should only trigger forward queries");
+			for(Node<Statement, Val> s : solvers.get(q).getReachedStates()){
+				if(s.stmt().getUnit().isPresent()){
+					Stmt stmt = s.stmt().getUnit().get();
+					if(stmt.toString().contains("queryFor")){
+						if(stmt.containsInvokeExpr()){
+							InvokeExpr invokeExpr = stmt.getInvokeExpr();
+							if(invokeExpr.getArg(0).equals(s.fact().value()))
+								results.add(q.asNode());
+						}
+					}
+				}
+			}
+		}
+		solver.debugOutput();
 		return results;
 	}
 
