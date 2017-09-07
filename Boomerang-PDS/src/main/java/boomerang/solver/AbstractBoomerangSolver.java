@@ -9,11 +9,13 @@ import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
 
+import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.jimple.Field;
 import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.poi.AbstractPOI;
 import heros.InterproceduralCFG;
 import soot.SootMethod;
 import soot.Unit;
@@ -282,4 +284,28 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 //			System.out.println(weightedPAutomaton.toDotString());
 		}
 	}
+	public void handlePOI(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> aliasedVariableAtStmt, Query baseAllocation) {
+		Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldWrite.getStmt(),
+				fieldWrite.getRightOp());
+		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
+			Node<Statement, Val> aliasedVariableAtSuccessor = new Node<Statement, Val>(successorStatement,
+					aliasedVariableAtStmt.fact());
+			Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getLeftOp());
+			processNormal(rightOpNode, aliasedVariableAtSuccessor);
+			processNormal(aliasedVariableAtStmt, aliasedVariableAtSuccessor); //Maintain flow of base objects
+			processNormal(leftOpNode, baseAllocation.asNode());
+		}
+	}
+	private Set<Statement> getSuccsOf(Statement stmt) {
+		Set<Statement> res = Sets.newHashSet();
+		if(!stmt.getUnit().isPresent())
+			return res;
+		Stmt curr = stmt.getUnit().get();
+		for(Unit succ : icfg.getSuccsOf(curr)){
+			res.add(new Statement((Stmt) succ, icfg.getMethodOf(succ)));
+		}
+		return res;
+	}
+	
+	
 }

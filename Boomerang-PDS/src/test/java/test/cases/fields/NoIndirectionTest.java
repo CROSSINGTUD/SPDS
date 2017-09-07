@@ -3,31 +3,30 @@ package test.cases.fields;
 import org.junit.Test;
 
 import test.core.selfrunning.AbstractBoomerangTest;
-import test.core.selfrunning.AllocatedObject;
 
 public class NoIndirectionTest extends AbstractBoomerangTest {
 	
 	@Test
 	public void doubleWriteAndReadFieldPositive(){
-		Alloc query = new Alloc();
+		Object query = new Alloc();
 		A a = new A();
 		B b = new B();
 		a.b = query;
 		b.a = a;
 		A c = b.a;
-		Alloc alias = c.b;
+		Object alias = c.b;
 		queryFor(alias);
 	}
 	
 	@Test
 	public void doubleWriteAndReadFieldNegative(){
-		Alloc query = new Alloc();
+		Object query = new Object();
 		A a = new A();
 		B b = new B();
 		a.b = query;
 		b.a = a;
 		A c = b.a;
-		Alloc alias = c.c;
+		Object alias = c.c;
 		unreachable(alias);
 	}
 
@@ -36,15 +35,15 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		Alloc query = new Alloc();
 		A a = new A();
 		call(a, query);
-		Alloc alias = a.b;
+		Object alias = a.b;
 		queryFor(alias);
 	}
 	@Test
 	public void writeWithinCallNegative(){
-		Alloc query = new Alloc();
+		Object query = new Object();
 		A a = new A();
 		call(a, query);
-		Alloc alias = a.c;
+		Object alias = a.c;
 		unreachable(alias);
 	}
 	
@@ -53,14 +52,14 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		Alloc query = new Alloc();
 		A a = new A();
 		call(a, query);
-		Alloc alias = a.b;
+		Object alias = a.b;
 		A b = new A();
 		call(b, alias);
-		Alloc summarizedAlias = b.b;
+		Object summarizedAlias = b.b;
 		queryFor(summarizedAlias);
 	}
 	
-	private void call(A a, Alloc query) {
+	private void call(A a, Object query) {
 		a.b = query;
 	}
 	
@@ -70,7 +69,7 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		A a = new A();
 		B b = callAndReturn(a, query);
 		A first = b.a;
-		Alloc alias = first.b;
+		Object alias = first.b;
 		queryFor(alias);
 	}
 
@@ -84,11 +83,11 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 
 	@Test
 	public void overwriteFieldTest(){
-		Alloc query = new Alloc();
+		Object query = new Object();
 		A a = new A();
 		a.b = query;
 		a.b = null;
-		Alloc alias = a.b;
+		Object alias = a.b;
 		unreachable(alias);
 	}
 
@@ -99,7 +98,7 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		A a = new A();
 		a.b = query;
 //		a.c = null;
-		Alloc alias = a.b;
+		Object alias = a.b;
 		queryFor(alias);
 	}
 
@@ -111,7 +110,7 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 		a.b = query;
 		a.b = null;
 		int y = x;
-		Alloc alias = a.b;
+		Object alias = a.b;
 		queryFor(alias);
 	}
 }

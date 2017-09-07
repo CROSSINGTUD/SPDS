@@ -14,7 +14,6 @@ import boomerang.Boomerang;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WholeProgramBoomerang;
-import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
@@ -35,46 +34,65 @@ import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
-import sync.pds.solver.nodes.GeneratedState;
-import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import wpds.impl.Transition;
-import wpds.impl.Weight;
-import wpds.interfaces.WPAUpdateListener;
 
 public class AbstractBoomerangTest extends AbstractTestingFramework {
-	private JimpleBasedInterproceduralCFG icfg;
+	private JimpleBasedInterproceduralCFG icfg;			
+	private Collection<? extends Query> allocationSites;
+	protected Collection<? extends Query> queryForCallSites;
 
+
+	private enum AnalysisMode{
+		WholeProgram, DemandDrivenForward, DemandDrivenBackward;
+	}
+	
+	private AnalysisMode[] analyses = new AnalysisMode[]{
+			AnalysisMode.WholeProgram,
+			AnalysisMode.DemandDrivenForward, 
+			AnalysisMode.DemandDrivenBackward
+	};
+	
 	protected SceneTransformer createAnalysisTransformer() {
 		return new SceneTransformer() {
+
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				icfg = new JimpleBasedInterproceduralCFG(true);
-				Collection<? extends Query> queryForCallSites = extractQuery(
+				allocationSites = extractQuery(new AllocationSiteOf());
+				queryForCallSites = extractQuery(
 						new FirstArgumentOf("queryFor"));
-				Collection<? extends Query> allocationSites = extractQuery(new AllocationSiteOf());
-
-				//Run forward analysis
-				Collection<? extends Query> unreachableNodes = extractQuery(
-						new FirstArgumentOf("unreachable"));
-				Collection<Node<Statement, Val>> results = runWholeProgram();
-				compareQuery( allocationSites, unreachableNodes, results, "WholeProgramForward");
-//				results = runQuery(allocationSites);
-//				compareQuery( queryForCallSites, unreachableNodes, results, "Forward");
-//				if(!queryForCallSites.isEmpty()){
-//					//Run backward analysis
-//					if(queryForCallSites.size() > 1)
-//						throw new RuntimeException("Found more than one backward query to execute!");
-////					Collection<? extends Query> expectedResults = extractQuery(
-////							new FirstArgumentOf("reachable"));
-//					unreachableNodes = extractQuery(
-//							new FirstArgumentOf("unreachable"));
-//					Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
-//					compareQuery(allocationSites, unreachableNodes, backwardResults, "Backward");
-//				}
 				
+				for(AnalysisMode analysis : analyses){
+					switch(analysis){
+						case WholeProgram: 
+							runWholeProgram();
+							break;
+						case DemandDrivenBackward:
+							runDemandDrivenBackward();
+							break;
+						case DemandDrivenForward:
+							runDemandDrivenForward();
+							break;
+					}
+				}
 			}
 		};
 	}
+
+	
+	private void runDemandDrivenBackward() {
+		//Run backward analysis
+		if(queryForCallSites.size() > 1)
+			throw new RuntimeException("Found more than one backward query to execute!");
+		Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
+		compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
+	}
+
+	private void runDemandDrivenForward() {
+		//Run forward analysis
+		Set<Node<Statement, Val>> results = runQuery(allocationSites);
+		compareQuery(queryForCallSites, results, AnalysisMode.DemandDrivenForward);
+	}
+
 
 	private class AllocationSiteOf implements ValueOfInterestInUnit {
 		public Optional<? extends Query> test(Stmt unit) {
@@ -116,8 +134,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	}
 
 	private void compareQuery(Collection<? extends Query> expectedResults,
-			Collection<? extends Query> unreachableNodes,
-			Collection<? extends Node<Statement, Val>> results, String analysis) {
+			Collection<? extends Node<Statement, Val>> results, AnalysisMode analysis) {
 		System.out.println("Boomerang Allocations Sites: " + results);
 		System.out.println("Boomerang Results: " + results);
 		System.out.println("Expected Results: " + expectedResults);
@@ -130,11 +147,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		for(Query res : expectedResults){
 			falsePositiveAllocationSites.remove(res.asNode());
 		}
-		for (Query n : unreachableNodes) {
-			if (results.contains(n.asNode())) {
-				throw new RuntimeException("Unreachable node discovered " + n);
-			}
-		}
 
 		String answer = (falseNegativeAllocationSites.isEmpty() ? "" : "\nFN:" + falseNegativeAllocationSites)
 				+ (falsePositiveAllocationSites.isEmpty() ? "" : "\nFP:" + falsePositiveAllocationSites + "\n");
@@ -143,6 +155,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		}
 		if(!falsePositiveAllocationSites.isEmpty())
 			throw new AssertionError(analysis +"Imprecise " + falsePositiveAllocationSites);
+		System.out.println(analysis + " mode terminated successfully!");
 	}
 
 	private Set<Node<Statement, Val>> runQuery(Collection<? extends Query> queries) {
@@ -181,7 +194,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		}
 		return results;
 	}
-	private Set<Node<Statement, Val>> runWholeProgram() {
+	private void runWholeProgram() {
 		final Set<Node<Statement, Val>> results = Sets.newHashSet();
 		WholeProgramBoomerang solver = new WholeProgramBoomerang() {
 			@Override
@@ -205,10 +218,15 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						}
 					}
 				}
+				if(s.stmt().getMethod().toString().contains("unreachable") && !q.toString().contains("dummyClass.main")){
+					throw new RuntimeException("Propagation within unreachable method found: " + q);
+				}
 			}
 		}
-		solver.debugOutput();
-		return results;
+		
+//		solver.debugOutput();
+		compareQuery(allocationSites, results, AnalysisMode.WholeProgram);
+		System.out.println();
 	}
 
 
