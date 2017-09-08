@@ -282,7 +282,6 @@ public abstract class Boomerang {
 								}
 							}
 						}));
-						currentSolver.handlePOI(FieldWritePOI.this, aliasedVariableAtStmt.fact());
 					}
 				}
 
@@ -319,8 +318,6 @@ public abstract class Boomerang {
 							 	}
 							}
 						}));
-						System.err.println("BACKWARd " + aliasedVariableAtStmt);
-						currentSolver.handlePOI(FieldReadPOI.this, aliasedVariableAtStmt.fact());	
 					}
 				}
 

@@ -44,6 +44,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
+	private boolean DEBUG = false;
 	private Collection<Node<Statement, Val>> fieldFlows = Sets.newHashSet();
 	
 	
@@ -227,16 +228,6 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return fieldFlows.add(fieldFlow);
 	}
 	
-	public void handlePOI(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> aliasedVariableAtStmt) {
-		Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldWrite.getStmt(),
-				fieldWrite.getStoredVar());
-		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
-			Node<Statement, Val> aliasedVariableAtSuccessor = new Node<Statement, Val>(successorStatement,
-					aliasedVariableAtStmt.fact());
-			processNormal(rightOpNode, aliasedVariableAtSuccessor);
-		}
-	}
-	
 	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> baseAllocation){
 		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
 			Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getBaseVar());
@@ -256,6 +247,8 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	}
 	
 	public void debugFieldAutomaton(final Statement statement) {
+		if(!DEBUG)
+			return;
 		final WeightedPAutomaton<Field, INode<Node<Val,Field>>, Weight<Field>> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Val,Field>>, Weight<Field>>(){
 
 			@Override
