@@ -63,7 +63,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	public boolean addTransition(Transition<N, D> trans) {
 		boolean added = internalAddTransition(trans);
 		if(trans.getLabel().equals(epsilon())){
-			addTransitiveTransitions(trans);
+//			addTransitiveTransitions(trans);
 		}
 		return added;
 	}

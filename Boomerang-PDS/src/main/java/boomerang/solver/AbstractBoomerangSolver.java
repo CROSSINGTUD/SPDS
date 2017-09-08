@@ -284,18 +284,24 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 //			System.out.println(weightedPAutomaton.toDotString());
 		}
 	}
-	public void handlePOI(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> aliasedVariableAtStmt, Query baseAllocation) {
+	public void handlePOI(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> aliasedVariableAtStmt) {
 		Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldWrite.getStmt(),
-				fieldWrite.getRightOp());
+				fieldWrite.getStoredVar());
 		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
 			Node<Statement, Val> aliasedVariableAtSuccessor = new Node<Statement, Val>(successorStatement,
 					aliasedVariableAtStmt.fact());
-			Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getLeftOp());
 			processNormal(rightOpNode, aliasedVariableAtSuccessor);
 			processNormal(aliasedVariableAtStmt, aliasedVariableAtSuccessor); //Maintain flow of base objects
-			processNormal(leftOpNode, baseAllocation.asNode());
 		}
 	}
+	
+	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> baseAllocation){
+		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
+			Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getBaseVar());
+			processNormal(leftOpNode, baseAllocation);
+		}
+	}
+	
 	private Set<Statement> getSuccsOf(Statement stmt) {
 		Set<Statement> res = Sets.newHashSet();
 		if(!stmt.getUnit().isPresent())

@@ -13,16 +13,16 @@ public abstract class AbstractPOI<Statement, Val, Field> implements PointOfIndir
 
 	private Set<Query> actualBaseAllocations = Sets.newHashSet();
 	private Set<Query> flowAllocations = Sets.newHashSet();
-	private final Val leftOp;
+	private final Val baseVar;
 	private final Field field;
-	private final Val rightOp;
+	private final Val storedVar;
 	private Statement statement;
 	
-	public AbstractPOI(Statement statement, Val leftOp, Field field, Val rightOp) {
+	public AbstractPOI(Statement statement, Val baseVar, Field field, Val storedVar) {
 		this.statement = statement;
-		this.leftOp = leftOp;
+		this.baseVar = baseVar;
 		this.field = field;
-		this.rightOp = rightOp;
+		this.storedVar = storedVar;
 	}
 
 	public abstract void execute(Query baseAllocation, Query flowAllocation);
@@ -46,16 +46,16 @@ public abstract class AbstractPOI<Statement, Val, Field> implements PointOfIndir
 	}
 	
 
-	public Val getLeftOp() {
-		return leftOp;
+	public Val getBaseVar() {
+		return baseVar;
 	}
 
 	public Field getField() {
 		return field;
 	}
 
-	public Val getRightOp() {
-		return rightOp;
+	public Val getStoredVar() {
+		return storedVar;
 	}
 
 
@@ -68,8 +68,8 @@ public abstract class AbstractPOI<Statement, Val, Field> implements PointOfIndir
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((field == null) ? 0 : field.hashCode());
-		result = prime * result + ((leftOp == null) ? 0 : leftOp.hashCode());
-		result = prime * result + ((rightOp == null) ? 0 : rightOp.hashCode());
+		result = prime * result + ((baseVar == null) ? 0 : baseVar.hashCode());
+		result = prime * result + ((storedVar == null) ? 0 : storedVar.hashCode());
 		result = prime * result + ((statement == null) ? 0 : statement.hashCode());
 		return result;
 	}
@@ -88,15 +88,15 @@ public abstract class AbstractPOI<Statement, Val, Field> implements PointOfIndir
 				return false;
 		} else if (!field.equals(other.field))
 			return false;
-		if (leftOp == null) {
-			if (other.leftOp != null)
+		if (baseVar == null) {
+			if (other.baseVar != null)
 				return false;
-		} else if (!leftOp.equals(other.leftOp))
+		} else if (!baseVar.equals(other.baseVar))
 			return false;
-		if (rightOp == null) {
-			if (other.rightOp != null)
+		if (storedVar == null) {
+			if (other.storedVar != null)
 				return false;
-		} else if (!rightOp.equals(other.rightOp))
+		} else if (!storedVar.equals(other.storedVar))
 			return false;
 		if (statement == null) {
 			if (other.statement != null)

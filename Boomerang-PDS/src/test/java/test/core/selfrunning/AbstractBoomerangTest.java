@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import com.beust.jcommander.internal.Sets;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
 import boomerang.BackwardQuery;
@@ -40,17 +41,21 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	private JimpleBasedInterproceduralCFG icfg;			
 	private Collection<? extends Query> allocationSites;
 	protected Collection<? extends Query> queryForCallSites;
+	protected Collection<Error> unsoundErrors = Sets.newHashSet();
+	protected Collection<Error> imprecisionErrors = Sets.newHashSet();
 
 
 	private enum AnalysisMode{
 		WholeProgram, DemandDrivenForward, DemandDrivenBackward;
 	}
 	
-	private AnalysisMode[] analyses = new AnalysisMode[]{
+	protected AnalysisMode[] getAnalyses(){
+		return new AnalysisMode[]{
 			AnalysisMode.WholeProgram,
 			AnalysisMode.DemandDrivenForward, 
 			AnalysisMode.DemandDrivenBackward
-	};
+		};
+	}
 	
 	protected SceneTransformer createAnalysisTransformer() {
 		return new SceneTransformer() {
@@ -61,7 +66,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				queryForCallSites = extractQuery(
 						new FirstArgumentOf("queryFor"));
 				
-				for(AnalysisMode analysis : analyses){
+				for(AnalysisMode analysis : getAnalyses()){
 					switch(analysis){
 						case WholeProgram: 
 							runWholeProgram();
@@ -73,6 +78,12 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 							runDemandDrivenForward();
 							break;
 					}
+				}
+				if(!unsoundErrors.isEmpty()){
+					throw new RuntimeException(Joiner.on("\n").join(unsoundErrors));
+				}
+				if(!imprecisionErrors.isEmpty()){
+					throw new AssertionError(Joiner.on("\n").join(imprecisionErrors));
 				}
 			}
 		};
@@ -151,11 +162,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		String answer = (falseNegativeAllocationSites.isEmpty() ? "" : "\nFN:" + falseNegativeAllocationSites)
 				+ (falsePositiveAllocationSites.isEmpty() ? "" : "\nFP:" + falsePositiveAllocationSites + "\n");
 		if (!falseNegativeAllocationSites.isEmpty()) {
-			throw new RuntimeException(analysis + " Unsound results for:" + answer);
+			unsoundErrors.add(new Error(analysis + " Unsound results for:" + answer));
 		}
 		if(!falsePositiveAllocationSites.isEmpty())
-			throw new AssertionError(analysis +"Imprecise " + falsePositiveAllocationSites);
-		System.out.println(analysis + " mode terminated successfully!");
+			imprecisionErrors.add(new Error(analysis + " Unsound results for:" + answer));
 	}
 
 	private Set<Node<Statement, Val>> runQuery(Collection<? extends Query> queries) {
@@ -224,7 +234,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			}
 		}
 		
-//		solver.debugOutput();
+		solver.debugOutput();
 		compareQuery(allocationSites, results, AnalysisMode.WholeProgram);
 		System.out.println();
 	}

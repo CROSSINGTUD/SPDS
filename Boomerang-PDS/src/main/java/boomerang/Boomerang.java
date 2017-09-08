@@ -16,8 +16,6 @@ import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
 import heros.utilities.DefaultValueMap;
-import soot.MethodOrMethodContext;
-import soot.Scene;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
@@ -26,23 +24,14 @@ import soot.jimple.InstanceFieldRef;
 import soot.jimple.NewExpr;
 import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.callgraph.ReachableMethods;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-import soot.util.queue.QueueReader;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;
-import sync.pds.solver.SyncPDSSolver.PDSSystem;
-import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import sync.pds.solver.nodes.NodeWithLocation;
-import sync.pds.solver.nodes.PopNode;
-import sync.pds.solver.nodes.SingleNode;
-import sync.pds.weights.SetDomain;
-import wpds.impl.PushRule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -118,10 +107,10 @@ public abstract class Boomerang {
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
 							handleFieldRead(node, ifr, as, backwardQuery);
 						}
-						if(as.getLeftOp() instanceof InstanceFieldRef){
-							InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
-							handleFieldWriteBackward(node, ifr, as, backwardQuery);
-						}
+//						if(as.getLeftOp() instanceof InstanceFieldRef){
+//							InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
+//							handleFieldWriteBackward(node, ifr, as, backwardQuery);
+//						}
 					}
 				}
 			}
@@ -167,7 +156,7 @@ public abstract class Boomerang {
 				public void witnessFound(Node<Statement, Val> alloc) {
 				}
 			});
-//			fieldReads.getOrCreate(new FieldReadPOI(backwardQuery.asNode(), field, as, base)).addFlowAllocation(sourceQuery);
+			fieldReads.getOrCreate(new FieldReadPOI(node.stmt(), base, field, new Val(as.getLeftOp(),icfg().getMethodOf(as)))).addFlowAllocation(sourceQuery);
 		}
 	}
 
@@ -191,17 +180,7 @@ public abstract class Boomerang {
 		}
 		if (node.fact().value().equals(ifr.getBase())) {
 			fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(),base, field, new Val(as.getRightOp(),icfg().getMethodOf(as)), as, base)).addBaseAllocation(sourceQuery);
-//			backwardFieldWrites.getOrCreate(new BackwardFieldWritePOI(backwardQuery.asNode(), field, as, base)).addBaseAllocation(sourceQuery);
 		}
-	}
-
-	private void handleFieldWriteBackward(WitnessNode<Statement, Val, Field> node, InstanceFieldRef ifr,
-			AssignStmt as, BackwardQuery backwardQuery) {
-		Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
-		BackwardQuery baseQuery = new BackwardQuery(node.stmt(),
-				base);
-		final Field field = new Field(ifr.getField());
-//		backwardFieldWrites.getOrCreate(new BackwardFieldWritePOI(baseQuery.asNode(),field,as, base)).addFlowAllocation(backwardQuery);	
 	}
 
 
@@ -209,12 +188,9 @@ public abstract class Boomerang {
 			final AssignStmt fieldRead, final ForwardQuery sourceQuery) {
 		if (node.fact().value().equals(ifr.getBase())) {
 			Val base = new Val(ifr.getBase(), icfg().getMethodOf(fieldRead));
-			BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
-						base);
 			Field field = new Field(ifr.getField());
-//			fieldReads.getOrCreate(new FieldReadPOI(backwardQuery.asNode(), field, fieldRead, base)).addBaseAllocation(sourceQuery);
+			fieldReads.getOrCreate(new FieldReadPOI(node.stmt(), base,field, new Val(fieldRead.getLeftOp(), icfg().getMethodOf(fieldRead)))).addBaseAllocation(sourceQuery);
 		}
-
 	}
 
 
@@ -283,16 +259,18 @@ public abstract class Boomerang {
 					INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt()) && !(aliasedVariableAtStmt instanceof GeneratedState)){
 						final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = queryToSolvers.getOrCreate(baseAllocation).getFieldAutomaton();
+						final AbstractBoomerangSolver currentSolver = queryToSolvers.getOrCreate(flowAllocation);
 						new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(aut, aliasedVariableAtStmt, new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 						
 							@Override
 							public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
-								queryToSolvers.getOrCreate(flowAllocation).getFieldAutomaton().addTransition(transition);	
+								currentSolver.getFieldAutomaton().addTransition(transition);
+								if(transition.getTarget().fact().equals(baseAllocation.asNode())){
+									currentSolver.connectBase(FieldWritePOI.this, transition.getStart().fact());
+							 	}
 							}
 						});
-						
-						AbstractBoomerangSolver solver = queryToSolvers.getOrCreate(flowAllocation);
-						solver.handlePOI(FieldWritePOI.this, aliasedVariableAtStmt.fact(), baseAllocation);
+						currentSolver.handlePOI(FieldWritePOI.this, aliasedVariableAtStmt.fact());
 					}
 				}
 
@@ -304,67 +282,10 @@ public abstract class Boomerang {
 	}
 	
 	
-//	private class BackwardFieldWritePOI extends AbstractPOI<Statement, Val, Field> {
-//
-//		private Field field;
-//		private AssignStmt fieldWriteStatement;
-//		private Val base;
-//
-//		public BackwardFieldWritePOI(Node<Statement,Val> node, Field field, AssignStmt fieldWriteStatement, Val base) {
-//			super(node);
-////			System.out.println("HERE" + this);
-//			this.field = field;
-//			this.fieldWriteStatement = fieldWriteStatement;
-//			this.base = base;
-//		}
-//
-//		@Override
-//		public void execute(final Query baseAllocation, final Query flowAllocation) {
-//			assert baseAllocation instanceof ForwardQuery;
-//			assert flowAllocation instanceof BackwardQuery;
-//			queryToSolvers.getOrCreate(baseAllocation).addFieldAutomatonListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
-//				@Override
-//				public void onReachableNodeAdded(final WitnessNode<Statement, Val, Field> forwardReachableNode) {
-//					if(forwardReachableNode.stmt().equals(getNode().stmt())){
-//						queryToSolvers.getOrCreate(flowAllocation).addFieldAutomatonListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-//
-//							@Override
-//							public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-//								if(t.getStart() instanceof GeneratedState)
-//									return;
-//								Node<Statement, Val> backwardFact = t.getStart().fact();
-//								if(backwardFact.stmt().equals(getNode().stmt())){
-//									if(forwardReachableNode.fact().equals(backwardFact.fact())){
-//////										Statement s = backwardReachableNode.stmt();
-////										Optional<Stmt> curr = s.getUnit();
-////										if(!curr.isPresent())
-////											return;
-////										for(Unit succ  : bwicfg().getSuccsOf(curr.get())){
-////											NodeWithLocation<Statement, Val, Field> succNode = new NodeWithLocation<>(
-////													new Statement((Stmt) succ, s.getMethod()), new Val(fieldWriteStatement.getRightOp(),s.getMethod()), field);
-////											PopNode<NodeWithLocation<Statement, Val, Field>> popNode = new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS);
-//////											queryToSolvers.getOrCreate(flowAllocation).getFieldAutomaton().addTransition(trans)(backwardReachableNode.asNode(), popNode);
-////										}
-//									}
-//								}
-//							}
-//
-//							@Override
-//							public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t,
-//									Weight<Field> w) {
-//								// TODO Auto-generated method stub
-//								
-//							}
-//						});
-//					}
-//				}
-//			});
-//		}
-//	}
 	private class FieldReadPOI extends AbstractPOI<Statement, Val, Field> {
 
-		public FieldReadPOI(Statement statement, Val leftOp, Field field, Val rightOp) {
-			super(statement,leftOp,field,rightOp);
+		public FieldReadPOI(Statement statement, Val base, Field field, Val stored) {
+			super(statement,base,field,stored);
 		}
 
 		@Override
@@ -375,14 +296,18 @@ public abstract class Boomerang {
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt()) && !(t.getStart() instanceof GeneratedState)){
-						System.err.println(t + "" + flowAllocation);
+						final AbstractBoomerangSolver currentSolver = queryToSolvers.getOrCreate(flowAllocation);
 						new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(queryToSolvers.getOrCreate(baseAllocation).getFieldAutomaton(), t.getStart(), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 							@Override
-							public void reachable(Transition<Field, INode<Node<Statement,Val>>> t) {
-								 queryToSolvers.getOrCreate(flowAllocation).getFieldAutomaton().addTransition(t);	
+							public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
+								currentSolver.getFieldAutomaton().addTransition(transition);	
+								if(transition.getTarget().fact().equals(baseAllocation.asNode())){
+									currentSolver.connectBase(FieldReadPOI.this, transition.getStart().fact());
+							 	}
 							}
 						});
-						queryToSolvers.getOrCreate(flowAllocation).handlePOI(FieldReadPOI.this, aliasedVariableAtStmt.fact(), baseAllocation);	
+						System.err.println("BACKWARd " + aliasedVariableAtStmt);
+						currentSolver.handlePOI(FieldReadPOI.this, aliasedVariableAtStmt.fact());	
 					}
 				}
 
