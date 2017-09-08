@@ -267,6 +267,10 @@ public abstract class Boomerang {
 						
 							@Override
 							public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
+								if(transition.getTarget().fact().equals(baseAllocation.asNode())){
+									currentSolver.connectBase(FieldWritePOI.this, transition.getStart().fact());
+									return;
+							 	}
 								if(transition.getStart().equals(aliasedVariableAtStmt)){
 									for(Statement succ : currentSolver.getSuccsOf(aliasedVariableAtStmt.fact().stmt())){
 										Node<Statement, Val> aliasedVariableAtSuccessor = new Node<Statement, Val>(succ,
@@ -276,13 +280,6 @@ public abstract class Boomerang {
 								} else{
 									currentSolver.getFieldAutomaton().addTransition(transition);	
 								}
-								if(transition.toString().contains("base) l2"))
-									System.err.println(transition);
-								if(baseAllocation.toString().contains("Level2"))
-									System.out.println(transition);
-								if(transition.getTarget().fact().equals(baseAllocation.asNode())){
-									currentSolver.connectBase(FieldWritePOI.this, transition.getStart().fact());
-							 	}
 							}
 						}));
 						currentSolver.handlePOI(FieldWritePOI.this, aliasedVariableAtStmt.fact());

@@ -165,7 +165,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			unsoundErrors.add(new Error(analysis + " Unsound results for:" + answer));
 		}
 		if(!falsePositiveAllocationSites.isEmpty())
-			imprecisionErrors.add(new Error(analysis + " Unsound results for:" + answer));
+			imprecisionErrors.add(new Error(analysis + " Imprecise results for:" + answer));
 	}
 
 	private Set<Node<Statement, Val>> runQuery(Collection<? extends Query> queries) {
