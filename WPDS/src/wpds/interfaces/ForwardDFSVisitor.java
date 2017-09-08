@@ -11,30 +11,35 @@ import wpds.impl.WeightedPAutomaton;
 
 public class ForwardDFSVisitor<N extends Location,D extends State, W extends Weight<N>> implements WPAUpdateListener<N, D, W>{
 	
-	private Set<D> reachable = Sets.newHashSet();
+	private Set<Transition<N, D>> reachable = Sets.newHashSet();
 	private ReachabilityListener<N,D> listener;
 	private WeightedPAutomaton<N, D, W> aut;
+	private D startState;
 	
 	
 	public ForwardDFSVisitor(WeightedPAutomaton<N,D,W> aut, D startState, ReachabilityListener<N,D> listener){
 		this.aut = aut;
+		this.startState = startState;
 		this.listener = listener;
-		addReachable(startState, Sets.<D>newHashSet());
+
+		for(Transition<N, D> t : aut.getTransitionsOutOf(startState)){
+			addReachable(t, Sets.<Transition<N, D>>newHashSet());
+		}
 	}
 	
 
-	private void addReachable(D s, Set<D> visited) {
+	private void addReachable(Transition<N, D> s, Set<Transition<N, D>> visited) {
 		if(!reachable.add(s))
 			return;
 		if(!visited.add(s))
 			return;
-		Collection<Transition<N, D>> trans = aut.getTransitionsOutOf(s);
+		listener.reachable(s);
+		Collection<Transition<N, D>> trans = aut.getTransitionsOutOf(s.getTarget());
 		for(Transition<N, D> t : trans){
 			if(!continueWith(t)){
 				continue;
 			}
-			listener.reachable(t);
-			addReachable(t.getTarget(),visited);
+			addReachable(t,visited);
 		}
 	}
 
@@ -47,8 +52,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 
 	@Override
 	public void onAddedTransition(Transition<N, D> t) {
-		if(reachable.contains(t.getStart()))
-			addReachable(t.getTarget(), Sets.<D>newHashSet());
+		addReachable(t, Sets.<Transition<N, D>>newHashSet());
 	}
 
 	@Override

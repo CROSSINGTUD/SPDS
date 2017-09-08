@@ -226,6 +226,35 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	public boolean addFieldFlow(Node<Statement, Val> fieldFlow) {
 		return fieldFlows.add(fieldFlow);
 	}
+	
+	public void handlePOI(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> aliasedVariableAtStmt) {
+		Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldWrite.getStmt(),
+				fieldWrite.getStoredVar());
+		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
+			Node<Statement, Val> aliasedVariableAtSuccessor = new Node<Statement, Val>(successorStatement,
+					aliasedVariableAtStmt.fact());
+			processNormal(rightOpNode, aliasedVariableAtSuccessor);
+		}
+	}
+	
+	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> baseAllocation){
+		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
+			Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getBaseVar());
+			processNormal(leftOpNode, baseAllocation);
+		}
+	}
+	
+	public Set<Statement> getSuccsOf(Statement stmt) {
+		Set<Statement> res = Sets.newHashSet();
+		if(!stmt.getUnit().isPresent())
+			return res;
+		Stmt curr = stmt.getUnit().get();
+		for(Unit succ : icfg.getSuccsOf(curr)){
+			res.add(new Statement((Stmt) succ, icfg.getMethodOf(succ)));
+		}
+		return res;
+	}
+	
 	public void debugFieldAutomaton(final Statement statement) {
 		final WeightedPAutomaton<Field, INode<Node<Val,Field>>, Weight<Field>> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Val,Field>>, Weight<Field>>(){
 
@@ -283,34 +312,6 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			}
 //			System.out.println(weightedPAutomaton.toDotString());
 		}
-	}
-	public void handlePOI(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> aliasedVariableAtStmt) {
-		Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldWrite.getStmt(),
-				fieldWrite.getStoredVar());
-		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
-			Node<Statement, Val> aliasedVariableAtSuccessor = new Node<Statement, Val>(successorStatement,
-					aliasedVariableAtStmt.fact());
-			processNormal(rightOpNode, aliasedVariableAtSuccessor);
-			processNormal(aliasedVariableAtStmt, aliasedVariableAtSuccessor); //Maintain flow of base objects
-		}
-	}
-	
-	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> baseAllocation){
-		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
-			Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getBaseVar());
-			processNormal(leftOpNode, baseAllocation);
-		}
-	}
-	
-	private Set<Statement> getSuccsOf(Statement stmt) {
-		Set<Statement> res = Sets.newHashSet();
-		if(!stmt.getUnit().isPresent())
-			return res;
-		Stmt curr = stmt.getUnit().get();
-		for(Unit succ : icfg.getSuccsOf(curr)){
-			res.add(new Statement((Stmt) succ, icfg.getMethodOf(succ)));
-		}
-		return res;
 	}
 	
 	

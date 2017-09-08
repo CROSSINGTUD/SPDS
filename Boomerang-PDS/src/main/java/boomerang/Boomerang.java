@@ -32,6 +32,7 @@ import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -256,20 +257,34 @@ public abstract class Boomerang {
 
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-					INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
+					final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt()) && !(aliasedVariableAtStmt instanceof GeneratedState)){
+						if(aliasedVariableAtStmt.fact().equals(getBaseVar()))
+							return;
 						final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = queryToSolvers.getOrCreate(baseAllocation).getFieldAutomaton();
 						final AbstractBoomerangSolver currentSolver = queryToSolvers.getOrCreate(flowAllocation);
-						new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(aut, aliasedVariableAtStmt, new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
+						aut.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(aut, aliasedVariableAtStmt, new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 						
 							@Override
 							public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
-								currentSolver.getFieldAutomaton().addTransition(transition);
+								if(transition.getStart().equals(aliasedVariableAtStmt)){
+									for(Statement succ : currentSolver.getSuccsOf(aliasedVariableAtStmt.fact().stmt())){
+										Node<Statement, Val> aliasedVariableAtSuccessor = new Node<Statement, Val>(succ,
+												aliasedVariableAtStmt.fact().fact());
+										currentSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new SingleNode<Node<Statement,Val>>(aliasedVariableAtSuccessor), transition.getLabel(), transition.getTarget()));
+									}
+								} else{
+									currentSolver.getFieldAutomaton().addTransition(transition);	
+								}
+								if(transition.toString().contains("base) l2"))
+									System.err.println(transition);
+								if(baseAllocation.toString().contains("Level2"))
+									System.out.println(transition);
 								if(transition.getTarget().fact().equals(baseAllocation.asNode())){
 									currentSolver.connectBase(FieldWritePOI.this, transition.getStart().fact());
 							 	}
 							}
-						});
+						}));
 						currentSolver.handlePOI(FieldWritePOI.this, aliasedVariableAtStmt.fact());
 					}
 				}
@@ -297,7 +312,8 @@ public abstract class Boomerang {
 					INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt()) && !(t.getStart() instanceof GeneratedState)){
 						final AbstractBoomerangSolver currentSolver = queryToSolvers.getOrCreate(flowAllocation);
-						new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(queryToSolvers.getOrCreate(baseAllocation).getFieldAutomaton(), t.getStart(), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
+						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = queryToSolvers.getOrCreate(baseAllocation).getFieldAutomaton();
+						aut.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(aut, t.getStart(), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 							@Override
 							public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
 								currentSolver.getFieldAutomaton().addTransition(transition);	
@@ -305,7 +321,7 @@ public abstract class Boomerang {
 									currentSolver.connectBase(FieldReadPOI.this, transition.getStart().fact());
 							 	}
 							}
-						});
+						}));
 						System.err.println("BACKWARd " + aliasedVariableAtStmt);
 						currentSolver.handlePOI(FieldReadPOI.this, aliasedVariableAtStmt.fact());	
 					}

@@ -20,9 +20,7 @@ import pathexpression.IRegEx;
 import pathexpression.LabeledGraph;
 import pathexpression.PathExpressionComputer;
 import pathexpression.RegEx;
-import wpds.interfaces.ForwardDFSVisitor;
 import wpds.interfaces.Location;
-import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
@@ -61,14 +59,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public boolean addTransition(Transition<N, D> trans) {
-		boolean added = internalAddTransition(trans);
-		if(trans.getLabel().equals(epsilon())){
-//			addTransitiveTransitions(trans);
-		}
-		return added;
-	}
-	
-	private boolean internalAddTransition(Transition<N, D> trans) {
 		transitionsOutOf.get(trans.getStart()).add(trans);
 		transitionsInto.get(trans.getTarget()).add(trans);
 		states.add(trans.getTarget());
@@ -81,26 +71,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			}
 		}
 		return added;
-	}
-
-	private void addTransitiveTransitions(final Transition<N, D> trans) {
-		new ForwardDFSVisitor<N,D,W>(this, trans.getStart(), new ReachabilityListener<N, D>() {
-
-			@Override
-			public void reachable(Transition<N, D> t) {
-				Collection<Transition<N, D>> transOutOf = transitionsOutOf.get(t.getTarget());
-				for(Transition<N, D> transOutOfTarget : transOutOf){
-					if(transOutOfTarget.getLabel().equals(epsilon()))
-						continue;
-					internalAddTransition(new Transition<N,D>(trans.getStart(),transOutOfTarget.getLabel(),transOutOfTarget.getTarget()));
-				}
-			}
-		}){
-			@Override
-			protected boolean continueWith(Transition<N, D> t) {
-				return t.getLabel().equals(epsilon());
-			}
-		};
 	}
 
 	public D getInitialState() {
