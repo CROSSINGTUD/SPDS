@@ -340,7 +340,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 
-	private void setCallingContextReachable(Node<Stmt,Fact> node, Transition<Stmt, INode<Fact>> t) {
+	protected void setCallingContextReachable(Node<Stmt,Fact> node, Transition<Stmt, INode<Fact>> t) {
 		if (!callingContextReachable.add(node))
 			return;
 
@@ -354,7 +354,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		WitnessNode<Stmt, Fact, Field> witnessNode = new WitnessNode<Stmt,Fact,Field>(node.stmt(),node.fact());
 		return witnessNode;
 	}
-	private void setFieldContextReachable(Node<Stmt,Fact> node, Transition<Field, INode<Node<Stmt,Fact>>> t) {
+	protected void setFieldContextReachable(Node<Stmt,Fact> node, Transition<Field, INode<Node<Stmt,Fact>>> t) {
 		if (!fieldContextReachable.add(node)) {
 			return;
 		}

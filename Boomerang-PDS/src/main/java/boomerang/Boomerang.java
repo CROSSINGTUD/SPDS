@@ -268,29 +268,16 @@ public abstract class Boomerang {
 							@Override
 							public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
 								
-								if(transition.getStart().fact().stmt().equals(getStmt())){
-									INode<Node<Statement, Val>> start = transition.getStart();
-									for(Statement succ : currentSolver.getSuccsOf(getStmt())){
-										Node<Statement, Val> aliasedVariableAtSuccessor = new Node<Statement, Val>(succ,
-												transition.getStart().fact().fact());
-										INode<Node<Statement, Val>> wrappedAliasedVarAtSucc = new SingleNode<Node<Statement,Val>>(aliasedVariableAtSuccessor);
-										
-										if(start instanceof GeneratedState){
-											GeneratedState<Node<Statement, Val>,Field> generatedState = (GeneratedState) start;
-											wrappedAliasedVarAtSucc = currentSolver.generateFieldState(wrappedAliasedVarAtSucc, generatedState.location());
-										}
-										currentSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(wrappedAliasedVarAtSucc, transition.getLabel(), transition.getTarget()));
-										if(transition.getTarget().fact().equals(baseAllocation.asNode())){
-											if(flowAllocation.toString().contains("Alloc")){
-												System.out.println(transition);
-												
-											}
-												currentSolver.connectBase(FieldWritePOI.this, wrappedAliasedVarAtSucc);
-//											return;
-									 	}
-									}
-								} else{
-									currentSolver.getFieldAutomaton().addTransition(transition);	
+								if(transition.getStart() instanceof GeneratedState){
+									currentSolver.addGeneratedFieldState((GeneratedState<Node<Statement,Val>, Field>)transition.getStart());
+								}
+								if(transition.getTarget() instanceof GeneratedState){
+									currentSolver.addGeneratedFieldState((GeneratedState<Node<Statement,Val>, Field>)transition.getTarget());
+								}
+								currentSolver.getFieldAutomaton().addTransition(transition);	
+								
+								if(transition.getTarget().fact().equals(baseAllocation.asNode())){
+									currentSolver.connectBase(FieldWritePOI.this, transition.getStart());
 								}
 							}
 						}));

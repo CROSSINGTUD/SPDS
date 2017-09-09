@@ -228,6 +228,8 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
 			Node<Statement, Val> aliasedVariableAtSuccessor = new Node<Statement, Val>(successorStatement,
 					aliasedVariableAtStmt.fact());
+			setFieldContextReachable(aliasedVariableAtStmt, null);
+			setCallingContextReachable(aliasedVariableAtStmt, null);
 			addNormalCallFlow(rightOpNode, aliasedVariableAtSuccessor);
 		}
 	}
@@ -236,9 +238,10 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
 			Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getBaseVar());
 			System.out.println("CONNECT " + leftOpNode +" -> " + iNode);
-
 			fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(new SingleNode<Node<Statement,Val>>(leftOpNode),
 					fieldWildCard(),iNode, fieldWildCard(), fieldPDS.getOne()));
+			
+
 		}
 	}
 	
@@ -256,16 +259,17 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	public void debugFieldAutomaton(final Statement statement) {
 		if(!DEBUG)
 			return;
-		final WeightedPAutomaton<Field, INode<Node<Val,Field>>, Weight<Field>> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Val,Field>>, Weight<Field>>(){
-
-			@Override
-			public INode<Node<Val,Field>> createState(INode<Node<Val,Field>> d, Field loc) {
-				return new SingleNode<Node<Val,Field>>(new Node<Val,Field>(d.fact().stmt(),loc));
-			}
+		final WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight<Field>> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight<Field>>(){
 
 			@Override
 			public Field epsilon() {
 				return Field.epsilon();
+			}
+
+			@Override
+			public INode<Node<Statement, Val>> createState(INode<Node<Statement, Val>> d, Field loc) {
+				// TODO Auto-generated method stub
+				return null;
 			}};
 		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 			
@@ -280,21 +284,8 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 					new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(fieldAutomaton,t.getStart(),new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 						@Override
 						public void reachable(Transition<Field, INode<Node<Statement,Val>>> t) {
-							INode<Node<Val, Field>> start;
-							INode<Node<Val, Field>> target;
-							if(t.getStart() instanceof GeneratedState){
-								GeneratedState genState = (GeneratedState) t.getStart();
-								start = new SingleNode<Node<Val,Field>>(new Node<Val,Field>(t.getStart().fact().fact(),(Field)genState.location()));
-							} else{
-								start = new SingleNode<Node<Val,Field>>(new Node<Val,Field>(t.getStart().fact().fact(),Field.epsilon()));
-							}
-							if(t.getTarget() instanceof GeneratedState){
-								GeneratedState genState = (GeneratedState) t.getTarget();
-								target = new SingleNode<Node<Val,Field>>(new Node<Val,Field>(t.getTarget().fact().fact(),(Field)genState.location()));
-							} else{
-								target = new SingleNode<Node<Val,Field>>(new Node<Val,Field>(t.getTarget().fact().fact(),Field.epsilon()));
-							}
-							weightedPAutomaton.addTransition(new Transition<Field, INode<Node<Val,Field>>>(start, t.getLabel(), target));
+							
+							weightedPAutomaton.addTransition(t);
 						}
 					});
 				}
@@ -302,14 +293,14 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		});
 		if(!weightedPAutomaton.getTransitions().isEmpty()){
 			INode<Node<Val, Field>> start = new SingleNode<Node<Val,Field>>(new Node<Val,Field>(query.asNode().fact(),Field.epsilon()));
-			if(!weightedPAutomaton.getTransitionsInto(start).isEmpty())
-				weightedPAutomaton.addFinalState(start);
+//			if(!weightedPAutomaton.getTransitionsInto(start).isEmpty())
+//				weightedPAutomaton.addFinalState(start);
 			System.out.println(statement);
 			System.out.println(weightedPAutomaton.toDotString());
-			for(Transition<Field, INode<Node<Val, Field>>> t : weightedPAutomaton.getTransitions()){
-				if(t.getStart().fact().fact().equals(Field.epsilon()))
-					System.out.println(t.getStart().fact().stmt() + "\t" + weightedPAutomaton.extractLanguage(t.getStart()));
-			}
+//			for(Transition<Field, INode<Node<Statement, Val>>> t : weightedPAutomaton.getTransitions()){
+//				if(t.getStart().fact().fact().equals(Field.epsilon()))
+//					System.out.println(t.getStart().fact().stmt() + "\t" + weightedPAutomaton.extractLanguage(t.getStart()));
+//			}
 //			System.out.println(weightedPAutomaton.toDotString());
 		}
 	}
