@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.SynchronousQueue;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -32,7 +33,19 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 					if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
 						update(t, rule);
 					}
+					//TODO this is a bad solution. 
+					if(rule instanceof PopRule){
+						if(t.getLabel().equals(fa.epsilon()) && !t.getStart().equals(t.getTarget())){
+							Collection<Transition<N, D>> transitives = fa.getTransitionsOutOf(t.getTarget());
+							for(Transition<N, D> t2 : Lists.newLinkedList(transitives)){
+								if(t2.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
+									update(t2, rule);
+								}		
+							}
+						}
+					}
 				}
+				
 			}
 		});
 		fa.registerListener(new WPAUpdateListener<N, D, W>() {
