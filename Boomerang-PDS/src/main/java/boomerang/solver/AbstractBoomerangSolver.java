@@ -225,8 +225,8 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	public void handlePOI(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> aliasedVariableAtStmt) {
 		Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldWrite.getStmt(),
 				fieldWrite.getStoredVar());
-			setFieldContextReachable(aliasedVariableAtStmt);
-			addNormalCallFlow(rightOpNode, aliasedVariableAtStmt);
+		setFieldContextReachable(aliasedVariableAtStmt);
+		addNormalCallFlow(rightOpNode, aliasedVariableAtStmt);
 	}
 	
 	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, INode<Node<Statement, Val>> iNode, Statement successorStatement){
