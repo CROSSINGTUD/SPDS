@@ -75,13 +75,14 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			previous.add(t);
 			N l2 = normalRule.getL2();
 			if (l2 instanceof Wildcard) {
-				l2 = t.getString();
+
 				if (l2 instanceof ExclusionWildcard) {
 					
 					ExclusionWildcard<N> ex = (ExclusionWildcard<N>) l2;
 					if (t.getString().equals(ex.excludes()))
 						return;
 				}
+				l2 = t.getString();
 			}
 			update(rule, new Transition<N, D>(p, l2, t.getTarget()), newWeight, previous);
 		} else if (rule instanceof PushRule) {

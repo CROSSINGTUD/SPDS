@@ -142,5 +142,15 @@ public class WritePOITest extends AbstractBoomerangTest {
 		Object query2 = a.b;
 		queryFor(query2);
 	}
+
+	@Test
+	public void overwriteTwice(){
+		Alloc alloc = new Alloc();
+		A a = new A();
+		a.b = new Object();
+		a.b = alloc;
+		Object query1 = a.b;
+		queryFor(query1);
+	}
 	private static class Alloc implements AllocatedObject{};
 }
