@@ -32,7 +32,6 @@ import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -253,12 +252,13 @@ public abstract class Boomerang {
 
 		@Override
 		public void execute(final Query baseAllocation, final Query flowAllocation) {
+			for(final Statement succOfWrite : getSuccsOf(getStmt())){
 			queryToSolvers.get(baseAllocation).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt()) && !(aliasedVariableAtStmt instanceof GeneratedState)){
+					if(aliasedVariableAtStmt.fact().stmt().equals(succOfWrite) && !(aliasedVariableAtStmt instanceof GeneratedState)){
 						if(aliasedVariableAtStmt.fact().fact().equals(getBaseVar()) || aliasedVariableAtStmt.fact().fact().equals(getStoredVar()))
 							return;
 						final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = queryToSolvers.getOrCreate(baseAllocation).getFieldAutomaton();
@@ -277,7 +277,7 @@ public abstract class Boomerang {
 								currentSolver.getFieldAutomaton().addTransition(transition);	
 								
 								if(transition.getTarget().fact().equals(baseAllocation.asNode())){
-									currentSolver.connectBase(FieldWritePOI.this, transition.getStart());
+									currentSolver.connectBase(FieldWritePOI.this, transition.getStart(), succOfWrite);
 								}
 							}
 						}));
@@ -289,6 +289,7 @@ public abstract class Boomerang {
 				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
 				}
 			});
+			}
 		}
 	}
 	
@@ -342,6 +343,18 @@ public abstract class Boomerang {
 	public DefaultValueMap<Query, AbstractBoomerangSolver> getSolvers() {
 		return queryToSolvers;
 	}
+	
+	private Set<Statement> getSuccsOf(Statement stmt) {
+		Set<Statement> res = Sets.newHashSet();
+		if(!stmt.getUnit().isPresent())
+			return res;
+		Stmt curr = stmt.getUnit().get();
+		for(Unit succ : icfg().getSuccsOf(curr)){
+			res.add(new Statement((Stmt) succ, icfg().getMethodOf(succ)));
+		}
+		return res;
+	}
+	
 	public void debugOutput() {
 		for (Query q : queryToSolvers.keySet()) {
 //			if (q instanceof ForwardQuery) {

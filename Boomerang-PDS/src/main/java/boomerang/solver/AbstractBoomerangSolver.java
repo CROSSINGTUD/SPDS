@@ -225,35 +225,14 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	public void handlePOI(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> aliasedVariableAtStmt) {
 		Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldWrite.getStmt(),
 				fieldWrite.getStoredVar());
-		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
-			Node<Statement, Val> aliasedVariableAtSuccessor = new Node<Statement, Val>(successorStatement,
-					aliasedVariableAtStmt.fact());
 			setFieldContextReachable(aliasedVariableAtStmt, null);
-			setCallingContextReachable(aliasedVariableAtStmt, null);
-			addNormalCallFlow(rightOpNode, aliasedVariableAtSuccessor);
-		}
+			addNormalCallFlow(rightOpNode, aliasedVariableAtStmt);
 	}
 	
-	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, INode<Node<Statement, Val>> iNode){
-		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
-			Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getBaseVar());
-			System.out.println("CONNECT " + leftOpNode +" -> " + iNode);
-			fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(new SingleNode<Node<Statement,Val>>(leftOpNode),
-					fieldWildCard(),iNode, fieldWildCard(), fieldPDS.getOne()));
-			
-
-		}
-	}
-	
-	public Set<Statement> getSuccsOf(Statement stmt) {
-		Set<Statement> res = Sets.newHashSet();
-		if(!stmt.getUnit().isPresent())
-			return res;
-		Stmt curr = stmt.getUnit().get();
-		for(Unit succ : icfg.getSuccsOf(curr)){
-			res.add(new Statement((Stmt) succ, icfg.getMethodOf(succ)));
-		}
-		return res;
+	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, INode<Node<Statement, Val>> iNode, Statement successorStatement){
+		Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getBaseVar());
+		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(new SingleNode<Node<Statement,Val>>(leftOpNode),
+				fieldWildCard(),iNode, fieldWildCard(), fieldPDS.getOne()));
 	}
 	
 	public void debugFieldAutomaton(final Statement statement) {
