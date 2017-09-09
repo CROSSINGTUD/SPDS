@@ -1,20 +1,19 @@
 package tests;
 
-import static tests.TestHelper.ACC;
-import static tests.TestHelper.accepts;
+import static tests.TestHelper.a;
+import static tests.TestHelper.s;
 import static tests.TestHelper.t;
 
+import java.util.HashSet;
 import java.util.Set;
 
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.Sets;
 
 import tests.TestHelper.Abstraction;
 import tests.TestHelper.StackSymbol;
-import static tests.TestHelper.*;
 import wpds.impl.PAutomaton;
 import wpds.impl.Transition;
 import wpds.impl.Weight.NoWeight;
@@ -34,8 +33,8 @@ public class ForwardDFSVisitorTest {
 		}
 	};
 	final Set<Transition<StackSymbol, Abstraction>> reachables = Sets.newHashSet();
-	@Before
-	public void before(){
+	@Test
+	public void delayedAdd() {
 		fa.registerListener(new ForwardDFSVisitor<StackSymbol, Abstraction, NoWeight<StackSymbol>>(fa, a(0),
 				new ReachabilityListener<StackSymbol, Abstraction>() {
 					@Override
@@ -43,16 +42,60 @@ public class ForwardDFSVisitorTest {
 						reachables.add(t);
 					}
 				}));
-	}
-	@Test
-	public void delayedAdd() {
 		fa.addTransition(t(0, "n1", 1));
 		Assert.assertFalse(reachables.isEmpty());
-		reachables.removeAll(fa.getTransitions());
-		Assert.assertTrue(reachables.isEmpty());
+		Assert.assertTrue(reachableMinusTrans().isEmpty());
 		fa.addTransition(t(1, "n1", 2));
-		reachables.removeAll(fa.getTransitions());
-		Assert.assertTrue(reachables.isEmpty());
+		Assert.assertTrue(reachableMinusTrans().isEmpty());
+	}
+	
+	
+	@Test
+	public void delayedAddListener() {
+		fa.addTransition(t(0, "n1", 1));
+		fa.addTransition(t(1, "n1", 2));
+		Assert.assertFalse(fa.getTransitions().isEmpty());
+		fa.registerListener(new ForwardDFSVisitor<StackSymbol, Abstraction, NoWeight<StackSymbol>>(fa, a(0),
+				new ReachabilityListener<StackSymbol, Abstraction>() {
+					@Override
+					public void reachable(Transition<StackSymbol, Abstraction> t) {
+						System.out.println("Reachable" + t);
+						reachables.add(t);
+					}
+				}));
+		Assert.assertFalse(reachables.isEmpty());
+		Assert.assertTrue(reachableMinusTrans().isEmpty());
+
+		fa.addTransition(t(4, "n1", 5));
+		Assert.assertTrue(fa.getTransitions().size() > reachables.size());
+		
+
+		fa.addTransition(t(2, "n1", 5));
+		Assert.assertTrue(fa.getTransitions().size() > reachables.size());
+		Assert.assertFalse(reachableMinusTrans().isEmpty());
+		
+
+		fa.addTransition(t(2, "n1", 4));
+		Assert.assertTrue(fa.getTransitions().size() == reachables.size());
+		Assert.assertTrue(reachableMinusTrans().isEmpty());
+
+		fa.addTransition(t(3, "n1", 8));
+		fa.addTransition(t(8, "n1", 9));
+		fa.addTransition(t(3, "n1", 7));
+		fa.addTransition(t(3, "n1", 6));
+		fa.addTransition(t(6, "n1", 3));
+		Assert.assertTrue(fa.getTransitions().size() > reachables.size());
+		Assert.assertFalse(reachableMinusTrans().isEmpty());
+		
+		
+		fa.addTransition(t(1, "n1", 3));
+		Assert.assertTrue(reachableMinusTrans().isEmpty());
 	}
 
+
+	private Set<Transition<StackSymbol, Abstraction>> reachableMinusTrans() {
+		HashSet<Transition<StackSymbol, Abstraction>> res = Sets.newHashSet(fa.getTransitions());
+		res.removeAll(reachables);
+		return res;
+	}
 }

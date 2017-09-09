@@ -30,6 +30,7 @@ import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
+import wpds.impl.NormalRule;
 import wpds.impl.Rule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
@@ -44,7 +45,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
-	private boolean DEBUG = false;
+	private boolean DEBUG = true;
 	private Collection<Node<Statement, Val>> fieldFlows = Sets.newHashSet();
 	
 	
@@ -209,13 +210,6 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return fieldAutomaton;
 	}
 
-	public void injectFieldRule(Node<Statement,Val> source, Field field, Node<Statement,Val> target){
-		processPush(source, field, target, PDSSystem.FIELDS);
-	}
-	public void injectFieldRule(Rule<Field, INode<Node<Statement,Val>>, Weight<Field>> rule){
-		fieldPDS.addRule(rule);
-	}
-
 	public void addFieldAutomatonListener(WPAUpdateListener<Field, INode<Node<Statement, Val>>, Weight<Field>> listener) {
 		fieldAutomaton.registerListener(listener);
 	}
@@ -228,10 +222,23 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return fieldFlows.add(fieldFlow);
 	}
 	
-	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> baseAllocation){
+	public void handlePOI(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> aliasedVariableAtStmt) {
+		Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldWrite.getStmt(),
+				fieldWrite.getStoredVar());
+		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
+			Node<Statement, Val> aliasedVariableAtSuccessor = new Node<Statement, Val>(successorStatement,
+					aliasedVariableAtStmt.fact());
+			addNormalCallFlow(rightOpNode, aliasedVariableAtSuccessor);
+		}
+	}
+	
+	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, INode<Node<Statement, Val>> iNode){
 		for (Statement successorStatement : getSuccsOf(fieldWrite.getStmt())) {
 			Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getBaseVar());
-			processNormal(leftOpNode, baseAllocation);
+			System.out.println("CONNECT " + leftOpNode +" -> " + iNode);
+
+			fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(new SingleNode<Node<Statement,Val>>(leftOpNode),
+					fieldWildCard(),iNode, fieldWildCard(), fieldPDS.getOne()));
 		}
 	}
 	

@@ -259,7 +259,7 @@ public abstract class Boomerang {
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt()) && !(aliasedVariableAtStmt instanceof GeneratedState)){
-						if(aliasedVariableAtStmt.fact().equals(getBaseVar()))
+						if(aliasedVariableAtStmt.fact().fact().equals(getBaseVar()) || aliasedVariableAtStmt.fact().fact().equals(getStoredVar()))
 							return;
 						final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = queryToSolvers.getOrCreate(baseAllocation).getFieldAutomaton();
 						final AbstractBoomerangSolver currentSolver = queryToSolvers.getOrCreate(flowAllocation);
@@ -267,21 +267,28 @@ public abstract class Boomerang {
 						
 							@Override
 							public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
-								if(transition.getTarget().fact().equals(baseAllocation.asNode())){
-									currentSolver.connectBase(FieldWritePOI.this, transition.getStart().fact());
-									return;
-							 	}
-								if(transition.getStart().equals(aliasedVariableAtStmt)){
-									for(Statement succ : currentSolver.getSuccsOf(aliasedVariableAtStmt.fact().stmt())){
+								
+								if(transition.getStart().fact().stmt().equals(getStmt())){
+									for(Statement succ : currentSolver.getSuccsOf(getStmt())){
 										Node<Statement, Val> aliasedVariableAtSuccessor = new Node<Statement, Val>(succ,
-												aliasedVariableAtStmt.fact().fact());
-										currentSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new SingleNode<Node<Statement,Val>>(aliasedVariableAtSuccessor), transition.getLabel(), transition.getTarget()));
+												transition.getStart().fact().fact());
+										SingleNode<Node<Statement, Val>> wrappedAliasedVarAtSucc = new SingleNode<Node<Statement,Val>>(aliasedVariableAtSuccessor);
+										currentSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(wrappedAliasedVarAtSucc, transition.getLabel(), transition.getTarget()));
+										if(transition.getTarget().fact().equals(baseAllocation.asNode())){
+											if(flowAllocation.toString().contains("Alloc")){
+												System.out.println(transition);
+												
+											}
+												currentSolver.connectBase(FieldWritePOI.this, transition.getStart());
+//											return;
+									 	}
 									}
 								} else{
 									currentSolver.getFieldAutomaton().addTransition(transition);	
 								}
 							}
 						}));
+						currentSolver.handlePOI(FieldWritePOI.this, aliasedVariableAtStmt.fact());
 					}
 				}
 
@@ -318,6 +325,8 @@ public abstract class Boomerang {
 							 	}
 							}
 						}));
+						System.err.println("BACKWARd " + aliasedVariableAtStmt);
+						currentSolver.handlePOI(FieldReadPOI.this, aliasedVariableAtStmt.fact());	
 					}
 				}
 

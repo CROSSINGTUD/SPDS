@@ -11,7 +11,7 @@ import wpds.impl.WeightedPAutomaton;
 
 public class ForwardDFSVisitor<N extends Location,D extends State, W extends Weight<N>> implements WPAUpdateListener<N, D, W>{
 	
-	private Set<Transition<N, D>> reachable = Sets.newHashSet();
+	private Set<D> reachable = Sets.newHashSet();
 	private ReachabilityListener<N,D> listener;
 	private WeightedPAutomaton<N, D, W> aut;
 	private D startState;
@@ -21,7 +21,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 		this.aut = aut;
 		this.startState = startState;
 		this.listener = listener;
-
+		reachable.add(startState);
 		for(Transition<N, D> t : aut.getTransitionsOutOf(startState)){
 			addReachable(t, Sets.<Transition<N, D>>newHashSet());
 		}
@@ -29,12 +29,11 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	
 
 	private void addReachable(Transition<N, D> s, Set<Transition<N, D>> visited) {
-		if(!reachable.add(s))
-			return;
 		if(!visited.add(s))
 			return;
 		listener.reachable(s);
 		Collection<Transition<N, D>> trans = aut.getTransitionsOutOf(s.getTarget());
+		reachable.add(s.getTarget());
 		for(Transition<N, D> t : trans){
 			if(!continueWith(t)){
 				continue;
@@ -52,7 +51,8 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 
 	@Override
 	public void onAddedTransition(Transition<N, D> t) {
-		addReachable(t, Sets.<Transition<N, D>>newHashSet());
+		if(reachable.contains(t.getStart()))
+			addReachable(t, Sets.<Transition<N, D>>newHashSet());
 	}
 
 	@Override
