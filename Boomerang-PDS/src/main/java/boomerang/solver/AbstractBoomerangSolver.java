@@ -45,7 +45,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
-	private boolean DEBUG = true;
+	private boolean DEBUG = false;
 	private Collection<Node<Statement, Val>> fieldFlows = Sets.newHashSet();
 	
 	

@@ -40,13 +40,17 @@ import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
+	private static final boolean DEBUG = false;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
 		@Override
 		protected AbstractBoomerangSolver createItem(Query key) {
-			if (key instanceof BackwardQuery)
+			if (key instanceof BackwardQuery){
+				System.out.println("Backward solving query: " + key);
 				return createBackwardSolver((BackwardQuery) key);
-			else
+			} else {
+				System.out.println("Forward solving query: " + key);
 				return createForwardSolver((ForwardQuery) key);
+			}
 		}
 	};
 	private BackwardsInterproceduralCFG bwicfg;
@@ -219,7 +223,6 @@ public abstract class Boomerang {
 	
 
 	protected void backwardSolve(BackwardQuery query) {
-		System.out.println("Backward solving query: " + query);
 		backwardQueries.add(query);
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
 		AbstractBoomerangSolver solver = queryToSolvers.getOrCreate(query);
@@ -233,7 +236,6 @@ public abstract class Boomerang {
 
 	private void forwardSolve(ForwardQuery query) {
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
-		System.out.println("Forward solving query: " + query);
 		forwardQueries.add(query);
 		AbstractBoomerangSolver solver = queryToSolvers.getOrCreate(query);
 		if (unit.isPresent()) {
@@ -363,6 +365,8 @@ public abstract class Boomerang {
 		return res;
 	}
 	public void debugOutput() {
+		if(!DEBUG)
+			return;
 		for (Query q : queryToSolvers.keySet()) {
 //			if (q instanceof ForwardQuery) {
 				System.out.println("========================");
