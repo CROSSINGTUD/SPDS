@@ -116,7 +116,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		@Override
 		public void onWeightAdded(Transition<Stmt, INode<Fact>> t, Weight<Stmt> w) {
 			if(!(t.getStart() instanceof GeneratedState)){
-				setCallingContextReachable(new Node<Stmt,Fact>(t.getString(),t.getStart().fact()), t);
+				setCallingContextReachable(new Node<Stmt,Fact>(t.getString(),t.getStart().fact()));
 			}
 		}
 	}
@@ -334,13 +334,13 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			INode<Node<Stmt,Fact>> n = t.getStart();
 			if(!(n instanceof GeneratedState)){
 				Node<Stmt,Fact> fact = n.fact();
-				setFieldContextReachable(new Node<Stmt,Fact>(fact.stmt(), fact.fact()),t);
+				setFieldContextReachable(new Node<Stmt,Fact>(fact.stmt(), fact.fact()));
 			}
 		}
 	}
 
 
-	protected void setCallingContextReachable(Node<Stmt,Fact> node, Transition<Stmt, INode<Fact>> t) {
+	protected void setCallingContextReachable(Node<Stmt,Fact> node) {
 		if (!callingContextReachable.add(node))
 			return;
 
@@ -354,7 +354,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		WitnessNode<Stmt, Fact, Field> witnessNode = new WitnessNode<Stmt,Fact,Field>(node.stmt(),node.fact());
 		return witnessNode;
 	}
-	protected void setFieldContextReachable(Node<Stmt,Fact> node, Transition<Field, INode<Node<Stmt,Fact>>> t) {
+	protected void setFieldContextReachable(Node<Stmt,Fact> node) {
 		if (!fieldContextReachable.add(node)) {
 			return;
 		}
