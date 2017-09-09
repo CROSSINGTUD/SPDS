@@ -9,8 +9,10 @@ import java.util.concurrent.SynchronousQueue;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import wpds.interfaces.ForwardDFSVisitor;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
+import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 import wpds.interfaces.WPDSUpdateListener;
@@ -32,17 +34,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 				for(Transition<N, D> t : Lists.newLinkedList(trans)){
 					if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
 						update(t, rule);
-					}
-					//TODO this is a bad solution. 
-					if(rule instanceof PopRule){
-						if(t.getLabel().equals(fa.epsilon()) && !t.getStart().equals(t.getTarget())){
-							Collection<Transition<N, D>> transitives = fa.getTransitionsOutOf(t.getTarget());
-							for(Transition<N, D> t2 : Lists.newLinkedList(transitives)){
-								if(t2.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
-									update(t2, rule);
-								}		
-							}
-						}
 					}
 				}
 				
@@ -69,8 +60,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		if (rule instanceof PopRule) {
 			LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
 			previous.add(t);
-			// System.err.println(new Transition<N, D>(p, fa.epsilon(),
-			// t.getTarget()));
 			update(rule, new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight, previous);
 
 			Collection<Transition<N, D>> trans = fa.getTransitionsOutOf(t.getTarget());
