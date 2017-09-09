@@ -248,12 +248,14 @@ public abstract class Boomerang {
 	}
 
 	private class FieldWritePOI extends AbstractPOI<Statement, Val, Field> {
+		private Set<Val> aliases = Sets.newHashSet();
 		public FieldWritePOI(Statement statement, Val leftOp, Field field, Val rightOp, AssignStmt fieldWriteStatement, Val base) {
 			super(statement, leftOp, field, rightOp);
 		}
 
 		@Override
-		public void execute(final Query baseAllocation, final Query flowAllocation) {
+		public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
+			
 			for(final Statement succOfWrite : getSuccsOf(getStmt())){
 				queryToSolvers.get(baseAllocation).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 	
@@ -262,6 +264,8 @@ public abstract class Boomerang {
 						final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 						if(aliasedVariableAtStmt.fact().stmt().equals(succOfWrite) && !(aliasedVariableAtStmt instanceof GeneratedState)){
 							if(aliasedVariableAtStmt.fact().fact().equals(getBaseVar()) || aliasedVariableAtStmt.fact().fact().equals(getStoredVar()))
+								return;
+							if(!aliases.add(aliasedVariableAtStmt.fact().fact()))
 								return;
 							final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = queryToSolvers.getOrCreate(baseAllocation).getFieldAutomaton();
 							final AbstractBoomerangSolver currentSolver = queryToSolvers.getOrCreate(flowAllocation);
@@ -290,13 +294,16 @@ public abstract class Boomerang {
 	
 	
 	private class FieldReadPOI extends AbstractPOI<Statement, Val, Field> {
-
+		private Set<Val> aliases = Sets.newHashSet();
 		public FieldReadPOI(Statement statement, Val base, Field field, Val stored) {
 			super(statement,base,field,stored);
 		}
 
 		@Override
-		public void execute(final Query baseAllocation, final Query flowAllocation) {
+		public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
+			if(Boomerang.this instanceof WholeProgramBoomerang)
+				return;
+			
 			for(final Statement succOfWrite : getPredsOf(getStmt())){
 				queryToSolvers.get(baseAllocation).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 					@Override
@@ -304,6 +311,8 @@ public abstract class Boomerang {
 						INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 						if(aliasedVariableAtStmt.fact().stmt().equals(succOfWrite) && !(t.getStart() instanceof GeneratedState)){
 							if(aliasedVariableAtStmt.fact().fact().equals(getBaseVar()) || aliasedVariableAtStmt.fact().fact().equals(getStoredVar()))
+								return;
+							if(!aliases.add(aliasedVariableAtStmt.fact().fact()))
 								return;
 							final AbstractBoomerangSolver currentSolver = queryToSolvers.getOrCreate(flowAllocation);
 							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = queryToSolvers.getOrCreate(baseAllocation).getFieldAutomaton();

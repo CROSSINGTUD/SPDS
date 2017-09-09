@@ -104,7 +104,7 @@ public class NoIndirectionTest extends AbstractBoomerangTest {
 
 	@Test
 	public void overwriteButPositiveFieldTest2(){
-		Alloc query = new Alloc();
+		Object query = new Object();
 		int x = 0;
 		A a = new A();
 		a.b = query;

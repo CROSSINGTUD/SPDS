@@ -6,6 +6,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
+
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -38,6 +42,9 @@ import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.nodes.Node;
 
 public class AbstractBoomerangTest extends AbstractTestingFramework {
+
+    @Rule
+    public Timeout timeout = new Timeout(100000);
 	private JimpleBasedInterproceduralCFG icfg;			
 	private Collection<? extends Query> allocationSites;
 	protected Collection<? extends Query> queryForCallSites;
@@ -51,8 +58,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	
 	protected AnalysisMode[] getAnalyses(){
 		return new AnalysisMode[]{
-			AnalysisMode.WholeProgram,
-			AnalysisMode.DemandDrivenForward, 
+//			AnalysisMode.WholeProgram,
+//			AnalysisMode.DemandDrivenForward, 
 			AnalysisMode.DemandDrivenBackward
 		};
 	}
