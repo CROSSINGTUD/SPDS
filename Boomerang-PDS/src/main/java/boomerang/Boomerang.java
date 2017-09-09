@@ -40,7 +40,7 @@ import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	private static final boolean DEBUG = false;
+	public static final boolean DEBUG = false;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
 		@Override
 		protected AbstractBoomerangSolver createItem(Query key) {
@@ -180,10 +180,10 @@ public abstract class Boomerang {
 				public void witnessFound(Node<Statement, Val> alloc) {
 				}
 			});
-			fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(),base, field, new Val(as.getRightOp(),icfg().getMethodOf(as)), as, base)).addFlowAllocation(sourceQuery);
+			fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(),base, field, new Val(as.getRightOp(),icfg().getMethodOf(as)))).addFlowAllocation(sourceQuery);
 		}
 		if (node.fact().value().equals(ifr.getBase())) {
-			fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(),base, field, new Val(as.getRightOp(),icfg().getMethodOf(as)), as, base)).addBaseAllocation(sourceQuery);
+			fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(),base, field, new Val(as.getRightOp(),icfg().getMethodOf(as)))).addBaseAllocation(sourceQuery);
 		}
 	}
 
@@ -247,16 +247,16 @@ public abstract class Boomerang {
 		}
 	}
 
-	private class FieldWritePOI extends AbstractPOI<Statement, Val, Field> {
-		private Set<Val> aliases = Sets.newHashSet();
-		public FieldWritePOI(Statement statement, Val leftOp, Field field, Val rightOp, AssignStmt fieldWriteStatement, Val base) {
-			super(statement, leftOp, field, rightOp);
+	private class FieldStmtPOI extends AbstractPOI<Statement, Val, Field> {
+		private Multimap<Query,Val> aliases = HashMultimap.create();
+		public FieldStmtPOI(Statement statement, Val base, Field field, Val storedVar) {
+			super(statement, base, field, storedVar);
 		}
 
 		@Override
 		public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
 			
-			for(final Statement succOfWrite : getSuccsOf(getStmt())){
+			for(final Statement succOfWrite : queryToSolvers.get(flowAllocation).getSuccsOf(getStmt())){
 				queryToSolvers.get(baseAllocation).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 	
 					@Override
@@ -265,7 +265,7 @@ public abstract class Boomerang {
 						if(aliasedVariableAtStmt.fact().stmt().equals(succOfWrite) && !(aliasedVariableAtStmt instanceof GeneratedState)){
 							if(aliasedVariableAtStmt.fact().fact().equals(getBaseVar()) || aliasedVariableAtStmt.fact().fact().equals(getStoredVar()))
 								return;
-							if(!aliases.add(aliasedVariableAtStmt.fact().fact()))
+							if(!aliases.put(flowAllocation, aliasedVariableAtStmt.fact().fact()))
 								return;
 							final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = queryToSolvers.getOrCreate(baseAllocation).getFieldAutomaton();
 							final AbstractBoomerangSolver currentSolver = queryToSolvers.getOrCreate(flowAllocation);
@@ -276,11 +276,11 @@ public abstract class Boomerang {
 									currentSolver.getFieldAutomaton().addTransition(transition);	
 									
 									if(transition.getTarget().fact().equals(baseAllocation.asNode())){
-										currentSolver.connectBase(FieldWritePOI.this, transition.getStart(), succOfWrite);
+										currentSolver.connectBase(FieldStmtPOI.this, transition.getStart(), succOfWrite);
 									}
 								}
 							}));
-							currentSolver.handlePOI(FieldWritePOI.this, aliasedVariableAtStmt.fact());
+							currentSolver.handlePOI(FieldStmtPOI.this, aliasedVariableAtStmt.fact());
 						}
 					}
 	
@@ -291,50 +291,16 @@ public abstract class Boomerang {
 			}
 		}
 	}
-	
-	
-	private class FieldReadPOI extends AbstractPOI<Statement, Val, Field> {
-		private Set<Val> aliases = Sets.newHashSet();
-		public FieldReadPOI(Statement statement, Val base, Field field, Val stored) {
+
+	private class FieldWritePOI extends FieldStmtPOI {
+		public FieldWritePOI(Statement statement, Val base, Field field, Val stored) {
 			super(statement,base,field,stored);
 		}
-
-		@Override
-		public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
-			if(Boomerang.this instanceof WholeProgramBoomerang)
-				return;
-			
-			for(final Statement succOfWrite : getPredsOf(getStmt())){
-				queryToSolvers.get(baseAllocation).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-					@Override
-					public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-						INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-						if(aliasedVariableAtStmt.fact().stmt().equals(succOfWrite) && !(t.getStart() instanceof GeneratedState)){
-							if(aliasedVariableAtStmt.fact().fact().equals(getBaseVar()) || aliasedVariableAtStmt.fact().fact().equals(getStoredVar()))
-								return;
-							if(!aliases.add(aliasedVariableAtStmt.fact().fact()))
-								return;
-							final AbstractBoomerangSolver currentSolver = queryToSolvers.getOrCreate(flowAllocation);
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = queryToSolvers.getOrCreate(baseAllocation).getFieldAutomaton();
-							aut.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(aut, t.getStart(), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
-								@Override
-								public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
-									currentSolver.getFieldAutomaton().addTransition(transition);	
-									
-									if(transition.getTarget().fact().equals(baseAllocation.asNode())){
-										currentSolver.connectBase(FieldReadPOI.this, transition.getStart(), succOfWrite);
-									}
-								}
-							}));
-							currentSolver.handlePOI(FieldReadPOI.this, aliasedVariableAtStmt.fact());	
-						}
-					}
+	}
 	
-					@Override
-					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-					}
-				});
-			}
+	private class FieldReadPOI extends FieldStmtPOI {
+		public FieldReadPOI(Statement statement, Val base, Field field, Val stored) {
+			super(statement,base,field,stored);
 		}
 	}
 	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
@@ -351,28 +317,7 @@ public abstract class Boomerang {
 		return queryToSolvers;
 	}
 	
-	private Set<Statement> getSuccsOf(Statement stmt) {
-		Set<Statement> res = Sets.newHashSet();
-		if(!stmt.getUnit().isPresent())
-			return res;
-		Stmt curr = stmt.getUnit().get();
-		for(Unit succ : icfg().getSuccsOf(curr)){
-			res.add(new Statement((Stmt) succ, icfg().getMethodOf(succ)));
-		}
-		return res;
-	}
-
 	
-	private Set<Statement> getPredsOf(Statement stmt) {
-		Set<Statement> res = Sets.newHashSet();
-		if(!stmt.getUnit().isPresent())
-			return res;
-		Stmt curr = stmt.getUnit().get();
-		for(Unit succ : icfg().getPredsOf(curr)){
-			res.add(new Statement((Stmt) succ, icfg().getMethodOf(succ)));
-		}
-		return res;
-	}
 	public void debugOutput() {
 		if(!DEBUG)
 			return;

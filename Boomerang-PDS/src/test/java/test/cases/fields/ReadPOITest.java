@@ -23,14 +23,35 @@ public class ReadPOITest extends AbstractBoomerangTest {
 	@Test
 	public void indirectAllocationSiteTwoFields3Address(){
 		Node a = new Node();
-		Node load = a.left;
-		load.right = new AllocNode();
-		Node loadAgain = a.left;
-		Node query = loadAgain.right;
+		Node firstLoad = a.left;
+		AllocNode alloc = new AllocNode();
+		firstLoad.right = alloc;
+		Node secondLoad = a.left;
+		Node query = secondLoad.right;
 		queryFor(query);
 	}
 	
+	@Test
+	public void unbalancedField(){
+		OWithField a = new OWithField();
+		Object query = a.field;
+		queryFor(query);
+	}
 
+	@Test
+	public void loadTwice(){
+		OWithRecField a = new OWithRecField();
+		OWithRecField query = a.field.field;
+		queryFor(query);
+	}
+
+	private static class OWithRecField{
+		OWithRecField field = new AllocRec();
+	}
+	private static class AllocRec extends  OWithRecField{}
+	private static class OWithField{
+		Object field = new Alloc();
+	}
 	@Test
 	public void indirectAllocationSiteTwoFields(){
 		Node a = new Node();
@@ -38,6 +59,7 @@ public class ReadPOITest extends AbstractBoomerangTest {
 		Node query = a.left.right;
 		queryFor(query);
 	}
+
 	@Test
 	public void twoFieldsBranched(){
 		Node a = new Node();
@@ -80,10 +102,10 @@ public class ReadPOITest extends AbstractBoomerangTest {
 		List next = new AllocListElement();
 	}
 	private class AllocListElement extends List implements AllocatedObject{}
-	private class Node{
+	private static class Node{
 		Node left = new Node();
 		Node right;
 	}
-	private class AllocNode extends Node implements AllocatedObject{}
-	private class Alloc implements AllocatedObject{};
+	private static class AllocNode extends Node implements AllocatedObject{}
+	private static class Alloc implements AllocatedObject{};
 }

@@ -9,6 +9,7 @@ import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
 
+import boomerang.Boomerang;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.jimple.Field;
@@ -45,7 +46,6 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
-	private boolean DEBUG = false;
 	private Collection<Node<Statement, Val>> fieldFlows = Sets.newHashSet();
 	
 	
@@ -235,8 +235,19 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 				fieldWildCard(),iNode, fieldWildCard(), fieldPDS.getOne()));
 	}
 	
+	public Set<Statement> getSuccsOf(Statement stmt) {
+		Set<Statement> res = Sets.newHashSet();
+		if(!stmt.getUnit().isPresent())
+			return res;
+		Stmt curr = stmt.getUnit().get();
+		for(Unit succ : icfg.getSuccsOf(curr)){
+			res.add(new Statement((Stmt) succ, icfg.getMethodOf(succ)));
+		}
+		return res;
+	}
+	
 	public void debugFieldAutomaton(final Statement statement) {
-		if(!DEBUG)
+		if(!Boomerang.DEBUG)
 			return;
 		final WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight<Field>> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight<Field>>(){
 
