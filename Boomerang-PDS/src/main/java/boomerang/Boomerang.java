@@ -15,7 +15,9 @@ import boomerang.poi.AbstractPOI;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
+import boomerang.solver.ReachableMethodListener;
 import heros.utilities.DefaultValueMap;
+import soot.RefType;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
@@ -40,22 +42,37 @@ import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
 		@Override
 		protected AbstractBoomerangSolver createItem(Query key) {
+			AbstractBoomerangSolver solver;
 			if (key instanceof BackwardQuery){
 				System.out.println("Backward solving query: " + key);
-				return createBackwardSolver((BackwardQuery) key);
+				solver = createBackwardSolver((BackwardQuery) key);
 			} else {
 				System.out.println("Forward solving query: " + key);
-				return createForwardSolver((ForwardQuery) key);
+				solver = createForwardSolver((ForwardQuery) key);
 			}
+			if(key.getType() instanceof RefType){
+				addAllocationType((RefType) key.getType());
+			}
+			for(RefType type : allocatedTypes){
+				solver.addAllocatedType(type);
+			}
+			
+			for(ReachableMethodListener l : reachableMethodsListener){
+				solver.registerReachableMethodListener(l);
+			}
+			return solver;
 		}
 	};
 	private BackwardsInterproceduralCFG bwicfg;
 	private Collection<ForwardQuery> forwardQueries = Sets.newHashSet();
 	private Collection<BackwardQuery> backwardQueries = Sets.newHashSet();
+
+	private Collection<RefType> allocatedTypes = Sets.newHashSet();
+	private Collection<ReachableMethodListener> reachableMethodsListener = Sets.newHashSet();
 	private Multimap<BackwardQuery, ForwardQuery> backwardToForwardQueries = HashMultimap.create();
 	private DefaultValueMap<FieldWritePOI, FieldWritePOI> fieldWrites = new DefaultValueMap<FieldWritePOI, FieldWritePOI>() {
 		@Override
@@ -76,7 +93,7 @@ public abstract class Boomerang {
 		}
 	};
 	protected AbstractBoomerangSolver createBackwardSolver(final BackwardQuery backwardQuery) {
-		BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg(), backwardQuery);
+		final BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg(), backwardQuery);
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
@@ -96,7 +113,7 @@ public abstract class Boomerang {
 								public void onAddedTransition(Transition<Statement, INode<Val>> t) {
 									if(t.getTarget() instanceof GeneratedState){
 										GeneratedState<Val,Statement> generatedState = (GeneratedState) t.getTarget();
-										queryToSolvers.getOrCreate(forwardQuery).addUnbalancedFlow(generatedState.location());
+										queryToSolvers.getOrCreate(forwardQuery).addUnbalancedFlow(generatedState.location().getMethod());
 									}
 								}
 
@@ -120,8 +137,10 @@ public abstract class Boomerang {
 			}
 
 		});
+		
 		return solver;
 	}
+
 
 	protected AbstractBoomerangSolver createForwardSolver(final ForwardQuery sourceQuery) {
 		ForwardBoomerangSolver solver = new ForwardBoomerangSolver(icfg(), sourceQuery);
@@ -291,7 +310,25 @@ public abstract class Boomerang {
 			}
 		}
 	}
+	
+	public boolean addAllocationType(RefType type){
+		if(allocatedTypes.add(type)){
+			for(AbstractBoomerangSolver solvers : queryToSolvers.values()){
+				solvers.addAllocatedType(type);
+			}
+			return true;
+		}
+		return false;
+	}
 
+	public void registerReachableMethodListener(ReachableMethodListener l){
+		if(reachableMethodsListener.add(l)){
+			for(AbstractBoomerangSolver s : queryToSolvers.values()){
+				s.registerReachableMethodListener(l);
+			}
+		}
+	}
+	
 	private class FieldWritePOI extends FieldStmtPOI {
 		public FieldWritePOI(Statement statement, Val base, Field field, Val stored) {
 			super(statement,base,field,stored);

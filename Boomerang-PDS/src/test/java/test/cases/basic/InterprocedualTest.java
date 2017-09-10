@@ -78,6 +78,18 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 		queryFor(query);
 	}
 
+	@Test
+	public void unbalancedCreationStatic() {
+		Object alias1 = createStatic();
+		Object query = alias1;
+		queryFor(query);
+	}
+
+	
+	private Object createStatic() {
+		return new Allocation();
+	}
+
 	public AllocatedObject wrappedCreate() {
 		return create();
 	}

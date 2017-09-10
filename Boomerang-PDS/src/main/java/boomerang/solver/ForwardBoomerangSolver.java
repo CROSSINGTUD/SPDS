@@ -159,16 +159,12 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	}
 	
 	@Override
-	public void addUnbalancedFlow(Statement location) {
-		Optional<Stmt> unit = query.asNode().stmt().getUnit();
-		if (unit.isPresent()) {
-			for (Unit succ : icfg.getSuccsOf(unit.get())) {
-				Node<Statement, Val> curr = new Node<Statement, Val>(
-						new Statement((Stmt) succ, icfg.getMethodOf(succ)), query.asNode().fact());
-				for(Unit callSite : icfg.getCallersOf(location.getMethod())){
-					for(Unit returnSite : icfg.getSuccsOf(callSite)){
-						this.processPush(curr, new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), curr, PDSSystem.CALLS);
-					}
+	public void addUnbalancedFlow(SootMethod m) {
+		for (Statement succ : getSuccsOf(query.asNode().stmt())) {
+			Node<Statement, Val> curr = new Node<Statement, Val>(succ, query.asNode().fact());
+			for(Unit callSite : icfg.getCallersOf(m)){
+				for(Unit returnSite : icfg.getSuccsOf(callSite)){
+					this.processPush(curr, new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), curr, PDSSystem.CALLS);
 				}
 			}
 		}

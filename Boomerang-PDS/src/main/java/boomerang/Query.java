@@ -2,6 +2,7 @@ package boomerang;
 
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import soot.Type;
 import sync.pds.solver.nodes.Node;
 
 public abstract class Query{
@@ -43,5 +44,9 @@ public abstract class Query{
 		} else if (!delegate.equals(other.delegate))
 			return false;
 		return true;
+	}
+
+	public Type getType() {
+		return delegate.fact().value().getType();
 	}
 }

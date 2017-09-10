@@ -137,7 +137,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		processNode(startNode);
 	}
 
-	private void processNode(WitnessNode<Stmt, Fact,Field> witnessNode) {
+	protected void processNode(WitnessNode<Stmt, Fact,Field> witnessNode) {
 		addReachableState(witnessNode);
 		Node<Stmt, Fact> curr = witnessNode.asNode();
 		Collection<? extends State> successors = computeSuccessor(curr);

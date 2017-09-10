@@ -44,6 +44,7 @@ public class CallPOITest extends AbstractBoomerangTest {
 	@Test
 	public void indirectAllocationSiteViaParameterAliased(){
 		A a = new A();
+		a.b = new B();
 		C alloc = new C();
 		A b = a;
 		allocation(a,alloc);
