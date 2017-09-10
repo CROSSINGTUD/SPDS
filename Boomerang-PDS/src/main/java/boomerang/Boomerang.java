@@ -43,7 +43,7 @@ import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
 		@Override
 		protected AbstractBoomerangSolver createItem(Query key) {
