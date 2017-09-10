@@ -221,20 +221,18 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		};
 		solver.wholeProgramAnalysis();
 		DefaultValueMap<Query, AbstractBoomerangSolver> solvers = solver.getSolvers();
-		for(Query q : solvers.keySet()){
+		for(final Query q : solvers.keySet()){
 			if(!(q instanceof ForwardQuery))
 				throw new RuntimeException("Unexpected solver found, whole program analysis should only trigger forward queries");
-			for(Node<Statement, Val> s : solvers.get(q).getReachedStates()){
-				if(s.stmt().getUnit().isPresent()){
-					Stmt stmt = s.stmt().getUnit().get();
-					if(stmt.toString().contains("queryFor")){
-						if(stmt.containsInvokeExpr()){
-							InvokeExpr invokeExpr = stmt.getInvokeExpr();
-							if(invokeExpr.getArg(0).equals(s.fact().value()))
-								results.add(q.asNode());
-						}
-					}
+			for(Query queryForCallSite : queryForCallSites){
+			solvers.get(q).synchedEmptyStackReachable(queryForCallSite.asNode(), new EmptyStackWitnessListener<Statement, Val>() {
+				@Override
+				public void witnessFound(Node<Statement, Val> targetFact) {
+					results.add(q.asNode());
 				}
+				});
+			}
+			for(Node<Statement, Val> s : solvers.get(q).getReachedStates()){
 				if(s.stmt().getMethod().toString().contains("unreachable") && !q.toString().contains("dummyClass.main")){
 					throw new RuntimeException("Propagation within unreachable method found: " + q);
 				}
