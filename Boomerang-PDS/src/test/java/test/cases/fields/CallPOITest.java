@@ -51,7 +51,11 @@ public class CallPOITest extends AbstractBoomerangTest {
 		C alias = b.b.c;
 		queryFor(alias);
 	}
-	
+
+	private void allocation(A a, C d) {
+		B intermediate = a.b;
+		intermediate.c = d;
+	}
 
 	@Test
 	public void whyRecursiveCallPOIIsNecessary(){
@@ -62,15 +66,20 @@ public class CallPOITest extends AbstractBoomerangTest {
 		C alias = b.b.c;
 		queryFor(alias);
 	}
-	private void allocation(A a, C d) {
-		B intermediate = a.b;
-		intermediate.c = d;
+	@Test
+	public void whyRecursiveCallPOIIsNecessarySimpler(){
+		A a = new A();
+		C alloc = new C();
+		allocationIndirect(a,alloc);
+		C alias = a.b.c;
+		queryFor(alias);
 	}
 	private void allocationIndirect(A a, C d) {
 		B b = new B();
 		A a2 = a;
-		a2.b= b;
+		a2.b = b;
 		B intermediate = a2.b;
 		intermediate.c = d;
+		int x=1;
 	}
 }

@@ -239,13 +239,14 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldWrite.getStmt(),
 				fieldWrite.getStoredVar());
 		setFieldContextReachable(aliasedVariableAtStmt);
+//		System.out.println(fieldWrite + " " + rightOpNode + aliasedVariableAtStmt);
 		addNormalCallFlow(rightOpNode, aliasedVariableAtStmt);
 	}
 	
-	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, INode<Node<Statement, Val>> iNode, Statement successorStatement){
+	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement, Val> otherObj, Statement successorStatement){
 		Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getBaseVar());
-		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(new SingleNode<Node<Statement,Val>>(leftOpNode),
-				fieldWildCard(),iNode, fieldWildCard(), fieldPDS.getOne()));
+//		System.out.println("CONNECTBASE" + fieldWrite + " " + leftOpNode + otherObj);
+		addNormalFieldFlow(leftOpNode, otherObj);
 	}
 	
 	@Override

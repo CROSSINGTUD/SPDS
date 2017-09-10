@@ -34,6 +34,7 @@ import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -42,7 +43,7 @@ import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
 		@Override
 		protected AbstractBoomerangSolver createItem(Query key) {
@@ -189,7 +190,7 @@ public abstract class Boomerang {
 
 	protected void handleFieldWrite(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
 			final AssignStmt as, final ForwardQuery sourceQuery) {
-		Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
+		final Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
 				base);
 		final Field field = new Field(ifr.getField());
@@ -202,7 +203,19 @@ public abstract class Boomerang {
 			fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(),base, field, new Val(as.getRightOp(),icfg().getMethodOf(as)))).addFlowAllocation(sourceQuery);
 		}
 		if (node.fact().value().equals(ifr.getBase())) {
-			fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(),base, field, new Val(as.getRightOp(),icfg().getMethodOf(as)))).addBaseAllocation(sourceQuery);
+			queryToSolvers.getOrCreate(sourceQuery).addFieldAutomatonListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+
+				@Override
+				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+					if(t.getStart().fact().equals(node.asNode()) && t.getTarget().fact().equals(sourceQuery.asNode())){
+						fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(),base, field, new Val(as.getRightOp(),icfg().getMethodOf(as)))).addBaseAllocation(sourceQuery);
+					}
+				}
+
+				@Override
+				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+				}
+			});
 		}
 	}
 
@@ -274,7 +287,7 @@ public abstract class Boomerang {
 
 		@Override
 		public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
-			
+//			System.out.println(this.toString() + "     " + baseAllocation + "   " + flowAllocation);
 			for(final Statement succOfWrite : queryToSolvers.get(flowAllocation).getSuccsOf(getStmt())){
 				queryToSolvers.get(baseAllocation).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 	
@@ -293,12 +306,9 @@ public abstract class Boomerang {
 								@Override
 								public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
 									currentSolver.getFieldAutomaton().addTransition(transition);	
-									
-									if(transition.getTarget().fact().equals(baseAllocation.asNode())){
-										currentSolver.connectBase(FieldStmtPOI.this, transition.getStart(), succOfWrite);
-									}
 								}
 							}));
+							currentSolver.connectBase(FieldStmtPOI.this, baseAllocation.asNode(), succOfWrite);
 							currentSolver.handlePOI(FieldStmtPOI.this, aliasedVariableAtStmt.fact());
 						}
 					}

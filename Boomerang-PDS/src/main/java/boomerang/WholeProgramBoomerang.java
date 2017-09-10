@@ -20,7 +20,6 @@ public abstract class WholeProgramBoomerang extends Boomerang{
 			analyzeMethod(m);
 		}
 		registerReachableMethodListener(new ReachableMethodListener() {
-			
 			@Override
 			public void reachable(AbstractBoomerangSolver solver, SootMethod m) {
 				analyzeMethod(m);
@@ -33,9 +32,6 @@ public abstract class WholeProgramBoomerang extends Boomerang{
 			if(u instanceof AssignStmt){
 				AssignStmt assignStmt = (AssignStmt) u;
 				if(assignStmt.getRightOp() instanceof NewExpr){
-					
-					NewExpr newExpr = (NewExpr) assignStmt.getRightOp();
-
 					solve(new ForwardQuery(new Statement((Stmt) u, method), new Val(assignStmt.getLeftOp(),method)));
 				}
 			}
