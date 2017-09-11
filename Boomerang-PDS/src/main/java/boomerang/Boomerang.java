@@ -42,7 +42,7 @@ import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
 		@Override
 		protected AbstractBoomerangSolver createItem(Query key) {
@@ -300,6 +300,15 @@ public abstract class Boomerang {
 		public FieldWritePOI(Statement statement, Val base, Field field, Val stored) {
 			super(statement,base,field,stored);
 		}
+
+		@Override
+		public void execute(ForwardQuery baseAllocation, Query flowAllocation) {
+			if(flowAllocation instanceof BackwardQuery){
+				executeConnectAliases(baseAllocation, flowAllocation);
+			} else if(flowAllocation instanceof ForwardQuery){
+				executeImportAliases(baseAllocation, flowAllocation);
+			}
+		}
 	}
 	
 	private class FieldReadPOI extends FieldStmtPOI {
@@ -310,39 +319,40 @@ public abstract class Boomerang {
 		@Override
 		public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
 			if(flowAllocation instanceof ForwardQuery){
-				AbstractBoomerangSolver baseSolver = queryToSolvers.get(baseAllocation);
-				final AbstractBoomerangSolver solver = queryToSolvers.get(flowAllocation);
-				baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-
-					@Override
-					public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-						final Node<Statement, Val> aliasedVariableAtStmt = t.getStart().fact();
-						if(aliasedVariableAtStmt.stmt().equals(getStmt()) && !(t.getStart() instanceof GeneratedState)){
-							if(aliasedVariableAtStmt.fact().equals(getBaseVar()) || aliasedVariableAtStmt.fact().equals(getStoredVar()))
-								return;
-							solver.connectAlias(FieldReadPOI.this, aliasedVariableAtStmt);
-						}
-					}
-
-					@Override
-					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-						
-					}
-				});
-				
-			} else{
-				super.execute(baseAllocation, flowAllocation);
+				executeConnectAliases(baseAllocation, flowAllocation);
+			} else if(flowAllocation instanceof BackwardQuery){
+				executeImportAliases(baseAllocation, flowAllocation);
 			}
 		}
 	}
-	private class FieldStmtPOI extends AbstractPOI<Statement, Val, Field> {
+	private abstract class FieldStmtPOI extends AbstractPOI<Statement, Val, Field> {
 		private Multimap<Query,Val> aliases = HashMultimap.create();
 		public FieldStmtPOI(Statement statement, Val base, Field field, Val storedVar) {
 			super(statement, base, field, storedVar);
 		}
 
-		@Override
-		public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
+		protected void executeConnectAliases(ForwardQuery baseAllocation, Query flowAllocation){
+			AbstractBoomerangSolver baseSolver = queryToSolvers.get(baseAllocation);
+			final AbstractBoomerangSolver solver = queryToSolvers.get(flowAllocation);
+			baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+
+				@Override
+				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+					final Node<Statement, Val> aliasedVariableAtStmt = t.getStart().fact();
+					if(aliasedVariableAtStmt.stmt().equals(getStmt()) && !(t.getStart() instanceof GeneratedState)){
+						if(aliasedVariableAtStmt.fact().equals(getBaseVar()) || aliasedVariableAtStmt.fact().equals(getStoredVar()))
+							return;
+						solver.connectAlias(FieldStmtPOI.this, aliasedVariableAtStmt);
+					}
+				}
+
+				@Override
+				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+					
+				}
+			});
+		}
+		protected void executeImportAliases(final ForwardQuery baseAllocation, final Query flowAllocation){
 			assert !queryToSolvers.get(flowAllocation).getSuccsOf(getStmt()).isEmpty();
 //			System.out.println(this.toString() + "     " + baseAllocation + "   " + flowAllocation);
 			for(final Statement succOfWrite : queryToSolvers.get(flowAllocation).getSuccsOf(getStmt())){
