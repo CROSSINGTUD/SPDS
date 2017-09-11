@@ -243,12 +243,19 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		addNormalCallFlow(rightOpNode, aliasedVariableAtStmt);
 	}
 	
-	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement, Val> otherObj, Statement successorStatement){
+	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, INode<Node<Statement, Val>> iNode, Statement successorStatement){
 		Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getBaseVar());
-//		System.out.println("CONNECTBASE" + fieldWrite + " " + leftOpNode + otherObj);
-		addNormalFieldFlow(leftOpNode, otherObj);
+		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(new SingleNode<Node<Statement,Val>>(leftOpNode),
+				fieldWildCard(),iNode, fieldWildCard(), fieldPDS.getOne()));
 	}
-	
+
+	public void connectAlias(AbstractPOI<Statement, Val, Field> fieldReadPOI, Node<Statement, Val> aliasVarAtStatement) {
+		Node<Statement, Val> leftOpNode = new Node<Statement,Val>(fieldReadPOI.getStmt(), fieldReadPOI.getBaseVar());
+//		System.out.println("ADDING" + aliasVarAtStatement + "  " + leftOpNode);
+//		setCallingContextReachable(aliasVarAtStatement);
+		addNormalCallFlow(aliasVarAtStatement, leftOpNode);
+		addNormalFieldFlow(aliasVarAtStatement,leftOpNode);
+	}
 	@Override
 	protected void processNode(final WitnessNode<Statement, Val, Field> witnessNode) {
 //		if(reachableMethods.contains(witnessNode.stmt().getMethod()) || witnessNode.stmt().getMethod().isStatic()){
