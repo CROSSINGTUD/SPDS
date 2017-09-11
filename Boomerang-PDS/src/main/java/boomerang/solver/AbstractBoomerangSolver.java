@@ -302,14 +302,14 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	
 	protected void addReachableMethod(SootMethod m){
 		if(reachableMethods.add(m)){
-			for(ReachableMethodListener l : reachableMethodListeners){
+			for(ReachableMethodListener l : Lists.newArrayList(reachableMethodListeners)){
 				l.reachable(this, m);
 			}
 		}
 	}
 	public void registerReachableMethodListener(ReachableMethodListener listener){
 		if(reachableMethodListeners.add(listener)){
-			for(SootMethod m : reachableMethods){
+			for(SootMethod m : Lists.newArrayList(reachableMethods)){
 				listener.reachable(this, m);
 			}
 		}

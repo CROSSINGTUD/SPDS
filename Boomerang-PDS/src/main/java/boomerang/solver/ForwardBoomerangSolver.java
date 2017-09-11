@@ -20,6 +20,7 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.AssignStmt;
+import soot.jimple.CastExpr;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
@@ -117,6 +118,14 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 							new Statement(succ, method), new Val(leftOp,method), new Field(ifr.getField()));
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
 				}
+			}
+			if(rightOp instanceof CastExpr){
+				CastExpr castExpr = (CastExpr) rightOp;
+				castExpr.getOp();
+				if (castExpr.getOp().equals(fact.value())) {
+					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
+				}
+				
 			}
 		}
 		return out;
