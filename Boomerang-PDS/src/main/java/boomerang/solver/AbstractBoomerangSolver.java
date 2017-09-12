@@ -1,13 +1,17 @@
 package boomerang.solver;
 
+import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.Map.Entry;
 
 import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
 
 import boomerang.Boomerang;
 import boomerang.Query;
@@ -57,12 +61,23 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
 	private Collection<ReachableMethodListener> reachableMethodListeners = Sets.newHashSet();
 	private Collection<SootMethod> unbalancedMethod = Sets.newHashSet();
+	private final Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> generatedFieldState;
+
 	
 	
-	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query){
+	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField){
 		this.icfg = icfg;
 		this.query = query;
 		this.unbalancedMethod.add(query.asNode().stmt().getMethod());
+		this.generatedFieldState = genField;
+	}
+	
+	public INode<Node<Statement,Val>> generateFieldState(final INode<Node<Statement,Val>> d, final Field loc) {
+		Entry<INode<Node<Statement,Val>>, Field> e = new AbstractMap.SimpleEntry<>(d, loc);
+		if (!generatedFieldState.containsKey(e)) {
+			generatedFieldState.put(e, new GeneratedState<Node<Statement,Val>,Field>(d,loc));
+		}
+		return generatedFieldState.get(e);
 	}
 	@Override
 	public Collection<? extends State> computeSuccessor(Node<Statement, Val> node) {
@@ -244,19 +259,20 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		setFieldContextReachable(aliasedVariableAtStmt);
 		addNormalCallFlow(rightOpNode, aliasedVariableAtStmt);
 	}
-	
+	public void handleReadPOI(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> aliasedVariableAtStmt) {
+		Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldWrite.getStmt(),
+				fieldWrite.getBaseVar());
+		addNormalCallFlow(aliasedVariableAtStmt,rightOpNode);
+	}
 	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, INode<Node<Statement, Val>> iNode, Statement successorStatement){
 		Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getBaseVar());
 		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(new SingleNode<Node<Statement,Val>>(leftOpNode),
 				fieldWildCard(),iNode, fieldWildCard(), fieldPDS.getOne()));
 	}
-
-	public void connectAlias(AbstractPOI<Statement, Val, Field> fieldReadPOI, Node<Statement, Val> aliasVarAtStatement) {
-		Node<Statement, Val> leftOpNode = new Node<Statement,Val>(fieldReadPOI.getStmt(), fieldReadPOI.getBaseVar());
-//		System.out.println("ADDING" + aliasVarAtStatement + "  " + leftOpNode);
-//		setCallingContextReachable(aliasVarAtStatement);
-		addNormalCallFlow(aliasVarAtStatement, leftOpNode);
-		addNormalFieldFlow(aliasVarAtStatement,leftOpNode);
+	public void connectAlias(AbstractPOI<Statement, Val, Field> fieldWrite, INode<Node<Statement, Val>> iNode){
+		Node<Statement, Val> leftOpNode = new Node<Statement,Val>(fieldWrite.getStmt(), fieldWrite.getBaseVar());
+		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(iNode,
+				fieldWildCard(),new SingleNode<Node<Statement,Val>>(leftOpNode), fieldWildCard(), fieldPDS.getOne()));
 	}
 	@Override
 	protected void processNode(final WitnessNode<Statement, Val, Field> witnessNode) {
@@ -331,7 +347,12 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		for(Unit succ : icfg.getSuccsOf(curr)){
 			res.add(new Statement((Stmt) succ, icfg.getMethodOf(succ)));
 		}
-		return res;
+		return res;	
+	}
+	
+	@Override
+	public String toString() {
+		return "Solver for: " + query.toString();
 	}
 	
 	public void debugFieldAutomaton(final Statement statement) {

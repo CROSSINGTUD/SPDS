@@ -44,7 +44,7 @@ import sync.pds.solver.nodes.Node;
 public class AbstractBoomerangTest extends AbstractTestingFramework {
 
     @Rule
-    public Timeout timeout = new Timeout(100000);
+    public Timeout timeout = new Timeout(10000000);
 	private JimpleBasedInterproceduralCFG icfg;			
 	private Collection<? extends Query> allocationSites;
 	protected Collection<? extends Query> queryForCallSites;

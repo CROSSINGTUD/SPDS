@@ -3,6 +3,8 @@ package boomerang.solver;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import com.beust.jcommander.internal.Sets;
@@ -27,6 +29,7 @@ import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
+import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
@@ -34,8 +37,8 @@ import sync.pds.solver.nodes.PushNode;
 import wpds.interfaces.State;
 
 public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
-	public ForwardBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, ForwardQuery query) {
-		super(icfg, query);
+	public ForwardBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, ForwardQuery query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField) {
+		super(icfg, query, genField);
 	}
 
 	@Override
