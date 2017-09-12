@@ -225,10 +225,11 @@ public abstract class Boomerang {
 		Val base = new Val(ifr.getBase(), icfg().getMethodOf(fieldRead));
 		final Field field = new Field(ifr.getField());
 		final FieldWritePOI fieldReadPoi = 	fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(), base,field, new Val(fieldRead.getRightOp(), icfg().getMethodOf(fieldRead))));
+
 		queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 			@Override
 			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-				if(t.getLabel().equals(field)){        
+				if(t.getLabel().equals(field)){    
 					fieldReadPoi.addFlowAllocation(sourceQuery);
 				}
 			}
