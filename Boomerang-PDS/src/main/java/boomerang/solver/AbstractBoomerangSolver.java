@@ -261,7 +261,8 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	}
 	public void handleReadPOI(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> aliasedVariableAtStmt) {
 		Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldWrite.getStmt(),
-				fieldWrite.getBaseVar());
+				fieldWrite.getBaseVar());		
+		setFieldContextReachable(rightOpNode);
 		addNormalCallFlow(aliasedVariableAtStmt,rightOpNode);
 	}
 	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, INode<Node<Statement, Val>> iNode, Statement successorStatement){
@@ -269,9 +270,13 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(new SingleNode<Node<Statement,Val>>(leftOpNode),
 				fieldWildCard(),iNode, fieldWildCard(), fieldPDS.getOne()));
 	}
-	public void connectAlias(AbstractPOI<Statement, Val, Field> fieldWrite, INode<Node<Statement, Val>> iNode){
+	public void connectAlias(AbstractPOI<Statement, Val, Field> fieldWrite, Transition<Field, INode<Node<Statement, Val>>> flowTransition){
 		Node<Statement, Val> leftOpNode = new Node<Statement,Val>(fieldWrite.getStmt(), fieldWrite.getBaseVar());
-		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(iNode,
+		if(!(flowTransition.getStart() instanceof GeneratedState)){
+			addNormalCallFlow(flowTransition.getStart().fact(), leftOpNode);
+		}
+		setFieldContextReachable(leftOpNode);
+		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>((flowTransition.getTarget() instanceof GeneratedState ? flowTransition.getTarget() : flowTransition.getStart()),
 				fieldWildCard(),new SingleNode<Node<Statement,Val>>(leftOpNode), fieldWildCard(), fieldPDS.getOne()));
 	}
 	@Override

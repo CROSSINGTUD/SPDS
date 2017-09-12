@@ -45,7 +45,7 @@ import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
 		@Override
@@ -341,16 +341,14 @@ public abstract class Boomerang {
 			//TODO this is a bit of a hack. The allocation sites are not in the 
 			baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 				@Override
-				public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> t) {
-					final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt()) && !(t.getStart() instanceof GeneratedState) && t.getStart().fact().fact().equals(getBaseVar())){
+				public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> baseTransition) {
+					final INode<Node<Statement, Val>> aliasedVariableAtStmt = baseTransition.getStart();
+					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt())){
 						flowSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 							@Override
-							public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> trans) {
-								if(trans.getTarget().equals(t.getTarget()) && trans.getLabel().equals(Field.epsilon()) && !(trans.getStart() instanceof GeneratedState)){
-									//Here we know, that trans.getStart() and the getBaseVar() are aliased 
-									flowSolver.handleReadPOI(FieldStmtPOI.this, trans.getStart().fact());
-									flowSolver.connectAlias(FieldStmtPOI.this, t.getTarget());
+							public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> flowTransition) {
+								if(baseTransition.equals(flowTransition)){
+									flowSolver.connectAlias(FieldStmtPOI.this, flowTransition);
 								}
 							}
 
