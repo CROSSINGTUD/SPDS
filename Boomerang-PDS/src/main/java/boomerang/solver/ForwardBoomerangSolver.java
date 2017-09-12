@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Set;
 
 import com.beust.jcommander.internal.Sets;
-import com.google.common.base.Optional;
 
 import boomerang.ForwardQuery;
 import boomerang.jimple.Field;
@@ -121,7 +120,6 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 			}
 			if(rightOp instanceof CastExpr){
 				CastExpr castExpr = (CastExpr) rightOp;
-				castExpr.getOp();
 				if (castExpr.getOp().equals(fact.value())) {
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
 				}

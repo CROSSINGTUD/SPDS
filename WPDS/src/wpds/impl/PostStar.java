@@ -35,25 +35,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 					if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
 						update(t, rule);
 					}
-					if(t.getLabel().equals(fa.epsilon())){
-						fa.registerListener(new ForwardDFSVisitor<N, D, W>(fa, t.getTarget(), new ReachabilityListener<N, D>() {
-
-							@Override
-							public void reachable(Transition<N, D> t) {
-								if(t.getLabel().equals(fa.epsilon()))
-									return;
-								if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
-									update(t, rule);
-								}
-							}
-						}){
-							protected boolean continueWith(Transition<N,D> t) {
-								return t.getLabel().equals(fa.epsilon());
-							};
-						});
-					}
 				}
-				
 			}
 		});
 		fa.registerListener(new WPAUpdateListener<N, D, W>() {
