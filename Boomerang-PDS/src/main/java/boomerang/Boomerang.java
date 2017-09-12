@@ -364,9 +364,7 @@ public abstract class Boomerang {
 		protected void executeConnectAliases(final ForwardQuery baseAllocation, final Query flowAllocation){
 			final AbstractBoomerangSolver baseSolver = queryToSolvers.get(baseAllocation);
 			final AbstractBoomerangSolver flowSolver = queryToSolvers.get(flowAllocation);
-			//TODO this is a bit of a hack. The allocation sites are not in the 
-
-			System.out.println("COONECTIONg "+  this  + " " +baseAllocation + flowAllocation);
+			
 			baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 				@Override
 				public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> baseTransition) {
@@ -374,9 +372,21 @@ public abstract class Boomerang {
 					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt())){
 						flowSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 							@Override
-							public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> flowTransition) {
-								if(baseTransition.equals(flowTransition)){
-									flowSolver.connectAlias(FieldStmtPOI.this, flowTransition);
+							public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> flowTransition) {
+
+								if(baseTransition.getStart().equals(flowTransition.getStart())){
+									baseSolver.getFieldAutomaton().registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(baseSolver.getFieldAutomaton(), baseTransition.getStart(), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
+
+										@Override
+										public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
+											// TODO Dead-lock potential
+											flowSolver.getFieldAutomaton().addTransition(t);
+											if(t.getTarget().fact().equals(baseAllocation.asNode())){
+												flowSolver.connectAlias2(FieldStmtPOI.this, t.getStart(),flowTransition.getStart());			
+											}
+										}
+									}));
+									
 								}
 							}
 
@@ -415,10 +425,11 @@ public abstract class Boomerang {
 							
 								@Override
 								public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
-									flowSolver.getFieldAutomaton().addTransition(transition);	
 									
 									if(transition.getTarget().fact().equals(baseAllocation.asNode())){
 										flowSolver.connectBase(FieldStmtPOI.this, transition.getStart(), succOfWrite);
+									}else{
+										flowSolver.getFieldAutomaton().addTransition(transition);
 									}
 								}
 							}));

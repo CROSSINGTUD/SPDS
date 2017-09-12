@@ -10,8 +10,20 @@ public class WritePOITest extends AbstractBoomerangTest {
 		Object b = null;
 //		Alloc c = null;
 	}
+	@Test
+	public void indirectAllocationSite12(){
+		A a = new A();
+		setField(a);
+		Object alias = a.b;
+		queryFor(alias);
+	}
 	
-	
+	private void setField(A a) {
+		A a1 = a;
+		Alloc alloc = new Alloc();
+		a1.b = alloc;
+	}
+
 	@Test
 	public void indirectAllocationSite(){
 		Alloc query = new Alloc();
