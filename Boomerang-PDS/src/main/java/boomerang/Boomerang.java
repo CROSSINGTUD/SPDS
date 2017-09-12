@@ -45,7 +45,7 @@ import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
 		@Override
@@ -370,24 +370,25 @@ public abstract class Boomerang {
 				public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> baseTransition) {
 					final INode<Node<Statement, Val>> aliasedVariableAtStmt = baseTransition.getStart();
 					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt())){
+						if(!aliases.put(flowAllocation, baseTransition.getStart().fact().fact()))
+							return;
 						flowSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+
 							@Override
 							public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> flowTransition) {
+								if(!flowTransition.getStart().equals(baseTransition.getStart()))
+									return;
+								final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = baseSolver.getFieldAutomaton();
+								aut.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(aut, baseTransition.getStart(), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 
-								if(baseTransition.getStart().equals(flowTransition.getStart())){
-									baseSolver.getFieldAutomaton().registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(baseSolver.getFieldAutomaton(), baseTransition.getStart(), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
-
-										@Override
-										public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
-											// TODO Dead-lock potential
-											flowSolver.getFieldAutomaton().addTransition(t);
-											if(t.getTarget().fact().equals(baseAllocation.asNode())){
-												flowSolver.connectAlias2(FieldStmtPOI.this, t.getStart(),flowTransition.getStart());			
-											}
+									@Override
+									public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
+										flowSolver.getFieldAutomaton().addTransition(t);
+										if(t.getTarget().fact().equals(baseAllocation.asNode())){
+											flowSolver.connectAlias2(FieldStmtPOI.this, t.getStart(),flowTransition.getStart());			
 										}
-									}));
-									
-								}
+									}
+								}));	
 							}
 
 							@Override
