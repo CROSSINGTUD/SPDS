@@ -30,9 +30,12 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.WitnessNode;
+import sync.pds.solver.SyncPDSSolver.PDSSystem;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.NodeWithLocation;
+import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.NormalRule;
 import wpds.impl.Transition;
@@ -239,7 +242,6 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldWrite.getStmt(),
 				fieldWrite.getStoredVar());
 		setFieldContextReachable(aliasedVariableAtStmt);
-//		System.out.println(fieldWrite + " " + rightOpNode + aliasedVariableAtStmt);
 		addNormalCallFlow(rightOpNode, aliasedVariableAtStmt);
 	}
 	

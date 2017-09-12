@@ -145,11 +145,39 @@ public class WritePOITest extends AbstractBoomerangTest {
 
 	@Test
 	public void overwriteTwice(){
+		//TODO This test case should not be imprecise, but is imprecise. Jimple introduces additional variable, why?.
 		Alloc alloc = new Alloc();
 		A a = new A();
 		a.b = new Object();
 		a.b = alloc;
+		int x = 1;
 		Object query1 = a.b;
+		queryFor(query1);
+	}
+
+	@Test
+	public void overwriteWithinCall(){
+		Alloc alloc = new Alloc();
+		A a = new A();
+		set(a);
+		a.b = alloc;
+		int x = 1;
+		Object query1 = a.b;
+		queryFor(query1);
+	}
+	private void set(A a) {
+		a.b = new Object();
+	}
+
+	@Test
+	public void overwriteTwiceStrongAliased(){
+		//This test case is expected to be imprecise.
+		Alloc alloc = new Alloc();
+		A a = new A();
+		A b = a;
+		b.b = new Object();
+		b.b = alloc;
+		Object query1 = b.b;
 		queryFor(query1);
 	}
 	private static class Alloc implements AllocatedObject{};
