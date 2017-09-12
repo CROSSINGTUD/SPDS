@@ -132,10 +132,10 @@ public abstract class Boomerang {
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
 							handleFieldRead(node, ifr, as, backwardQuery);
 						}
-//						if(as.getLeftOp() instanceof InstanceFieldRef){
-//							InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
-//							handleFieldWriteBackward(node, ifr, as, backwardQuery);
-//						}
+						if(as.getLeftOp() instanceof InstanceFieldRef){
+							InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
+							handleFieldWriteBackward(node, ifr, as, backwardQuery);
+						}
 					}
 				}
 			}
@@ -207,14 +207,12 @@ public abstract class Boomerang {
 		}
 		if (node.fact().value().equals(ifr.getBase())) {
 			queryToSolvers.getOrCreate(sourceQuery).addFieldAutomatonListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					if(t.getStart().fact().equals(node.asNode()) && t.getTarget().fact().equals(sourceQuery.asNode())){
 						fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(),base, field, new Val(as.getRightOp(),icfg().getMethodOf(as)))).addBaseAllocation(sourceQuery);
 					}
 				}
-
 				@Override
 				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
 				}
@@ -222,11 +220,28 @@ public abstract class Boomerang {
 		}
 	}
 
+	private void handleFieldWriteBackward(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
+			final AssignStmt fieldRead, final BackwardQuery sourceQuery) {
+		Val base = new Val(ifr.getBase(), icfg().getMethodOf(fieldRead));
+		final Field field = new Field(ifr.getField());
+		final FieldWritePOI fieldReadPoi = 	fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(), base,field, new Val(fieldRead.getRightOp(), icfg().getMethodOf(fieldRead))));
+		queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+			@Override
+			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+				if(t.getLabel().equals(field)){        
+					fieldReadPoi.addFlowAllocation(sourceQuery);
+				}
+			}
 
+			@Override
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+			}
+		});
+	}
 	private void attachHandlerFieldRead(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
 			final AssignStmt fieldRead, final ForwardQuery sourceQuery) {
 		Val base = new Val(ifr.getBase(), icfg().getMethodOf(fieldRead));
-		Field field = new Field(ifr.getField());
+		final Field field = new Field(ifr.getField());
 		final FieldReadPOI fieldReadPoi = 	fieldReads.getOrCreate(new FieldReadPOI(node.stmt(), base,field, new Val(fieldRead.getLeftOp(), icfg().getMethodOf(fieldRead))));
 		if (node.fact().value().equals(ifr.getBase())) {
 			queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
@@ -241,12 +256,22 @@ public abstract class Boomerang {
 
 				@Override
 				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-					// TODO Auto-generated method stub
 					
 				}
 			});
 		}
-		fieldReadPoi.addFlowAllocation(sourceQuery);
+		queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+			@Override
+			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+				if(t.getLabel().equals(field)){        
+					fieldReadPoi.addFlowAllocation(sourceQuery);
+				}
+			}
+
+			@Override
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+			}
+		});
 	}
 
 
@@ -339,48 +364,34 @@ public abstract class Boomerang {
 			final AbstractBoomerangSolver baseSolver = queryToSolvers.get(baseAllocation);
 			final AbstractBoomerangSolver flowSolver = queryToSolvers.get(flowAllocation);
 			//TODO this is a bit of a hack. The allocation sites are not in the 
-			flowSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-				boolean triggered = false;
+
+			System.out.println("COONECTIONg "+  this  + " " +baseAllocation + flowAllocation);
+			baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 				@Override
-				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-					if(triggered || !t.getLabel().equals(getField()) )
-						return;
-					triggered = true;
-					baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-						@Override
-						public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> baseTransition) {
-							final INode<Node<Statement, Val>> aliasedVariableAtStmt = baseTransition.getStart();
-							if(aliasedVariableAtStmt.fact().stmt().equals(getStmt())){
-								flowSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-									@Override
-									public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> flowTransition) {
-										if(baseTransition.equals(flowTransition)){
-											flowSolver.connectAlias(FieldStmtPOI.this, flowTransition);
-										}
-									}
-
-									@Override
-									public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t,
-											Weight<Field> w) {
-									}
-								});
+				public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> baseTransition) {
+					final INode<Node<Statement, Val>> aliasedVariableAtStmt = baseTransition.getStart();
+					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt())){
+						flowSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+							@Override
+							public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> flowTransition) {
+								if(baseTransition.equals(flowTransition)){
+									flowSolver.connectAlias(FieldStmtPOI.this, flowTransition);
+								}
 							}
-						}
 
-						@Override
-						public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-							
-						}
-					});
+							@Override
+							public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t,
+									Weight<Field> w) {
+							}
+						});
+					}
 				}
 
 				@Override
 				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-					// TODO Auto-generated method stub
 					
 				}
 			});
-			
 		}
 		protected void executeImportAliases(final ForwardQuery baseAllocation, final Query flowAllocation){
 			final AbstractBoomerangSolver baseSolver = queryToSolvers.get(baseAllocation);
