@@ -77,16 +77,21 @@ public abstract class WeightedPushdownSystem<N extends Location, D extends State
 
 	@Override
 	public Set<Rule<N, D, W>> getRulesStarting(D start, N string) {
-		Set<Rule<N, D, W>> allRules = getAllRules();
 		Set<Rule<N, D, W>> result = new HashSet<>();
-		for (Rule<N, D, W> r : allRules) {
+		getRulesStartingWithinSet(start,string,popRules,result);
+		getRulesStartingWithinSet(start,string,normalRules,result);
+		getRulesStartingWithinSet(start,string,pushRules,result);
+		return result;
+	}
+	
+	private void getRulesStartingWithinSet(D start, N string, Set<? extends Rule<N, D, W>> rules, Set<Rule<N, D, W>> res){
+		for (Rule<N, D, W> r : rules) {
 			if (r.getS1().equals(start) && (r.getL1().equals(string) || r.getL1() instanceof Wildcard))
-				result.add(r);
+				res.add(r);
 			if (string instanceof Wildcard && r.getS1().equals(start)) {
-				result.add(r);
+				res.add(r);
 			}
 		}
-		return result;
 	}
 
 	@Override
