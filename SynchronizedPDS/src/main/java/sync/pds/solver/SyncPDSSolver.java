@@ -340,7 +340,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 
-	protected void setCallingContextReachable(Node<Stmt,Fact> node) {
+	public void setCallingContextReachable(Node<Stmt,Fact> node) {
 		if (!callingContextReachable.add(node))
 			return;
 

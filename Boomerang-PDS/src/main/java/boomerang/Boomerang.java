@@ -42,6 +42,7 @@ import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -381,70 +382,88 @@ public abstract class Boomerang {
 			final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> baseFieldAut = baseSolver.getFieldAutomaton();
 			final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> flowFieldAut = flowSolver.getFieldAutomaton();
 //			intersectAutomaton(baseFieldAut,flowFieldAut,)
-			baseFieldAut.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+			addFlowListener(new FlowListener() {
 				@Override
-				public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> baseTransitionAtCallsite) {
-					final INode<Node<Statement, Val>> aliasedVariableAtCallsite = baseTransitionAtCallsite.getStart();
-					if(aliasedVariableAtCallsite.fact().stmt().equals(getStmt())){
-//						System.out.println(baseTransition);
-//						if(!aliases.put(flowAllocation, aliasedVariableAtStmt.fact().fact()))
-//							return;
-						flowFieldAut.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-
-							@Override
-							public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> flowTransition) {
-								if(!flowTransition.getStart().fact().equals(new Node<Statement,Val>(returnSite,aliasedVariableAtCallsite.fact().fact())))
-									return;
-								if(!aliases.put(baseAllocation, flowAllocation))
-									return;
-//								System.out.println("Found Can alias between : " + baseAllocation + " " + flowAllocation);
-								baseFieldAut.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+				public void flows(final Val returnedVal) {
+					final Node<Statement, Val> returnedValAtReturnSite = new Node<Statement,Val>(returnSite,returnedVal);
+					final Node<Statement, Val> returnedValAtCallSite = new Node<Statement,Val>(callSite,returnedVal);
+					baseFieldAut.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+						@Override
+						public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> baseTransitionAtCallsite) {
+							final INode<Node<Statement, Val>> baseAllocationFact = baseTransitionAtCallsite.getStart();
+							if(baseAllocationFact.fact().equals(returnedValAtCallSite) && !(baseAllocationFact instanceof GeneratedState)){
+//								System.out.println(baseTransition);
+//								if(!aliases.put(flowAllocation, aliasedVariableAtStmt.fact().fact()))
+//									return;
+								flowFieldAut.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 
 									@Override
-									public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> baseTransitionAtReturnSite) {
-										if(baseTransitionAtReturnSite.getStart().fact().stmt().equals(returnSite)){
-											baseFieldAut.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(baseFieldAut, baseTransitionAtReturnSite.getStart(), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
+									public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> flowTransition) {
+										INode<Node<Statement, Val>> flowAllocationFact = flowTransition.getStart();
+										if(flowAllocationFact.fact().equals(returnedValAtReturnSite) && !(flowAllocationFact instanceof GeneratedState)){
+										
+											if(!aliases.put(baseAllocation, flowAllocation))
+												return;
+											System.out.println("Found an alias between : " + baseAllocation + " " + flowAllocation + getStmt() + returnedVal);
+											System.out.println("Witness : " + flowTransition.getStart());
+											baseFieldAut.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+
 												@Override
-												public void reachable(final 
-														Transition<Field, INode<Node<Statement, Val>>> t) {
-													if(t.getTarget().fact().equals(baseAllocation.asNode())){
-														addFlowListener(new FlowListener(){
-															public void flows(Val flow){
-																if(t.getStart().fact().fact().equals(flow))
-																	return;
-																flowSolver.addNormalCallFlow(new Node<Statement,Val>(returnSite,flow), t.getStart().fact());
-																flowSolver.connectAlias2( flowTransition.getStart().fact(),t.getStart());
+												public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> baseTransitionAtReturnSite) {
+													final INode<Node<Statement, Val>> potentialAlias = baseTransitionAtReturnSite.getStart();
+													
+													if(potentialAlias.fact().stmt().equals(callSite) && !(potentialAlias instanceof GeneratedState) && !flowSolver.valueUsedInStatement(callSite.getMethod(), callSite.getUnit().get(), callSite.getUnit().get().getInvokeExpr(), potentialAlias.fact().fact())){
+														flowSolver.setCallingContextReachable(new Node<Statement,Val>(callSite, potentialAlias.fact().fact()));
+//														flowSolver.processNode(new WitnessNode<Statement, Val, Field>(callSite, potentialAlias.fact().fact()));
+														flowSolver.addNormalCallFlow(new Node<Statement,Val>(returnSite,returnedVal),new Node<Statement,Val>(returnSite, potentialAlias.fact().fact()));
+														baseFieldAut.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(baseFieldAut, baseTransitionAtReturnSite.getStart(), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
+															@Override
+															public void reachable(final 
+																	Transition<Field, INode<Node<Statement, Val>>> t) {
+																if(t.getTarget().fact().equals(baseAllocation.asNode())){
+																	if(t.getStart().fact().fact().equals(returnedVal))
+																		return;
+																	baseFieldAut.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(baseFieldAut, baseTransitionAtReturnSite.getStart(), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
+																		@Override
+																		public void reachable(final 
+																				Transition<Field, INode<Node<Statement, Val>>> t) {
+
+																			flowSolver.getFieldAutomaton().addTransition(t);
+																		}
+																	}));
+																	flowSolver.connectAlias2( flowTransition.getStart().fact(),t.getStart());
+																} else{
+																}
 															}
-														});			
-													} else{
-														flowSolver.getFieldAutomaton().addTransition(t);
+														}));
 													}
 												}
-											}));
+
+												@Override
+												public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t,
+														Weight<Field> w) {
+												}
+											});
 										}
+										
 									}
 
 									@Override
 									public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t,
 											Weight<Field> w) {
-										
 									}
 								});
 							}
+						}
 
-							@Override
-							public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t,
-									Weight<Field> w) {
-							}
-						});
-					}
-				}
-
-				@Override
-				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-					
+						@Override
+						public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+							
+						}
+					});
 				}
 			});
+			
 		}
 
 		@Override
@@ -531,9 +550,8 @@ public abstract class Boomerang {
 									
 									if(transition.getTarget().fact().equals(baseAllocation.asNode())){
 										flowSolver.connectBase(FieldStmtPOI.this, transition.getStart(), succOfWrite);
-									}else{
-										flowSolver.getFieldAutomaton().addTransition(transition);
 									}
+									flowSolver.getFieldAutomaton().addTransition(transition);
 								}
 							}));
 							flowSolver.handlePOI(FieldStmtPOI.this, aliasedVariableAtStmt.fact());

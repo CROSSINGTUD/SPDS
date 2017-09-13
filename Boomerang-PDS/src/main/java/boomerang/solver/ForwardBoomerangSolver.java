@@ -195,6 +195,9 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 					@Override
 					public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
 						if(reachableNode.asNode().equals(new Node<Statement,Val>(callPopNode.getReturnSite(),callPopNode.location()))){
+							if(!valueUsedInStatement(icfg.getMethodOf(callSite), (Stmt)callSite, ((Stmt) callSite).getInvokeExpr(), callPopNode.location())){
+								return;
+							}
 							onReturnFromCall(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), callPopNode.getReturnSite(), reachableNode.asNode());
 						}
 					}

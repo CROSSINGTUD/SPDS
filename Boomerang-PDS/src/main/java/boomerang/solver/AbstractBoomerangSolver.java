@@ -160,7 +160,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	}
 	protected abstract boolean killFlow(SootMethod method, Stmt curr, Val value);
 	
-	private boolean valueUsedInStatement(SootMethod method, Stmt u, InvokeExpr invokeExpr, Val value) {
+	public boolean valueUsedInStatement(SootMethod method, Stmt u, InvokeExpr invokeExpr, Val value) {
 		if(u instanceof AssignStmt && isBackward()){
 			AssignStmt assignStmt = (AssignStmt) u;
 			if(assignStmt.getLeftOp().equals(value.value()))
