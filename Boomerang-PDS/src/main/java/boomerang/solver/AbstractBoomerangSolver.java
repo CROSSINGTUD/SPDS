@@ -209,6 +209,11 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 				}
 			}
 		}
+		if(icfg.getCalleesOfCallAt(callSite).isEmpty()){
+			for(Unit returnSite : icfg.getSuccsOf(callSite)){
+				out.addAll(computeNormalFlow(caller, (Stmt)callSite, value,(Stmt) returnSite));
+			}
+		}
 		return out;
 	}
 

@@ -15,6 +15,8 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
+import boomerang.debugger.Debugger;
+import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -177,6 +179,7 @@ public abstract class Boomerang {
 //				System.out.println("Query + " + sourceQuery + " bypasses " + callSite);
 				callSitePoi.addBaseAllocation(sourceQuery);
 			}
+			
 		};
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
@@ -597,11 +600,17 @@ public abstract class Boomerang {
 		return queryToSolvers;
 	}
 	
+	public abstract Debugger createDebugger();
 	
 	public void debugOutput() {
 		if(!DEBUG)
 			return;
+		Debugger debugger = createDebugger();
 		for (Query q : queryToSolvers.keySet()) {
+			debugger.reachableNodes(q,queryToSolvers.getOrCreate(q).getReachedStates());
+			debugger.reachableCallNodes(q,queryToSolvers.getOrCreate(q).getReachedStates());
+			debugger.reachableFieldNodes(q,queryToSolvers.getOrCreate(q).getReachedStates());
+			
 //			if (q instanceof ForwardQuery) {
 				System.out.println("========================");
 				System.out.println(q);

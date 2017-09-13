@@ -19,6 +19,8 @@ import boomerang.Boomerang;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WholeProgramBoomerang;
+import boomerang.debugger.Debugger;
+import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
@@ -183,6 +185,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 					return icfg;
 				}
+				
+				@Override
+				public Debugger createDebugger() {
+					return new IDEVizDebugger(ideVizFile,icfg);
+				}
 			};
 			if(query instanceof BackwardQuery){
 				solver.addBackwardQuery((BackwardQuery)query,new EmptyStackWitnessListener<Statement, Val>() {
@@ -217,6 +224,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 				return icfg;
+			}
+			
+			@Override
+			public Debugger createDebugger() {
+				return new IDEVizDebugger(ideVizFile,icfg);
 			}
 		};
 		solver.wholeProgramAnalysis();
