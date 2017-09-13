@@ -150,10 +150,6 @@ public abstract class Boomerang {
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
 							handleFieldRead(node, ifr, as, backwardQuery);
 						}
-						if(as.getLeftOp() instanceof InstanceFieldRef){
-							InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
-							handleFieldWriteBackward(node, ifr, as, backwardQuery);
-						}
 					}
 				}
 			}
@@ -253,25 +249,6 @@ public abstract class Boomerang {
 		}
 	}
 
-	private void handleFieldWriteBackward(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
-			final AssignStmt fieldRead, final BackwardQuery sourceQuery) {
-		Val base = new Val(ifr.getBase(), icfg().getMethodOf(fieldRead));
-		final Field field = new Field(ifr.getField());
-		final FieldWritePOI fieldReadPoi = 	fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(), base,field, new Val(fieldRead.getRightOp(), icfg().getMethodOf(fieldRead))));
-
-		queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-			@Override
-			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-				if(t.getLabel().equals(field)){    
-					fieldReadPoi.addFlowAllocation(sourceQuery);
-				}
-			}
-
-			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-			}
-		});
-	}
 	private void attachHandlerFieldRead(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
 			final AssignStmt fieldRead, final ForwardQuery sourceQuery) {
 		Val base = new Val(ifr.getBase(), icfg().getMethodOf(fieldRead));
@@ -294,18 +271,6 @@ public abstract class Boomerang {
 				}
 			});
 		}
-		queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-			@Override
-			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-				if(t.getLabel().equals(field)){        
-					fieldReadPoi.addFlowAllocation(sourceQuery);
-				}
-			}
-
-			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-			}
-		});
 	}
 
 
@@ -367,7 +332,6 @@ public abstract class Boomerang {
 		@Override
 		public void execute(ForwardQuery baseAllocation, Query flowAllocation) {
 			if(flowAllocation instanceof BackwardQuery){
-				executeConnectAliases(baseAllocation, flowAllocation);
 			} else if(flowAllocation instanceof ForwardQuery){
 				executeImportAliases(baseAllocation, flowAllocation);
 			}
@@ -378,7 +342,7 @@ public abstract class Boomerang {
 
 		private Statement callSite;
 		private Statement returnSite;
-		private Multimap<Query,Val> aliases = HashMultimap.create();
+		private Multimap<ForwardQuery,Query> aliases = HashMultimap.create();
 		private Set<Val> flows = Sets.newHashSet();
 		private Set<FlowListener> flowListeners = Sets.newHashSet();
 
@@ -430,6 +394,8 @@ public abstract class Boomerang {
 							@Override
 							public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> flowTransition) {
 								if(!flowTransition.getStart().fact().equals(new Node<Statement,Val>(returnSite,aliasedVariableAtCallsite.fact().fact())))
+									return;
+								if(!aliases.put(baseAllocation, flowAllocation))
 									return;
 //								System.out.println("Found Can alias between : " + baseAllocation + " " + flowAllocation);
 								baseFieldAut.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
@@ -531,7 +497,6 @@ public abstract class Boomerang {
 		@Override
 		public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
 			if(flowAllocation instanceof ForwardQuery){
-				executeConnectAliases(baseAllocation, flowAllocation);
 			} else if(flowAllocation instanceof BackwardQuery){
 				executeImportAliases(baseAllocation, flowAllocation);
 			}
@@ -541,10 +506,6 @@ public abstract class Boomerang {
 		private Multimap<Query,Val> aliases = HashMultimap.create();
 		public FieldStmtPOI(Statement statement, Val base, Field field, Val storedVar) {
 			super(statement, base, field, storedVar);
-		}
-
-		protected void executeConnectAliases(final ForwardQuery baseAllocation, final Query flowAllocation){
-			
 		}
 		protected void executeImportAliases(final ForwardQuery baseAllocation, final Query flowAllocation){
 			final AbstractBoomerangSolver baseSolver = queryToSolvers.get(baseAllocation);
