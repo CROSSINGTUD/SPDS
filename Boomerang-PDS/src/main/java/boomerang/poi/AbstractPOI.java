@@ -1,18 +1,7 @@
 package boomerang.poi;
 
-import java.util.Set;
+public abstract class AbstractPOI<Statement, Val, Field> extends PointOfIndirection<Statement, Val, Field> {
 
-import com.beust.jcommander.internal.Lists;
-import com.beust.jcommander.internal.Sets;
-
-import boomerang.ForwardQuery;
-import boomerang.Query;
-import sync.pds.solver.nodes.Node;
-
-public abstract class AbstractPOI<Statement, Val, Field> implements PointOfIndirection<Statement, Val, Field> {
-
-	private Set<ForwardQuery> actualBaseAllocations = Sets.newHashSet();
-	private Set<Query> flowAllocations = Sets.newHashSet();
 	private final Val baseVar;
 	private final Field field;
 	private final Val storedVar;
@@ -25,25 +14,6 @@ public abstract class AbstractPOI<Statement, Val, Field> implements PointOfIndir
 		this.storedVar = storedVar;
 	}
 
-	public abstract void execute(ForwardQuery baseAllocation, Query flowAllocation);
-
-	@Override
-	public void addBaseAllocation(ForwardQuery baseAllocation) {
-		if(actualBaseAllocations.add(baseAllocation)){
-			for(Query flowAllocation : Lists.newArrayList(flowAllocations)){
-				execute(baseAllocation, flowAllocation);
-			}
-		}
-	}
-
-	@Override
-	public void addFlowAllocation(Query flowAllocation) {
-		if(flowAllocations.add(flowAllocation)){
-			for(ForwardQuery baseAllocation : Lists.newArrayList(actualBaseAllocations)){
-				execute(baseAllocation, flowAllocation);
-			}
-		}
-	}
 	
 
 	public Val getBaseVar() {

@@ -11,6 +11,16 @@ public class HiddenFieldLoadTest extends AbstractBoomerangTest{
 		A b = new A();
 		A a = b;
 		b.setF();
+		int x = 1;
+		Object alias = a.f();
+		queryFor(alias);
+	}
+	@Test
+	public void run3(){
+		A b = new A();
+		A a = b;
+		Alloc alloc = new Alloc();
+		b.setF(alloc);
 		Object alias = a.f();
 		queryFor(alias);
 	}
@@ -28,6 +38,9 @@ public class HiddenFieldLoadTest extends AbstractBoomerangTest{
 			f = new Alloc();
 		}
 
+		public void setF(Object alloc) {
+			f = alloc;
+		}
 		public Object f() {
 			return f;
 		}

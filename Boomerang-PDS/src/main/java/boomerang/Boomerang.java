@@ -3,18 +3,23 @@ package boomerang;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+
+import javax.swing.plaf.synth.SynthSpinnerUI;
+
+import java.util.Set;
 
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.poi.AbstractPOI;
+import boomerang.poi.PointOfIndirection;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
@@ -45,7 +50,7 @@ import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
 		@Override
@@ -96,8 +101,21 @@ public abstract class Boomerang {
 			return key;
 		}
 	};
+	private DefaultValueMap<ForwardCallSitePOI, ForwardCallSitePOI> forwardCallSitePOI = new DefaultValueMap<ForwardCallSitePOI, ForwardCallSitePOI>() {
+		@Override
+		protected ForwardCallSitePOI createItem(ForwardCallSitePOI key) {
+			return key;
+		}
+	};
 	protected AbstractBoomerangSolver createBackwardSolver(final BackwardQuery backwardQuery) {
-		final BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg(), backwardQuery,genField);
+		final BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg(), backwardQuery,genField){
+
+			@Override
+			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
+				// TODO Auto-generated method stub
+			}
+			
+		};
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
@@ -147,7 +165,22 @@ public abstract class Boomerang {
 
 
 	protected AbstractBoomerangSolver createForwardSolver(final ForwardQuery sourceQuery) {
-		ForwardBoomerangSolver solver = new ForwardBoomerangSolver(icfg(), sourceQuery,genField);
+		ForwardBoomerangSolver solver = new ForwardBoomerangSolver(icfg(), sourceQuery,genField){
+			@Override
+			protected void onReturnFromCall(Statement callSite, Statement returnSite, Node<Statement, Val> asNode) {
+				ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite,returnSite));
+//				System.out.println("Query + " + sourceQuery + " returns from call " + callSite);
+				callSitePoi.addFlowAllocation(sourceQuery);
+				callSitePoi.addFlow(asNode.fact());
+			}
+			
+			@Override
+			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
+				ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite,returnSite));
+//				System.out.println("Query + " + sourceQuery + " bypasses " + callSite);
+				callSitePoi.addBaseAllocation(sourceQuery);
+			}
+		};
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
@@ -341,6 +374,155 @@ public abstract class Boomerang {
 		}
 	}
 	
+	private class ForwardCallSitePOI extends PointOfIndirection<Statement, Val, Field>{
+
+		private Statement callSite;
+		private Statement returnSite;
+		private Multimap<Query,Val> aliases = HashMultimap.create();
+		private Set<Val> flows = Sets.newHashSet();
+		private Set<FlowListener> flowListeners = Sets.newHashSet();
+
+		public ForwardCallSitePOI(Statement callSite, Statement returnSite){
+			this.callSite = callSite;
+			this.returnSite = returnSite;
+		}
+
+		public void addFlow(Val fact) {
+			if(flows.add(fact)){
+				for(FlowListener l : Lists.newArrayList(flowListeners)){
+					l.flows(fact);
+				}
+			}
+		}
+
+		
+		private void addFlowListener(FlowListener l){
+			if(flowListeners.add(l)){
+				for(Val flow : Lists.newArrayList(flows)){
+					l.flows(flow);
+				}
+			}
+		}
+		@Override
+		public Statement getStmt() {
+			return callSite;
+		}
+
+		@Override
+		public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
+			if(flowAllocation.equals(baseAllocation))
+				return;
+			final AbstractBoomerangSolver baseSolver = queryToSolvers.get(baseAllocation);
+			final AbstractBoomerangSolver flowSolver = queryToSolvers.get(flowAllocation);
+			final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> baseFieldAut = baseSolver.getFieldAutomaton();
+			final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> flowFieldAut = flowSolver.getFieldAutomaton();
+//			intersectAutomaton(baseFieldAut,flowFieldAut,)
+			baseFieldAut.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+				@Override
+				public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> baseTransitionAtCallsite) {
+					final INode<Node<Statement, Val>> aliasedVariableAtCallsite = baseTransitionAtCallsite.getStart();
+					if(aliasedVariableAtCallsite.fact().stmt().equals(getStmt())){
+//						System.out.println(baseTransition);
+//						if(!aliases.put(flowAllocation, aliasedVariableAtStmt.fact().fact()))
+//							return;
+						flowFieldAut.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+
+							@Override
+							public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> flowTransition) {
+								if(!flowTransition.getStart().fact().equals(new Node<Statement,Val>(returnSite,aliasedVariableAtCallsite.fact().fact())))
+									return;
+//								System.out.println("Found Can alias between : " + baseAllocation + " " + flowAllocation);
+								baseFieldAut.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+
+									@Override
+									public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> baseTransitionAtReturnSite) {
+										if(baseTransitionAtReturnSite.getStart().fact().stmt().equals(returnSite)){
+											baseFieldAut.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(baseFieldAut, baseTransitionAtReturnSite.getStart(), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
+												@Override
+												public void reachable(final 
+														Transition<Field, INode<Node<Statement, Val>>> t) {
+													if(t.getTarget().fact().equals(baseAllocation.asNode())){
+														addFlowListener(new FlowListener(){
+															public void flows(Val flow){
+																if(t.getStart().fact().fact().equals(flow))
+																	return;
+																flowSolver.addNormalCallFlow(new Node<Statement,Val>(returnSite,flow), t.getStart().fact());
+																flowSolver.connectAlias2( flowTransition.getStart().fact(),t.getStart());
+															}
+														});			
+													} else{
+														flowSolver.getFieldAutomaton().addTransition(t);
+													}
+												}
+											}));
+										}
+									}
+
+									@Override
+									public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t,
+											Weight<Field> w) {
+										
+									}
+								});
+							}
+
+							@Override
+							public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t,
+									Weight<Field> w) {
+							}
+						});
+					}
+				}
+
+				@Override
+				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+					
+				}
+			});
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
+			result = prime * result + ((returnSite == null) ? 0 : returnSite.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ForwardCallSitePOI other = (ForwardCallSitePOI) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (callSite == null) {
+				if (other.callSite != null)
+					return false;
+			} else if (!callSite.equals(other.callSite))
+				return false;
+			if (returnSite == null) {
+				if (other.returnSite != null)
+					return false;
+			} else if (!returnSite.equals(other.returnSite))
+				return false;
+			return true;
+		}
+
+		private Boomerang getOuterType() {
+			return Boomerang.this;
+		}
+		
+	}
+	private interface FlowListener{
+		void flows(Val val);
+	}
 	private class FieldReadPOI extends FieldStmtPOI {
 		public FieldReadPOI(Statement statement, Val base, Field field, Val stored) {
 			super(statement,base,field,stored);
@@ -362,48 +544,7 @@ public abstract class Boomerang {
 		}
 
 		protected void executeConnectAliases(final ForwardQuery baseAllocation, final Query flowAllocation){
-			final AbstractBoomerangSolver baseSolver = queryToSolvers.get(baseAllocation);
-			final AbstractBoomerangSolver flowSolver = queryToSolvers.get(flowAllocation);
 			
-			baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-				@Override
-				public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> baseTransition) {
-					final INode<Node<Statement, Val>> aliasedVariableAtStmt = baseTransition.getStart();
-					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt())){
-						if(!aliases.put(flowAllocation, baseTransition.getStart().fact().fact()))
-							return;
-						flowSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-
-							@Override
-							public void onAddedTransition(final Transition<Field, INode<Node<Statement, Val>>> flowTransition) {
-								if(!flowTransition.getStart().equals(baseTransition.getStart()))
-									return;
-								final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = baseSolver.getFieldAutomaton();
-								aut.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(aut, baseTransition.getStart(), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
-
-									@Override
-									public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
-										flowSolver.getFieldAutomaton().addTransition(t);
-										if(t.getTarget().fact().equals(baseAllocation.asNode())){
-											flowSolver.connectAlias2(FieldStmtPOI.this, t.getStart(),flowTransition.getStart());			
-										}
-									}
-								}));	
-							}
-
-							@Override
-							public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t,
-									Weight<Field> w) {
-							}
-						});
-					}
-				}
-
-				@Override
-				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-					
-				}
-			});
 		}
 		protected void executeImportAliases(final ForwardQuery baseAllocation, final Query flowAllocation){
 			final AbstractBoomerangSolver baseSolver = queryToSolvers.get(baseAllocation);

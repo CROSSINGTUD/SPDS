@@ -27,6 +27,8 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
+import sync.pds.solver.SyncPDSUpdateListener;
+import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.INode;
@@ -36,7 +38,7 @@ import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import wpds.interfaces.State;
 
-public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
+public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	public ForwardBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, ForwardQuery query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField) {
 		super(icfg, query, genField);
 	}
@@ -66,6 +68,8 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 		}
 		return Collections.emptySet();
 	}
+	
+	
 
 	@Override
 	protected boolean killFlow(SootMethod m, Stmt curr, Val value) {
@@ -179,5 +183,27 @@ public class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 			}
 		}
 	}
+	
+	@Override
+	protected void onReturnFlow(final Unit callSite, Unit returnSite, SootMethod method, Val value,
+			Collection<? extends State> outFlow) {
+		for(State r : outFlow){
+			if(r instanceof CallPopNode){
+				final CallPopNode<Val,Statement> callPopNode = (CallPopNode) r;
+				this.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
+					
+					@Override
+					public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+						if(reachableNode.asNode().equals(new Node<Statement,Val>(callPopNode.getReturnSite(),callPopNode.location()))){
+							onReturnFromCall(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), callPopNode.getReturnSite(), reachableNode.asNode());
+						}
+					}
+				});
+			}
+		}
+		super.onReturnFlow(callSite, returnSite, method, value, outFlow);
+	}
+
+	protected abstract void onReturnFromCall(Statement statement, Statement returnSite, Node<Statement, Val> asNode);
 	
 }

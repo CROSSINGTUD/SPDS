@@ -69,6 +69,8 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		this.icfg = icfg;
 		this.query = query;
 		this.unbalancedMethod.add(query.asNode().stmt().getMethod());
+		
+		//TODO recap, I assume we can implement this more easily.
 		this.generatedFieldState = genField;
 	}
 	
@@ -101,9 +103,14 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return Collections.emptySet();
 	}
 
+	protected abstract void callBypass(Statement callSite, Statement returnSite,  Val value);
+
 	private Collection<State> normalFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
 		for(Unit succ : icfg.getSuccsOf(curr)){
+			if(curr.containsInvokeExpr()){
+				callBypass(new Statement(curr,method), new Statement((Stmt) succ,method), value);
+			}
 			out.addAll(computeNormalFlow(method,curr, value, (Stmt) succ));
 		}
 		List<Unit> succsOf = icfg.getSuccsOf(curr);
@@ -270,28 +277,12 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(new SingleNode<Node<Statement,Val>>(leftOpNode),
 				fieldWildCard(),iNode, fieldWildCard(), fieldPDS.getOne()));
 	}
-	public void connectAlias(AbstractPOI<Statement, Val, Field> fieldWrite, Transition<Field, INode<Node<Statement, Val>>> flowTransition){
-		Node<Statement, Val> leftOpNode = new Node<Statement,Val>(fieldWrite.getStmt(), fieldWrite.getBaseVar());
-		if(!(flowTransition.getStart() instanceof GeneratedState)){
-			addNormalCallFlow(flowTransition.getStart().fact(), leftOpNode);
-		}
-		setFieldContextReachable(leftOpNode);
-		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>((flowTransition.getTarget() instanceof GeneratedState ? flowTransition.getTarget() : flowTransition.getStart()),
-				fieldWildCard(),new SingleNode<Node<Statement,Val>>(leftOpNode), fieldWildCard(), fieldPDS.getOne()));
-	}
-	
 
-	public void connectAlias2(AbstractPOI<Statement, Val, Field> fieldWrite,
-			INode<Node<Statement, Val>> iNode, INode<Node<Statement, Val>> iNode2) {
-		Node<Statement, Val> leftOpNode = new Node<Statement,Val>(fieldWrite.getStmt(), fieldWrite.getBaseVar());
-		if(!(iNode2 instanceof GeneratedState)){
-			addNormalCallFlow(iNode2.fact(), leftOpNode);
-		}
-		setFieldContextReachable(leftOpNode);
-		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>( iNode,
-				fieldWildCard(),new SingleNode<Node<Statement,Val>>(leftOpNode), fieldWildCard(), fieldPDS.getOne()));
+	public void connectAlias2(Node<Statement, Val> node, INode<Node<Statement, Val>> byPassingFact) {
+		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>( new SingleNode<Node<Statement,Val>>(node),
+				fieldWildCard(),byPassingFact, fieldWildCard(), fieldPDS.getOne()));
 	}
-	
+
 	@Override
 	protected void processNode(final WitnessNode<Statement, Val, Field> witnessNode) {
 //		if(reachableMethods.contains(witnessNode.stmt().getMethod()) || witnessNode.stmt().getMethod().isStatic()){
@@ -328,13 +319,13 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		}
 	}
 	
-	private void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
+	protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
 		if(!res.isEmpty()){
 			addReachableMethod(callee);
 		}
 	}
 
-	private void onReturnFlow(Unit callSite, Unit returnSite, SootMethod method, Val value,
+	protected void onReturnFlow(Unit callSite, Unit returnSite, SootMethod method, Val value,
 			Collection<? extends State> outFlow) {
 		if(unbalancedMethod.contains(method)){
 			SootMethod caller = icfg.getMethodOf(callSite);

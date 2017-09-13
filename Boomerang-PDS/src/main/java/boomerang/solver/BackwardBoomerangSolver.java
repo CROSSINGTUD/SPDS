@@ -37,7 +37,7 @@ import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import wpds.interfaces.State;
 
-public class BackwardBoomerangSolver extends AbstractBoomerangSolver{
+public abstract class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 
 	public BackwardBoomerangSolver(BiDiInterproceduralCFG<Unit, SootMethod> icfg, BackwardQuery query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField){
 		super(icfg, query, genField);
