@@ -13,6 +13,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
+import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.GeneratedState;
@@ -126,7 +127,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 	
 	public void solve(Node<Stmt,Fact> source, Node<Stmt, Fact> curr) {
-		Transition<Field, INode<Node<Stmt,Fact>>> fieldTrans = new Transition<Field, INode<Node<Stmt,Fact>>>(asFieldFact(curr), emptyField(), asFieldFact(source));
+		Transition<Field, INode<Node<Stmt,Fact>>> fieldTrans = new Transition<Field, INode<Node<Stmt,Fact>>>(asFieldFact(curr), emptyField(), asFieldFactSource(source));
 		fieldAutomaton.addTransition(fieldTrans);
 		fieldAutomaton.addWeightForTransition(fieldTrans, new SetDomain<Field,Stmt,Fact>(curr));
 		Transition<Stmt, INode<Fact>> callTrans = new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(source.fact()));
@@ -135,6 +136,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		callAutomaton.addWeightForTransition(callTrans, new SetDomain<Stmt,Stmt,Fact>(curr));
 		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
 		processNode(startNode);
+	}
+
+	private INode<Node<Stmt, Fact>> asFieldFactSource(Node<Stmt, Fact> source) {
+		return new AllocNode<Node<Stmt,Fact>>(source);
 	}
 
 	protected void processNode(WitnessNode<Stmt, Fact,Field> witnessNode) {
@@ -354,7 +359,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		WitnessNode<Stmt, Fact, Field> witnessNode = new WitnessNode<Stmt,Fact,Field>(node.stmt(),node.fact());
 		return witnessNode;
 	}
-	protected void setFieldContextReachable(Node<Stmt,Fact> node) {
+	public void setFieldContextReachable(Node<Stmt,Fact> node) {
 		if (!fieldContextReachable.add(node)) {
 			return;
 		}
