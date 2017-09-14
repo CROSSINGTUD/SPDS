@@ -21,6 +21,15 @@ public class CustomMapTest extends AbstractBoomerangTest {
 		Object alias = map.m.content;
 		queryFor(alias);
 	}
+	
+	@Test
+	public void onlyInnerMapSimple(){
+		Alloc alloc = new Alloc();
+		InnerMap map = new InnerMap();
+		map.innerAdd(alloc);
+		Object alias = map.content;
+		queryFor(alias);
+	}
 	public static class Map{
 		InnerMap m = new InnerMap();
 		public void add(Object o){

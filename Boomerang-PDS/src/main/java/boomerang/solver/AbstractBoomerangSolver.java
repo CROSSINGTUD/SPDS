@@ -190,7 +190,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		for(Unit callSite : icfg.getCallersOf(method)){
 			for(Unit returnSite : icfg.getSuccsOf(callSite)){
 				Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) callSite, (Stmt) returnSite);
-				onReturnFlow(callSite, returnSite, method, value, outFlow);
+				onReturnFlow(callSite, returnSite, method, curr, value, outFlow);
 				out.addAll(outFlow);
 			}
 		}
@@ -277,7 +277,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 				fieldWildCard(),iNode, fieldWildCard(), fieldPDS.getOne()));
 	}
 
-	public void connectAlias2(Node<Statement, Val> node, INode<Node<Statement, Val>> byPassingFact) {
+	public void connectAlias2(final Node<Statement, Val> node,final INode<Node<Statement, Val>> byPassingFact) {
 		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>( new SingleNode<Node<Statement,Val>>(node),
 				fieldWildCard(),byPassingFact, fieldWildCard(), fieldPDS.getOne()));
 	}
@@ -324,7 +324,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		}
 	}
 
-	protected void onReturnFlow(Unit callSite, Unit returnSite, SootMethod method, Val value,
+	protected void onReturnFlow(Unit callSite, Unit returnSite, SootMethod method, Stmt curr, Val value,
 			Collection<? extends State> outFlow) {
 		if(unbalancedMethod.contains(method)){
 			SootMethod caller = icfg.getMethodOf(callSite);

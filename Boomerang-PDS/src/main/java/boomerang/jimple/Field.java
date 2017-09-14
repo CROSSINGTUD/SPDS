@@ -75,7 +75,7 @@ public class Field implements Location {
 		if (empty == null) {
 			empty = new Field("{}");
 		}
-		return Field.epsilon();
+		return empty;
 	}
 
 	public static Field epsilon() {

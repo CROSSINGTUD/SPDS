@@ -185,7 +185,7 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	}
 	
 	@Override
-	protected void onReturnFlow(final Unit callSite, Unit returnSite, SootMethod method, Val value,
+	protected void onReturnFlow(final Unit callSite, Unit returnSite, final SootMethod method, final Stmt returnStmt, final Val value,
 			Collection<? extends State> outFlow) {
 		for(State r : outFlow){
 			if(r instanceof CallPopNode){
@@ -199,15 +199,15 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 								//TODO why do we need this?
 								return;
 							}
-							onReturnFromCall(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), callPopNode.getReturnSite(), reachableNode.asNode());
+							onReturnFromCall(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), callPopNode.getReturnSite(),new Node<Statement,Val>(new Statement((Stmt)returnStmt, method),value), reachableNode.asNode());
 						}
 					}
 				});
 			}
 		}
-		super.onReturnFlow(callSite, returnSite, method, value, outFlow);
+		super.onReturnFlow(callSite, returnSite, method, returnStmt, value, outFlow);
 	}
 
-	protected abstract void onReturnFromCall(Statement statement, Statement returnSite, Node<Statement, Val> asNode);
+	protected abstract void onReturnFromCall(Statement statement, Statement returnSite, Node<Statement, Val> asNode, Node<Statement, Val> node);
 	
 }
