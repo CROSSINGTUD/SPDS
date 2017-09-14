@@ -22,6 +22,7 @@ import wpds.wildcard.Wildcard;
 public class PostStar<N extends Location, D extends State, W extends Weight<N>> {
 	private IPushdownSystem<N, D, W> pds;
 	private WeightedPAutomaton<N, D, W> fa;
+	private LinkedList<Transition<N,D>> worklist = Lists.newLinkedList();
 
 	public void poststar(IPushdownSystem<N, D, W> pds, WeightedPAutomaton<N, D, W> initialAutomaton) {
 		this.pds = pds;
@@ -36,14 +37,15 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 						update(t, rule);
 					}
 				}
+				await();
 			}
 		});
 		fa.registerListener(new WPAUpdateListener<N, D, W>() {
 			@Override
 			public void onAddedTransition(Transition<N, D> t) {
-				update(t);
+				addToWorklist(t);
+				await();
 			}
-
 			@Override
 			public void onWeightAdded(Transition<N, D> t, Weight<N> w) {
 			}
@@ -85,8 +87,9 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		} else if (rule instanceof PushRule) {
 			PushRule<N, D, W> pushRule = (PushRule<N, D, W>) rule;
 			N gammaPrime = pushRule.getL2();
-			if (gammaPrime instanceof Wildcard)
+			if (gammaPrime instanceof Wildcard){
 				gammaPrime = t.getString();
+			}
 			D irState = fa.createState(p, gammaPrime);
 			LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
 			previous.add(t);
@@ -117,17 +120,25 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 	private void update(Rule<N, D, W> triggeringRule, Transition<N, D> trans, W weight,
 			List<Transition<N, D>> previous) {
-//		System.out.println("\t"+
-//		 trans + "\t as of \t" + triggeringRule + " \t and " + previous);
 		fa.addTransition(trans);
 		W lt = getOrCreateWeight(trans);
 		W newLt = (W) lt.combineWithIn(weight);
 		fa.addWeightForTransition(trans, newLt);
 		if (!lt.equals(newLt)) {
-			update(trans);
+			addToWorklist(trans);
 		}
 	}
 
+
+	private void addToWorklist(Transition<N, D> t) {
+		worklist.add(t);
+	}
+	private void await(){
+		while(!worklist.isEmpty()){
+			Transition<N, D> pop = worklist.pop();
+			update(pop);
+		}
+	}
 	private void update(Transition<N, D> t) {
 		Set<Rule<N, D, W>> rules = pds.getRulesStarting(t.getStart(), t.getString());
 		for(Rule<N, D, W> rule : rules){

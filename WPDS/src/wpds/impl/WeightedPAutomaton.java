@@ -41,9 +41,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private final Multimap<D, Transition<N, D>> transitionsInto = HashMultimap.create();
 	private Set<WPAUpdateListener<N, D, W>> listeners = Sets.newHashSet();
 
-	public WeightedPAutomaton() {
-	}
-
 	public abstract D createState(D d, N loc);
 
 	public Set<Transition<N, D>> getTransitions() {

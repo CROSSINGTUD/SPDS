@@ -3,6 +3,7 @@ package sync.pds.solver;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -42,6 +43,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 	private static final boolean DEBUG = true;
+	private LinkedList<WitnessNode<Stmt,Fact,Field>> worklist = Lists.newLinkedList();
 
 	protected final WeightedPushdownSystem<Stmt, INode<Fact>, Weight<Stmt>> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, Weight<Stmt>>() {
 		@Override
@@ -138,6 +140,13 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		processNode(startNode);
 	}
 
+	private void await() {
+		while(!worklist.isEmpty()){
+			WitnessNode<Stmt, Fact, Field> pop = worklist.pop();
+			processNode(pop);
+		}
+	}
+
 	private INode<Node<Stmt, Fact>> asFieldFactSource(Node<Stmt, Fact> source) {
 		return new AllocNode<Node<Stmt,Fact>>(source);
 	}
@@ -161,13 +170,14 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				}
 				if (added){
 					maintainWitness(curr,succ);
-					processNode(new WitnessNode<Stmt,Fact,Field>(succ.stmt(),succ.fact()));
+					worklist.add(new WitnessNode<Stmt,Fact,Field>(succ.stmt(),succ.fact()));
 				}
 			} else if (s instanceof PopNode) {
 				PopNode<Fact> popNode = (PopNode<Fact>) s;
 				processPop(curr, popNode);
 			}
 		}
+		await();
 	}
 
 	private void maintainWitness(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
