@@ -1,7 +1,8 @@
-package test.cases.fields;
+package test.cases.sets;
 
 import org.junit.Test;
 
+import test.cases.fields.Alloc;
 import test.core.selfrunning.AbstractBoomerangTest;
 
 public class CustomMapTest extends AbstractBoomerangTest {
@@ -53,4 +54,14 @@ public class CustomMapTest extends AbstractBoomerangTest {
 			return content;
 		}
 	}
+	
+	@Test
+	public void storeAndLoadSimpleNoInnerClasses(){
+		Alloc alloc = new Alloc();
+		MyMap map = new MyMap();
+		map.add(alloc);
+		Object alias = map.m.content;
+		queryFor(alias);
+	}
+	
 }

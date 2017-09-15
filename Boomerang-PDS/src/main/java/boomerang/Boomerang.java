@@ -171,7 +171,7 @@ public abstract class Boomerang {
 					public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
 						if(t.getTarget() instanceof AllocNode){
 							Node<Statement, Val> fact = t.getTarget().fact();
-							if(t.getLabel().equals(emptyField())){
+							if(!fact.equals(sourceQuery.asNode()) && t.getLabel().equals(emptyField())){
 								callSitePoi.addFlowAllocation(sourceQuery, new ForwardQuery(fact.stmt(),fact.fact()),asNode.fact());
 							}
 						}
@@ -429,9 +429,12 @@ public abstract class Boomerang {
 			}
 		}
 
-		private void activateBase(QueryWithVal queryWithVal, final ForwardQuery byPassingAllocation, Val byPassing) {
+		private void activateBase(QueryWithVal queryWithVal, final ForwardQuery byPassingAllocation, final Val byPassing) {
 			final Val returnedVal = queryWithVal.v;
-			ForwardQuery flowSource = queryWithVal.q;
+			final ForwardQuery flowSource = queryWithVal.q;
+			if(byPassingAllocation.equals(flowSource)){
+				return;
+			}
 			AbstractBoomerangSolver byPassingSolver = queryToSolvers.get(byPassingAllocation);
 			WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> byPassingFieldAutomaton = byPassingSolver.getFieldAutomaton();
 			Node<Statement,Val> source = new Node<Statement,Val>(returnSite,byPassing);
@@ -440,11 +443,13 @@ public abstract class Boomerang {
 				@Override
 				public void reachable(Transition<Field, INode<Node<Statement, Val>>> transition) {
 					if(transition.getTarget().fact().equals(byPassingAllocation.asNode())){
-						flowSolver.connectAlias2(new Node<Statement,Val>(returnSite,returnedVal), transition.getStart());
+						if(!transition.getStart().fact().fact().equals(returnedVal))
+							flowSolver.connectAlias2(new Node<Statement,Val>(returnSite,returnedVal), transition.getStart());
 					}
 					flowSolver.getFieldAutomaton().addTransition(transition);
 				}
 			}));
+			flowSolver.setFieldContextReachable(new Node<Statement,Val>(returnSite,byPassing));
 			flowSolver.addNormalCallFlow(new Node<Statement,Val>(returnSite,returnedVal),  new Node<Statement,Val>(returnSite,byPassing));
 		}
 		@Override
