@@ -271,11 +271,6 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		setFieldContextReachable(aliasedVariableAtStmt);
 		addNormalCallFlow(rightOpNode, aliasedVariableAtStmt);
 	}
-	public void connectBase(AbstractPOI<Statement, Val, Field> fieldWrite, INode<Node<Statement, Val>> iNode, Statement successorStatement){
-		Node<Statement, Val> leftOpNode = new Node<Statement,Val>(successorStatement, fieldWrite.getBaseVar());
-		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>(new SingleNode<Node<Statement,Val>>(leftOpNode),
-				fieldWildCard(),iNode, fieldWildCard(), fieldPDS.getOne()));
-	}
 
 	public void connectAlias2(final Node<Statement, Val> node,final INode<Node<Statement, Val>> byPassingFact) {
 		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>( new SingleNode<Node<Statement,Val>>(node),

@@ -22,6 +22,7 @@ import pathexpression.PathExpressionComputer;
 import pathexpression.RegEx;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
+import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedPAutomaton<N extends Location, D extends State, W extends Weight<N>>

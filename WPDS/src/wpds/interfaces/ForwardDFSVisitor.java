@@ -13,7 +13,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	
 	private Set<D> reachableStates = Sets.newHashSet();
 	private ReachabilityListener<N,D> listener;
-	private WeightedPAutomaton<N, D, W> aut;
+	protected WeightedPAutomaton<N, D, W> aut;
 	private Set<Transition<N,D>> visited =  Sets.newHashSet();
 	
 	
@@ -30,6 +30,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	private void addReachable(Transition<N, D> s) {
 		if(!visited.add(s))
 			return;
+
 		listener.reachable(s);
 		Collection<Transition<N, D>> trans = aut.getTransitionsOutOf(s.getTarget());
 		reachableStates.add(s.getTarget());

@@ -9,11 +9,13 @@ import java.util.concurrent.SynchronousQueue;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import wpds.interfaces.ForwardDFSEpsilonVisitor;
 import wpds.interfaces.ForwardDFSVisitor;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
+import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 import wpds.interfaces.WPDSUpdateListener;
 import wpds.wildcard.ExclusionWildcard;
@@ -31,6 +33,10 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 			@Override
 			public void onRuleAdded(final Rule<N, D, W> rule) {
+				if(rule instanceof PopRule){
+					onPopRuleAdded(rule);
+					return;
+				}
 				Collection<Transition<N, D>> trans = fa.getTransitionsOutOf(rule.getS1());
 				for(Transition<N, D> t : Lists.newLinkedList(trans)){
 					if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
@@ -38,6 +44,20 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 					}
 				}
 				await();
+			}
+
+			private void onPopRuleAdded(final Rule<N, D, W> rule) {
+				if(rule.toString().contains("itePOITest.indirectAllocationSite1 alias = e.b,e);b>-><(WritePOITest.indirectAllocationSite1 this.queryFor(alias),alias)>"))
+					System.out.println("rule added");
+				fa.registerListener(new HandlePopListener(rule, rule.getS1()));
+				fa.registerListener(new ForwardDFSEpsilonVisitor<N, D, W>(fa, rule.getS1(),new ReachabilityListener<N, D>() {
+					@Override
+					public void reachable(Transition<N, D> t) {
+						if(rule.toString().contains("itePOITest.indirectAllocationSite1 alias = e.b,e);b>-><(WritePOITest.indirectAllocationSite1 this.queryFor(alias),alias)>"))
+							System.out.println(t);
+						fa.registerListener(new HandlePopListener(rule, t.getStart()));
+					}
+				}));
 			}
 		});
 		fa.registerListener(new WPAUpdateListener<N, D, W>() {
@@ -50,6 +70,66 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			public void onWeightAdded(Transition<N, D> t, Weight<N> w) {
 			}
 		});
+	}
+	
+	private class HandlePopListener extends WPAStateListener<N, D, W> {
+		private Rule<N, D, W> rule;
+		public HandlePopListener(Rule<N, D, W> rule, D state) {
+			super(state);
+			this.rule = rule;
+		}
+
+
+		@Override
+		public void onOutTransitionAdded(Transition<N, D> t) {
+			if(rule.toString().contains("itePOITest.indirectAllocationSite1 alias = e.b,e);b>-><(WritePOITest.indirectAllocationSite1 this.queryFor(alias),alias)>"))
+				System.out.println("HANDEL" + t);
+			if(t.getLabel().equals(rule.getL1())){
+				update(t, rule);
+			}
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<N, D> t) {
+			
+		}
+
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((rule == null) ? 0 : rule.hashCode());
+			return result;
+		}
+
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			HandlePopListener other = (HandlePopListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (rule == null) {
+				if (other.rule != null)
+					return false;
+			} else if (!rule.equals(other.rule))
+				return false;
+			return true;
+		}
+
+
+		private PostStar getOuterType() {
+			return PostStar.this;
+		}
+		
+		
 	}
 
 	private void update(Transition<N, D> t, Rule<N, D, W> rule) {

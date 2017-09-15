@@ -50,6 +50,7 @@ import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
 	public static final boolean DEBUG = true;
+	private static final boolean DISABLE_CALLPOI = true;
 	Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
 		@Override
@@ -399,7 +400,6 @@ public abstract class Boomerang {
 	}
 	
 	private class ForwardCallSitePOI {
-
 		private Statement callSite;
 		private Statement returnSite;
 		private Multimap<QueryWithVal,Query> flowSourceToBase = HashMultimap.create();
@@ -430,6 +430,8 @@ public abstract class Boomerang {
 		}
 
 		private void activateBase(QueryWithVal queryWithVal, final ForwardQuery byPassingAllocation, final Val byPassing) {
+			if(DISABLE_CALLPOI)
+				return;
 			final Val returnedVal = queryWithVal.v;
 			final ForwardQuery flowSource = queryWithVal.q;
 			if(byPassingAllocation.equals(flowSource)){
@@ -528,14 +530,12 @@ public abstract class Boomerang {
 							
 								@Override
 								public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
-									
-									if(transition.getTarget().fact().equals(baseAllocation.asNode())){
-										if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()) && !aliasedVariableAtStmt.fact().fact().equals(getStoredVar()))
-											flowSolver.connectBase(FieldStmtPOI.this, transition.getStart(), succOfWrite);
-									}
-									flowSolver.getFieldAutomaton().addTransition(transition);
+									if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()) && !aliasedVariableAtStmt.fact().fact().equals(getStoredVar()))
+										flowSolver.getFieldAutomaton().addTransition(transition);
 								}
 							}));
+							System.out.println("ADDING "+ new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
+							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
 							if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()) && !aliasedVariableAtStmt.fact().fact().equals(getStoredVar()))
 								flowSolver.handlePOI(FieldStmtPOI.this, aliasedVariableAtStmt.fact());
 						}
