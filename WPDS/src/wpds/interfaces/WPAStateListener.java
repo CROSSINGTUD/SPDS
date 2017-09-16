@@ -6,7 +6,7 @@ import wpds.impl.Weight;
 public abstract class WPAStateListener<N extends Location, D extends State, W extends Weight<N>> implements WPAUpdateListener<N, D, W>{
 	
 
-	private final D state;
+	protected final D state;
 	public WPAStateListener(D state) {
 		this.state = state;
 	}

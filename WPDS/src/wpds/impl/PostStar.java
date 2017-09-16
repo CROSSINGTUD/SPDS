@@ -47,14 +47,10 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			}
 
 			private void onPopRuleAdded(final Rule<N, D, W> rule) {
-				if(rule.toString().contains("itePOITest.indirectAllocationSite1 alias = e.b,e);b>-><(WritePOITest.indirectAllocationSite1 this.queryFor(alias),alias)>"))
-					System.out.println("rule added");
-				fa.registerListener(new HandlePopListener(rule, rule.getS1()));
 				fa.registerListener(new ForwardDFSEpsilonVisitor<N, D, W>(fa, rule.getS1(),new ReachabilityListener<N, D>() {
 					@Override
 					public void reachable(Transition<N, D> t) {
-						if(rule.toString().contains("itePOITest.indirectAllocationSite1 alias = e.b,e);b>-><(WritePOITest.indirectAllocationSite1 this.queryFor(alias),alias)>"))
-							System.out.println(t);
+						System.out.println(rule + " "+t);
 						fa.registerListener(new HandlePopListener(rule, t.getStart()));
 					}
 				}));
@@ -81,24 +77,36 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 
 		@Override
-		public void onOutTransitionAdded(Transition<N, D> t) {
-			if(rule.toString().contains("itePOITest.indirectAllocationSite1 alias = e.b,e);b>-><(WritePOITest.indirectAllocationSite1 this.queryFor(alias),alias)>"))
-				System.out.println("HANDEL" + t);
+		public void onOutTransitionAdded(final Transition<N, D> t) {
 			if(t.getLabel().equals(rule.getL1())){
-				update(t, rule);
+				W currWeight = getOrCreateWeight(new Transition<N,D>(state,t.getLabel(),t.getTarget()));
+				final W newWeight = (W) currWeight.extendWithIn(rule.getWeight());
+				final D p = rule.getS2();
+				LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
+				previous.add(t);
+				update(rule, new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight, previous);
+				fa.registerListener(new WPAStateListener<N, D, W>(t.getTarget()) {
+
+					@Override
+					public void onOutTransitionAdded(Transition<N, D> tq) {
+							LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
+							prev.add(t);
+							prev.add(tq);
+							update(rule, new Transition<N, D>(p, tq.getString(), tq.getTarget()), (W) newWeight, prev);
+					}
+
+					@Override
+					public void onInTransitionAdded(Transition<N, D> t) {
+						
+					}
+				});
 			}
 		}
 
 		@Override
-		public void onInTransitionAdded(Transition<N, D> t) {
-			
-		}
-
-
-		@Override
 		public int hashCode() {
 			final int prime = 31;
-			int result = 1;
+			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((rule == null) ? 0 : rule.hashCode());
 			return result;
@@ -109,7 +117,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		public boolean equals(Object obj) {
 			if (this == obj)
 				return true;
-			if (obj == null)
+			if (!super.equals(obj))
 				return false;
 			if (getClass() != obj.getClass())
 				return false;
@@ -125,11 +133,15 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		}
 
 
+		@Override
+		public void onInTransitionAdded(Transition<N, D> t) {
+			
+		}
+
+
 		private PostStar getOuterType() {
 			return PostStar.this;
 		}
-		
-		
 	}
 
 	private void update(Transition<N, D> t, Rule<N, D, W> rule) {
@@ -139,17 +151,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		// continue;
 		D p = rule.getS2();
 		if (rule instanceof PopRule) {
-			LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
-			previous.add(t);
-			update(rule, new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight, previous);
-
-			Collection<Transition<N, D>> trans = fa.getTransitionsOutOf(t.getTarget());
-			for (Transition<N, D> tq : trans) {
-				LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
-				prev.add(t);
-				prev.add(tq);
-				update(rule, new Transition<N, D>(p, tq.getString(), tq.getTarget()), (W) newWeight, prev);
-			}
 		} else if (rule instanceof NormalRule) {
 			NormalRule<N, D, W> normalRule = (NormalRule<N, D, W>) rule;
 			LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();

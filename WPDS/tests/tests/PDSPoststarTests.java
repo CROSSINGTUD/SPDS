@@ -31,6 +31,19 @@ public class PDSPoststarTests {
   }
 
   @Test
+  public void popEpsilonTest1() {
+    pds.addRule(push(2, "b", 2, "c", "d"));
+    pds.addRule(pop(3, "c", 3));
+    PAutomaton<StackSymbol, Abstraction> fa = accepts(2, "b");
+    System.out.println(fa.getTransitions());
+    fa.addTransition(new Transition<StackSymbol, Abstraction>(a(3), fa.epsilon(), a(2)));
+    System.out.println(fa.getTransitions());
+    pds.poststar(fa);
+    System.out.println(fa.getTransitions());
+    assertTrue(fa.getTransitions().contains(t(3, "d", ACC)));
+  }
+  
+  @Test
   public void popEpsilonTest() {
     pds.addRule(push(1, "b", 1, "c", "d"));
     pds.addRule(pop(1, "c", 1));
@@ -61,7 +74,9 @@ public class PDSPoststarTests {
     pds.addRule(pop(1, "d", 1));
     pds.addRule(normal(1, "e", 1, "k"));
     PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "a");
+    System.out.println(fa.toDotString());
     pds.poststar(fa);
+    System.out.println(fa.toDotString());
     assertTrue(fa.getTransitions().contains(t(1, "k", ACC)));
     fa = accepts(1, "k");
     pds.prestar(fa);

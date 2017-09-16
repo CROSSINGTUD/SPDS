@@ -32,12 +32,12 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			return;
 
 		listener.reachable(s);
+		if(!continueWith(s)){
+			return;
+		}
 		Collection<Transition<N, D>> trans = aut.getTransitionsOutOf(s.getTarget());
 		reachableStates.add(s.getTarget());
 		for(Transition<N, D> t : trans){
-			if(!continueWith(t)){
-				continue;
-			}
 			addReachable(t);
 		}
 	}
