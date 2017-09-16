@@ -34,7 +34,10 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			@Override
 			public void onRuleAdded(final Rule<N, D, W> rule) {
 				if(rule instanceof PopRule){
-					onPopRuleAdded(rule);
+					onPopRuleAdded((PopRule)rule);
+					return;
+				} else if(rule instanceof NormalRule){
+					onNormalRuleAdded((NormalRule) rule);
 					return;
 				}
 				Collection<Transition<N, D>> trans = fa.getTransitionsOutOf(rule.getS1());
@@ -46,11 +49,20 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 				await();
 			}
 
-			private void onPopRuleAdded(final Rule<N, D, W> rule) {
+			private void onNormalRuleAdded(final NormalRule<N, D, W> rule) {
 				fa.registerListener(new ForwardDFSEpsilonVisitor<N, D, W>(fa, rule.getS1(),new ReachabilityListener<N, D>() {
 					@Override
 					public void reachable(Transition<N, D> t) {
-						System.out.println(rule + " "+t);
+						fa.registerListener(new HandleNormalListener(rule, t.getStart()));
+					}
+				}));
+				
+			}
+
+			private void onPopRuleAdded(final PopRule<N, D, W> rule) {
+				fa.registerListener(new ForwardDFSEpsilonVisitor<N, D, W>(fa, rule.getS1(),new ReachabilityListener<N, D>() {
+					@Override
+					public void reachable(Transition<N, D> t) {
 						fa.registerListener(new HandlePopListener(rule, t.getStart()));
 					}
 				}));
@@ -69,8 +81,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 	}
 	
 	private class HandlePopListener extends WPAStateListener<N, D, W> {
-		private Rule<N, D, W> rule;
-		public HandlePopListener(Rule<N, D, W> rule, D state) {
+		private PopRule<N, D, W> rule;
+		public HandlePopListener(PopRule<N, D, W> rule, D state) {
 			super(state);
 			this.rule = rule;
 		}
@@ -89,10 +101,10 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 					@Override
 					public void onOutTransitionAdded(Transition<N, D> tq) {
-							LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
-							prev.add(t);
-							prev.add(tq);
-							update(rule, new Transition<N, D>(p, tq.getString(), tq.getTarget()), (W) newWeight, prev);
+						LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
+						prev.add(t);
+						prev.add(tq);
+						update(rule, new Transition<N, D>(p, tq.getString(), tq.getTarget()), (W) newWeight, prev);
 					}
 
 					@Override
@@ -102,6 +114,12 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 				});
 			}
 		}
+
+		@Override
+		public void onInTransitionAdded(Transition<N, D> t) {
+			
+		}
+
 
 		@Override
 		public int hashCode() {
@@ -133,10 +151,76 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		}
 
 
+
+		private PostStar getOuterType() {
+			return PostStar.this;
+		}
+	}
+	
+	private class HandleNormalListener extends WPAStateListener<N, D, W> {
+		private NormalRule<N, D, W> rule;
+		public HandleNormalListener(NormalRule<N, D, W> rule, D state) {
+			super(state);
+			this.rule = rule;
+		}
+
+
+		@Override
+		public void onOutTransitionAdded(final Transition<N, D> t) {
+			if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
+				W currWeight = getOrCreateWeight(new Transition<N,D>(state,t.getLabel(),t.getTarget()));
+				W newWeight = (W) currWeight.extendWithIn(rule.getWeight());
+				D p = rule.getS2();
+				LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
+				previous.add(t);
+				N l2 = rule.getL2();
+				if (l2 instanceof Wildcard) {
+					if (l2 instanceof ExclusionWildcard) {
+						ExclusionWildcard<N> ex = (ExclusionWildcard<N>) l2;
+						if (t.getString().equals(ex.excludes()))
+							return;
+					}
+					l2 = t.getString();
+				}
+				update(rule, new Transition<N, D>(p, l2, t.getTarget()), newWeight, previous);
+			}
+		}
+
 		@Override
 		public void onInTransitionAdded(Transition<N, D> t) {
 			
 		}
+
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((rule == null) ? 0 : rule.hashCode());
+			return result;
+		}
+
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			HandleNormalListener other = (HandleNormalListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (rule == null) {
+				if (other.rule != null)
+					return false;
+			} else if (!rule.equals(other.rule))
+				return false;
+			return true;
+		}
+
 
 
 		private PostStar getOuterType() {
@@ -152,19 +236,19 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		D p = rule.getS2();
 		if (rule instanceof PopRule) {
 		} else if (rule instanceof NormalRule) {
-			NormalRule<N, D, W> normalRule = (NormalRule<N, D, W>) rule;
-			LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
-			previous.add(t);
-			N l2 = normalRule.getL2();
-			if (l2 instanceof Wildcard) {
-				if (l2 instanceof ExclusionWildcard) {
-					ExclusionWildcard<N> ex = (ExclusionWildcard<N>) l2;
-					if (t.getString().equals(ex.excludes()))
-						return;
-				}
-				l2 = t.getString();
-			}
-			update(rule, new Transition<N, D>(p, l2, t.getTarget()), newWeight, previous);
+//			NormalRule<N, D, W> normalRule = (NormalRule<N, D, W>) rule;
+//			LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
+//			previous.add(t);
+//			N l2 = normalRule.getL2();
+//			if (l2 instanceof Wildcard) {
+//				if (l2 instanceof ExclusionWildcard) {
+//					ExclusionWildcard<N> ex = (ExclusionWildcard<N>) l2;
+//					if (t.getString().equals(ex.excludes()))
+//						return;
+//				}
+//				l2 = t.getString();
+//			}
+//			update(rule, new Transition<N, D>(p, l2, t.getTarget()), newWeight, previous);
 		} else if (rule instanceof PushRule) {
 			PushRule<N, D, W> pushRule = (PushRule<N, D, W>) rule;
 			N gammaPrime = pushRule.getL2();
