@@ -27,44 +27,20 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 			@Override
 			public void onRuleAdded(final Rule<N, D, W> rule) {
-				if(rule instanceof PopRule){
-					onPopRuleAdded((PopRule)rule);
-					return;
-				} else if(rule instanceof NormalRule){
-					onNormalRuleAdded((NormalRule) rule);
-					return;
-				} else if(rule instanceof PushRule){
-					onPushRuleAdded((PushRule) rule);
-					return;
-				}
-			}
-
-			private void onPushRuleAdded(final PushRule<N, D, W> rule) {
 				fa.registerListener(new ForwardDFSEpsilonVisitor<N, D, W>(fa, rule.getS1(),new ReachabilityListener<N, D>() {
 					@Override
 					public void reachable(Transition<N, D> t) {
-						fa.registerListener(new HandlePushListener(rule, t.getStart()));
+						if(rule instanceof PopRule){
+							fa.registerListener(new HandlePopListener((PopRule)rule, t.getStart()));
+						} else if(rule instanceof NormalRule){
+							fa.registerListener(new HandleNormalListener((NormalRule)rule, t.getStart()));
+						} else if(rule instanceof PushRule){
+							fa.registerListener(new HandlePushListener((PushRule)rule, t.getStart()));
+						}
 					}
 				}));
 			}
 
-			private void onNormalRuleAdded(final NormalRule<N, D, W> rule) {
-				fa.registerListener(new ForwardDFSEpsilonVisitor<N, D, W>(fa, rule.getS1(),new ReachabilityListener<N, D>() {
-					@Override
-					public void reachable(Transition<N, D> t) {
-						fa.registerListener(new HandleNormalListener(rule, t.getStart()));
-					}
-				}));
-			}
-
-			private void onPopRuleAdded(final PopRule<N, D, W> rule) {
-				fa.registerListener(new ForwardDFSEpsilonVisitor<N, D, W>(fa, rule.getS1(),new ReachabilityListener<N, D>() {
-					@Override
-					public void reachable(Transition<N, D> t) {
-						fa.registerListener(new HandlePopListener(rule, t.getStart()));
-					}
-				}));
-			}
 		});
 	}
 	
