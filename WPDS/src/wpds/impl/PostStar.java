@@ -2,8 +2,10 @@ package wpds.impl;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import wpds.interfaces.BackwardDFSEpsilonVisitor;
 import wpds.interfaces.ForwardDFSEpsilonVisitor;
@@ -12,6 +14,7 @@ import wpds.interfaces.Location;
 import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
+import wpds.interfaces.WPAUpdateListener;
 import wpds.interfaces.WPDSUpdateListener;
 import wpds.wildcard.ExclusionWildcard;
 import wpds.wildcard.Wildcard;
@@ -27,18 +30,18 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 			@Override
 			public void onRuleAdded(final Rule<N, D, W> rule) {
-				fa.registerListener(new ForwardDFSEpsilonVisitor<N, D, W>(fa, rule.getS1(),new ReachabilityListener<N, D>() {
-					@Override
-					public void reachable(Transition<N, D> t) {
-						if(rule instanceof PopRule){
+				if(rule instanceof NormalRule){
+					fa.registerListener(new HandleNormalListener((NormalRule)rule));
+				} else if(rule instanceof PushRule){
+					fa.registerListener(new HandlePushListener((PushRule)rule));
+				} else if(rule instanceof PopRule){
+					fa.registerListener(new ForwardDFSEpsilonVisitor<N, D, W>(fa, rule.getS1(),new ReachabilityListener<N, D>() {
+						@Override
+						public void reachable(Transition<N, D> t) {
 							fa.registerListener(new HandlePopListener((PopRule)rule, t.getStart()));
-						} else if(rule instanceof NormalRule){
-							fa.registerListener(new HandleNormalListener((NormalRule)rule, t.getStart()));
-						} else if(rule instanceof PushRule){
-							fa.registerListener(new HandlePushListener((PushRule)rule, t.getStart()));
 						}
-					}
-				}));
+					}));
+				}
 			}
 
 		});
@@ -60,7 +63,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 				final D p = rule.getS2();
 				LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
 				previous.add(t);
-				update(rule, new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight, previous);
+				update(new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight, previous);
 				fa.registerListener(new WPAStateListener<N, D, W>(t.getTarget()) {
 
 					@Override
@@ -68,7 +71,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 						LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
 						prev.add(t);
 						prev.add(tq);
-						update(rule, new Transition<N, D>(p, tq.getString(), tq.getTarget()), (W) newWeight, prev);
+						update(new Transition<N, D>(p, tq.getString(), tq.getTarget()), (W) newWeight, prev);
 					}
 
 					@Override
@@ -123,8 +126,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 	
 	private class HandleNormalListener extends WPAStateListener<N, D, W> {
 		private NormalRule<N, D, W> rule;
-		public HandleNormalListener(NormalRule<N, D, W> rule, D state) {
-			super(state);
+		public HandleNormalListener(NormalRule<N, D, W> rule) {
+			super(rule.getS1());
 			this.rule = rule;
 		}
 
@@ -132,21 +135,21 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		@Override
 		public void onOutTransitionAdded(final Transition<N, D> t) {
 			if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
-				W currWeight = getOrCreateWeight(new Transition<N,D>(state,t.getLabel(),t.getTarget()));
+				W currWeight = getOrCreateWeight(new Transition<N,D>(rule.getS1(),t.getLabel(),t.getTarget()));
 				W newWeight = (W) currWeight.extendWithIn(rule.getWeight());
 				D p = rule.getS2();
 				LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
 				previous.add(t);
 				N l2 = rule.getL2();
+				if (l2 instanceof ExclusionWildcard) {
+					ExclusionWildcard<N> ex = (ExclusionWildcard<N>) l2;
+					if (t.getString().equals(ex.excludes()))
+						return;
+				}
 				if (l2 instanceof Wildcard) {
-					if (l2 instanceof ExclusionWildcard) {
-						ExclusionWildcard<N> ex = (ExclusionWildcard<N>) l2;
-						if (t.getString().equals(ex.excludes()))
-							return;
-					}
 					l2 = t.getString();
 				}
-				update(rule, new Transition<N, D>(p, l2, t.getTarget()), newWeight, previous);
+				update(new Transition<N, D>(p, l2, t.getTarget()), newWeight, previous);
 			}
 		}
 
@@ -195,8 +198,9 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 	
 	private class HandlePushListener extends WPAStateListener<N, D, W> {
 		private PushRule<N, D, W> rule;
-		public HandlePushListener(PushRule<N, D, W> rule, D state) {
-			super(state);
+		
+		public HandlePushListener(PushRule<N, D, W> rule) {
+			super(rule.getS1());
 			this.rule = rule;
 		}
 
@@ -208,30 +212,16 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 				final W newWeight = (W) currWeight.extendWithIn(rule.getWeight());
 				final D p = rule.getS2();
 				N gammaPrime = rule.getL2();
-				if (gammaPrime instanceof Wildcard){
-					gammaPrime = t.getString();
-				}
-				D irState = fa.createState(p, gammaPrime);
+				final D irState = fa.createState(p, gammaPrime);
 				LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
 				previous.add(t);
-				update(rule, new Transition<N, D>(p, gammaPrime, irState),
+				update(new Transition<N, D>(p, gammaPrime, irState),
 						(W) currWeight.extendWithIn(rule.getWeight()), previous);
 				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
-				update(rule, new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W) currWeight,
+				
+				update(new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W) currWeight,
 						previous);
-				fa.registerListener(new BackwardDFSEpsilonVisitor<N, D, W>(fa, irState, new ReachabilityListener<N, D>() {
-
-					@Override
-					public void reachable(Transition<N, D> ts) {
-						if (ts.getString().equals(fa.epsilon())) {
-							LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
-							prev.add(t);
-							prev.add(ts);
-							update(rule, new Transition<N, D>(ts.getStart(), transitionLabel, t.getTarget()),
-									(W) getOrCreateWeight(ts).extendWithIn(newWeight), prev);
-						}
-					}
-				}));
+				fa.registerListener(new UpdateEpsilonOnPushListener(p, irState,transitionLabel,t.getTarget(),currWeight));
 			}
 		}
 
@@ -277,7 +267,94 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		}
 	}
 	
-	private void update(Rule<N, D, W> triggeringRule, Transition<N, D> trans, W weight,
+	private class UpdateEpsilonOnPushListener implements WPAUpdateListener<N, D, W>{
+		private N transitionLabel;
+		private D target;
+		private W newWeight;
+		private D irState;
+		private D p;
+
+		public UpdateEpsilonOnPushListener(D p,D irState, final N transitionLabel, final D target, final W newWeight){
+			this.p = p;
+			this.irState = irState;
+			this.transitionLabel = transitionLabel;
+			this.target = target;
+			this.newWeight = newWeight;
+		}
+
+		@Override
+		public void onAddedTransition(Transition<N, D> t) {
+			if (!t.getStart().equals(p) && t.getString().equals(fa.epsilon()) && t.getTarget().equals(irState)) {
+//				System.out.println(new Transition<N, D>(t.getStart(), transitionLabel, target));
+				LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
+//				prev.add(t);
+				prev.add(t);
+				update(new Transition<N, D>(t.getStart(), transitionLabel, target),
+						(W) getOrCreateWeight(t).extendWithIn(newWeight), prev);
+			}			
+		}
+
+		@Override
+		public void onWeightAdded(Transition<N, D> t, Weight<N> w) {
+			// TODO Auto-generated method stub
+			
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((irState == null) ? 0 : irState.hashCode());
+			result = prime * result + ((newWeight == null) ? 0 : newWeight.hashCode());
+			result = prime * result + ((target == null) ? 0 : target.hashCode());
+			result = prime * result + ((transitionLabel == null) ? 0 : transitionLabel.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			UpdateEpsilonOnPushListener other = (UpdateEpsilonOnPushListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (irState == null) {
+				if (other.irState != null)
+					return false;
+			} else if (!irState.equals(other.irState))
+				return false;
+			if (newWeight == null) {
+				if (other.newWeight != null)
+					return false;
+			} else if (!newWeight.equals(other.newWeight))
+				return false;
+			if (target == null) {
+				if (other.target != null)
+					return false;
+			} else if (!target.equals(other.target))
+				return false;
+			if (transitionLabel == null) {
+				if (other.transitionLabel != null)
+					return false;
+			} else if (!transitionLabel.equals(other.transitionLabel))
+				return false;
+			return true;
+		}
+
+		private PostStar getOuterType() {
+			return PostStar.this;
+		};
+
+		
+		
+	}
+	
+	private void update(Transition<N, D> trans, W weight,
 			List<Transition<N, D>> previous) {
 		fa.addTransition(trans);
 		W lt = getOrCreateWeight(trans);

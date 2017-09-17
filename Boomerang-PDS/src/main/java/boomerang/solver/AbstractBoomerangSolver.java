@@ -266,10 +266,6 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		addNormalCallFlow(rightOpNode, aliasedVariableAtStmt);
 	}
 
-	public void connectAlias2(final Node<Statement, Val> node,final INode<Node<Statement, Val>> byPassingFact) {
-		fieldPDS.addRule(new NormalRule<Field, INode<Node<Statement,Val>>, Weight<Field>>( new SingleNode<Node<Statement,Val>>(node),
-				fieldWildCard(),byPassingFact, fieldWildCard(), fieldPDS.getOne()));
-	}
 
 	@Override
 	protected void processNode(final WitnessNode<Statement, Val, Field> witnessNode) {

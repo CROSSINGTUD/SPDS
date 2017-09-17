@@ -49,7 +49,7 @@ import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	private static final boolean DISABLE_CALLPOI = false;
 	Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
@@ -172,20 +172,18 @@ public abstract class Boomerang {
 					public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 						if(t.getStart() instanceof AllocNode){
 							Node<Statement, Val> fact = t.getStart().fact();
-//							if(t.getLabel().equals(emptyField()))
-//								System.out.println(sourceQuery + " "+t.getTarget());
-							if(!fact.equals(sourceQuery.asNode()) && t.getLabel().equals(emptyField())){
+							if(!fact.equals(sourceQuery.asNode())){
 								callSitePoi.addFlowAllocation(sourceQuery, new ForwardQuery(fact.stmt(),fact.fact()),asNode.fact());
 							}
-						}	
+						}
 					}
 
 					@Override
 					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-						// TODO Auto-generated method stub
 						
 					}
 				});
+				
 			}
 			
 			@Override
@@ -445,7 +443,7 @@ public abstract class Boomerang {
 			if(byPassingAllocation.equals(flowSource)){
 				return;
 			}
-//			System.out.println(byPassing + "  " +flowSource  + byPassing  + returnedVal);
+
 			AbstractBoomerangSolver byPassingSolver = queryToSolvers.get(byPassingAllocation);
 			WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> byPassingFieldAutomaton = byPassingSolver.getFieldAutomaton();
 			Node<Statement,Val> source = new Node<Statement,Val>(returnSite,byPassing);
@@ -457,7 +455,8 @@ public abstract class Boomerang {
 				}
 			}));
 			flowSolver.setFieldContextReachable(new Node<Statement,Val>(returnSite,byPassing));
-			flowSolver.addNormalCallFlow(new Node<Statement,Val>(returnSite,returnedVal),  new Node<Statement,Val>(returnSite,byPassing));
+			if(!byPassing.equals(returnedVal))
+				flowSolver.addNormalCallFlow(new Node<Statement,Val>(returnSite,returnedVal),  new Node<Statement,Val>(returnSite,byPassing));
 		}
 		@Override
 		public int hashCode() {

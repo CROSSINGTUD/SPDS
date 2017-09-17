@@ -5,6 +5,7 @@ import java.util.Map;
 import com.beust.jcommander.internal.Maps;
 
 import soot.SootField;
+import wpds.interfaces.Empty;
 import wpds.interfaces.Location;
 import wpds.wildcard.ExclusionWildcard;
 import wpds.wildcard.Wildcard;
@@ -73,9 +74,15 @@ public class Field implements Location {
 
 	public static Field empty() {
 		if (empty == null) {
-			empty = new Field("{}");
+			empty = new EmptyField();
 		}
-		return epsilon();
+		return empty;
+	}
+	
+	private static class EmptyField extends Field implements Empty{
+		public EmptyField() {
+			super("{}");
+		}
 	}
 
 	public static Field epsilon() {

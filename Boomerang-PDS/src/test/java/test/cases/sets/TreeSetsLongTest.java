@@ -7,6 +7,7 @@ import java.util.TreeSet;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import test.cases.fields.Alloc;
 import test.core.selfrunning.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
@@ -14,7 +15,7 @@ public class TreeSetsLongTest extends AbstractBoomerangTest{
 	@Test
 	public void addAndRetrieve(){
 		Set<Object> set = new TreeSet<Object>();
-		AllocatedObject alias = new AllocatedObject(){};
+		Alloc alias = new Alloc();
 		set.add(alias);
 		Object alias2 = null;
 		for(Object o : set)
