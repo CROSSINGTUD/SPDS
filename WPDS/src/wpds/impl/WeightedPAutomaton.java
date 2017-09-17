@@ -41,19 +41,20 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private final Multimap<D, Transition<N, D>> transitionsOutOf = HashMultimap.create();
 	private final Multimap<D, Transition<N, D>> transitionsInto = HashMultimap.create();
 	private Set<WPAUpdateListener<N, D, W>> listeners = Sets.newHashSet();
+	private Multimap<D,WPAStateListener<N, D, W>> stateListeners = HashMultimap.create();
 
 	public abstract D createState(D d, N loc);
 
-	public Set<Transition<N, D>> getTransitions() {
-		return Sets.newHashSet(transitions);
+	public Collection<Transition<N, D>> getTransitions() {
+		return Lists.newArrayList(transitions);
 	}
 
 	public Collection<Transition<N, D>> getTransitionsOutOf(D state) {
-		return Sets.newHashSet(transitionsOutOf.get(state));
+		return Lists.newArrayList(transitionsOutOf.get(state));
 	}
 
 	public Collection<Transition<N, D>> getTransitionsInto(D state) {
-		return new HashSet<>(transitionsInto.get(state));
+		return Lists.newArrayList(transitionsInto.get(state));
 	}
 
 	public boolean addTransition(Transition<N, D> trans) {
@@ -67,8 +68,14 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		boolean added = transitions.add(trans);
 		sequentialTransitions.add(trans);
 		if(added){
-			for(WPAUpdateListener<N, D, W> l : Lists.newLinkedList(listeners)){
+			for(WPAUpdateListener<N, D, W> l : Lists.newArrayList(listeners)){
 				l.onAddedTransition(trans);
+			}
+			for(WPAStateListener<N, D, W> l : Lists.newArrayList(stateListeners.get(trans.getStart()))){
+				l.onOutTransitionAdded(trans);
+			}
+			for(WPAStateListener<N, D, W> l : Lists.newArrayList(stateListeners.get(trans.getTarget()))){
+				l.onInTransitionAdded(trans);
 			}
 		}
 		return added;
@@ -177,7 +184,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		W w = transitionToWeights.get(trans);
 		if(w == null || !w.equals(weight)){
 			transitionToWeights.put(trans, weight);
-			for(WPAUpdateListener<N, D, W> l : Lists.newLinkedList(listeners))
+			for(WPAUpdateListener<N, D, W> l : Lists.newArrayList(listeners))
 				l.onWeightAdded(trans, weight);
 		}
 	}
@@ -216,5 +223,18 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			worklist.addAll(getTransitionsInto(poll.getTarget()));
 		}
 		return visited;
+	}
+
+	public void registerListener(WPAStateListener<N, D, W> l) {
+		if(!stateListeners.put(l.getState(), l)){
+			return;
+		}
+		for(Transition<N, D> t : Lists.newArrayList(transitionsOutOf.get(l.getState()))){
+			l.onOutTransitionAdded(t);
+		}
+		for(Transition<N, D> t : Lists.newArrayList(transitionsInto.get(l.getState()))){
+			l.onInTransitionAdded(t);
+		}
+		
 	}
 }

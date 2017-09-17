@@ -10,6 +10,7 @@ import static tests.TestHelper.push;
 import static tests.TestHelper.s;
 import static tests.TestHelper.t;
 
+import java.util.Collection;
 import java.util.Set;
 
 import org.junit.Before;
@@ -108,7 +109,7 @@ public class PDSPoststarTests {
     pds.addRule(normal(1, "e", 1, "k"));
     PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "a");
     pds.poststar(fa);
-    Set<Transition<StackSymbol, Abstraction>> transitions = fa.getTransitions();
+    Collection<Transition<StackSymbol, Abstraction>> transitions = fa.getTransitions();
     transitions.remove(t(1, "e", ACC));
     transitions.remove(t(1, "a", ACC));
     transitions.remove(t(1, "k", ACC));
@@ -133,7 +134,7 @@ public class PDSPoststarTests {
     pds.addRule(pop(1, "n8", 1));
     PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "n1");
     pds.poststar(fa);
-    Set<Transition<StackSymbol, Abstraction>> transitions = fa.getTransitions();
+    Collection<Transition<StackSymbol, Abstraction>> transitions = fa.getTransitions();
     transitions.remove(t(1, "n1", ACC));
     transitions.remove(t(1, "n2", ACC));
     transitions.remove(t(1, "n3", ACC));

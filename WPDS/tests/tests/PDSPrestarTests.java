@@ -10,6 +10,7 @@ import static tests.TestHelper.pop;
 import static tests.TestHelper.push;
 import static tests.TestHelper.t;
 
+import java.util.Collection;
 import java.util.Set;
 
 import org.junit.Before;
@@ -126,7 +127,7 @@ public class PDSPrestarTests {
     PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "n6");
     pds.prestar(fa);
     System.out.println(fa);
-    Set<Transition<StackSymbol, Abstraction>> transitions = fa.getTransitions();
+    Collection<Transition<StackSymbol, Abstraction>> transitions = fa.getTransitions();
     transitions.remove(t(1, "n1", ACC));
     transitions.remove(t(1, "n2", ACC));
     transitions.remove(t(1, "n3", ACC));

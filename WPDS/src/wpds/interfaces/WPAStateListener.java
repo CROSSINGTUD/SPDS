@@ -3,26 +3,19 @@ package wpds.interfaces;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 
-public abstract class WPAStateListener<N extends Location, D extends State, W extends Weight<N>> implements WPAUpdateListener<N, D, W>{
+public abstract class WPAStateListener<N extends Location, D extends State, W extends Weight<N>>{
 	
 
 	protected final D state;
 	public WPAStateListener(D state) {
 		this.state = state;
 	}
-	@Override
-	public void onAddedTransition(Transition<N, D> t) {
-		if(t.getStart().equals(state))
-			onOutTransitionAdded(t);
-		if(t.getTarget().equals(state))
-			onInTransitionAdded(t);
-	}
 
 	public abstract void onOutTransitionAdded(Transition<N, D> t);
 	public abstract void onInTransitionAdded(Transition<N, D> t);
 	
-	@Override
-	public void onWeightAdded(Transition<N, D> t, Weight<N> w) {
+	public D getState(){
+		return state;
 	}
 	
 	@Override
