@@ -9,7 +9,7 @@ import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 
-public class ForwardDFSVisitor<N extends Location,D extends State, W extends Weight<N>> implements WPAUpdateListener<N, D, W>{
+public class ForwardDFSVisitor<N extends Location,D extends State, W extends Weight<N>> extends WPAStateListener<N, D, W>{
 	
 	private Set<D> reachableStates = Sets.newHashSet();
 	private ReachabilityListener<N,D> listener;
@@ -18,12 +18,10 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	
 	
 	public ForwardDFSVisitor(WeightedPAutomaton<N,D,W> aut, D startState, ReachabilityListener<N,D> listener){
+		super(startState);
 		this.aut = aut;
 		this.listener = listener;
 		this.reachableStates.add(startState);
-		for(Transition<N, D> t : aut.getTransitionsOutOf(startState)){
-			addReachable(t);
-		}
 	}
 	
 
@@ -35,11 +33,62 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 		if(!continueWith(s)){
 			return;
 		}
-		Collection<Transition<N, D>> trans = aut.getTransitionsOutOf(s.getTarget());
-		reachableStates.add(s.getTarget());
-		for(Transition<N, D> t : trans){
-			addReachable(t);
+		
+		aut.registerListener(new TransitiveListener(s.getTarget(),getState()));
+	}
+	
+	private class TransitiveListener extends WPAStateListener<N, D, W>{
+
+		private D startState;
+
+		public TransitiveListener(D state, D startState) {
+			super(state);
+			this.startState = startState;
 		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<N, D> t) {
+			addReachable(t);	
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<N, D> t) {
+			
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((startState == null) ? 0 : startState.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			TransitiveListener other = (TransitiveListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (startState == null) {
+				if (other.startState != null)
+					return false;
+			} else if (!startState.equals(other.startState))
+				return false;
+			return true;
+		}
+
+		private ForwardDFSVisitor getOuterType() {
+			return ForwardDFSVisitor.this;
+		}
+		
+		
 	}
 
 
@@ -49,15 +98,51 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	}
 
 
-	@Override
-	public void onAddedTransition(Transition<N, D> t) {
-		if(reachableStates.contains(t.getStart()))
-			addReachable(t);
-	}
 
 	@Override
-	public void onWeightAdded(Transition<N, D> t, Weight<N> w) {
+	public void onOutTransitionAdded(Transition<N, D> t) {
+		addReachable(t);
+	}
+
+
+	@Override
+	public void onInTransitionAdded(Transition<N, D> t) {
+		// TODO Auto-generated method stub
 		
 	}
+
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime * result + ((aut == null) ? 0 : aut.hashCode());
+		result = prime * result + ((listener == null) ? 0 : listener.hashCode());
+		return result;
+	}
+
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ForwardDFSVisitor other = (ForwardDFSVisitor) obj;
+		if (aut == null) {
+			if (other.aut != null)
+				return false;
+		} else if (!aut.equals(other.aut))
+			return false;
+		if (listener == null) {
+			if (other.listener != null)
+				return false;
+		} else if (!listener.equals(other.listener))
+			return false;
+		return true;
+	}
+	
 	
 }
