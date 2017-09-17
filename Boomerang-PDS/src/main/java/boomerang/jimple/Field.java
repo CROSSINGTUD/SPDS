@@ -14,6 +14,7 @@ public class Field implements Location {
 	private static Field wildcard;
 	private static Field epsilon;
 	private static Field empty;
+	private static Field array;
 	private final SootField delegate;
 	private final String rep;
 
@@ -91,7 +92,13 @@ public class Field implements Location {
 		}
 		return epsilon;
 	}
-
+	
+	public static Field array() {
+		if (array == null) {
+			array = new Field("array");
+		}
+		return array;
+	}
 	private static class WildcardField extends Field implements Wildcard {
 		public WildcardField() {
 			super("*");

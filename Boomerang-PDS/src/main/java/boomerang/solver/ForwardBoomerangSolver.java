@@ -20,6 +20,7 @@ import soot.Local;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
+import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.CastExpr;
 import soot.jimple.InstanceFieldRef;
@@ -112,7 +113,11 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 					InstanceFieldRef ifr = (InstanceFieldRef) leftOp;
 					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
 							new Field(ifr.getField()), PDSSystem.FIELDS));
-				} else {
+				} else if(leftOp instanceof ArrayRef){
+					ArrayRef arrayRef = (ArrayRef) leftOp;
+					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(arrayRef.getBase(),method),
+							Field.array(), PDSSystem.FIELDS));
+				} else{
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
 				}
 			}
@@ -122,6 +127,15 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 				if (base.equals(fact.value())) {
 					NodeWithLocation<Statement, Val, Field> succNode = new NodeWithLocation<>(
 							new Statement(succ, method), new Val(leftOp,method), new Field(ifr.getField()));
+					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
+				}
+			}
+			if(rightOp instanceof ArrayRef){
+				ArrayRef arrayRef = (ArrayRef) rightOp;
+				Value base = arrayRef.getBase();
+				if (base.equals(fact.value())) {
+					NodeWithLocation<Statement, Val, Field> succNode = new NodeWithLocation<>(
+							new Statement(succ, method), new Val(leftOp,method), Field.array());
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
 				}
 			}

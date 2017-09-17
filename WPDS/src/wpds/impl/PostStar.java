@@ -2,19 +2,15 @@ package wpds.impl;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
-import wpds.interfaces.BackwardDFSEpsilonVisitor;
 import wpds.interfaces.ForwardDFSEpsilonVisitor;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
-import wpds.interfaces.WPAUpdateListener;
 import wpds.interfaces.WPDSUpdateListener;
 import wpds.wildcard.ExclusionWildcard;
 import wpds.wildcard.Wildcard;
@@ -260,14 +256,12 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			return true;
 		}
 
-
-
 		private PostStar getOuterType() {
 			return PostStar.this;
 		}
 	}
 	
-	private class UpdateEpsilonOnPushListener implements WPAUpdateListener<N, D, W>{
+	private class UpdateEpsilonOnPushListener extends WPAStateListener<N, D, W>{
 		private N transitionLabel;
 		private D target;
 		private W newWeight;
@@ -275,6 +269,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		private D p;
 
 		public UpdateEpsilonOnPushListener(D p,D irState, final N transitionLabel, final D target, final W newWeight){
+			super(irState);
 			this.p = p;
 			this.irState = irState;
 			this.transitionLabel = transitionLabel;
@@ -282,23 +277,23 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			this.newWeight = newWeight;
 		}
 
+
 		@Override
-		public void onAddedTransition(Transition<N, D> t) {
-			if (!t.getStart().equals(p) && t.getString().equals(fa.epsilon()) && t.getTarget().equals(irState)) {
+		public void onOutTransitionAdded(Transition<N, D> t) {
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<N, D> t) {
+			if (!t.getStart().equals(p) && t.getString().equals(fa.epsilon())) {
 //				System.out.println(new Transition<N, D>(t.getStart(), transitionLabel, target));
 				LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
 //				prev.add(t);
 				prev.add(t);
 				update(new Transition<N, D>(t.getStart(), transitionLabel, target),
 						(W) getOrCreateWeight(t).extendWithIn(newWeight), prev);
-			}			
-		}
+			}	
+		};
 
-		@Override
-		public void onWeightAdded(Transition<N, D> t, Weight<N> w) {
-			// TODO Auto-generated method stub
-			
-		}
 
 		@Override
 		public int hashCode() {
@@ -348,9 +343,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 		private PostStar getOuterType() {
 			return PostStar.this;
-		};
+		}
 
-		
 		
 	}
 	
