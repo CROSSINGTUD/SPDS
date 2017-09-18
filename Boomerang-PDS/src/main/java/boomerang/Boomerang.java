@@ -12,6 +12,9 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 
+import boomerang.customize.BackwardEmptyCalleeFlow;
+import boomerang.customize.EmptyCalleeFlow;
+import boomerang.customize.ForwardEmptyCalleeFlow;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -39,18 +42,17 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;
-import sync.pds.solver.SyncPDSSolver.PDSSystem;
 import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.ForwardDFSVisitor;
 import wpds.interfaces.ReachabilityListener;
+import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
@@ -85,6 +87,8 @@ public abstract class Boomerang {
 	private Collection<ForwardQuery> forwardQueries = Sets.newHashSet();
 	private Collection<BackwardQuery> backwardQueries = Sets.newHashSet();
 
+	private EmptyCalleeFlow forwardEmptyCalleeFlow = new ForwardEmptyCalleeFlow(); 
+	private EmptyCalleeFlow backwardEmptyCalleeFlow = new BackwardEmptyCalleeFlow(); 
 	private Collection<RefType> allocatedTypes = Sets.newHashSet();
 	private Collection<ReachableMethodListener> reachableMethodsListener = Sets.newHashSet();
 	private Multimap<BackwardQuery, ForwardQuery> backwardToForwardQueries = HashMultimap.create();
@@ -118,6 +122,12 @@ public abstract class Boomerang {
 			@Override
 			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
 				// TODO Auto-generated method stub
+			}
+
+			@Override
+			protected Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,
+					Stmt returnSite) {
+				return backwardEmptyCalleeFlow.getEmptyCalleeFlow(caller, callSite, value, returnSite);
 			}
 			
 		};
@@ -196,6 +206,12 @@ public abstract class Boomerang {
 				ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite,returnSite));
 //				System.out.println("Query + " + sourceQuery + " bypasses " + callSite);
 				callSitePoi.addByPassingAllocation(sourceQuery,value);
+			}
+
+			@Override
+			protected Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,
+					Stmt returnSite) {
+				return forwardEmptyCalleeFlow.getEmptyCalleeFlow(caller, callSite, value, returnSite);
 			}
 			
 		};

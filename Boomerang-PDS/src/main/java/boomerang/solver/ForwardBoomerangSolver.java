@@ -47,8 +47,9 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	@Override
 	public Collection<? extends State> computeCallFlow(SootMethod caller, ReturnSite returnSite, InvokeExpr invokeExpr,
 			Val fact, SootMethod callee, Stmt calleeSp) {
-		if (!callee.hasActiveBody())
+		if (!callee.hasActiveBody()){
 			return Collections.emptySet();
+		}
 		Body calleeBody = callee.getActiveBody();
 		if (invokeExpr instanceof InstanceInvokeExpr) {
 			InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;

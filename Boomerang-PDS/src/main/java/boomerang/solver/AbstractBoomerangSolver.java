@@ -202,17 +202,19 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 				}
 			}
 		}
-		if(icfg.getCalleesOfCallAt(callSite).isEmpty()){
-			for(Unit returnSite : icfg.getSuccsOf(callSite)){
+		for(Unit returnSite : icfg.getSuccsOf(callSite)){
+			if(icfg.getCalleesOfCallAt(callSite).isEmpty()){
 				out.addAll(computeNormalFlow(caller, (Stmt)callSite, value,(Stmt) returnSite));
 			}
+			out.addAll(getEmptyCalleeFlow(caller, (Stmt)callSite, value,(Stmt) returnSite));
 		}
 		return out;
 	}
 
 
-	
-	
+	protected abstract Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,
+			Stmt returnSite);
+
 	protected abstract Collection<? extends State> computeCallFlow(SootMethod caller, ReturnSite returnSite, InvokeExpr invokeExpr,
 			Val value, SootMethod callee, Stmt calleeSp);
 	protected abstract Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Val value, Stmt succ);
