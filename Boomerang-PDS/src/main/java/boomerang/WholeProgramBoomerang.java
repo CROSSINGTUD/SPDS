@@ -11,6 +11,7 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
 import soot.jimple.NewExpr;
+import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
 
 public abstract class WholeProgramBoomerang extends Boomerang{
@@ -34,6 +35,8 @@ public abstract class WholeProgramBoomerang extends Boomerang{
 			if(u instanceof AssignStmt){
 				AssignStmt assignStmt = (AssignStmt) u;
 				if(isAllocationVal(assignStmt.getRightOp())){
+					if(assignStmt.getRightOp() instanceof NullConstant)
+						continue;
 					solve(new ForwardQuery(new Statement((Stmt) u, method), new Val(assignStmt.getLeftOp(),method)));
 				}
 			}
