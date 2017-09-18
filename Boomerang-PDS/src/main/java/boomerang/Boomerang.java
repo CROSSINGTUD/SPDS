@@ -163,7 +163,7 @@ public abstract class Boomerang {
 
 						if (as.getRightOp() instanceof InstanceFieldRef) {
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
-							handleFieldRead(node, ifr, as, backwardQuery);
+							handleFieldRead(node, fieldReads.getOrCreate(new FieldReadPOI(node.stmt(), new Val(ifr.getBase(),node.stmt().getMethod()), new Field(ifr.getField()), new Val(as.getLeftOp(),node.stmt().getMethod()))), backwardQuery);
 						}
 					}
 				}
@@ -227,14 +227,16 @@ public abstract class Boomerang {
 						if (as.getLeftOp() instanceof InstanceFieldRef) {
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
 							final Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
+							final Val stored = new Val(as.getRightOp(), icfg().getMethodOf(as));
 							final Field field = new Field(ifr.getField());
-							handleFieldWrite(node, base, field, as, sourceQuery);
+							handleFieldWrite(node, fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(), base, field, stored)), sourceQuery);
 						}
 						
 						if (as.getLeftOp() instanceof ArrayRef) {
 							ArrayRef ifr = (ArrayRef) as.getLeftOp();
-							final Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
-							handleFieldWrite(node, base, Field.array(), as, sourceQuery);
+							Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
+							Val stored = new Val(as.getRightOp(), icfg().getMethodOf(as));
+							handleFieldWrite(node, fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(), base, Field.array(), stored)), sourceQuery);
 						}
 						if (as.getRightOp() instanceof InstanceFieldRef) {
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
@@ -247,19 +249,16 @@ public abstract class Boomerang {
 		return solver;
 	}
 
-	protected void handleFieldRead(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
-			final AssignStmt as, final BackwardQuery sourceQuery) {	
-		Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
+	protected void handleFieldRead(final WitnessNode<Statement, Val, Field> node, FieldReadPOI fieldRead, final BackwardQuery sourceQuery) {	
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
-					base);
-		Field field = new Field(ifr.getField());
-		if (node.fact().value().equals(as.getLeftOp())) {
+				fieldRead.getBaseVar());
+		if (node.fact().equals(fieldRead.getStoredVar())) {
 			addBackwardQuery(backwardQuery, new EmptyStackWitnessListener<Statement, Val>() {
 				@Override
 				public void witnessFound(Node<Statement, Val> alloc) {
 				}
 			});
-			fieldReads.getOrCreate(new FieldReadPOI(node.stmt(), base, field, new Val(as.getLeftOp(),icfg().getMethodOf(as)))).addFlowAllocation(sourceQuery);
+			fieldRead.addFlowAllocation(sourceQuery);
 		}
 	}
 
@@ -267,24 +266,23 @@ public abstract class Boomerang {
 		return val instanceof NullConstant || val instanceof NewExpr || val instanceof NewArrayExpr || val instanceof NewMultiArrayExpr;
 	}
 
-	protected void handleFieldWrite(final WitnessNode<Statement, Val, Field> node,final Val base, final Field field,
-			final AssignStmt as, final ForwardQuery sourceQuery) {
+	protected void handleFieldWrite(final WitnessNode<Statement, Val, Field> node, final FieldWritePOI fieldWritePoi, final ForwardQuery sourceQuery) {
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
-				base);
-		if (node.fact().value().equals(as.getRightOp())) {
+				fieldWritePoi.getBaseVar());
+		if (node.fact().equals(fieldWritePoi.getStoredVar())) {
 			addBackwardQuery(backwardQuery, new EmptyStackWitnessListener<Statement, Val>() {
 				@Override
 				public void witnessFound(Node<Statement, Val> alloc) {
 				}
 			});
-			fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(),base, field, new Val(as.getRightOp(),icfg().getMethodOf(as)))).addFlowAllocation(sourceQuery);
+			fieldWritePoi.addFlowAllocation(sourceQuery);
 		}
-		if (node.fact().equals(base)) {
+		if (node.fact().equals(fieldWritePoi.getBaseVar())) {
 			queryToSolvers.getOrCreate(sourceQuery).addFieldAutomatonListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					if(t.getStart().fact().equals(node.asNode()) && t.getTarget().fact().equals(sourceQuery.asNode())){
-						fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(),base, field, new Val(as.getRightOp(),icfg().getMethodOf(as)))).addBaseAllocation(sourceQuery);
+						fieldWritePoi.addBaseAllocation(sourceQuery);
 					}
 				}
 				@Override
