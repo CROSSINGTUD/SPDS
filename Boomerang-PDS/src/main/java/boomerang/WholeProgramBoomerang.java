@@ -33,11 +33,7 @@ public abstract class WholeProgramBoomerang extends Boomerang{
 		for(Unit u : method.getActiveBody().getUnits()){
 			if(u instanceof AssignStmt){
 				AssignStmt assignStmt = (AssignStmt) u;
-				if(assignStmt.getRightOp() instanceof NewExpr){
-					
-					NewExpr newExpr = (NewExpr) assignStmt.getRightOp();
-					if(newExpr.getBaseType().toString().contains("String"))
-						continue;
+				if(isAllocationVal(assignStmt.getRightOp())){
 					solve(new ForwardQuery(new Statement((Stmt) u, method), new Val(assignStmt.getLeftOp(),method)));
 				}
 			}

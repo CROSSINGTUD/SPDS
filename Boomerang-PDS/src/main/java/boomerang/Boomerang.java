@@ -26,9 +26,12 @@ import soot.RefType;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
+import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.InstanceFieldRef;
+import soot.jimple.NewArrayExpr;
 import soot.jimple.NewExpr;
+import soot.jimple.NewMultiArrayExpr;
 import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
@@ -36,10 +39,12 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;
+import sync.pds.solver.SyncPDSSolver.PDSSystem;
 import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
@@ -49,7 +54,7 @@ import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	private static final boolean DISABLE_CALLPOI = false;
 	Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
@@ -205,7 +210,15 @@ public abstract class Boomerang {
 						AssignStmt as = (AssignStmt) stmt;
 						if (as.getLeftOp() instanceof InstanceFieldRef) {
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
-							handleFieldWrite(node, ifr, as, sourceQuery);
+							final Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
+							final Field field = new Field(ifr.getField());
+							handleFieldWrite(node, base, field, as, sourceQuery);
+						}
+						
+						if (as.getLeftOp() instanceof ArrayRef) {
+							ArrayRef ifr = (ArrayRef) as.getLeftOp();
+							final Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
+							handleFieldWrite(node, base, Field.array(), as, sourceQuery);
 						}
 						if (as.getRightOp() instanceof InstanceFieldRef) {
 							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
@@ -235,15 +248,13 @@ public abstract class Boomerang {
 	}
 
 	public static boolean isAllocationVal(Value val) {
-		return val instanceof NullConstant || val instanceof NewExpr;
+		return val instanceof NullConstant || val instanceof NewExpr || val instanceof NewArrayExpr || val instanceof NewMultiArrayExpr;
 	}
 
-	protected void handleFieldWrite(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
+	protected void handleFieldWrite(final WitnessNode<Statement, Val, Field> node,final Val base, final Field field,
 			final AssignStmt as, final ForwardQuery sourceQuery) {
-		final Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
 				base);
-		final Field field = new Field(ifr.getField());
 		if (node.fact().value().equals(as.getRightOp())) {
 			addBackwardQuery(backwardQuery, new EmptyStackWitnessListener<Statement, Val>() {
 				@Override
@@ -252,7 +263,7 @@ public abstract class Boomerang {
 			});
 			fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(),base, field, new Val(as.getRightOp(),icfg().getMethodOf(as)))).addFlowAllocation(sourceQuery);
 		}
-		if (node.fact().value().equals(ifr.getBase())) {
+		if (node.fact().equals(base)) {
 			queryToSolvers.getOrCreate(sourceQuery).addFieldAutomatonListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {

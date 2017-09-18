@@ -137,6 +137,7 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 					NodeWithLocation<Statement, Val, Field> succNode = new NodeWithLocation<>(
 							new Statement(succ, method), new Val(leftOp,method), Field.array());
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
+					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
 				}
 			}
 			if(rightOp instanceof CastExpr){
