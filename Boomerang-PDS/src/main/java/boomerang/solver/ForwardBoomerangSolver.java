@@ -200,30 +200,4 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 		}
 	}
 	
-	@Override
-	protected void onReturnFlow(final Unit callSite, Unit returnSite, final SootMethod method, final Stmt returnStmt, final Val value,
-			Collection<? extends State> outFlow) {
-		for(State r : outFlow){
-			if(r instanceof CallPopNode){
-				final CallPopNode<Val,Statement> callPopNode = (CallPopNode) r;
-				this.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
-					
-					@Override
-					public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
-						if(reachableNode.asNode().equals(new Node<Statement,Val>(callPopNode.getReturnSite(),callPopNode.location()))){
-							if(!valueUsedInStatement(icfg.getMethodOf(callSite), (Stmt)callSite, ((Stmt) callSite).getInvokeExpr(), callPopNode.location())){
-								//TODO why do we need this?
-								return;
-							}
-							onReturnFromCall(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), callPopNode.getReturnSite(),new Node<Statement,Val>(new Statement((Stmt)returnStmt, method),value), reachableNode.asNode());
-						}
-					}
-				});
-			}
-		}
-		super.onReturnFlow(callSite, returnSite, method, returnStmt, value, outFlow);
-	}
-
-	protected abstract void onReturnFromCall(Statement statement, Statement returnSite, Node<Statement, Val> asNode, Node<Statement, Val> node);
-	
 }

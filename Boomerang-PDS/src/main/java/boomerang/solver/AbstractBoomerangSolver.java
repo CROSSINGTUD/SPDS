@@ -30,7 +30,9 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import sync.pds.solver.SyncPDSSolver;
+import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;
+import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -310,7 +312,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		}
 	}
 
-	protected void onReturnFlow(Unit callSite, Unit returnSite, SootMethod method, Stmt curr, Val value,
+	protected void handleUnbalancedFlow(Unit callSite, Unit returnSite, SootMethod method, Stmt curr, Val value,
 			Collection<? extends State> outFlow) {
 		if(unbalancedMethod.contains(method)){
 			SootMethod caller = icfg.getMethodOf(callSite);
@@ -374,29 +376,45 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			@Override
 			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 				if(t.getStart().fact().stmt().equals(statement) && !(t.getStart() instanceof GeneratedState)){
-					new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(fieldAutomaton,t.getStart(),new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
+					fieldAutomaton.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(fieldAutomaton,t.getStart(),new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 						@Override
 						public void reachable(Transition<Field, INode<Node<Statement,Val>>> t) {
-							
 							weightedPAutomaton.addTransition(t);
 						}
-					});
+					}));
 				}
 			}
 		});
 		if(!weightedPAutomaton.getTransitions().isEmpty()){
-			INode<Node<Val, Field>> start = new SingleNode<Node<Val,Field>>(new Node<Val,Field>(query.asNode().fact(),Field.epsilon()));
-//			if(!weightedPAutomaton.getTransitionsInto(start).isEmpty())
-//				weightedPAutomaton.addFinalState(start);
 			System.out.println(statement);
 			System.out.println(weightedPAutomaton.toDotString());
-//			for(Transition<Field, INode<Node<Statement, Val>>> t : weightedPAutomaton.getTransitions()){
-//				if(t.getStart().fact().fact().equals(Field.epsilon()))
-//					System.out.println(t.getStart().fact().stmt() + "\t" + weightedPAutomaton.extractLanguage(t.getStart()));
-//			}
-//			System.out.println(weightedPAutomaton.toDotString());
 		}
 	}
 
+
+	protected void onReturnFlow(final Unit callSite, Unit returnSite, final SootMethod method, final Stmt returnStmt, final Val value,
+			Collection<? extends State> outFlow) {
+		for(State r : outFlow){
+			if(r instanceof CallPopNode){
+				final CallPopNode<Val,Statement> callPopNode = (CallPopNode) r;
+				this.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
+					
+					@Override
+					public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+						if(reachableNode.asNode().equals(new Node<Statement,Val>(callPopNode.getReturnSite(),callPopNode.location()))){
+							if(!valueUsedInStatement(icfg.getMethodOf(callSite), (Stmt)callSite, ((Stmt) callSite).getInvokeExpr(), callPopNode.location())){
+								//TODO why do we need this?
+								return;
+							}
+							onReturnFromCall(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), callPopNode.getReturnSite(),new Node<Statement,Val>(new Statement((Stmt)returnStmt, method),value), reachableNode.asNode());
+						}
+					}
+				});
+			}
+		}
+		handleUnbalancedFlow(callSite, returnSite, method, returnStmt, value, outFlow);
+	}
+
+	protected abstract void onReturnFromCall(Statement statement, Statement returnSite, Node<Statement, Val> asNode, Node<Statement, Val> node);
 	
 }
