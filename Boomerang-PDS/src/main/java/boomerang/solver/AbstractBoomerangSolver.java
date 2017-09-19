@@ -394,6 +394,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 
 	protected void onReturnFlow(final Unit callSite, Unit returnSite, final SootMethod method, final Stmt returnStmt, final Val value,
 			Collection<? extends State> outFlow) {
+		handleUnbalancedFlow(callSite, returnSite, method, returnStmt, value, outFlow);
 		for(State r : outFlow){
 			if(r instanceof CallPopNode){
 				final CallPopNode<Val,Statement> callPopNode = (CallPopNode) r;
@@ -406,15 +407,14 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 								//TODO why do we need this?
 								return;
 							}
-							onReturnFromCall(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), callPopNode.getReturnSite(),new Node<Statement,Val>(new Statement((Stmt)returnStmt, method),value), reachableNode.asNode());
+							onReturnFromCall(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), callPopNode.getReturnSite(), reachableNode.asNode(),unbalancedMethod.contains(method));
 						}
 					}
 				});
 			}
 		}
-		handleUnbalancedFlow(callSite, returnSite, method, returnStmt, value, outFlow);
 	}
 
-	protected abstract void onReturnFromCall(Statement statement, Statement returnSite, Node<Statement, Val> asNode, Node<Statement, Val> node);
+	protected abstract void onReturnFromCall(Statement statement, Statement returnSite,  Node<Statement, Val> node, boolean unbalanced);
 	
 }
