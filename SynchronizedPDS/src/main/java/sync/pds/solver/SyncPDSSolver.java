@@ -114,13 +114,13 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 		@Override
 		public void onAddedTransition(Transition<Stmt, INode<Fact>> t) {
+			if(!(t.getStart() instanceof GeneratedState)){
+				setCallingContextReachable(new Node<Stmt,Fact>(t.getString(),t.getStart().fact()));
+			}
 		}
 
 		@Override
 		public void onWeightAdded(Transition<Stmt, INode<Fact>> t, Weight<Stmt> w) {
-			if(!(t.getStart() instanceof GeneratedState)){
-				setCallingContextReachable(new Node<Stmt,Fact>(t.getString(),t.getStart().fact()));
-			}
 		}
 	}
 
@@ -340,17 +340,16 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 		@Override
 		public void onAddedTransition(Transition<Field, INode<Node<Stmt,Fact>>> t) {
-			
-		}
-
-		@Override
-		public void onWeightAdded(Transition<Field, INode<Node<Stmt,Fact>>> t,
-				Weight<Field> w) {
 			INode<Node<Stmt,Fact>> n = t.getStart();
 			if(!(n instanceof GeneratedState)){
 				Node<Stmt,Fact> fact = n.fact();
 				setFieldContextReachable(new Node<Stmt,Fact>(fact.stmt(), fact.fact()));
 			}
+		}
+
+		@Override
+		public void onWeightAdded(Transition<Field, INode<Node<Stmt,Fact>>> t,
+				Weight<Field> w) {
 		}
 	}
 
