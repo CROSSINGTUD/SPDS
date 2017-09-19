@@ -52,7 +52,8 @@ public class PDSPoststarTests {
     fa.addTransition(new Transition<StackSymbol, Abstraction>(a(0), fa.epsilon(), a(1)));
     pds.poststar(fa);
     System.out.println(fa.getTransitions());
-    assertTrue(fa.getTransitions().contains(t(0, "d", ACC)));
+    assertTrue(fa.getTransitions().contains(t(1, "d", ACC)));
+    assertTrue(fa.getTransitions().contains(t(0, "EPS", 1)));
   }
   @Test
   public void pushTest() {
