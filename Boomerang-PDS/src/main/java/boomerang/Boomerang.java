@@ -188,7 +188,7 @@ public abstract class Boomerang {
 			@Override
 			protected void onReturnFromCall(Statement callSite, Statement returnSite, final Node<Statement, Val> returnedNode, final boolean unbalanced) {
 				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
-				callSitePoi.returnsFromCall(sourceQuery, returnedNode, unbalanced);
+				callSitePoi.returnsFromCall(sourceQuery, returnedNode);
 			}
 			
 			@Override
@@ -249,7 +249,7 @@ public abstract class Boomerang {
 
 	protected void backwardHandleFieldWrite(final WitnessNode<Statement, Val, Field> witness, final ForwardCallSitePOI fieldWrite,
 			final BackwardQuery backwardQuery) {
-		fieldWrite.returnsFromCall(backwardQuery,witness.asNode(), false);
+		fieldWrite.returnsFromCall(backwardQuery,witness.asNode());
 	}
 	
 	
@@ -396,12 +396,10 @@ public abstract class Boomerang {
 	private class QueryWithVal{
 		private final Query flowSourceQuery;
 		private final Node<Statement, Val> returningFact;
-		private boolean unbalanced;
 
-		QueryWithVal(Query q, Node<Statement, Val> asNode, boolean unbalanced){
+		QueryWithVal(Query q, Node<Statement, Val> asNode){
 			this.flowSourceQuery = q;
 			this.returningFact = asNode;
-			this.unbalanced = unbalanced;
 		}
 
 		@Override
@@ -411,7 +409,6 @@ public abstract class Boomerang {
 			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((flowSourceQuery == null) ? 0 : flowSourceQuery.hashCode());
 			result = prime * result + ((returningFact == null) ? 0 : returningFact.hashCode());
-			result = prime * result + (unbalanced ? 1231 : 1237);
 			return result;
 		}
 
@@ -436,8 +433,6 @@ public abstract class Boomerang {
 					return false;
 			} else if (!returningFact.equals(other.returningFact))
 				return false;
-			if (unbalanced != other.unbalanced)
-				return false;
 			return true;
 		}
 
@@ -456,15 +451,15 @@ public abstract class Boomerang {
 			this.callSite = callSite;
 		}
 
-		public void returnsFromCall(final Query flowQuery, Node<Statement, Val> returnedNode, boolean unbalanced) {
-			if(returnsFromCall.add(new QueryWithVal(flowQuery, returnedNode, unbalanced))){
+		public void returnsFromCall(final Query flowQuery, Node<Statement, Val> returnedNode) {
+			if(returnsFromCall.add(new QueryWithVal(flowQuery, returnedNode))){
 				for(final ForwardQuery byPassing : Lists.newArrayList(byPassingAllocations)){
-					eachPair(byPassing, flowQuery,returnedNode, unbalanced);
+					eachPair(byPassing, flowQuery,returnedNode);
 				}
 			}
 		}
 
-		private void eachPair(final ForwardQuery byPassing, final Query flowQuery, final Node<Statement,Val> returnedNode, final boolean unbalanced){
+		private void eachPair(final ForwardQuery byPassing, final Query flowQuery, final Node<Statement,Val> returnedNode){
 			if(byPassing.equals(flowQuery)) 
 				return;
 			queryToSolvers.getOrCreate(flowQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
@@ -476,7 +471,7 @@ public abstract class Boomerang {
 							@Override
 							public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
 								if(reachableNode.asNode().equals(returnedNode)){
-									importFlowsAtReturnSite(byPassing,flowQuery, returnedNode,unbalanced);
+									importFlowsAtReturnSite(byPassing,flowQuery, returnedNode);
 								}
 							}
 						});
@@ -489,7 +484,7 @@ public abstract class Boomerang {
 				}
 			});
 		}
-		protected void importFlowsAtReturnSite(final ForwardQuery byPassingAllocation, final Query flowQuery, final Node<Statement, Val> returnedNode, final boolean unbalanced) {
+		protected void importFlowsAtReturnSite(final ForwardQuery byPassingAllocation, final Query flowQuery, final Node<Statement, Val> returnedNode) {
 			AbstractBoomerangSolver byPassingSolver = queryToSolvers.get(byPassingAllocation);
 		    final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> byPassingFieldAutomaton = byPassingSolver.getFieldAutomaton();
 		    final AbstractBoomerangSolver flowSolver = queryToSolvers.getOrCreate(flowQuery);
@@ -522,7 +517,7 @@ public abstract class Boomerang {
 		public void addByPassingAllocation(ForwardQuery byPassingAllocation) {
 			if(byPassingAllocations.add(byPassingAllocation)){
 				for(QueryWithVal e : Lists.newArrayList(returnsFromCall)){
-					eachPair(byPassingAllocation, e.flowSourceQuery,e.returningFact,e.unbalanced);
+					eachPair(byPassingAllocation, e.flowSourceQuery,e.returningFact);
 				}
 			}
 		}
