@@ -73,21 +73,28 @@ public class MinSeminringPostStarTests {
         waccepts(1, "a", w(0));
     pds.poststar(fa);
     assertEquals(w(1), fa.getWeightFor(t(1, "b", ACC)));
-    assertEquals(w(2), fa.getWeightFor(t(1, "c", a(1, "c"))));
-    assertEquals(w(3), fa.getWeightFor(t(1, "e", a(1, "c"))));
+    assertEquals(w(1), fa.getWeightFor(t(1, "c", a(1, "c"))));
+    assertEquals(w(2), fa.getWeightFor(t(1, "e", a(1, "c"))));
   }
 
   @Test
   public void push2() {
     pds.addRule(wnormal(1, "a", 2, "b", w(1)));
-    pds.addRule(wpush(2, "b", 3, "c", "d", w(1)));
+    pds.addRule(wpush(2, "b", 3, "c", "d", w(2)));
     pds.addRule(wnormal(3, "c", 4, "e", w(1)));
     pds.addRule(wpop(4, "e", 5, w(1)));
+    pds.addRule(wnormal(5, "d", 2, "f", w(10)));
     WeightedPAutomaton<StackSymbol, Abstraction, MinSemiring<StackSymbol>> fa =
         waccepts(1, "a", w(0));
+
+    System.out.println(fa.toDotString());
+    System.out.println(fa);
     pds.poststar(fa);
-    assertEquals(w(4), fa.getWeightFor(t(5, "d", ACC)));
+    System.out.println(fa.toDotString());
+    System.out.println(fa);
+    assertEquals(w(5), fa.getWeightFor(t(5, "d", ACC)));
     assertEquals(w(3), fa.getWeightFor(t(4, "e", a(3, "c"))));
+    assertEquals(w(15), fa.getWeightFor(t(2, "f", ACC)));
   }
 
   @Test
@@ -127,6 +134,16 @@ public class MinSeminringPostStarTests {
           public StackSymbol epsilon() {
             return s("EPS");
           }
+
+		@Override
+		public MinSemiring<StackSymbol> getZero() {
+			return MinSemiring.zero();
+		}
+
+		@Override
+		public MinSemiring<StackSymbol> getOne() {
+			return MinSemiring.one();
+		}
         };
         aut.setInitialState(a(a));
         aut.addFinalState(ACC);

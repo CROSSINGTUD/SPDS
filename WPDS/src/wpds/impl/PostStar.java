@@ -65,9 +65,11 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 					@Override
 					public void onOutTransitionAdded(Transition<N, D> tq) {
 						LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
+						W currWeight =	getOrCreateWeight(tq);
+						W combined = (W) currWeight.extendWithIn(newWeight);
 						prev.add(t);
 						prev.add(tq);
-						update(new Transition<N, D>(p, tq.getString(), tq.getTarget()), (W) newWeight, prev);
+						update(new Transition<N, D>(p, tq.getString(), tq.getTarget()), (W) combined, prev);
 					}
 
 					@Override
@@ -212,7 +214,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 				LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
 				previous.add(t);
 				update(new Transition<N, D>(p, gammaPrime, irState),
-						(W) currWeight.extendWithIn(rule.getWeight()), previous);
+						rule.getWeight(), previous);
 				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
 				
 				update(new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W) currWeight,
@@ -350,10 +352,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 	
 	private void update(Transition<N, D> trans, W weight,
 			List<Transition<N, D>> previous) {
-		fa.addTransition(trans);
-		W lt = getOrCreateWeight(trans);
-		W newLt = (W) lt.combineWithIn(weight);
-		fa.addWeightForTransition(trans, newLt);
+		fa.addWeightForTransition(trans, weight);
 	}
 
 
@@ -361,7 +360,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		W w = fa.getWeightFor(trans);
 		if (w != null)
 			return w;
-		return pds.getZero();
+		return pds.getOne();
 	}
 
 }

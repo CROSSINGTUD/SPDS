@@ -13,6 +13,10 @@ public class MinSemiring<N extends Location> extends Weight<N> {
 
   @Override
   public Weight<N> extendWith(Weight<N> other) {
+	    if (other.equals(one()))
+	      return this;
+	    if (this.equals(one()))
+	      return other;
     MinSemiring<N> o = (MinSemiring<N>) other;
     return new MinSemiring<N>(o.i + i);
   }
