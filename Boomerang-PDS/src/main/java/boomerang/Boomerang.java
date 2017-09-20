@@ -634,12 +634,12 @@ public abstract class Boomerang {
 							
 								@Override
 								public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
-									if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()) && !aliasedVariableAtStmt.fact().fact().equals(getStoredVar()))
+									if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()))
 										flowSolver.getFieldAutomaton().addTransition(transition);
 								}
 							}));
 							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
-							if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()) && !aliasedVariableAtStmt.fact().fact().equals(getStoredVar()))
+							if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()))
 								flowSolver.handlePOI(FieldStmtPOI.this, aliasedVariableAtStmt.fact());
 						}
 					}
