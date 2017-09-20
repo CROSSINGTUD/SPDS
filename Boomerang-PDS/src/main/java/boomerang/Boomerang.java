@@ -57,7 +57,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	private static final boolean DISABLE_CALLPOI = false;
 	Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
@@ -493,18 +493,25 @@ public abstract class Boomerang {
 		private void eachPair(final ForwardQuery byPassing, final Query flowQuery, final Node<Statement,Val> returnedNode, final boolean unbalanced){
 			if(byPassing.equals(flowQuery)) 
 				return;
-			queryToSolvers.getOrCreate(byPassing).synchedReachable(returnedNode, new WitnessListener<Statement, Val, Field>() {
-				boolean triggered = false;
+			queryToSolvers.getOrCreate(flowQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+
 				@Override
-				public void fieldWitness(Transition<Field, INode<Node<Statement, Val>>> transition) {
-					if(triggered)
-						return;
-					triggered = true;
-					importFlowsAtReturnSite(byPassing,flowQuery, returnedNode,unbalanced);
+				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+					if(t.getStart().fact().equals(byPassing.asNode())){
+						queryToSolvers.getOrCreate(byPassing).registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
+							@Override
+							public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+								if(reachableNode.asNode().equals(returnedNode)){
+									importFlowsAtReturnSite(byPassing,flowQuery, returnedNode,unbalanced);
+								}
+							}
+						});
+					}
 				}
-				
+
 				@Override
-				public void callWitness(Transition<Statement, INode<Val>> t) {
+				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+					
 				}
 			});
 		}
@@ -656,7 +663,6 @@ public abstract class Boomerang {
 								}
 							}));
 							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
-//							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar())), Field.epsilon(),new AllocNode<Node<Statement,Val>>( baseAllocation.asNode())));
 							if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()) && !aliasedVariableAtStmt.fact().fact().equals(getStoredVar()))
 								flowSolver.handlePOI(FieldStmtPOI.this, aliasedVariableAtStmt.fact());
 						}
