@@ -150,7 +150,22 @@ public class DoublePDSTest {
 		System.out.println(solver.getReachedStates());
 		assertTrue(solver.getReachedStates().contains(node(6,"x")));
 	}
-	
+	@Test
+	public void callOnlyIntraprocedural() {
+		addNormal(node(1,"u"),  node(5,"q"));
+		addNormal(node(5,"q"),  node(6,"x"));
+		solver.solve(node(1,"u"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(6,"x")));
+	}
+	@Test
+	public void fieldPushAndPop() {
+		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
+		addFieldPop(node(2,"v"), f("h"), node(6,"x"));
+		solver.solve(node(1,"u"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(6,"x")));
+	}
 	@Test
 	public void simpleNonFieldFlow() {
 		addNormal(node(1,"v"), node(2,"w"));

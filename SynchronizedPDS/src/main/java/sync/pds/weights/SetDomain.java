@@ -31,13 +31,12 @@ public class SetDomain<N extends Location,Stmt,Fact> extends Weight<N>{
 	}
 	@Override
 	public Weight<N> extendWith(Weight<N> other) {
-		if(other == this)
-			return this;
 		if(other.equals(one())){
 			return this;
 		}
-		if(this.equals(one()))
+		if(this.equals(one())){
 			return other;
+		}
 		return zero();
 	}
 
@@ -47,7 +46,7 @@ public class SetDomain<N extends Location,Stmt,Fact> extends Weight<N>{
 			return this;
 		if(this.equals(zero()))
 			return other;
-		if(this.equals(one()) || other.equals(one()))
+		if(this.equals(one())|| other.equals(one()))
 			return one();
 		if(other instanceof SetDomain){
 			Set<Node<Stmt, Fact>> merged = Sets.newHashSet(nodes);

@@ -172,12 +172,11 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		boolean added = transitions.add(trans);
 		sequentialTransitions.add(trans);
 		W oldWeight = transitionToWeights.get(trans);
-		System.out.println("old weight " + trans + oldWeight +"   " + weight);
 		W newWeight = (W) (oldWeight == null ? weight : oldWeight.combineWith(weight));
 		if(!newWeight.equals(oldWeight)){
-			System.out.println("ADDING weight " + trans + newWeight);
 			transitionToWeights.put(trans, newWeight);
 			for(WPAUpdateListener<N, D, W> l : Lists.newArrayList(listeners)){
+				l.onAddedTransition(trans);
 				l.onWeightAdded(trans, weight);
 			}
 			for(WPAStateListener<N, D, W> l : Lists.newArrayList(stateListeners.get(trans.getStart()))){

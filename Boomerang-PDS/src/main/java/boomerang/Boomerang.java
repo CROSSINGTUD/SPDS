@@ -299,24 +299,6 @@ public abstract class Boomerang {
 		fieldWrite.returnsFromCall(backwardQuery,witness.asNode());
 	}
 	
-	
-	protected void attachAllocHandler(Query query, Node<Statement, Val> startState, final AllocHandler handler){
-		WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = queryToSolvers.getOrCreate(query).getFieldAutomaton();
-		aut.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(aut, new SingleNode<Node<Statement,Val>>(startState), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
-
-			@Override
-			public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
-				if(t.getTarget() instanceof AllocNode){
-					handler.trigger((AllocNode) t.getTarget());
-				}
-			}
-		}));
-	}
-
-	private interface AllocHandler{
-		public void trigger(AllocNode<Node<Statement, Val>> node);
-	}
-	
 	public static boolean isAllocationVal(Value val) {
 		return val instanceof NullConstant || val instanceof NewExpr || val instanceof NewArrayExpr || val instanceof NewMultiArrayExpr;
 	}
@@ -548,10 +530,8 @@ public abstract class Boomerang {
 							}
 						}));
 						Val byPassing = t.getStart().fact().fact();
-						if(t.getLabel().equals(Field.empty()) || t.getLabel().equals(Field.epsilon())){
-							flowSolver.setFieldContextReachable(new Node<Statement,Val>(returnedNode.stmt(),byPassing));
-							flowSolver.addNormalCallFlow(returnedNode,  new Node<Statement,Val>(returnedNode.stmt(),byPassing));
-						}
+						flowSolver.setFieldContextReachable(new Node<Statement,Val>(returnedNode.stmt(),byPassing));
+						flowSolver.addNormalCallFlow(returnedNode,  new Node<Statement,Val>(returnedNode.stmt(),byPassing));
 					}
 				}
 			});
