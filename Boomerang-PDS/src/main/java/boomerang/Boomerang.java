@@ -23,6 +23,7 @@ import boomerang.poi.AbstractPOI;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
+import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import heros.utilities.DefaultValueMap;
 import soot.RefType;
@@ -57,7 +58,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	private static final boolean DISABLE_CALLPOI = false;
 	Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
@@ -487,8 +488,8 @@ public abstract class Boomerang {
 		private void eachPair(final ForwardQuery byPassing, final Query flowQuery, final Node<Statement,Val> returnedNode){
 			if(byPassing.equals(flowQuery)) 
 				return;
-			queryToSolvers.getOrCreate(flowQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-
+			queryToSolvers.getOrCreate(flowQuery).registerFieldTransitionListener(new MethodBasedFieldTransitionListener(byPassing.asNode().stmt().getMethod()) {
+				
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					if(t.getStart().fact().equals(byPassing.asNode())){
@@ -502,22 +503,13 @@ public abstract class Boomerang {
 						});
 					}
 				}
-
-				@Override
-				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-					
-				}
 			});
 		}
 		protected void importFlowsAtReturnSite(final ForwardQuery byPassingAllocation, final Query flowQuery, final Node<Statement, Val> returnedNode) {
 			AbstractBoomerangSolver byPassingSolver = queryToSolvers.get(byPassingAllocation);
 		    final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> byPassingFieldAutomaton = byPassingSolver.getFieldAutomaton();
 		    final AbstractBoomerangSolver flowSolver = queryToSolvers.getOrCreate(flowQuery);
-			byPassingFieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-				
-				@Override
-				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-				}
+		    byPassingSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener(returnedNode.stmt().getMethod()) {
 				
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {

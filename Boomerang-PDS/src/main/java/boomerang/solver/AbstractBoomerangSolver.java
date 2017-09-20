@@ -11,6 +11,8 @@ import java.util.Set;
 import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
 
 import boomerang.Boomerang;
 import boomerang.Query;
@@ -57,18 +59,47 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	private Collection<ReachableMethodListener> reachableMethodListeners = Sets.newHashSet();
 	private Collection<SootMethod> unbalancedMethod = Sets.newHashSet();
 	private final Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> generatedFieldState;
-
+	private Multimap<SootMethod,Transition<Field,INode<Node<Statement,Val>>>> perMethodFieldTransitions = HashMultimap.create();
+	private Multimap<SootMethod, MethodBasedFieldTransitionListener> perMethodFieldTransitionsListener = HashMultimap.create();
 	
 	
 	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField){
 		this.icfg = icfg;
 		this.query = query;
 		this.unbalancedMethod.add(query.asNode().stmt().getMethod());
+		this.fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+
+			@Override
+			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+				addTransitionToMethod(t.getStart().fact().stmt().getMethod(), t);
+				addTransitionToMethod(t.getTarget().fact().stmt().getMethod(), t);
+			}
+
+			@Override
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+				// TODO Auto-generated method stub
+				
+			}
+		});
 		
 		//TODO recap, I assume we can implement this more easily.
 		this.generatedFieldState = genField;
 	}
 	
+	private void addTransitionToMethod(SootMethod method, Transition<Field, INode<Node<Statement, Val>>> t) {
+		if(perMethodFieldTransitions.put(method, t)){
+			for(MethodBasedFieldTransitionListener l : Lists.newArrayList(perMethodFieldTransitionsListener.get(method))){
+				l.onAddedTransition(t);
+			}
+		}
+	}
+	public void registerFieldTransitionListener(MethodBasedFieldTransitionListener l) {
+		if(perMethodFieldTransitionsListener.put(l.getMethod(),l)){
+			for(Transition<Field, INode<Node<Statement, Val>>> t : Lists.newArrayList(perMethodFieldTransitions.get(l.getMethod()))){
+				l.onAddedTransition(t);
+			}
+		}
+	}
 	public INode<Node<Statement,Val>> generateFieldState(final INode<Node<Statement,Val>> d, final Field loc) {
 		Entry<INode<Node<Statement,Val>>, Field> e = new AbstractMap.SimpleEntry<>(d, loc);
 		if (!generatedFieldState.containsKey(e)) {
