@@ -27,7 +27,7 @@ public abstract class Weight<N extends Location> {
     this.to = to;
   }
 
-  public static NoWeight NO_WEIGHT = new Weight.NoWeight();
+  public static NoWeight NO_WEIGHT_ONE = new Weight.NoWeight();
   public static NoWeight NO_WEIGHT_ZERO = new Weight.NoWeight();
 
   public static class NoWeight<N extends Location> extends Weight<N> {

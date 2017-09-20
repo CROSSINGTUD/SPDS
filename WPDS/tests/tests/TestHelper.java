@@ -48,6 +48,16 @@ public class TestHelper {
       public StackSymbol epsilon() {
         return s("EPS");
       }
+      
+      @Override
+	  public NumWeight<StackSymbol> getOne() {
+    	  return NumWeight.one();
+      }
+      
+      @Override
+	  public NumWeight<StackSymbol> getZero() {
+     	  return getZero();
+      }
     };
     aut.setInitialState(a(a));
     aut.addFinalState(ACC);

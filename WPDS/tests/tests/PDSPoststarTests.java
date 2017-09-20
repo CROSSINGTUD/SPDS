@@ -76,12 +76,9 @@ public class PDSPoststarTests {
     pds.addRule(pop(1, "d", 1));
     pds.addRule(normal(1, "e", 1, "k"));
     PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "a");
-    System.out.println(fa.toDotString());
     pds.poststar(fa);
-    System.out.println(fa.toDotString());
+    System.out.println(fa);
     assertTrue(fa.getTransitions().contains(t(1, "k", ACC)));
-    fa = accepts(1, "k");
-    pds.prestar(fa);
     assertTrue(fa.getTransitions().contains(t(1, "a", ACC)));
   }
 

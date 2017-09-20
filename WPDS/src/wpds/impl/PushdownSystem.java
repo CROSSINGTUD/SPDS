@@ -13,7 +13,7 @@ public class PushdownSystem<N extends Location, D extends State>
 
   @Override
   public NoWeight getOne() {
-    return NoWeight.NO_WEIGHT;
+    return NoWeight.NO_WEIGHT_ONE;
   }
 
   @Override

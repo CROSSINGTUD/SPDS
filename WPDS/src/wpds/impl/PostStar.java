@@ -1,10 +1,5 @@
 package wpds.impl;
 
-import java.util.LinkedList;
-import java.util.List;
-
-import com.google.common.collect.Lists;
-
 import wpds.interfaces.ForwardDFSEpsilonVisitor;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
@@ -57,19 +52,14 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 				W currWeight = getOrCreateWeight(new Transition<N,D>(state,t.getLabel(),t.getTarget()));
 				final W newWeight = (W) currWeight.extendWithIn(rule.getWeight());
 				final D p = rule.getS2();
-				LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
-				previous.add(t);
-				update(new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight, previous);
+				update(new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight);
 				fa.registerListener(new WPAStateListener<N, D, W>(t.getTarget()) {
 
 					@Override
 					public void onOutTransitionAdded(Transition<N, D> tq) {
-						LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
 						W currWeight =	getOrCreateWeight(tq);
 						W combined = (W) currWeight.extendWithIn(newWeight);
-						prev.add(t);
-						prev.add(tq);
-						update(new Transition<N, D>(p, tq.getString(), tq.getTarget()), (W) combined, prev);
+						update(new Transition<N, D>(p, tq.getString(), tq.getTarget()), (W) combined);
 					}
 
 					@Override
@@ -136,8 +126,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 				W currWeight = getOrCreateWeight(new Transition<N,D>(rule.getS1(),t.getLabel(),t.getTarget()));
 				W newWeight = (W) currWeight.extendWithIn(rule.getWeight());
 				D p = rule.getS2();
-				LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
-				previous.add(t);
 				N l2 = rule.getL2();
 				if (l2 instanceof ExclusionWildcard) {
 					ExclusionWildcard<N> ex = (ExclusionWildcard<N>) l2;
@@ -147,7 +135,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 				if (l2 instanceof Wildcard) {
 					l2 = t.getString();
 				}
-				update(new Transition<N, D>(p, l2, t.getTarget()), newWeight, previous);
+				update(new Transition<N, D>(p, l2, t.getTarget()), newWeight);
 			}
 		}
 
@@ -206,19 +194,14 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		@Override
 		public void onOutTransitionAdded(final Transition<N, D> t) {
 			if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
-				W currWeight = getOrCreateWeight(new Transition<N,D>(state,t.getLabel(),t.getTarget()));
-				final W newWeight = (W) currWeight.extendWithIn(rule.getWeight());
 				final D p = rule.getS2();
 				N gammaPrime = rule.getL2();
 				final D irState = fa.createState(p, gammaPrime);
-				LinkedList<Transition<N, D>> previous = Lists.<Transition<N, D>>newLinkedList();
-				previous.add(t);
 				update(new Transition<N, D>(p, gammaPrime, irState),
-						rule.getWeight(), previous);
+						rule.getWeight());
+				W currWeight = getOrCreateWeight(t);
 				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
-				
-				update(new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W) currWeight,
-						previous);
+				update(new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W) currWeight);
 				fa.registerListener(new UpdateEpsilonOnPushListener(p, irState,transitionLabel,t.getTarget(),currWeight));
 			}
 		}
@@ -287,12 +270,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		@Override
 		public void onInTransitionAdded(Transition<N, D> t) {
 			if (!t.getStart().equals(p) && t.getString().equals(fa.epsilon())) {
-//				System.out.println(new Transition<N, D>(t.getStart(), transitionLabel, target));
-				LinkedList<Transition<N, D>> prev = Lists.<Transition<N, D>>newLinkedList();
-//				prev.add(t);
-				prev.add(t);
 				update(new Transition<N, D>(t.getStart(), transitionLabel, target),
-						(W) getOrCreateWeight(t).extendWithIn(newWeight), prev);
+						(W) getOrCreateWeight(t).extendWith(newWeight));
 			}	
 		};
 
@@ -350,17 +329,16 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		
 	}
 	
-	private void update(Transition<N, D> trans, W weight,
-			List<Transition<N, D>> previous) {
+	private void update(Transition<N, D> trans, W weight) {
 		fa.addWeightForTransition(trans, weight);
 	}
 
 
 	private W getOrCreateWeight(Transition<N, D> trans) {
 		W w = fa.getWeightFor(trans);
-		if (w != null)
+//		if (w != null)
 			return w;
-		return pds.getOne();
+//		return pds.getOne();
 	}
 
 }

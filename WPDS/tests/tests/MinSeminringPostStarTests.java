@@ -110,8 +110,7 @@ public class MinSeminringPostStarTests {
         waccepts(1, "a", w(0));
     pds.poststar(fa);
     System.out.println(fa);
-    assertEquals(w(7), fa.getWeightFor(t(1, "h", ACC)));
-    assertEquals(w(2), fa.getWeightFor(t(1, "call", a(1, "call"))));
+    assertEquals(w(9), fa.getWeightFor(t(1, "h", ACC)));
   }
 
   private static MinSemiring<StackSymbol> w(int i) {

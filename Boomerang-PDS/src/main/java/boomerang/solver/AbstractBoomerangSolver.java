@@ -365,6 +365,18 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			public INode<Node<Statement, Val>> createState(INode<Node<Statement, Val>> d, Field loc) {
 				// TODO Auto-generated method stub
 				return null;
+			}
+
+			@Override
+			public Weight<Field> getZero() {
+				// TODO Auto-generated method stub
+				return null;
+			}
+
+			@Override
+			public Weight<Field> getOne() {
+				// TODO Auto-generated method stub
+				return null;
 			}};
 		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 			

@@ -80,6 +80,16 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		public Field epsilon() {
 			return epsilonField();
 		}
+
+		@Override
+		public Weight<Field> getZero() {
+			return fieldPDS.getZero();
+		}
+
+		@Override
+		public Weight<Field> getOne() {
+			return fieldPDS.getOne();
+		}
 	};
 
 	protected final WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>> callAutomaton = new WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>>() {
@@ -91,6 +101,16 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		@Override
 		public Stmt epsilon() {
 			return epsilonStmt();
+		}
+
+		@Override
+		public Weight<Stmt> getZero() {
+			return callingPDS.getZero();
+		}
+
+		@Override
+		public Weight<Stmt> getOne() {
+			return callingPDS.getOne();
 		}
 	};
 

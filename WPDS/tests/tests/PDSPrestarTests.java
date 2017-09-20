@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.Set;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import tests.TestHelper.Abstraction;
@@ -22,6 +23,7 @@ import wpds.impl.PAutomaton;
 import wpds.impl.PushdownSystem;
 import wpds.impl.Transition;
 
+@Ignore 
 public class PDSPrestarTests {
 
   private PushdownSystem<StackSymbol, Abstraction> pds;
