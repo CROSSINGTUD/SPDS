@@ -60,6 +60,7 @@ public class CallPOITest extends AbstractBoomerangTest {
 
 	@Test
 	public void whyRecursiveCallPOIIsNecessary(){
+		//TODO This test case seems to be non deterministic, why?
 		A a = new A();
 		C alloc = new C();
 		A b = a;

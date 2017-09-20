@@ -129,17 +129,7 @@ public abstract class Boomerang {
 					final Node<Statement, Val> returnedNode, final boolean unbalanced) {
 
 				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
-				attachAllocHandler(backwardQuery,returnedNode, new AllocHandler(){
-
-					@Override
-					public void trigger(AllocNode<Node<Statement, Val>> node) {
-						Node<Statement, Val> fact = node.fact();
-						if(!fact.equals(backwardQuery.asNode())){
-							callSitePoi.addFlowAllocation(backwardQuery, new ForwardQuery(fact.stmt(),fact.fact()),returnedNode, unbalanced);
-						}
-					}
-				});
-				
+				callSitePoi.returnsFromCall(backwardQuery, returnedNode, unbalanced);
 			}
 			
 		};
@@ -204,7 +194,6 @@ public abstract class Boomerang {
 			@Override
 			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
 				ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
-//				System.out.println("Query + " + sourceQuery + " bypasses " + callSite);
 				callSitePoi.addByPassingAllocation(sourceQuery);
 			}
 
@@ -253,23 +242,14 @@ public abstract class Boomerang {
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
 				fieldRead.getBaseVar());
 		if (node.fact().equals(fieldRead.getStoredVar())) {
-			addBackwardQuery(backwardQuery, new EmptyStackWitnessListener<Statement, Val>() {
-				@Override
-				public void witnessFound(Node<Statement, Val> alloc) {
-				}
-			});
+			backwardSolve(backwardQuery);
 			fieldRead.addFlowAllocation(sourceQuery);
 		}
 	}
 
 	protected void backwardHandleFieldWrite(final WitnessNode<Statement, Val, Field> witness, final ForwardCallSitePOI fieldWrite,
 			final BackwardQuery backwardQuery) {
-		attachAllocHandler(backwardQuery, witness.asNode(), new AllocHandler(){
-			@Override
-			public void trigger(AllocNode<Node<Statement, Val>> node) {
-				fieldWrite.addFlowAllocation(backwardQuery,new ForwardQuery(node.fact().stmt(),node.fact().fact()),witness.asNode(), false);
-			}
-		});
+		fieldWrite.returnsFromCall(backwardQuery,witness.asNode(), false);
 	}
 	
 	
@@ -298,11 +278,7 @@ public abstract class Boomerang {
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
 				fieldWritePoi.getBaseVar());
 		if (node.fact().equals(fieldWritePoi.getStoredVar())) {
-			addBackwardQuery(backwardQuery, new EmptyStackWitnessListener<Statement, Val>() {
-				@Override
-				public void witnessFound(Node<Statement, Val> alloc) {
-				}
-			});
+			backwardSolve(backwardQuery);
 			fieldWritePoi.addFlowAllocation(sourceQuery);
 		}
 		if (node.fact().equals(fieldWritePoi.getBaseVar())) {
@@ -474,15 +450,13 @@ public abstract class Boomerang {
 	
 	private class ForwardCallSitePOI {
 		private Statement callSite;
-		private Multimap<QueryWithVal,Query> flowSourceToBase = HashMultimap.create();
-		private Multimap<ForwardQuery,Val> callSiteByPassingValues = HashMultimap.create();
 		private Set<QueryWithVal> returnsFromCall = Sets.newHashSet();
 		private Set<ForwardQuery> byPassingAllocations = Sets.newHashSet();
 		public ForwardCallSitePOI(Statement callSite){
 			this.callSite = callSite;
 		}
 
-		public void returnsFromCall(final ForwardQuery flowQuery, Node<Statement, Val> returnedNode, boolean unbalanced) {
+		public void returnsFromCall(final Query flowQuery, Node<Statement, Val> returnedNode, boolean unbalanced) {
 			if(returnsFromCall.add(new QueryWithVal(flowQuery, returnedNode, unbalanced))){
 				for(final ForwardQuery byPassing : Lists.newArrayList(byPassingAllocations)){
 					eachPair(byPassing, flowQuery,returnedNode, unbalanced);
@@ -551,42 +525,6 @@ public abstract class Boomerang {
 					eachPair(byPassingAllocation, e.flowSourceQuery,e.returningFact,e.unbalanced);
 				}
 			}
-		}
-
-		public void addFlowAllocation(Query flowSource, ForwardQuery aliasAlloc,  Node<Statement, Val> asNode, boolean unbalanced) {
-			QueryWithVal queryWithVal = new QueryWithVal(flowSource, asNode, unbalanced);
-			if(flowSourceToBase.put(queryWithVal, aliasAlloc)){
-				for(Val byPassing : Lists.newArrayList(callSiteByPassingValues.get(aliasAlloc))){
-//					activateBase(queryWithVal, aliasAlloc, byPassing);
-				}
-			}
-		}
-
-		private void activateBase(QueryWithVal queryWithVal, final ForwardQuery byPassingAllocation, final Val byPassing) {
-			if(DISABLE_CALLPOI)
-				return;
-			final Node<Statement, Val> returnedVal = queryWithVal.returningFact;
-			final Statement returnSite = returnedVal.stmt();
-			final Query flowSource = queryWithVal.flowSourceQuery;
-			if(byPassingAllocation.equals(flowSource)){
-				return;
-			}
-			AbstractBoomerangSolver byPassingSolver = queryToSolvers.get(byPassingAllocation);
-			WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> byPassingFieldAutomaton = byPassingSolver.getFieldAutomaton();
-			Node<Statement,Val> source = new Node<Statement,Val>(returnSite,byPassing);
-			final AbstractBoomerangSolver flowSolver = queryToSolvers.getOrCreate(flowSource);
-			byPassingFieldAutomaton.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(byPassingFieldAutomaton,new SingleNode<Node<Statement,Val>>(source), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
-				@Override
-				public void reachable(Transition<Field, INode<Node<Statement, Val>>> transition) {
-					flowSolver.getFieldAutomaton().addTransition(transition);
-				}
-			}));
-//			if(queryWithVal.unbalanced){
-				flowSolver.setFieldContextReachable(new Node<Statement,Val>(returnSite,byPassing));
-				if(!byPassing.equals(returnedVal.fact())){
-					flowSolver.addNormalCallFlow(returnedVal,  new Node<Statement,Val>(returnSite,byPassing));
-				}
-//			}
 		}
 		@Override
 		public int hashCode() {
