@@ -57,7 +57,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	private static final boolean DISABLE_CALLPOI = false;
 	Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
@@ -127,9 +127,8 @@ public abstract class Boomerang {
 			@Override
 			protected void onReturnFromCall(final Statement callSite, Statement returnSite, 
 					final Node<Statement, Val> returnedNode, final boolean unbalanced) {
-
 				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
-				callSitePoi.returnsFromCall(backwardQuery, returnedNode, unbalanced);
+				callSitePoi.returnsFromCall(backwardQuery, returnedNode);
 			}
 			
 		};
@@ -208,35 +207,83 @@ public abstract class Boomerang {
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
-				Optional<Stmt> optUnit = node.stmt().getUnit();
-				if (optUnit.isPresent()) {
-					Stmt stmt = optUnit.get();
-					if (stmt instanceof AssignStmt) {
-						AssignStmt as = (AssignStmt) stmt;
-						if (as.getLeftOp() instanceof InstanceFieldRef) {
-							InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
-							final Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
-							final Val stored = new Val(as.getRightOp(), icfg().getMethodOf(as));
-							final Field field = new Field(ifr.getField());
-							handleFieldWrite(node, fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(), base, field, stored)), sourceQuery);
-						}
-						
-						if (as.getLeftOp() instanceof ArrayRef) {
-							ArrayRef ifr = (ArrayRef) as.getLeftOp();
-							Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
-							Val stored = new Val(as.getRightOp(), icfg().getMethodOf(as));
-							handleFieldWrite(node, fieldWrites.getOrCreate(new FieldWritePOI(node.stmt(), base, Field.array(), stored)), sourceQuery);
-						}
-						if (as.getRightOp() instanceof InstanceFieldRef) {
-							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
-							attachHandlerFieldRead(node, ifr, as, sourceQuery);
-						}
-					}
+				if(isFieldStore(node.stmt())){
+					handleFieldWrite(node, createFieldStore(node.stmt()), sourceQuery);
+				} else if(isArrayStore(node.stmt())){
+					handleFieldWrite(node, createArrayFieldStore(node.stmt()), sourceQuery);
+				} else if(isFieldLoad(node.stmt())){
+					handleFieldLoad(node, createFieldLoad(node.stmt()), sourceQuery);
 				}
 			}
 		});
 		return solver;
 	}
+
+	protected FieldReadPOI createFieldLoad(Statement s) {	
+		Stmt stmt = s.getUnit().get();
+		AssignStmt as = (AssignStmt) stmt;
+		InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
+		Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
+		Field field = new Field(ifr.getField());
+		return fieldReads.getOrCreate(new FieldReadPOI(s, base,field, new Val(as.getLeftOp(), icfg().getMethodOf(as))));
+	}
+
+	protected FieldWritePOI createArrayFieldStore(Statement s) {
+		Stmt stmt = s.getUnit().get();
+		AssignStmt as = (AssignStmt) stmt;
+		ArrayRef ifr = (ArrayRef) as.getLeftOp();
+		Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
+		Val stored = new Val(as.getRightOp(), icfg().getMethodOf(as));
+		return fieldWrites.getOrCreate(new FieldWritePOI(s, base, Field.array(), stored));
+	}
+
+	protected FieldWritePOI createFieldStore(Statement s) {
+		Stmt stmt = s.getUnit().get();
+		AssignStmt as = (AssignStmt) stmt;
+		InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
+		Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
+		Val stored = new Val(as.getRightOp(), icfg().getMethodOf(as));
+		Field field = new Field(ifr.getField());
+		return fieldWrites.getOrCreate(new FieldWritePOI(s, base, field, stored));
+	}
+
+
+
+	public static boolean isFieldStore(Statement s) {
+		Optional<Stmt> optUnit = s.getUnit();
+		if (optUnit.isPresent()) {
+			Stmt stmt = optUnit.get();
+			if (stmt instanceof AssignStmt && ((AssignStmt) stmt).getLeftOp() instanceof InstanceFieldRef) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+
+	public static boolean isArrayStore(Statement s) {
+		Optional<Stmt> optUnit = s.getUnit();
+		if (optUnit.isPresent()) {
+			Stmt stmt = optUnit.get();
+			if (stmt instanceof AssignStmt && ((AssignStmt) stmt).getLeftOp() instanceof ArrayRef) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static boolean isFieldLoad(Statement s) {
+		Optional<Stmt> optUnit = s.getUnit();
+		if (optUnit.isPresent()) {
+			Stmt stmt = optUnit.get();
+			if (stmt instanceof AssignStmt && ((AssignStmt) stmt).getRightOp() instanceof InstanceFieldRef) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+
 
 	protected void handleFieldRead(final WitnessNode<Statement, Val, Field> node, FieldReadPOI fieldRead, final BackwardQuery sourceQuery) {	
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
@@ -297,12 +344,8 @@ public abstract class Boomerang {
 		}
 	}
 
-	private void attachHandlerFieldRead(final WitnessNode<Statement, Val, Field> node, final InstanceFieldRef ifr,
-			final AssignStmt fieldRead, final ForwardQuery sourceQuery) {
-		Val base = new Val(ifr.getBase(), icfg().getMethodOf(fieldRead));
-		final Field field = new Field(ifr.getField());
-		final FieldReadPOI fieldReadPoi = 	fieldReads.getOrCreate(new FieldReadPOI(node.stmt(), base,field, new Val(fieldRead.getLeftOp(), icfg().getMethodOf(fieldRead))));
-		if (node.fact().value().equals(ifr.getBase())) {
+	private void handleFieldLoad(final WitnessNode<Statement, Val, Field> node, final FieldReadPOI fieldReadPoi, final ForwardQuery sourceQuery) {
+		if (node.fact().equals(fieldReadPoi.getBaseVar())) {
 			queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 
 				@Override
