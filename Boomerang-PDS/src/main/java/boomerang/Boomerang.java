@@ -514,13 +514,7 @@ public abstract class Boomerang {
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					if(t.getStart().fact().stmt().equals(returnedNode.stmt()) && !(t.getStart() instanceof GeneratedState)){
-						byPassingFieldAutomaton.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(byPassingFieldAutomaton, t.getStart(), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
-
-							@Override
-							public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
-								flowSolver.getFieldAutomaton().addTransition(t);
-							}
-						}));
+						byPassingFieldAutomaton.registerDFSListener(t.getStart(), new ImportToSolver(flowSolver));
 						Val byPassing = t.getStart().fact().fact();
 						flowSolver.setFieldContextReachable(new Node<Statement,Val>(returnedNode.stmt(),byPassing));
 						flowSolver.addNormalCallFlow(returnedNode,  new Node<Statement,Val>(returnedNode.stmt(),byPassing));
@@ -602,14 +596,8 @@ public abstract class Boomerang {
 							if(!aliases.put(flowAllocation, aliasedVariableAtStmt.fact().fact()))
 								return;
 							final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = baseSolver.getFieldAutomaton();
-							aut.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(aut, aliasedVariableAtStmt, new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
-							
-								@Override
-								public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
-									if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()))
-										flowSolver.getFieldAutomaton().addTransition(transition);
-								}
-							}));
+							if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()))
+								aut.registerDFSListener(aliasedVariableAtStmt,new ImportToSolver(flowSolver));
 							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
 							if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()))
 								flowSolver.handlePOI(FieldStmtPOI.this, aliasedVariableAtStmt.fact());
@@ -619,12 +607,61 @@ public abstract class Boomerang {
 					@Override
 					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
 					}
+					
+					
 				});
 			}
 		}
 		
 	}
-	
+	class ImportToSolver implements ReachabilityListener<Field, INode<Node<Statement,Val>>>{
+		
+		private AbstractBoomerangSolver flowSolver;
+
+		public ImportToSolver(AbstractBoomerangSolver flowSolver) {
+			this.flowSolver = flowSolver;
+		}
+
+		@Override
+		public void reachable(Transition<Field, INode<Node<Statement,Val>>> transition) {
+			flowSolver.getFieldAutomaton().addTransition(transition);
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ImportToSolver other = (ImportToSolver) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (flowSolver == null) {
+				if (other.flowSolver != null)
+					return false;
+			} else if (!flowSolver.equals(other.flowSolver))
+				return false;
+			return true;
+		}
+
+		private Boomerang getOuterType() {
+			return Boomerang.this;
+		}
+		
+		
+		
+	}
 	public boolean addAllocationType(RefType type){
 		if(allocatedTypes.add(type)){
 			for(AbstractBoomerangSolver solvers : queryToSolvers.values()){

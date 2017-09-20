@@ -1,8 +1,8 @@
 package wpds.interfaces;
 
-import java.util.Collection;
 import java.util.Set;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import wpds.impl.Transition;
@@ -10,26 +10,23 @@ import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 
 public class ForwardDFSVisitor<N extends Location,D extends State, W extends Weight<N>> extends WPAStateListener<N, D, W>{
-	
-	private Set<D> reachableStates = Sets.newHashSet();
-	private ReachabilityListener<N,D> listener;
+	private Set<ReachabilityListener<N,D>> listeners = Sets.newHashSet();
 	protected WeightedPAutomaton<N, D, W> aut;
 	private Set<Transition<N,D>> visited =  Sets.newHashSet();
 	
 	
-	public ForwardDFSVisitor(WeightedPAutomaton<N,D,W> aut, D startState, ReachabilityListener<N,D> listener){
+	public ForwardDFSVisitor(WeightedPAutomaton<N,D,W> aut, D startState){
 		super(startState);
 		this.aut = aut;
-		this.listener = listener;
-		this.reachableStates.add(startState);
 	}
 	
 
 	private void addReachable(Transition<N, D> s) {
 		if(!visited.add(s))
 			return;
-
-		listener.reachable(s);
+		for(ReachabilityListener<N,D> l : Lists.newArrayList(listeners)){
+			l.reachable(s);
+		}
 		if(!continueWith(s)){
 			return;
 		}
@@ -107,42 +104,15 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 
 	@Override
 	public void onInTransitionAdded(Transition<N, D> t) {
-		// TODO Auto-generated method stub
 		
 	}
 
-
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = super.hashCode();
-		result = prime * result + ((aut == null) ? 0 : aut.hashCode());
-		result = prime * result + ((listener == null) ? 0 : listener.hashCode());
-		return result;
+	public void registerListener(ReachabilityListener<N, D> l){
+		if(listeners.add(l)){
+			for(Transition<N, D> t : Lists.newArrayList(visited)){
+				l.reachable(t);
+			}
+		}
 	}
-
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (!super.equals(obj))
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		ForwardDFSVisitor other = (ForwardDFSVisitor) obj;
-		if (aut == null) {
-			if (other.aut != null)
-				return false;
-		} else if (!aut.equals(other.aut))
-			return false;
-		if (listener == null) {
-			if (other.listener != null)
-				return false;
-		} else if (!listener.equals(other.listener))
-			return false;
-		return true;
-	}
-	
 	
 }

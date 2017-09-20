@@ -12,6 +12,7 @@ import java.util.Set;
 import com.google.common.base.Joiner;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
@@ -20,7 +21,10 @@ import pathexpression.IRegEx;
 import pathexpression.LabeledGraph;
 import pathexpression.PathExpressionComputer;
 import pathexpression.RegEx;
+import wpds.interfaces.ForwardDFSEpsilonVisitor;
+import wpds.interfaces.ForwardDFSVisitor;
 import wpds.interfaces.Location;
+import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
@@ -42,6 +46,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private final Multimap<D, Transition<N, D>> transitionsInto = HashMultimap.create();
 	private Set<WPAUpdateListener<N, D, W>> listeners = Sets.newHashSet();
 	private Multimap<D,WPAStateListener<N, D, W>> stateListeners = HashMultimap.create();
+	private Map<D,ForwardDFSVisitor<N, D, W>> stateToDFS = Maps.newHashMap();
+	private Map<D,ForwardDFSVisitor<N, D, W>> stateToEpsilonDFS = Maps.newHashMap();
 
 	public abstract D createState(D d, N loc);
 
@@ -212,17 +218,23 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		this.finalState.add(state);
 	}
 
-	public Set<Transition<N,D>> dfs(D state) {
-		Set<Transition<N,D>> visited = Sets.newHashSet();
-		LinkedList<Transition<N,D>> worklist = Lists.newLinkedList(getTransitionsInto(state));
-		while(!worklist.isEmpty()){
-			Transition<N, D> poll = worklist.poll();
-			if(!visited.add(poll)){
-				continue;
-			}
-			worklist.addAll(getTransitionsInto(poll.getTarget()));
+	
+	public void registerDFSListener(D state, ReachabilityListener<N, D> l){
+		ForwardDFSVisitor<N, D, W> dfsVisitor = stateToDFS.get(state);
+		if(dfsVisitor == null){
+			dfsVisitor = new ForwardDFSVisitor<N, D, W>(this, state);
+			this.registerListener(dfsVisitor);
 		}
-		return visited;
+		dfsVisitor.registerListener(l);
+	}	
+	
+	public void registerDFSEpsilonListener(D state, ReachabilityListener<N, D> l){
+		ForwardDFSVisitor<N, D, W> dfsVisitor = stateToEpsilonDFS.get(state);
+		if(dfsVisitor == null){
+			dfsVisitor = new ForwardDFSEpsilonVisitor<N,D,W>(this, state);
+			this.registerListener(dfsVisitor);
+		}
+		dfsVisitor.registerListener(l);
 	}
 
 	public void registerListener(WPAStateListener<N, D, W> l) {

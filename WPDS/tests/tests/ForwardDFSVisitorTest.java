@@ -16,8 +16,6 @@ import tests.TestHelper.Abstraction;
 import tests.TestHelper.StackSymbol;
 import wpds.impl.PAutomaton;
 import wpds.impl.Transition;
-import wpds.impl.Weight.NoWeight;
-import wpds.interfaces.ForwardDFSVisitor;
 import wpds.interfaces.ReachabilityListener;
 
 public class ForwardDFSVisitorTest {
@@ -35,13 +33,13 @@ public class ForwardDFSVisitorTest {
 	final Set<Transition<StackSymbol, Abstraction>> reachables = Sets.newHashSet();
 	@Test
 	public void delayedAdd() {
-		fa.registerListener(new ForwardDFSVisitor<StackSymbol, Abstraction, NoWeight<StackSymbol>>(fa, a(0),
+		fa.registerDFSListener(a(0),
 				new ReachabilityListener<StackSymbol, Abstraction>() {
 					@Override
 					public void reachable(Transition<StackSymbol, Abstraction> t) {
 						reachables.add(t);
 					}
-				}));
+				});
 		fa.addTransition(t(0, "n1", 1));
 		Assert.assertFalse(reachables.isEmpty());
 		Assert.assertTrue(reachableMinusTrans().isEmpty());
@@ -55,14 +53,14 @@ public class ForwardDFSVisitorTest {
 		fa.addTransition(t(0, "n1", 1));
 		fa.addTransition(t(1, "n1", 2));
 		Assert.assertFalse(fa.getTransitions().isEmpty());
-		fa.registerListener(new ForwardDFSVisitor<StackSymbol, Abstraction, NoWeight<StackSymbol>>(fa, a(0),
+		fa.registerDFSListener(a(0),
 				new ReachabilityListener<StackSymbol, Abstraction>() {
 					@Override
 					public void reachable(Transition<StackSymbol, Abstraction> t) {
 						System.out.println("Reachable" + t);
 						reachables.add(t);
 					}
-				}));
+				});
 		Assert.assertFalse(reachables.isEmpty());
 		Assert.assertTrue(reachableMinusTrans().isEmpty());
 

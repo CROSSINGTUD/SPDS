@@ -419,12 +419,12 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			@Override
 			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 				if(t.getStart().fact().stmt().equals(statement) && !(t.getStart() instanceof GeneratedState)){
-					fieldAutomaton.registerListener(new ForwardDFSVisitor<Field, INode<Node<Statement,Val>>, Weight<Field>>(fieldAutomaton,t.getStart(),new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
+					fieldAutomaton.registerDFSListener(t.getStart(),new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 						@Override
 						public void reachable(Transition<Field, INode<Node<Statement,Val>>> t) {
 							weightedPAutomaton.addTransition(t);
 						}
-					}));
+					});
 				}
 			}
 		});

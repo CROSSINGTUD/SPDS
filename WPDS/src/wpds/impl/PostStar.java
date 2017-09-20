@@ -26,12 +26,12 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 				} else if(rule instanceof PushRule){
 					fa.registerListener(new HandlePushListener((PushRule)rule));
 				} else if(rule instanceof PopRule){
-					fa.registerListener(new ForwardDFSEpsilonVisitor<N, D, W>(fa, rule.getS1(),new ReachabilityListener<N, D>() {
+					fa.registerDFSEpsilonListener(rule.getS1(),new ReachabilityListener<N, D>() {
 						@Override
 						public void reachable(Transition<N, D> t) {
 							fa.registerListener(new HandlePopListener((PopRule)rule, t.getStart()));
 						}
-					}));
+					});
 				}
 			}
 
