@@ -510,12 +510,13 @@ public abstract class Boomerang {
 		    final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> byPassingFieldAutomaton = byPassingSolver.getFieldAutomaton();
 		    final AbstractBoomerangSolver flowSolver = queryToSolvers.getOrCreate(flowQuery);
 		    byPassingSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener(returnedNode.stmt().getMethod()) {
-				
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-					if(t.getStart().fact().stmt().equals(returnedNode.stmt()) && !(t.getStart() instanceof GeneratedState)){
-						byPassingFieldAutomaton.registerDFSListener(t.getStart(), new ImportToSolver(flowSolver));
+					if(!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(returnedNode.stmt())){
 						Val byPassing = t.getStart().fact().fact();
+						if(byPassing.equals(returnedNode.fact()))
+							return;
+						byPassingFieldAutomaton.registerDFSListener(t.getStart(), new ImportToSolver(flowSolver));
 						flowSolver.setFieldContextReachable(new Node<Statement,Val>(returnedNode.stmt(),byPassing));
 						flowSolver.addNormalCallFlow(returnedNode,  new Node<Statement,Val>(returnedNode.stmt(),byPassing));
 					}

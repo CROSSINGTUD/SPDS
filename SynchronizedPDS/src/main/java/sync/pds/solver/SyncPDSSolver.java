@@ -172,7 +172,8 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 	protected void processNode(WitnessNode<Stmt, Fact,Field> witnessNode) {
-		addReachableState(witnessNode);
+		if(!addReachableState(witnessNode))
+			return;
 		Node<Stmt, Fact> curr = witnessNode.asNode();
 		Collection<? extends State> successors = computeSuccessor(curr);
 //		System.out.println(curr+ " FLows tot \t\t\t "+successors);
@@ -210,15 +211,15 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		queuedFieldWitness.putAll(succWit, fieldWitnesses);
 	}
 
-	private void addReachableState(WitnessNode<Stmt,Fact,Field> curr) {
-		boolean existed = reachedStates.containsKey(curr);
-		if (existed)
-			return;
+	private boolean addReachableState(WitnessNode<Stmt,Fact,Field> curr) {
+		if (reachedStates.containsKey(curr))
+			return false;
 //		System.out.println(this.getClass() + " " + curr);
 		reachedStates.put(curr,curr);
 		for (SyncPDSUpdateListener<Stmt, Fact, Field> l : Lists.newLinkedList(updateListeners)) {
 			l.onReachableNodeAdded(curr);
 		}
+		return true;
 	}
 
 	public boolean processNormal(Node<Stmt,Fact> curr, Node<Stmt, Fact> succ) {
