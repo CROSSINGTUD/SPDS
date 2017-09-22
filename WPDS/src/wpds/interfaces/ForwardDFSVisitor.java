@@ -114,5 +114,34 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			}
 		}
 	}
+
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime * result + ((aut == null) ? 0 : aut.hashCode());
+		return result;
+	}
+
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ForwardDFSVisitor other = (ForwardDFSVisitor) obj;
+		if (aut == null) {
+			if (other.aut != null)
+				return false;
+		} else if (!aut.equals(other.aut))
+			return false;
+		return true;
+	}
+	
+	
 	
 }

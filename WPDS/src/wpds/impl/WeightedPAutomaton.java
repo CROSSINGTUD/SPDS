@@ -223,6 +223,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		ForwardDFSVisitor<N, D, W> dfsVisitor = stateToDFS.get(state);
 		if(dfsVisitor == null){
 			dfsVisitor = new ForwardDFSVisitor<N, D, W>(this, state);
+			stateToDFS.put(state, dfsVisitor);
 			this.registerListener(dfsVisitor);
 		}
 		dfsVisitor.registerListener(l);
@@ -232,6 +233,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		ForwardDFSVisitor<N, D, W> dfsVisitor = stateToEpsilonDFS.get(state);
 		if(dfsVisitor == null){
 			dfsVisitor = new ForwardDFSEpsilonVisitor<N,D,W>(this, state);
+			stateToEpsilonDFS.put(state, dfsVisitor);
 			this.registerListener(dfsVisitor);
 		}
 		dfsVisitor.registerListener(l);
