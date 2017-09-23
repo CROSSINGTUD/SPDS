@@ -575,26 +575,27 @@ public abstract class Boomerang {
 			assert !flowSolver.getSuccsOf(getStmt()).isEmpty();
 //			System.out.println(this.toString() + "     " + baseAllocation + "   " + flowAllocation);
 			
-				baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
-	
-					@Override
-					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-						final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
+			baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+
+				@Override
+				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+					final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
+					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt()) && !(aliasedVariableAtStmt instanceof GeneratedState)){
+						if(!aliases.put(flowAllocation, aliasedVariableAtStmt.fact().fact()))
+							return;
+						final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = baseSolver.getFieldAutomaton();
+						aut.registerDFSListener(t.getTarget(),new ImportToSolver(flowSolver));
+
 						for(final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())){
-							if(aliasedVariableAtStmt.fact().stmt().equals(succOfWrite) && !(aliasedVariableAtStmt instanceof GeneratedState)){
-								if(aliasedVariableAtStmt.fact().fact().equals(getBaseVar()))
-									return;
-								if(!aliases.put(flowAllocation, aliasedVariableAtStmt.fact().fact()))
-									return;
-								final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = baseSolver.getFieldAutomaton();
-								aut.registerDFSListener(aliasedVariableAtStmt,new ImportToSolver(flowSolver));
-								flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
-								if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()))
-									flowSolver.handlePOI(FieldStmtPOI.this, aliasedVariableAtStmt.fact());
-							}	
-						}
+							Node<Statement, Val> aliasedVarAtSucc = new Node<Statement,Val>(succOfWrite,aliasedVariableAtStmt.fact().fact());
+							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.empty(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
+							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new SingleNode<Node<Statement,Val>>(aliasedVarAtSucc), t.getLabel(),t.getTarget()));
+							flowSolver.handlePOI(FieldStmtPOI.this, aliasedVarAtSucc);
+						}	
+
 					}
-				});
+				}
+			});
 			
 		}
 		
