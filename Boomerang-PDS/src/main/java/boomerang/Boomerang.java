@@ -585,12 +585,13 @@ public abstract class Boomerang {
 							return;
 						final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = baseSolver.getFieldAutomaton();
 						aut.registerDFSListener(t.getTarget(),new ImportToSolver(flowSolver));
-
 						for(final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())){
 							Node<Statement, Val> aliasedVarAtSucc = new Node<Statement,Val>(succOfWrite,aliasedVariableAtStmt.fact().fact());
 							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.empty(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
 							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new SingleNode<Node<Statement,Val>>(aliasedVarAtSucc), t.getLabel(),t.getTarget()));
-							flowSolver.handlePOI(FieldStmtPOI.this, aliasedVarAtSucc);
+							Node<Statement, Val> rightOpNode = new Node<Statement, Val>(getStmt(),getStoredVar());
+							flowSolver.setFieldContextReachable(aliasedVarAtSucc);
+							flowSolver.addNormalCallFlow(rightOpNode,aliasedVarAtSucc);
 						}	
 
 					}

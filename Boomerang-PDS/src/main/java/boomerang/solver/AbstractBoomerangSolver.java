@@ -287,14 +287,6 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return fieldFlows.add(fieldFlow);
 	}
 	
-	public void handlePOI(AbstractPOI<Statement, Val, Field> fieldWrite, Node<Statement,Val> aliasedVariableAtStmt) {
-		Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldWrite.getStmt(),
-				fieldWrite.getStoredVar());
-		setFieldContextReachable(aliasedVariableAtStmt);
-		addNormalCallFlow(rightOpNode, aliasedVariableAtStmt);
-	}
-
-
 	@Override
 	protected void processNode(final WitnessNode<Statement, Val, Field> witnessNode) {
 //		if(reachableMethods.contains(witnessNode.stmt().getMethod()) || witnessNode.stmt().getMethod().isStatic()){
@@ -394,14 +386,12 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 
 			@Override
 			public Weight<Field> getZero() {
-				// TODO Auto-generated method stub
-				return null;
+				return fieldPDS.getZero();
 			}
 
 			@Override
 			public Weight<Field> getOne() {
-				// TODO Auto-generated method stub
-				return null;
+				return fieldPDS.getOne();
 			}};
 		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 			
