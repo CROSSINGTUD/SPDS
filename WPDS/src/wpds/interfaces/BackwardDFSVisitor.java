@@ -50,14 +50,9 @@ public class BackwardDFSVisitor<N extends Location,D extends State, W extends We
 
 
 	@Override
-	public void onAddedTransition(Transition<N, D> t) {
+	public void onWeightAdded(Transition<N, D> t, Weight<N> w) {
 		if(reachableStates.contains(t.getTarget()))
 			addReachable(t);
-	}
-
-	@Override
-	public void onWeightAdded(Transition<N, D> t, Weight<N> w) {
-		
 	}
 	
 }

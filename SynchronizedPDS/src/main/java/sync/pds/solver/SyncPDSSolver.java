@@ -133,14 +133,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private class CallAutomatonListener implements WPAUpdateListener<Stmt, INode<Fact>,Weight<Stmt>>{
 
 		@Override
-		public void onAddedTransition(Transition<Stmt, INode<Fact>> t) {
+		public void onWeightAdded(Transition<Stmt, INode<Fact>> t, Weight<Stmt> w) {
 			if(!(t.getStart() instanceof GeneratedState)){
 				setCallingContextReachable(new Node<Stmt,Fact>(t.getString(),t.getStart().fact()));
 			}
-		}
-
-		@Override
-		public void onWeightAdded(Transition<Stmt, INode<Fact>> t, Weight<Stmt> w) {
 		}
 	}
 
@@ -273,21 +269,17 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 					return;
 				fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, Weight<Field>>() {
 					@Override
-					public void onAddedTransition(Transition<Field, INode<Node<Stmt, Fact>>> t) {
+					public void onWeightAdded(Transition<Field, INode<Node<Stmt, Fact>>> t, Weight<Field> w) {
 						if(t.getStart() instanceof GeneratedState)
 							return;
 						if(!t.getStart().fact().equals(sourceNode))
 							return;
 						listener.fieldWitness(t);
 					}
-
-					@Override
-					public void onWeightAdded(Transition<Field, INode<Node<Stmt, Fact>>> t, Weight<Field> w) {
-					}
 				});
 				callAutomaton.registerListener(new WPAUpdateListener<Stmt, INode<Fact>, Weight<Stmt>>() {
 					@Override
-					public void onAddedTransition(Transition<Stmt, INode<Fact>> t) {
+					public void onWeightAdded(Transition<Stmt, INode<Fact>> t, Weight<Stmt> w) {
 						if(t.getStart() instanceof GeneratedState)
 							return;
 						if(!t.getStart().fact().equals(sourceNode.fact()))
@@ -295,11 +287,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 						if(!t.getLabel().equals(sourceNode.stmt()))
 							return;
 						listener.callWitness(t);
-					}
-
-					@Override
-					public void onWeightAdded(Transition<Stmt, INode<Fact>> t, Weight<Stmt> w) {
-						
 					}
 				});
 			}
@@ -360,17 +347,13 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private class FieldUpdateListener implements WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, Weight<Field>> {
 
 		@Override
-		public void onAddedTransition(Transition<Field, INode<Node<Stmt,Fact>>> t) {
+		public void onWeightAdded(Transition<Field, INode<Node<Stmt,Fact>>> t,
+				Weight<Field> w) {
 			INode<Node<Stmt,Fact>> n = t.getStart();
 			if(!(n instanceof GeneratedState)){
 				Node<Stmt,Fact> fact = n.fact();
 				setFieldContextReachable(new Node<Stmt,Fact>(fact.stmt(), fact.fact()));
 			}
-		}
-
-		@Override
-		public void onWeightAdded(Transition<Field, INode<Node<Stmt,Fact>>> t,
-				Weight<Field> w) {
 		}
 	}
 

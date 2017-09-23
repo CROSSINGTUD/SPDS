@@ -62,7 +62,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		return new AnalysisMode[]{
 			AnalysisMode.WholeProgram,
 //			AnalysisMode.DemandDrivenForward, 
-			AnalysisMode.DemandDrivenBackward
+//			AnalysisMode.DemandDrivenBackward
 		};
 	}
 	

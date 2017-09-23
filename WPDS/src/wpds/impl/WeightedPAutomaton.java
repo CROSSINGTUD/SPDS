@@ -182,7 +182,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		if(!newWeight.equals(oldWeight)){
 			transitionToWeights.put(trans, newWeight);
 			for(WPAUpdateListener<N, D, W> l : Lists.newArrayList(listeners)){
-				l.onAddedTransition(trans);
 				l.onWeightAdded(trans, weight);
 			}
 			for(WPAStateListener<N, D, W> l : Lists.newArrayList(stateListeners.get(trans.getStart()))){
@@ -202,10 +201,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	public void registerListener(WPAUpdateListener<N,D,W> listener){
 		if(!listeners.add(listener))
 			return;
-		for(Transition<N, D > t : getTransitions()){
-			listener.onAddedTransition(t);
-		}
-		for(Entry<Transition<N, D>, W> transAndWeight : transitionToWeights.entrySet()){
+		for(Entry<Transition<N, D>, W> transAndWeight : Lists.newArrayList(transitionToWeights.entrySet())){
 			listener.onWeightAdded(transAndWeight.getKey(), transAndWeight.getValue());
 		}
 	}

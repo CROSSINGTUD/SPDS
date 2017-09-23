@@ -70,15 +70,9 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		this.fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 
 			@Override
-			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
 				addTransitionToMethod(t.getStart().fact().stmt().getMethod(), t);
 				addTransitionToMethod(t.getTarget().fact().stmt().getMethod(), t);
-			}
-
-			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-				// TODO Auto-generated method stub
-				
 			}
 		});
 		
@@ -413,11 +407,6 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			
 			@Override
 			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-				
-			}
-			
-			@Override
-			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 				if(t.getStart().fact().stmt().equals(statement) && !(t.getStart() instanceof GeneratedState)){
 					fieldAutomaton.registerDFSListener(t.getStart(),new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 						@Override
@@ -427,6 +416,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 					});
 				}
 			}
+			
 		});
 		if(!weightedPAutomaton.getTransitions().isEmpty()){
 			System.out.println(statement);

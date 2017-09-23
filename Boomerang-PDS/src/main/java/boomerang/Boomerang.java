@@ -149,16 +149,11 @@ public abstract class Boomerang {
 							queryToSolvers.getOrCreate(backwardQuery).addCallAutomatonListener(new WPAUpdateListener<Statement, INode<Val>, Weight<Statement>>() {
 
 								@Override
-								public void onAddedTransition(Transition<Statement, INode<Val>> t) {
+								public void onWeightAdded(Transition<Statement, INode<Val>> t, Weight<Statement> w) {
 									if(t.getTarget() instanceof GeneratedState){
 										GeneratedState<Val,Statement> generatedState = (GeneratedState) t.getTarget();
 										queryToSolvers.getOrCreate(forwardQuery).addUnbalancedFlow(generatedState.location().getMethod());
 									}
-								}
-
-								@Override
-								public void onWeightAdded(Transition<Statement, INode<Val>> t, Weight<Statement> w) {
-									
 								}
 							});
 						}
@@ -314,14 +309,11 @@ public abstract class Boomerang {
 		if (node.fact().equals(fieldWritePoi.getBaseVar())) {
 			queryToSolvers.getOrCreate(sourceQuery).addFieldAutomatonListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 				@Override
-				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-					if(t.getStart().fact().equals(node.asNode()) && t.getTarget().fact().equals(sourceQuery.asNode())){
+				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+					if(!(t.getStart() instanceof GeneratedState) && t.getStart().fact().equals(node.asNode()) && t.getTarget().fact().equals(sourceQuery.asNode()) && t.getLabel().equals(Field.empty())){
 						fieldWritePoi.addBaseAllocation(sourceQuery);
 						forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(node.stmt())).addByPassingAllocation(sourceQuery);
 					}
-				}
-				@Override
-				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
 				}
 			});
 		}
@@ -332,15 +324,10 @@ public abstract class Boomerang {
 			queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 
 				@Override
-				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
 					if(t.getStart().fact().equals(node.asNode()) && t.getTarget().fact().equals(sourceQuery.asNode())){
 						fieldReadPoi.addBaseAllocation(sourceQuery);
 					}
-				}
-
-				@Override
-				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-					
 				}
 			});
 		}
@@ -480,7 +467,7 @@ public abstract class Boomerang {
 		public void returnsFromCall(final Query flowQuery, Node<Statement, Val> returnedNode) {
 			if(returnsFromCall.add(new QueryWithVal(flowQuery, returnedNode))){
 				for(final ForwardQuery byPassing : Lists.newArrayList(byPassingAllocations)){
-					eachPair(byPassing, flowQuery,returnedNode);
+					eachPair(byPassing, flowQuery, returnedNode);
 				}
 			}
 		}
@@ -497,7 +484,7 @@ public abstract class Boomerang {
 							@Override
 							public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
 								if(reachableNode.asNode().equals(returnedNode)){
-									importFlowsAtReturnSite(byPassing,flowQuery, returnedNode);
+									importFlowsAtReturnSite(byPassing, flowQuery, returnedNode);
 								}
 							}
 						});
@@ -510,7 +497,7 @@ public abstract class Boomerang {
 		    final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> byPassingFieldAutomaton = byPassingSolver.getFieldAutomaton();
 		    final AbstractBoomerangSolver flowSolver = queryToSolvers.getOrCreate(flowQuery);
 		    byPassingSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener(returnedNode.stmt().getMethod()) {
-				@Override
+		    	@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					if(!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(returnedNode.stmt())){
 						Val byPassing = t.getStart().fact().fact();
@@ -587,31 +574,28 @@ public abstract class Boomerang {
 			final AbstractBoomerangSolver flowSolver = queryToSolvers.get(flowAllocation);
 			assert !flowSolver.getSuccsOf(getStmt()).isEmpty();
 //			System.out.println(this.toString() + "     " + baseAllocation + "   " + flowAllocation);
-			for(final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())){
+			
 				baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 	
 					@Override
-					public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
 						final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-						if(aliasedVariableAtStmt.fact().stmt().equals(succOfWrite) && !(aliasedVariableAtStmt instanceof GeneratedState)){
-							if(!aliases.put(flowAllocation, aliasedVariableAtStmt.fact().fact()))
-								return;
-							final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = baseSolver.getFieldAutomaton();
-							if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()))
+						for(final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())){
+							if(aliasedVariableAtStmt.fact().stmt().equals(succOfWrite) && !(aliasedVariableAtStmt instanceof GeneratedState)){
+								if(aliasedVariableAtStmt.fact().fact().equals(getBaseVar()))
+									return;
+								if(!aliases.put(flowAllocation, aliasedVariableAtStmt.fact().fact()))
+									return;
+								final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = baseSolver.getFieldAutomaton();
 								aut.registerDFSListener(aliasedVariableAtStmt,new ImportToSolver(flowSolver));
-							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
-							if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()))
-								flowSolver.handlePOI(FieldStmtPOI.this, aliasedVariableAtStmt.fact());
+								flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
+								if(!aliasedVariableAtStmt.fact().fact().equals(getBaseVar()))
+									flowSolver.handlePOI(FieldStmtPOI.this, aliasedVariableAtStmt.fact());
+							}	
 						}
 					}
-	
-					@Override
-					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-					}
-					
-					
 				});
-			}
+			
 		}
 		
 	}

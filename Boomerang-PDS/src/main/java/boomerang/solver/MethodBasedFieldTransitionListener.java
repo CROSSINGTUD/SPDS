@@ -23,5 +23,8 @@ public abstract class MethodBasedFieldTransitionListener implements WPAUpdateLis
 	
 	@Override
 	public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+		onAddedTransition(t);
 	}
+
+	public abstract void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t);
 }
