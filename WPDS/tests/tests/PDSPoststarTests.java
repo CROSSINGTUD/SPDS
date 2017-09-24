@@ -11,7 +11,6 @@ import static tests.TestHelper.s;
 import static tests.TestHelper.t;
 
 import java.util.Collection;
-import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -36,12 +35,11 @@ public class PDSPoststarTests {
     pds.addRule(push(2, "b", 2, "c", "d"));
     pds.addRule(pop(3, "c", 3));
     PAutomaton<StackSymbol, Abstraction> fa = accepts(2, "b");
-    System.out.println(fa.getTransitions());
     fa.addTransition(new Transition<StackSymbol, Abstraction>(a(3), fa.epsilon(), a(2)));
-    System.out.println(fa.getTransitions());
     pds.poststar(fa);
     System.out.println(fa.getTransitions());
-    assertTrue(fa.getTransitions().contains(t(3, "d", ACC)));
+    assertTrue(fa.getTransitions().contains(t(3, "EPS", 2)));
+    assertTrue(fa.getTransitions().contains(t(2, "b", ACC)));
   }
   
   @Test

@@ -1,13 +1,6 @@
 package sync.pds.solver;
 
-import java.util.Set;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-
-import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import wpds.impl.Transition;
 import wpds.interfaces.Location;
 
 public class WitnessNode<Stmt extends Location, Fact, Field extends Location> {

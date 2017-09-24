@@ -27,6 +27,7 @@ import sync.pds.solver.nodes.SingleNode;
 import sync.pds.weights.SetDomain;
 import wpds.impl.NormalRule;
 import wpds.impl.PopRule;
+import wpds.impl.PostStar;
 import wpds.impl.PushRule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
@@ -90,6 +91,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		public Weight<Field> getOne() {
 			return fieldPDS.getOne();
 		}
+
+		@Override
+		public boolean isGeneratedState(INode<Node<Stmt, Fact>> d) {
+			return d instanceof GeneratedState;
+		}
 	};
 
 	protected final WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>> callAutomaton = new WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>>() {
@@ -111,6 +117,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		@Override
 		public Weight<Stmt> getOne() {
 			return callingPDS.getOne();
+		}
+
+		@Override
+		public boolean isGeneratedState(INode<Fact> d) {
+			return d instanceof GeneratedState;
 		}
 	};
 

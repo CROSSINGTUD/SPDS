@@ -27,6 +27,11 @@ public class TestHelper {
       public StackSymbol epsilon() {
         return s("EPS");
       }
+
+	  @Override
+	  public boolean isGenereatedState(Abstraction d) {
+		return d.s != null;
+	  }
     };
     aut.setInitialState(a(a));
     aut.addFinalState(ACC);
@@ -58,6 +63,11 @@ public class TestHelper {
 	  public NumWeight<StackSymbol> getZero() {
      	  return getZero();
       }
+
+	@Override
+	public boolean isGenereatedState(Abstraction d) {
+		return d.s != null;
+	}
     };
     aut.setInitialState(a(a));
     aut.addFinalState(ACC);
@@ -129,11 +139,12 @@ public class TestHelper {
 
 
   static class Abstraction implements State {
-    int a;
-    StackSymbol s;
+    final int a;
+    final StackSymbol s;
 
     Abstraction(int a) {
       this.a = a;
+      this.s = null;
     }
 
     Abstraction(Abstraction a, StackSymbol s) {

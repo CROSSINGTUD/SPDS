@@ -1,11 +1,17 @@
 package wpds.impl;
 
-import wpds.interfaces.ForwardDFSEpsilonVisitor;
+import java.awt.geom.GeneralPath;
+import java.util.Map;
+
+import com.google.common.collect.Maps;
+
+import wpds.interfaces.BackwardDFSEpsilonVisitor;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
+import wpds.interfaces.WPAUpdateListener;
 import wpds.interfaces.WPDSUpdateListener;
 import wpds.wildcard.ExclusionWildcard;
 import wpds.wildcard.Wildcard;
@@ -13,6 +19,8 @@ import wpds.wildcard.Wildcard;
 public class PostStar<N extends Location, D extends State, W extends Weight<N>> {
 	private IPushdownSystem<N, D, W> pds;
 	private WeightedPAutomaton<N, D, W> fa;
+	private Map<Transition<N,D>, WeightedPAutomaton<N, D, W>> summaries = Maps.newHashMap();
+	private static final boolean SUMMARIES = true;
 
 	public void poststar(IPushdownSystem<N, D, W> pds, WeightedPAutomaton<N, D, W> initialAutomaton) {
 		this.pds = pds;
@@ -37,7 +45,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 		});
 	}
-	
 	private class HandlePopListener extends WPAStateListener<N, D, W> {
 		private PopRule<N, D, W> rule;
 		public HandlePopListener(PopRule<N, D, W> rule, D state) {
@@ -195,10 +202,25 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		public void onOutTransitionAdded(final Transition<N, D> t) {
 			if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
 				final D p = rule.getS2();
-				N gammaPrime = rule.getL2();
+				final N gammaPrime = rule.getL2();
 				final D irState = fa.createState(p, gammaPrime);
-				update(new Transition<N, D>(p, gammaPrime, irState),
-						rule.getWeight());
+				if(!SUMMARIES){
+					update(new Transition<N, D>(p, gammaPrime, irState), rule.getWeight());
+				} else{
+					if(!fa.isGeneratedState(irState))
+						throw new RuntimeException("State must be generated");
+					final WeightedPAutomaton<N, D, W> summary = getOrCreateSummary(new Transition<N, D>(p, gammaPrime, irState), rule.getWeight());
+					summary.registerListener(new WPAUpdateListener<N, D, W>() {
+
+						@Override
+						public void onWeightAdded(Transition<N, D> t, Weight<N> w) {
+							if((t.getLabel().equals(fa.epsilon()) && (fa.isGeneratedState(t.getTarget()))) || (fa.isGeneratedState(t.getStart()) && fa.isGeneratedState(t.getTarget()))){
+								if(summary.getWeightFor(t) != null)
+									update(t,summary.getWeightFor(t));
+							}
+						}
+					});
+				}
 				W currWeight = getOrCreateWeight(t);
 				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
 				update(new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W) currWeight);
@@ -269,7 +291,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 		@Override
 		public void onInTransitionAdded(Transition<N, D> t) {
-			if (!t.getStart().equals(p) && t.getString().equals(fa.epsilon())) {
+			if ( t.getString().equals(fa.epsilon())) {
 				update(new Transition<N, D>(t.getStart(), transitionLabel, target),
 						(W) getOrCreateWeight(t).extendWith(newWeight));
 			}	
@@ -334,11 +356,34 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 	}
 
 
+	private WeightedPAutomaton<N, D, W> getOrCreateSummary(Transition<N, D> transition, W weight) {
+		WeightedPAutomaton<N, D, W> aut = getSummaries().get(transition);
+		if(aut == null){
+			aut = fa.createNestedAutomaton();
+			getSummaries().put(transition, aut);
+			new PostStar<N, D, W>(){
+				protected Map<Transition<N,D>,WeightedPAutomaton<N,D,W>> getSummaries() {
+					return PostStar.this.getSummaries();
+				};
+			}.poststar(pds, aut);
+		}
+		aut.addWeightForTransition(transition, weight);
+		return aut;
+	}
+	
+
+	protected Map<Transition<N, D>, WeightedPAutomaton<N, D, W>> getSummaries(){
+		return summaries;
+	}
+
+
 	private W getOrCreateWeight(Transition<N, D> trans) {
 		W w = fa.getWeightFor(trans);
-//		if (w != null)
-			return w;
-//		return pds.getOne();
+		if(w == null && SUMMARIES){
+			return pds.getOne();
+		}
+		return w;
+		
 	}
 
 }

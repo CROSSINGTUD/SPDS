@@ -4,6 +4,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collection;
+import java.util.concurrent.SynchronousQueue;
 
 import org.junit.Test;
 
@@ -148,6 +149,7 @@ public class DoublePDSTest {
 		addFieldPop(node(6,"x"), f("f"), node(7,"y"));
 		solver.solve(node(1,"u"));
 		System.out.println(solver.getReachedStates());
+		solver.debugOutput();
 		assertTrue(solver.getReachedStates().contains(node(6,"x")));
 	}
 	@Test
@@ -315,6 +317,7 @@ public class DoublePDSTest {
 		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
 		addFieldPop(node(2,"v"), f("h"),  node(2,"x"));
 		solver.solve(node(0,"u"));
+		solver.debugOutput();
 		assertTrue(solver.getReachedStates().contains(node(2,"x")));
 	}
 	@Test
@@ -408,6 +411,7 @@ public class DoublePDSTest {
 		addFieldPop(node(8,"g"), f("f"), node(9,"y"));
 		solver.solve(node(0,"c"));
 		System.out.println(solver.getReachedStates());
+		solver.debugOutput();
 		assertTrue(solver.getReachedStates().contains(node(7,"h")));
 		assertTrue(solver.getReachedStates().contains( node(8,"g")));
 		assertTrue(solver.getReachedStates().contains(node(9,"z")));
@@ -429,6 +433,7 @@ public class DoublePDSTest {
 //		addNormal(node(6,"e"), node(7,"h"));
 		solver.solve(node(0,"c"));
 		System.out.println(solver.getReachedStates());
+		solver.debugOutput();
 		assertTrue(solver.getReachedStates().contains(node(7,"h")));
 		assertTrue(solver.getReachedStates().contains(node(8,"l")));
 	}

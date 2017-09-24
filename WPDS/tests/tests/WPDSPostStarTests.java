@@ -73,8 +73,6 @@ public class WPDSPostStarTests {
         waccepts(1, "a", w(0));
     pds.poststar(fa);
     assertEquals(fa.getWeightFor(t(1, "b", ACC)), w(2));
-    assertEquals(fa.getWeightFor(t(1, "c", a(1, "c"))), w(3));
-    assertEquals(fa.getWeightFor(t(1, "e", a(1, "c"))), w(4));
     assertEquals(fa.getWeightFor(t(1, "d", ACC)), w(11));
   }
 
@@ -89,7 +87,6 @@ public class WPDSPostStarTests {
     pds.poststar(fa);
     System.out.println(fa);
     assertEquals(fa.getWeightFor(t(5, "d", ACC)), w(11));
-    assertEquals(fa.getWeightFor(t(4, "e", a(3, "c"))), w(4));
   }
 
   @Test
@@ -105,7 +102,6 @@ public class WPDSPostStarTests {
         waccepts(1, "a", w(0));
     pds.poststar(fa);
     System.out.println(fa);
-    assertEquals(w(6), fa.getWeightFor(t(2, "call", a(2, "call"))));
     assertEquals(w(19), fa.getWeightFor(t(1, "f", ACC)));
     assertEquals(w(32), fa.getWeightFor(t(3, "g", ACC)));
   }

@@ -392,6 +392,11 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			@Override
 			public Weight<Field> getOne() {
 				return fieldPDS.getOne();
+			}
+
+			@Override
+			public boolean isGeneratedState(INode<Node<Statement, Val>> d) {
+				return d instanceof GeneratedState;
 			}};
 		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 			

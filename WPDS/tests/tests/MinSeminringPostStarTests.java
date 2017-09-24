@@ -71,10 +71,12 @@ public class MinSeminringPostStarTests {
     pds.addRule(wpop(1, "e", 1, w(1)));
     WeightedPAutomaton<StackSymbol, Abstraction, MinSemiring<StackSymbol>> fa =
         waccepts(1, "a", w(0));
+    System.out.println(pds);
     pds.poststar(fa);
+    System.out.println(fa);
     assertEquals(w(1), fa.getWeightFor(t(1, "b", ACC)));
-    assertEquals(w(1), fa.getWeightFor(t(1, "c", a(1, "c"))));
-    assertEquals(w(2), fa.getWeightFor(t(1, "e", a(1, "c"))));
+    assertEquals(w(4), fa.getWeightFor(t(1, "d", ACC)));
+//    assertEquals(w(2), fa.getWeightFor(t(1, "e", a(1, "c"))));
   }
 
   @Test
@@ -93,7 +95,6 @@ public class MinSeminringPostStarTests {
     System.out.println(fa.toDotString());
     System.out.println(fa);
     assertEquals(w(5), fa.getWeightFor(t(5, "d", ACC)));
-    assertEquals(w(3), fa.getWeightFor(t(4, "e", a(3, "c"))));
     assertEquals(w(15), fa.getWeightFor(t(2, "f", ACC)));
   }
 
@@ -142,6 +143,11 @@ public class MinSeminringPostStarTests {
 		@Override
 		public MinSemiring<StackSymbol> getOne() {
 			return MinSemiring.one();
+		}
+
+		@Override
+		public boolean isGenereatedState(Abstraction d) {
+			return d.s != null;
 		}
         };
         aut.setInitialState(a(a));

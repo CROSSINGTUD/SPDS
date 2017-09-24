@@ -29,6 +29,11 @@ public class ForwardDFSVisitorTest {
 		public StackSymbol epsilon() {
 			return s("EPS");
 		}
+
+		@Override
+		public boolean isGenereatedState(Abstraction d) {
+			return d.s != null;
+		}
 	};
 	final Set<Transition<StackSymbol, Abstraction>> reachables = Sets.newHashSet();
 	@Test

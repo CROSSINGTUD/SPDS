@@ -45,11 +45,16 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private final Multimap<D, Transition<N, D>> transitionsOutOf = HashMultimap.create();
 	private final Multimap<D, Transition<N, D>> transitionsInto = HashMultimap.create();
 	private Set<WPAUpdateListener<N, D, W>> listeners = Sets.newHashSet();
-	private Multimap<D,WPAStateListener<N, D, W>> stateListeners = HashMultimap.create();
-	private Map<D,ForwardDFSVisitor<N, D, W>> stateToDFS = Maps.newHashMap();
-	private Map<D,ForwardDFSVisitor<N, D, W>> stateToEpsilonDFS = Maps.newHashMap();
+	private Multimap<D, WPAStateListener<N, D, W>> stateListeners = HashMultimap.create();
+	private Map<D, ForwardDFSVisitor<N, D, W>> stateToDFS = Maps.newHashMap();
+	private Map<D, ForwardDFSVisitor<N, D, W>> stateToEpsilonDFS = Maps.newHashMap();
+	private List<WeightedPAutomaton<N, D, W>> nestedAutomatons = Lists.newArrayList();
+	private Map<D, ReachabilityListener<N, D>> stateToEpsilonReachabilityListener = Maps.newHashMap();
+	private Map<D, ReachabilityListener<N, D>> stateToReachabilityListener = Maps.newHashMap();
 
 	public abstract D createState(D d, N loc);
+
+	public abstract boolean isGeneratedState(D d);
 
 	public Collection<Transition<N, D>> getTransitions() {
 		return Lists.newArrayList(transitions);
@@ -64,10 +69,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public boolean addTransition(Transition<N, D> trans) {
-		if(trans.getStart().equals(trans.getTarget()) && trans.getLabel().equals(epsilon())){
+		if (trans.getStart().equals(trans.getTarget()) && trans.getLabel().equals(epsilon())) {
 			return false;
 		}
-		
+
 		return addWeightForTransition(trans, getOne());
 	}
 
@@ -85,11 +90,9 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		s += "\tFinalStates:" + finalState + "\n";
 		s += "\tWeightToTransitions:\n\t\t";
 		s += Joiner.on("\n\t\t").join(transitionToWeights.entrySet());
-		
-		
+
 		return s;
 	}
-
 
 	private String wrapIfInitialOrFinalState(D s) {
 		return s.equals(initialState) ? "ENTRY: " + wrapFinalState(s) : wrapFinalState(s);
@@ -101,16 +104,16 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 
 	public String toDotString() {
 		String s = "digraph {\n";
-		for(D source : states){
+		for (D source : states) {
 			Collection<Transition<N, D>> collection = transitionsOutOf.get(source);
-			for(D target : states){
+			for (D target : states) {
 				List<N> labels = Lists.newLinkedList();
-				for(Transition<N, D> t : collection){
-					if(t.getTarget().equals(target)){
+				for (Transition<N, D> t : collection) {
+					if (t.getTarget().equals(target)) {
 						labels.add(t.getString());
 					}
 				}
-				if(!labels.isEmpty()){
+				if (!labels.isEmpty()) {
 					s += "\t\"" + wrapIfInitialOrFinalState(source) + "\"";
 					s += " -> \"" + wrapIfInitialOrFinalState(target) + "\"";
 					s += "[label=\"" + Joiner.on(",").join(labels) + "\"];\n";
@@ -118,32 +121,33 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			}
 		}
 		s += "}\n";
-//		s += "Initial State:" + initialState + "\n";
-//		s += "Final States:" + finalState + "\n";
-//		s = "digraph {\n";
-//
-//		for(Transition<N, D> tran : sequentialTransitions){
-//			s += "\t\"" + wrapIfInitialOrFinalState(tran.getStart()) + "\"";
-//			s += " -> \"" + wrapIfInitialOrFinalState(tran.getTarget()) + "\"";
-//			s += "[label=\"" + tran.getLabel() + "\"];\n";
-//		}
-//		s += "}\n";
+		// s += "Initial State:" + initialState + "\n";
+		// s += "Final States:" + finalState + "\n";
+		// s = "digraph {\n";
+		//
+		// for(Transition<N, D> tran : sequentialTransitions){
+		// s += "\t\"" + wrapIfInitialOrFinalState(tran.getStart()) + "\"";
+		// s += " -> \"" + wrapIfInitialOrFinalState(tran.getTarget()) + "\"";
+		// s += "[label=\"" + tran.getLabel() + "\"];\n";
+		// }
+		// s += "}\n";
 		return s;
 	}
+
 	public abstract N epsilon();
 
 	public IRegEx<N> extractLanguage(D from) {
 		PathExpressionComputer<D, N> expr = new PathExpressionComputer<>(this);
 		IRegEx<N> res = null;
-		for(D finalState : getFinalState()){
+		for (D finalState : getFinalState()) {
 			IRegEx<N> regEx = expr.getExpressionBetween(from, finalState);
-			if(res == null){
+			if (res == null) {
 				res = regEx;
 			} else {
-				res = RegEx.<N>union(res, regEx);
+				res = RegEx.<N> union(res, regEx);
 			}
 		}
-		if(res == null)
+		if (res == null)
 			return new RegEx.EmptySet<N>();
 		return res;
 	}
@@ -151,10 +155,11 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	public IRegEx<N> extractLanguage(D from, D to) {
 		PathExpressionComputer<D, N> expr = new PathExpressionComputer<>(this);
 		IRegEx<N> res = expr.getExpressionBetween(from, to);
-		if(res == null)
+		if (res == null)
 			return new RegEx.EmptySet<N>();
 		return res;
 	}
+
 	public Set<D> getStates() {
 		return states;
 	}
@@ -171,6 +176,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	};
 
 	public boolean addWeightForTransition(Transition<N, D> trans, W weight) {
+		if (weight == null)
+			throw new IllegalArgumentException("Weight must not be null!");
 		transitionsOutOf.get(trans.getStart()).add(trans);
 		transitionsInto.get(trans.getTarget()).add(trans);
 		states.add(trans.getTarget());
@@ -179,15 +186,15 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		sequentialTransitions.add(trans);
 		W oldWeight = transitionToWeights.get(trans);
 		W newWeight = (W) (oldWeight == null ? weight : oldWeight.combineWith(weight));
-		if(!newWeight.equals(oldWeight)){
+		if (!newWeight.equals(oldWeight)) {
 			transitionToWeights.put(trans, newWeight);
-			for(WPAUpdateListener<N, D, W> l : Lists.newArrayList(listeners)){
+			for (WPAUpdateListener<N, D, W> l : Lists.newArrayList(listeners)) {
 				l.onWeightAdded(trans, weight);
 			}
-			for(WPAStateListener<N, D, W> l : Lists.newArrayList(stateListeners.get(trans.getStart()))){
+			for (WPAStateListener<N, D, W> l : Lists.newArrayList(stateListeners.get(trans.getStart()))) {
 				l.onOutTransitionAdded(trans);
 			}
-			for(WPAStateListener<N, D, W> l : Lists.newArrayList(stateListeners.get(trans.getTarget()))){
+			for (WPAStateListener<N, D, W> l : Lists.newArrayList(stateListeners.get(trans.getTarget()))) {
 				l.onInTransitionAdded(trans);
 			}
 		}
@@ -198,57 +205,117 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		return transitionToWeights.get(trans);
 	}
 
-	public void registerListener(WPAUpdateListener<N,D,W> listener){
-		if(!listeners.add(listener))
+	public void registerListener(WPAUpdateListener<N, D, W> listener) {
+		if (!listeners.add(listener))
 			return;
-		for(Entry<Transition<N, D>, W> transAndWeight : Lists.newArrayList(transitionToWeights.entrySet())){
+		for (Entry<Transition<N, D>, W> transAndWeight : Lists.newArrayList(transitionToWeights.entrySet())) {
 			listener.onWeightAdded(transAndWeight.getKey(), transAndWeight.getValue());
+		}
+		for(WeightedPAutomaton<N, D, W> nested : Lists.newArrayList(nestedAutomatons)){
+			nested.registerListener(listener);
 		}
 	}
 
 	public void setInitialState(D state) {
 		this.initialState = state;
 	}
-	
+
 	public void addFinalState(D state) {
 		this.finalState.add(state);
 	}
 
-	
-	public void registerDFSListener(D state, ReachabilityListener<N, D> l){
+	public void registerDFSListener(D state, ReachabilityListener<N, D> l) {
 		ForwardDFSVisitor<N, D, W> dfsVisitor = stateToDFS.get(state);
-		if(dfsVisitor == null){
+		stateToReachabilityListener.put(state,l);
+		if (dfsVisitor == null) {
 			dfsVisitor = new ForwardDFSVisitor<N, D, W>(this, state);
 			stateToDFS.put(state, dfsVisitor);
 			this.registerListener(dfsVisitor);
 		}
+		for(WeightedPAutomaton<N, D, W> nested : nestedAutomatons){
+			nested.registerDFSListener(state, l);
+		}
 		dfsVisitor.registerListener(l);
-	}	
-	
-	public void registerDFSEpsilonListener(D state, ReachabilityListener<N, D> l){
+	}
+
+	public void registerDFSEpsilonListener(D state, ReachabilityListener<N, D> l) {
 		ForwardDFSVisitor<N, D, W> dfsVisitor = stateToEpsilonDFS.get(state);
-		if(dfsVisitor == null){
-			dfsVisitor = new ForwardDFSEpsilonVisitor<N,D,W>(this, state);
+		stateToEpsilonReachabilityListener.put(state,l);
+		if (dfsVisitor == null) {
+			dfsVisitor = new ForwardDFSEpsilonVisitor<N, D, W>(this, state);
 			stateToEpsilonDFS.put(state, dfsVisitor);
 			this.registerListener(dfsVisitor);
 		}
+		for(WeightedPAutomaton<N, D, W> nested : nestedAutomatons){
+			nested.registerDFSEpsilonListener(state, l);
+		}
 		dfsVisitor.registerListener(l);
 	}
-
+	
 	public void registerListener(WPAStateListener<N, D, W> l) {
-		if(!stateListeners.put(l.getState(), l)){
+		if (!stateListeners.put(l.getState(), l)) {
 			return;
 		}
-		for(Transition<N, D> t : Lists.newArrayList(transitionsOutOf.get(l.getState()))){
+		for (Transition<N, D> t : Lists.newArrayList(transitionsOutOf.get(l.getState()))) {
 			l.onOutTransitionAdded(t);
 		}
-		for(Transition<N, D> t : Lists.newArrayList(transitionsInto.get(l.getState()))){
+		for (Transition<N, D> t : Lists.newArrayList(transitionsInto.get(l.getState()))) {
 			l.onInTransitionAdded(t);
 		}
-		
+
+		for(WeightedPAutomaton<N, D, W> nested : Lists.newArrayList(nestedAutomatons)){
+			nested.registerListener(l);
+		}
+
 	}
 
-  public abstract W getZero();
+	public abstract W getZero();
 
-  public abstract W getOne();
+	public abstract W getOne();
+
+	public WeightedPAutomaton<N, D, W> createNestedAutomaton() {
+		WeightedPAutomaton<N, D, W> nested = new WeightedPAutomaton<N, D, W>() {
+
+			@Override
+			public D createState(D d, N loc) {
+				return WeightedPAutomaton.this.createState(d, loc);
+			}
+
+			@Override
+			public N epsilon() {
+				return WeightedPAutomaton.this.epsilon();
+			}
+
+			@Override
+			public W getZero() {
+				return WeightedPAutomaton.this.getZero();
+			}
+
+			@Override
+			public W getOne() {
+				return WeightedPAutomaton.this.getOne();
+			}
+
+			@Override
+			public boolean isGeneratedState(D d) {
+				return WeightedPAutomaton.this.isGeneratedState(d);
+			}
+		};
+		nestedAutomatons.add(nested);
+		
+		for(WPAStateListener<N, D, W> e : Lists.newArrayList(stateListeners.values())){
+			nested.registerListener(e);
+		}
+		for(WPAUpdateListener<N, D, W> e : Lists.newArrayList(listeners)){
+			nested.registerListener(e);
+		}
+		
+		for(Entry<D, ReachabilityListener<N, D>> e: stateToEpsilonReachabilityListener.entrySet()){
+			nested.registerDFSEpsilonListener(e.getKey(), e.getValue());
+		}
+		for(Entry<D, ReachabilityListener<N, D>> e: stateToReachabilityListener.entrySet()){
+			nested.registerDFSListener(e.getKey(), e.getValue());
+		}
+		return nested;
+	}
 }
