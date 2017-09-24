@@ -471,6 +471,36 @@ public class DoublePDSTest {
 	}
 	
 	@Test
+	public void recursion() {
+		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
+		addNormal(node(2,"u"), node(3,"c"));
+		addFieldPush(node(3,"c"),f("h"), node(4,"h"));
+		addCallFlow(node(4,"h"), node(2,"u"),returnSite(5));
+		addNormal(node(4,"h"), node(5,"h"));
+		addFieldPop(node(5,"h"),f("h"), node(6,"g"));
+		addFieldPop(node(6,"g"),f("h"), node(7,"g"));
+		addReturnFlow(node(7,"g"),var("a"),returnSite(4));
+		solver.solve(node(1,"a"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(4,"a")));
+	}
+	
+	@Test
+	public void recursion2() {
+		addCallFlow(node(1,"a"), node(2,"u"),returnSite(4));
+		addNormal(node(2,"u"), node(3,"c"));
+		addFieldPush(node(3,"c"),f("h"), node(4,"h"));
+		addCallFlow(node(4,"h"), node(2,"u"),returnSite(5));
+		addNormal(node(4,"h"), node(5,"h"));
+		addFieldPop(node(5,"h"),f("h"), node(6,"g"));
+		addFieldPop(node(6,"g"),f("h"), node(7,"g"));
+		addReturnFlow(node(7,"g"),var("a"),returnSite(4));
+		solver.solve(node(1,"a"));
+		System.out.println(solver.getReachedStates());
+		assertTrue(solver.getReachedStates().contains(node(4,"a")));
+	}
+	
+	@Test
 	public void negativeTestFieldPushAndPop() {
 		addFieldPush(node(1,"u"), f("h"), node(2,"v"));
 		addFieldPop(node(2,"v"), f("f"), node(3,"w"));

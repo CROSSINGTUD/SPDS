@@ -32,24 +32,24 @@ public class Fields6LongTest extends AbstractBoomerangTest{
 			p = x;
 		}
 		TreeNode t = null;
-		if(staticallyUnknown()){
-			t = x.a;
-		}
-		if(staticallyUnknown()){
-			t = x.b;
-		}
-		if(staticallyUnknown()){
-			t = x.c;
-		}
-		if(staticallyUnknown()){
-			t = x.d;
-		}
-		if(staticallyUnknown()){
-			t = x.e;
-		}
-		if(staticallyUnknown()){
-			t = x.f;
-		}
+			if(staticallyUnknown()){
+				t = x.a;
+			}
+			if(staticallyUnknown()){
+				t = x.b;
+			}
+			if(staticallyUnknown()){
+				t = x.c;
+			}
+			if(staticallyUnknown()){
+				t = x.d;
+			}
+			if(staticallyUnknown()){
+				t = x.e;
+			}
+			if(staticallyUnknown()){
+				t = x.f;
+			}
 		TreeNode h = t;
 		queryFor(h);
 	}

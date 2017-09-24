@@ -147,11 +147,9 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	public void solve(Node<Stmt,Fact> source, Node<Stmt, Fact> curr) {
 		Transition<Field, INode<Node<Stmt,Fact>>> fieldTrans = new Transition<Field, INode<Node<Stmt,Fact>>>(asFieldFact(curr), emptyField(), asFieldFactSource(source));
 		fieldAutomaton.addTransition(fieldTrans);
-		fieldAutomaton.addWeightForTransition(fieldTrans, new SetDomain<Field,Stmt,Fact>(curr));
 		Transition<Stmt, INode<Fact>> callTrans = new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(source.fact()));
 		callAutomaton
 				.addTransition(callTrans);
-		callAutomaton.addWeightForTransition(callTrans, new SetDomain<Stmt,Stmt,Fact>(curr));
 		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
 		processNode(startNode);
 	}
@@ -361,7 +359,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	public void setCallingContextReachable(Node<Stmt,Fact> node) {
 		if (!callingContextReachable.add(node))
 			return;
-
 		if (fieldContextReachable.contains(node)) {
 			processNode(createWitness(node));
 		}
@@ -376,7 +373,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		if (!fieldContextReachable.add(node)) {
 			return;
 		}
-
 		if (callingContextReachable.contains(node)) {
 			processNode(createWitness(node));
 		}

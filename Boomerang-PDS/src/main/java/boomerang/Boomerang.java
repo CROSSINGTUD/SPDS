@@ -581,12 +581,13 @@ public abstract class Boomerang {
 				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
 					final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt()) && !(aliasedVariableAtStmt instanceof GeneratedState)){
-						if(!aliases.put(flowAllocation, aliasedVariableAtStmt.fact().fact()))
+						Val alias = aliasedVariableAtStmt.fact().fact();
+						if(!aliases.put(flowAllocation,alias))
 							return;
 						final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = baseSolver.getFieldAutomaton();
 						aut.registerDFSListener(t.getTarget(),new ImportToSolver(flowSolver));
 						for(final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())){
-							Node<Statement, Val> aliasedVarAtSucc = new Node<Statement,Val>(succOfWrite,aliasedVariableAtStmt.fact().fact());
+							Node<Statement, Val> aliasedVarAtSucc = new Node<Statement,Val>(succOfWrite,alias);
 							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.empty(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
 							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new SingleNode<Node<Statement,Val>>(aliasedVarAtSucc), t.getLabel(),t.getTarget()));
 							Node<Statement, Val> rightOpNode = new Node<Statement, Val>(getStmt(),getStoredVar());

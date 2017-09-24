@@ -411,8 +411,8 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		if(!weightedPAutomaton.getTransitions().isEmpty()){
 			System.out.println(statement);
 			System.out.println(weightedPAutomaton.toDotString());
+			}
 		}
-	}
 
 
 	protected void onReturnFlow(final Unit callSite, Unit returnSite, final SootMethod method, final Stmt returnStmt, final Val value,
