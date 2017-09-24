@@ -31,7 +31,7 @@ public class ForwardDFSVisitorTest {
 		}
 
 		@Override
-		public boolean isGenereatedState(Abstraction d) {
+		public boolean isGeneratedState(Abstraction d) {
 			return d.s != null;
 		}
 	};

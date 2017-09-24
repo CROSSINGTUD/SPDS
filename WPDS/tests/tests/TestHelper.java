@@ -29,7 +29,7 @@ public class TestHelper {
       }
 
 	  @Override
-	  public boolean isGenereatedState(Abstraction d) {
+	  public boolean isGeneratedState(Abstraction d) {
 		return d.s != null;
 	  }
     };
@@ -65,7 +65,7 @@ public class TestHelper {
       }
 
 	@Override
-	public boolean isGenereatedState(Abstraction d) {
+	public boolean isGeneratedState(Abstraction d) {
 		return d.s != null;
 	}
     };
