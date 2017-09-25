@@ -20,30 +20,64 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 	private IPushdownSystem<N, D, W> pds;
 	private WeightedPAutomaton<N, D, W> fa;
 	private Map<Transition<N,D>, WeightedPAutomaton<N, D, W>> summaries = Maps.newHashMap();
-	private static final boolean SUMMARIES = true;
+	public static boolean SUMMARIES = true;
 
 	public void poststar(IPushdownSystem<N, D, W> pds, WeightedPAutomaton<N, D, W> initialAutomaton) {
 		this.pds = pds;
 		this.fa = initialAutomaton;
-		this.pds.registerUpdateListener(new WPDSUpdateListener<N, D, W>() {
+		this.pds.registerUpdateListener(new PostStarUpdateListener(fa));
+	}
+	
+	
+	private class PostStarUpdateListener implements WPDSUpdateListener<N, D, W> {
 
-			@Override
-			public void onRuleAdded(final Rule<N, D, W> rule) {
-				if(rule instanceof NormalRule){
-					fa.registerListener(new HandleNormalListener((NormalRule)rule));
-				} else if(rule instanceof PushRule){
-					fa.registerListener(new HandlePushListener((PushRule)rule));
-				} else if(rule instanceof PopRule){
-					fa.registerDFSEpsilonListener(rule.getS1(),new ReachabilityListener<N, D>() {
-						@Override
-						public void reachable(Transition<N, D> t) {
-							fa.registerListener(new HandlePopListener((PopRule)rule, t.getStart()));
-						}
-					});
-				}
+		private WeightedPAutomaton<N, D, W> aut;
+
+		public PostStarUpdateListener(WeightedPAutomaton<N, D, W> fa) {
+			aut = fa;
+		}
+		
+		@Override
+		public void onRuleAdded(final Rule<N, D, W> rule) {
+			if(rule instanceof NormalRule){
+				aut.registerListener(new HandleNormalListener((NormalRule)rule));
+			} else if(rule instanceof PushRule){
+				aut.registerListener(new HandlePushListener((PushRule)rule));
+			} else if(rule instanceof PopRule){
+				aut.registerDFSEpsilonListener(rule.getS1(),new ReachabilityListener<N, D>() {
+					@Override
+					public void reachable(Transition<N, D> t) {
+						aut.registerListener(new HandlePopListener((PopRule)rule, t.getStart()));
+					}
+				});
 			}
+		}
 
-		});
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((aut == null) ? 0 : aut.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			PostStarUpdateListener other = (PostStarUpdateListener) obj;
+			if (aut == null) {
+				if (other.aut != null)
+					return false;
+			} else if (!aut.equals(other.aut))
+				return false;
+			return true;
+		}
+
 	}
 	private class HandlePopListener extends WPAStateListener<N, D, W> {
 		private PopRule<N, D, W> rule;
@@ -56,7 +90,10 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		@Override
 		public void onOutTransitionAdded(final Transition<N, D> t) {
 			if(t.getLabel().equals(rule.getL1())){
+				
 				W currWeight = getOrCreateWeight(new Transition<N,D>(state,t.getLabel(),t.getTarget()));
+				if(SUMMARIES && currWeight == null)
+					return;
 				final W newWeight = (W) currWeight.extendWithIn(rule.getWeight());
 				final D p = rule.getS2();
 				update(new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight);
@@ -65,6 +102,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 					@Override
 					public void onOutTransitionAdded(Transition<N, D> tq) {
 						W currWeight =	getOrCreateWeight(tq);
+						if(SUMMARIES && currWeight == null)
+							return;
 						W combined = (W) currWeight.extendWithIn(newWeight);
 						update(new Transition<N, D>(p, tq.getString(), tq.getTarget()), (W) combined);
 					}
@@ -131,6 +170,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		public void onOutTransitionAdded(final Transition<N, D> t) {
 			if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
 				W currWeight = getOrCreateWeight(new Transition<N,D>(rule.getS1(),t.getLabel(),t.getTarget()));
+				if(SUMMARIES && currWeight == null)
+					return;
 				W newWeight = (W) currWeight.extendWithIn(rule.getWeight());
 				D p = rule.getS2();
 				N l2 = rule.getL2();
@@ -214,7 +255,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 						@Override
 						public void onWeightAdded(Transition<N, D> t, Weight<N> w) {
-							if((t.getLabel().equals(fa.epsilon()) && (fa.isGeneratedState(t.getTarget()))) || (fa.isGeneratedState(t.getStart()) && fa.isGeneratedState(t.getTarget()))){
+							if((t.getLabel().equals(fa.epsilon()) && t.getTarget().equals(irState))){
 								if(summary.getWeightFor(t) != null)
 									update(t,summary.getWeightFor(t));
 							}
@@ -222,6 +263,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 					});
 				}
 				W currWeight = getOrCreateWeight(t);
+				if(SUMMARIES && currWeight == null)
+					currWeight = pds.getOne();
 				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
 				update(new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W) currWeight);
 				fa.registerListener(new UpdateEpsilonOnPushListener(p, irState,transitionLabel,t.getTarget(),currWeight));
@@ -292,8 +335,13 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		@Override
 		public void onInTransitionAdded(Transition<N, D> t) {
 			if (t.getString().equals(fa.epsilon())) {
+				W currWeight = (W) getOrCreateWeight(t);
+				
+				if(SUMMARIES && currWeight == null){
+					currWeight = pds.getOne();
+				}
 				update(new Transition<N, D>(t.getStart(), transitionLabel, target),
-						(W) getOrCreateWeight(t).extendWith(newWeight));
+						(W) currWeight.extendWith(newWeight));
 			}	
 		};
 
@@ -379,11 +427,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 	private W getOrCreateWeight(Transition<N, D> trans) {
 		W w = fa.getWeightFor(trans);
-		if(w == null && SUMMARIES){
-			return pds.getOne();
-		}
 		return w;
-		
 	}
 
 }

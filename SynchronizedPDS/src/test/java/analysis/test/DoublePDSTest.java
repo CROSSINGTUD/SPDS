@@ -173,7 +173,8 @@ public class DoublePDSTest {
 		addNormal(node(1,"v"), node(2,"w"));
 		addCallFlow(node(2,"w"), node(3,"p"),returnSite(4));
 		addNormal(node(3,"p"),  node(5,"q"));
-		addNormal(node(5,"q"),  node(6,"x"));
+		addNormal(node(5,"q"),  node(7,"z"));
+		addNormal(node(7,"z"),  node(6,"x"));
 		addReturnFlow(node(6,"x"), var("k"),returnSite(4));
 		addNormal(node(4,"k"),  node(6,"y"));
 		
@@ -279,7 +280,7 @@ public class DoublePDSTest {
 		addFieldPop(node(9,"x"), f("h"),node(10,"y"));
 		addFieldPop(node(9,"x"), f("impossibleRead"),node(11,"z"));
 		solver.solve(node(1,"u"));
-		System.out.println(solver.getReachedStates());
+		solver.debugOutput();
 		assertTrue(solver.getReachedStates().contains(node(7,"t")));
 		assertTrue(solver.getReachedStates().contains(node(8,"s")));
 		assertTrue(solver.getReachedStates().contains(node(9,"x")));

@@ -587,8 +587,6 @@ public abstract class Boomerang {
 					final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt()) && !(aliasedVariableAtStmt instanceof GeneratedState)){
 						Val alias = aliasedVariableAtStmt.fact().fact();
-						if(!aliases.put(flowAllocation,alias))
-							return;
 						final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>> aut = baseSolver.getFieldAutomaton();
 						aut.registerDFSListener(t.getTarget(),new ImportToSolver(flowSolver));
 						for(final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())){

@@ -121,6 +121,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			}
 		}
 		s += "}\n";
+		s += "Transitions: " + transitions.size() +"\n";
 		// s += "Initial State:" + initialState + "\n";
 		// s += "Final States:" + finalState + "\n";
 		// s = "digraph {\n";
@@ -131,6 +132,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		// s += "[label=\"" + tran.getLabel() + "\"];\n";
 		// }
 		// s += "}\n";
+		for(WeightedPAutomaton<N, D, W> nested : nestedAutomatons){
+			s += "NESTED -> \n";
+			s += nested.toDotString();
+		}
 		return s;
 	}
 
