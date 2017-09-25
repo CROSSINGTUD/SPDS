@@ -102,6 +102,7 @@ public class WPDSPostStarTests {
         waccepts(1, "a", w(0));
     pds.poststar(fa);
     System.out.println(fa);
+    System.out.println(fa.toDotString());
     assertEquals(w(19), fa.getWeightFor(t(1, "f", ACC)));
     assertEquals(w(32), fa.getWeightFor(t(3, "g", ACC)));
   }

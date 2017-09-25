@@ -11,8 +11,8 @@ public abstract class WPAStateListener<N extends Location, D extends State, W ex
 		this.state = state;
 	}
 
-	public abstract void onOutTransitionAdded(Transition<N, D> t);
-	public abstract void onInTransitionAdded(Transition<N, D> t);
+	public abstract void onOutTransitionAdded(Transition<N, D> t, W w);
+	public abstract void onInTransitionAdded(Transition<N, D> t, W w);
 	
 	public D getState(){
 		return state;
@@ -41,4 +41,5 @@ public abstract class WPAStateListener<N extends Location, D extends State, W ex
 			return false;
 		return true;
 	}
+
 }

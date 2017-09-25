@@ -4,7 +4,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collection;
-import java.util.concurrent.SynchronousQueue;
 
 import org.junit.Test;
 
@@ -124,6 +123,7 @@ public class DoublePDSTest {
 		addFieldPop( node(4,"y"), f("g"), node(7,"y"));
 		solver.solve(node(1,"u"));
 		System.out.println(solver.getReachedStates());
+		solver.debugOutput();
 		assertTrue(solver.getReachedStates().contains(node(5,"y")));
 		assertTrue(solver.getReachedStates().contains( node(4,"y")));
 		assertFalse(solver.getReachedStates().contains(node(6,"y")));

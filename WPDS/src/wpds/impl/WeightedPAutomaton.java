@@ -91,6 +91,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		s += "\tWeightToTransitions:\n\t\t";
 		s += Joiner.on("\n\t\t").join(transitionToWeights.entrySet());
 
+		for(WeightedPAutomaton<N, D, W> nested : nestedAutomatons){
+			s += "\n";
+			s += nested.toString();
+		}
 		return s;
 	}
 
@@ -197,10 +201,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 				l.onWeightAdded(trans, weight);
 			}
 			for (WPAStateListener<N, D, W> l : Lists.newArrayList(stateListeners.get(trans.getStart()))) {
-				l.onOutTransitionAdded(trans);
+				l.onOutTransitionAdded(trans, weight);
 			}
 			for (WPAStateListener<N, D, W> l : Lists.newArrayList(stateListeners.get(trans.getTarget()))) {
-				l.onInTransitionAdded(trans);
+				l.onInTransitionAdded(trans, weight);
 			}
 		}
 		return added;
@@ -219,6 +223,23 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		for(WeightedPAutomaton<N, D, W> nested : Lists.newArrayList(nestedAutomatons)){
 			nested.registerListener(listener);
 		}
+	}
+
+	public void registerListener(WPAStateListener<N, D, W> l) {
+		if (!stateListeners.put(l.getState(), l)) {
+			return;
+		}
+		for (Transition<N, D> t : Lists.newArrayList(transitionsOutOf.get(l.getState()))) {
+			l.onOutTransitionAdded(t,transitionToWeights.get(t));
+		}
+		for (Transition<N, D> t : Lists.newArrayList(transitionsInto.get(l.getState()))) {
+			l.onInTransitionAdded(t,transitionToWeights.get(t));
+		}
+
+		for(WeightedPAutomaton<N, D, W> nested : Lists.newArrayList(nestedAutomatons)){
+			nested.registerListener(l);
+		}
+
 	}
 
 	public void setInitialState(D state) {
@@ -260,23 +281,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	
 	protected Map<D, ForwardDFSVisitor<N, D, W>> getStateToEpsilonDFS() {
 		return stateToEpsilonDFS;
-	}
-
-	public void registerListener(WPAStateListener<N, D, W> l) {
-		if (!stateListeners.put(l.getState(), l)) {
-			return;
-		}
-		for (Transition<N, D> t : Lists.newArrayList(transitionsOutOf.get(l.getState()))) {
-			l.onOutTransitionAdded(t);
-		}
-		for (Transition<N, D> t : Lists.newArrayList(transitionsInto.get(l.getState()))) {
-			l.onInTransitionAdded(t);
-		}
-
-		for(WeightedPAutomaton<N, D, W> nested : Lists.newArrayList(nestedAutomatons)){
-			nested.registerListener(l);
-		}
-
 	}
 
 	public abstract W getZero();
@@ -321,7 +325,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			}
 			@Override
 			public String toString() {
-				return "NESTED";
+				return "NESTED: \n" + super.toString();
 			}
 		};
 		nestedAutomatons.add(nested);

@@ -44,12 +44,12 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 		}
 
 		@Override
-		public void onOutTransitionAdded(Transition<N, D> t) {
+		public void onOutTransitionAdded(Transition<N, D> t, W weight) {
 			addReachable(t);	
 		}
 
 		@Override
-		public void onInTransitionAdded(Transition<N, D> t) {
+		public void onInTransitionAdded(Transition<N, D> t, W weight) {
 			
 		}
 
@@ -97,13 +97,13 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 
 
 	@Override
-	public void onOutTransitionAdded(Transition<N, D> t) {
+	public void onOutTransitionAdded(Transition<N, D> t, W weight) {
 		addReachable(t);
 	}
 
 
 	@Override
-	public void onInTransitionAdded(Transition<N, D> t) {
+	public void onInTransitionAdded(Transition<N, D> t, W weight) {
 		
 	}
 

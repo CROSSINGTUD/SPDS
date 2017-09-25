@@ -59,7 +59,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	private static final boolean DISABLE_CALLPOI = false;
 	Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
@@ -591,7 +591,7 @@ public abstract class Boomerang {
 						aut.registerDFSListener(t.getTarget(),new ImportToSolver(flowSolver));
 						for(final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())){
 							Node<Statement, Val> aliasedVarAtSucc = new Node<Statement,Val>(succOfWrite,alias);
-							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.empty(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
+							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
 							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new SingleNode<Node<Statement,Val>>(aliasedVarAtSucc), t.getLabel(),t.getTarget()));
 							Node<Statement, Val> rightOpNode = new Node<Statement, Val>(getStmt(),getStoredVar());
 							flowSolver.setFieldContextReachable(aliasedVarAtSucc);
