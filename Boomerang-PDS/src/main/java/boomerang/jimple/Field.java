@@ -125,6 +125,33 @@ public class Field implements Location {
 		public String toString() {
 			return "not " + super.toString();
 		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + ((excludes == null) ? 0 : excludes.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ExclusionWildcardField other = (ExclusionWildcardField) obj;
+			if (excludes == null) {
+				if (other.excludes != null)
+					return false;
+			} else if (!excludes.equals(other.excludes))
+				return false;
+			return true;
+		}
+		
+		
 	}
 	private static Map<Field,ExclusionWildcardField> exclusionWildcards = Maps.newHashMap();
 	

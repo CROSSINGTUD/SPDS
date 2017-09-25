@@ -30,17 +30,13 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 		if(!continueWith(s)){
 			return;
 		}
-		
-		aut.registerListener(new TransitiveListener(s.getTarget(),getState()));
+		aut.registerListener(new TransitiveListener(s.getTarget()));
 	}
 	
 	private class TransitiveListener extends WPAStateListener<N, D, W>{
 
-		private D startState;
-
-		public TransitiveListener(D state, D startState) {
+		public TransitiveListener(D state) {
 			super(state);
-			this.startState = startState;
 		}
 
 		@Override
@@ -58,7 +54,6 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((startState == null) ? 0 : startState.hashCode());
 			return result;
 		}
 
@@ -73,19 +68,12 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			TransitiveListener other = (TransitiveListener) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
-			if (startState == null) {
-				if (other.startState != null)
-					return false;
-			} else if (!startState.equals(other.startState))
-				return false;
 			return true;
 		}
 
 		private ForwardDFSVisitor getOuterType() {
 			return ForwardDFSVisitor.this;
 		}
-		
-		
 	}
 
 

@@ -21,7 +21,6 @@ public class Statement implements Location {
 	private final Stmt delegate;
 	private final SootMethod method;
 	private final String rep;
-	private int hashCode;
 
 	public Statement(Stmt delegate, SootMethod m) {
 		this.delegate = delegate;
@@ -41,39 +40,34 @@ public class Statement implements Location {
 		return Optional.of(delegate);
 	}
 
-	
 	@Override
 	public int hashCode() {
-		if(hashCode != 0)
-			return hashCode;
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((delegate == null) ? 0 : delegate.hashCode());
-		hashCode = prime * result + ((rep == null) ? 0 : rep.hashCode());
-		return hashCode;
+		result = prime * result + ((rep == null) ? 0 : rep.hashCode());
+		return result;
 	}
 
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
-		if(rep != null)
-			return false;
 		if (obj == null)
 			return false;
+		if (getClass() != obj.getClass())
+			return false;
 		Statement other = (Statement) obj;
-		if(other.rep != null)
+		if (rep == null) {
+			if (other.rep != null)
+				return false;
+		} else if (!rep.equals(other.rep))
 			return false;
 		if (delegate == null) {
 			if (other.delegate != null)
 				return false;
 		} else if (!delegate.equals(other.delegate))
 			return false;
-//		if (rep == null) {
-//			if (other.rep != null)
-//				return false;
-//		} else if (!rep.equals(other.rep))
-//			return false;
 		return true;
 	}
 

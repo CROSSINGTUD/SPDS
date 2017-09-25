@@ -45,7 +45,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 				aut.registerDFSEpsilonListener(rule.getS1(),new ReachabilityListener<N, D>() {
 					@Override
 					public void reachable(Transition<N, D> t) {
-						aut.registerListener(new HandlePopListener((PopRule)rule, t.getStart()));
+						aut.registerListener(new HandlePopListener(t.getStart(), rule.getL1(),rule.getS2(),rule.getWeight()));
 					}
 				});
 			}
@@ -78,19 +78,22 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 	}
 	private class HandlePopListener extends WPAStateListener<N, D, W> {
-		private PopRule<N, D, W> rule;
-		public HandlePopListener(PopRule<N, D, W> rule, D state) {
+		private N popLabel;
+		private D targetState;
+		private W ruleWeight;
+		public HandlePopListener(D state, N popLabel, D targetState, W ruleWeight) {
 			super(state);
-			this.rule = rule;
+			this.targetState = targetState;
+			this.popLabel = popLabel;
+			this.ruleWeight = ruleWeight;
 		}
 
 
 		@Override
 		public void onOutTransitionAdded(final Transition<N, D> t, W weight) {
-			if(t.getLabel().equals(rule.getL1())){
-				final W newWeight = (W) weight.extendWithIn(rule.getWeight());
-				final D p = rule.getS2();
-				update(new Transition<N, D>(p, fa.epsilon(), t.getTarget()), newWeight);
+			if(t.getLabel().equals(popLabel)){
+				final W newWeight = (W) weight.extendWithIn(ruleWeight);
+				update(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget()), newWeight);
 			}
 		}
 
@@ -103,8 +106,9 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((rule == null) ? 0 : rule.hashCode());
+			result = prime * result + ((popLabel == null) ? 0 : popLabel.hashCode());
+			result = prime * result + ((ruleWeight == null) ? 0 : ruleWeight.hashCode());
+			result = prime * result + ((targetState == null) ? 0 : targetState.hashCode());
 			return result;
 		}
 
@@ -118,21 +122,27 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			if (getClass() != obj.getClass())
 				return false;
 			HandlePopListener other = (HandlePopListener) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (rule == null) {
-				if (other.rule != null)
+			if (popLabel == null) {
+				if (other.popLabel != null)
 					return false;
-			} else if (!rule.equals(other.rule))
+			} else if (!popLabel.equals(other.popLabel))
+				return false;
+			if (ruleWeight == null) {
+				if (other.ruleWeight != null)
+					return false;
+			} else if (!ruleWeight.equals(other.ruleWeight))
+				return false;
+			if (targetState == null) {
+				if (other.targetState != null)
+					return false;
+			} else if (!targetState.equals(other.targetState))
 				return false;
 			return true;
 		}
 
 
 
-		private PostStar getOuterType() {
-			return PostStar.this;
-		}
+
 	}
 	
 	private class HandleNormalListener extends WPAStateListener<N, D, W> {
@@ -170,7 +180,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((rule == null) ? 0 : rule.hashCode());
 			return result;
 		}
@@ -185,8 +194,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			if (getClass() != obj.getClass())
 				return false;
 			HandleNormalListener other = (HandleNormalListener) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
 			if (rule == null) {
 				if (other.rule != null)
 					return false;
@@ -195,11 +202,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			return true;
 		}
 
-
-
-		private PostStar getOuterType() {
-			return PostStar.this;
-		}
 	}
 
 	
@@ -250,7 +252,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((rule == null) ? 0 : rule.hashCode());
 			return result;
 		}
@@ -265,8 +266,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			if (getClass() != obj.getClass())
 				return false;
 			HandlePushListener other = (HandlePushListener) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
 			if (rule == null) {
 				if (other.rule != null)
 					return false;
@@ -275,9 +274,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			return true;
 		}
 
-		private PostStar getOuterType() {
-			return PostStar.this;
-		}
 	}
 	
 	private class UpdateEpsilonOnPushListener extends WPAStateListener<N, D, W>{
@@ -308,7 +304,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((transition == null) ? 0 : transition.hashCode());
 			return result;
 		}
@@ -322,18 +317,12 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 			if (getClass() != obj.getClass())
 				return false;
 			UpdateEpsilonOnPushListener other = (UpdateEpsilonOnPushListener) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
 			if (transition == null) {
 				if (other.transition != null)
 					return false;
 			} else if (!transition.equals(other.transition))
 				return false;
 			return true;
-		}
-
-		private PostStar getOuterType() {
-			return PostStar.this;
 		}
 
 		

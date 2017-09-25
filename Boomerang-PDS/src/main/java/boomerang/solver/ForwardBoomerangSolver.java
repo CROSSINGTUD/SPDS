@@ -11,7 +11,6 @@ import com.beust.jcommander.internal.Sets;
 
 import boomerang.ForwardQuery;
 import boomerang.jimple.Field;
-import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
@@ -28,8 +27,6 @@ import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
-import sync.pds.solver.SyncPDSUpdateListener;
-import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.INode;
@@ -48,7 +45,7 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	}
 
 	@Override
-	public Collection<? extends State> computeCallFlow(SootMethod caller, ReturnSite returnSite, InvokeExpr invokeExpr,
+	public Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite, Statement callSite, InvokeExpr invokeExpr,
 			Val fact, SootMethod callee, Stmt calleeSp) {
 		if (!callee.hasActiveBody()){
 			return Collections.emptySet();

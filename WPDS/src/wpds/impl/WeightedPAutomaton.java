@@ -36,7 +36,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	// Weighted Pushdown Systems and their Application to Interprocedural
 	// Dataflow Analysis
 	protected Set<Transition<N, D>> transitions = Sets.newHashSet();
-	protected List<Transition<N, D>> sequentialTransitions = Lists.newArrayList();
 	// set F in paper [Reps2003]
 	protected Set<D> finalState = Sets.newHashSet();
 	// set P in paper [Reps2003]
@@ -192,7 +191,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		states.add(trans.getTarget());
 		states.add(trans.getStart());
 		boolean added = transitions.add(trans);
-		sequentialTransitions.add(trans);
 		W oldWeight = transitionToWeights.get(trans);
 		W newWeight = (W) (oldWeight == null ? weight : oldWeight.combineWith(weight));
 		if (!newWeight.equals(oldWeight)) {

@@ -6,9 +6,10 @@ import wpds.interfaces.State;
 import wpds.wildcard.Wildcard;
 
 public class Transition<N extends Location, D extends State> implements Edge<D, N> {
-  private D s1;
-  private N l1;
-  private D s2;
+  private final D s1;
+  private final N l1;
+  private final D s2;
+private int hashCode;
 
   public Transition(D s1, N l1, D s2) {
     assert s1 != null;
@@ -39,12 +40,15 @@ public class Transition<N extends Location, D extends State> implements Edge<D, 
 
   @Override
   public int hashCode() {
+	if(hashCode != 0)
+		return hashCode;
     final int prime = 31;
     int result = 1;
     result = prime * result + ((l1 == null) ? 0 : l1.hashCode());
     result = prime * result + ((s1 == null) ? 0 : s1.hashCode());
     result = prime * result + ((s2 == null) ? 0 : s2.hashCode());
-    return result;
+    hashCode = result;
+    return hashCode;
   }
 
   @Override

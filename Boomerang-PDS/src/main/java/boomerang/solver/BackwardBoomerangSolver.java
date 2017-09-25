@@ -4,15 +4,14 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import com.beust.jcommander.internal.Sets;
 
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.jimple.Field;
-import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import soot.Body;
@@ -79,7 +78,7 @@ public abstract class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 	}
 
 	@Override
-	protected Collection<? extends State> computeCallFlow(SootMethod caller, ReturnSite returnSite,
+	protected Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite, Statement callSite,
 			InvokeExpr invokeExpr, Val fact, SootMethod callee, Stmt calleeSp) {
 		if (!callee.hasActiveBody())
 			return Collections.emptySet();
@@ -103,7 +102,6 @@ public abstract class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 			i++;
 		}
 		
-		Stmt callSite = returnSite.getCallSite();
 		if(callSite instanceof AssignStmt && calleeSp instanceof ReturnStmt){
 			AssignStmt as = (AssignStmt) callSite;
 			ReturnStmt retStmt = (ReturnStmt) calleeSp;

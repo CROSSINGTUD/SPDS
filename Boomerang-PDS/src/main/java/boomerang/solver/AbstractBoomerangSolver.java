@@ -17,10 +17,8 @@ import com.google.common.collect.Multimap;
 import boomerang.Boomerang;
 import boomerang.Query;
 import boomerang.jimple.Field;
-import boomerang.jimple.ReturnSite;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import boomerang.poi.AbstractPOI;
 import heros.InterproceduralCFG;
 import soot.RefType;
 import soot.SootMethod;
@@ -38,11 +36,9 @@ import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
-import wpds.interfaces.ForwardDFSVisitor;
 import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
@@ -225,7 +221,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		for(SootMethod callee : icfg.getCalleesOfCallAt(callSite)){
 			for(Unit calleeSp : icfg.getStartPointsOf(callee)){
 				for(Unit returnSite : icfg.getSuccsOf(callSite)){
-					Collection<? extends State> res = computeCallFlow(caller,new ReturnSite((Stmt) returnSite,caller, callSite), invokeExpr, value, callee, (Stmt) calleeSp);
+					Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt)returnSite, caller), new Statement((Stmt)callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
 					onCallFlow(callee, callSite, value, res);
 					out.addAll(res);
 				}
@@ -244,7 +240,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	protected abstract Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,
 			Stmt returnSite);
 
-	protected abstract Collection<? extends State> computeCallFlow(SootMethod caller, ReturnSite returnSite, InvokeExpr invokeExpr,
+	protected abstract Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite, Statement callSite, InvokeExpr invokeExpr,
 			Val value, SootMethod callee, Stmt calleeSp);
 	protected abstract Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Val value, Stmt succ);
 
