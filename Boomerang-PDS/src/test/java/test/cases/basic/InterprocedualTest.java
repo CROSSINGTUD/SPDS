@@ -2,6 +2,7 @@ package test.cases.basic;
 
 import org.junit.Test;
 
+import test.cases.fields.Alloc;
 import test.core.selfrunning.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
@@ -21,6 +22,25 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 		alias3 = identity(alias2);
 		alias4 = alias1;
 		queryFor(alias4);
+	}	
+	
+	@Test
+	public void summaryReuseTest4() {
+		Alloc alias2;
+//		if(staticallyUnknown()){
+			Alloc alias1 = new Alloc();
+			alias2 = nestedIdentity(alias1);
+//		}else{
+//			Alloc alias1 = new Alloc();
+//			alias2 = nestedIdentity(alias1);
+//		}
+		queryFor(alias2);
+	}
+
+	private Alloc nestedIdentity(Alloc param2) {
+		int shouldNotSeeThis = 1;
+		Alloc returnVal = param2;
+		return returnVal;
 	}
 
 	@Test

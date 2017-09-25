@@ -41,11 +41,15 @@ public class Field implements Location {
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
+		if(rep != null)
+			return false;
 		if (obj == null)
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
 		Field other = (Field) obj;
+		if(other.rep != null)
+			return false;
 		if (delegate == null) {
 			if (other.delegate != null)
 				return false;

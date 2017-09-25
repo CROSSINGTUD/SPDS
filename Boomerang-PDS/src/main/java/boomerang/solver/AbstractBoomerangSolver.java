@@ -63,7 +63,9 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	private Multimap<SootMethod, MethodBasedFieldTransitionListener> perMethodFieldTransitionsListener = HashMultimap.create();
 	
 	
-	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField){
+	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, Weight<Statement>>> callSummaries, Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>>> fieldSummaries){
+		super(callSummaries, fieldSummaries);
+
 		this.icfg = icfg;
 		this.query = query;
 		this.unbalancedMethod.add(query.asNode().stmt().getMethod());

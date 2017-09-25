@@ -291,7 +291,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 
 		@Override
 		public void onInTransitionAdded(Transition<N, D> t) {
-			if ( t.getString().equals(fa.epsilon())) {
+			if (t.getString().equals(fa.epsilon())) {
 				update(new Transition<N, D>(t.getStart(), transitionLabel, target),
 						(W) getOrCreateWeight(t).extendWith(newWeight));
 			}	

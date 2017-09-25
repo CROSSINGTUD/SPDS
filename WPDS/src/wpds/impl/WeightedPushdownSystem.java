@@ -2,6 +2,7 @@ package wpds.impl;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Joiner;
@@ -23,8 +24,8 @@ public abstract class WeightedPushdownSystem<N extends Location, D extends State
 
 	@Override
 	public boolean addRule(Rule<N, D, W> rule) {
-		if(addRuleInternal(rule)){
-			for(WPDSUpdateListener<N, D, W> l : Lists.newArrayList(listeners)){
+		if (addRuleInternal(rule)) {
+			for (WPDSUpdateListener<N, D, W> l : Lists.newArrayList(listeners)) {
 				l.onRuleAdded(rule);
 			}
 			return true;
@@ -41,12 +42,12 @@ public abstract class WeightedPushdownSystem<N extends Location, D extends State
 			return normalRules.add((NormalRule) rule);
 		throw new RuntimeException("Try to add a rule of wrong type");
 	}
-	
-	public void registerUpdateListener(WPDSUpdateListener<N, D, W> listener){
-		if(!listeners.add(listener)){
+
+	public void registerUpdateListener(WPDSUpdateListener<N, D, W> listener) {
+		if (!listeners.add(listener)) {
 			return;
 		}
-		for(Rule<N, D, W> r : getAllRules()){
+		for (Rule<N, D, W> r : getAllRules()) {
 			listener.onRuleAdded(r);
 		}
 	}
@@ -78,13 +79,14 @@ public abstract class WeightedPushdownSystem<N extends Location, D extends State
 	@Override
 	public Set<Rule<N, D, W>> getRulesStarting(D start, N string) {
 		Set<Rule<N, D, W>> result = new HashSet<>();
-		getRulesStartingWithinSet(start,string,popRules,result);
-		getRulesStartingWithinSet(start,string,normalRules,result);
-		getRulesStartingWithinSet(start,string,pushRules,result);
+		getRulesStartingWithinSet(start, string, popRules, result);
+		getRulesStartingWithinSet(start, string, normalRules, result);
+		getRulesStartingWithinSet(start, string, pushRules, result);
 		return result;
 	}
-	
-	private void getRulesStartingWithinSet(D start, N string, Set<? extends Rule<N, D, W>> rules, Set<Rule<N, D, W>> res){
+
+	private void getRulesStartingWithinSet(D start, N string, Set<? extends Rule<N, D, W>> rules,
+			Set<Rule<N, D, W>> res) {
 		for (Rule<N, D, W> r : rules) {
 			if (r.getS1().equals(start) && (r.getL1().equals(string) || r.getL1() instanceof Wildcard))
 				res.add(r);
@@ -124,6 +126,16 @@ public abstract class WeightedPushdownSystem<N extends Location, D extends State
 			states.add(r.getS2());
 		}
 		return states;
+	}
+
+	@Override
+	public void poststar(WeightedPAutomaton<N, D, W> initialAutomaton,
+			final Map<Transition<N, D>, WeightedPAutomaton<N, D, W>> summaries) {
+		new PostStar<N, D, W>() {
+			protected Map<Transition<N, D>, WeightedPAutomaton<N, D, W>> getSummaries() {
+				return summaries;
+			};
+		}.poststar(this, initialAutomaton);
 	}
 
 	@Override

@@ -225,25 +225,26 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public void registerDFSListener(D state, ReachabilityListener<N, D> l) {
-		ForwardDFSVisitor<N, D, W> dfsVisitor = stateToDFS.get(state);
+		ForwardDFSVisitor<N, D, W> dfsVisitor = getStateToDFS().get(state);
 		stateToReachabilityListener.put(state,l);
 		if (dfsVisitor == null) {
 			dfsVisitor = new ForwardDFSVisitor<N, D, W>(this, state);
-			stateToDFS.put(state, dfsVisitor);
+			getStateToDFS().put(state, dfsVisitor);
 			this.registerListener(dfsVisitor);
-		}
-		for(WeightedPAutomaton<N, D, W> nested : nestedAutomatons){
-			nested.registerDFSListener(state, l);
 		}
 		dfsVisitor.registerListener(l);
 	}
 
+	protected Map<D, ForwardDFSVisitor<N, D, W>> getStateToDFS() {
+		return stateToDFS;
+	}
+
 	public void registerDFSEpsilonListener(D state, ReachabilityListener<N, D> l) {
-		ForwardDFSVisitor<N, D, W> dfsVisitor = stateToEpsilonDFS.get(state);
+		ForwardDFSVisitor<N, D, W> dfsVisitor = getStateToEpsilonDFS().get(state);
 		stateToEpsilonReachabilityListener.put(state,l);
 		if (dfsVisitor == null) {
 			dfsVisitor = new ForwardDFSEpsilonVisitor<N, D, W>(this, state);
-			stateToEpsilonDFS.put(state, dfsVisitor);
+			getStateToEpsilonDFS().put(state, dfsVisitor);
 			this.registerListener(dfsVisitor);
 		}
 		for(WeightedPAutomaton<N, D, W> nested : nestedAutomatons){
@@ -252,6 +253,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		dfsVisitor.registerListener(l);
 	}
 	
+	protected Map<D, ForwardDFSVisitor<N, D, W>> getStateToEpsilonDFS() {
+		return stateToEpsilonDFS;
+	}
+
 	public void registerListener(WPAStateListener<N, D, W> l) {
 		if (!stateListeners.put(l.getState(), l)) {
 			return;
@@ -300,6 +305,19 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			public boolean isGeneratedState(D d) {
 				return WeightedPAutomaton.this.isGeneratedState(d);
 			}
+			
+			@Override
+			protected Map<D, ForwardDFSVisitor<N, D, W>> getStateToDFS() {
+				return WeightedPAutomaton.this.stateToDFS;
+			}
+			@Override
+			protected Map<D, ForwardDFSVisitor<N, D, W>> getStateToEpsilonDFS() {
+				return WeightedPAutomaton.this.stateToEpsilonDFS;
+			}
+			@Override
+			public String toString() {
+				return "NESTED";
+			}
 		};
 		nestedAutomatons.add(nested);
 		
@@ -310,12 +328,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			nested.registerListener(e);
 		}
 		
-		for(Entry<D, ReachabilityListener<N, D>> e: stateToEpsilonReachabilityListener.entrySet()){
-			nested.registerDFSEpsilonListener(e.getKey(), e.getValue());
-		}
-		for(Entry<D, ReachabilityListener<N, D>> e: stateToReachabilityListener.entrySet()){
-			nested.registerDFSListener(e.getKey(), e.getValue());
-		}
 		return nested;
 	}
 }

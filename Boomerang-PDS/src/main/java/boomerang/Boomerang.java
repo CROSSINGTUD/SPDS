@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.beust.jcommander.internal.Maps;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
@@ -94,6 +95,10 @@ public abstract class Boomerang {
 	private Collection<RefType> allocatedTypes = Sets.newHashSet();
 	private Collection<ReachableMethodListener> reachableMethodsListener = Sets.newHashSet();
 	private Multimap<BackwardQuery, ForwardQuery> backwardToForwardQueries = HashMultimap.create();
+	private Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, Weight<Statement>>> backwardCallSummaries = Maps.newHashMap();
+	private Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>>> backwardFieldSummaries = Maps.newHashMap();
+	private Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, Weight<Statement>>> forwardCallSummaries = Maps.newHashMap();
+	private Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>>> forwardFieldSummaries = Maps.newHashMap();
 	private DefaultValueMap<FieldWritePOI, FieldWritePOI> fieldWrites = new DefaultValueMap<FieldWritePOI, FieldWritePOI>() {
 		@Override
 		protected FieldWritePOI createItem(FieldWritePOI key) {
@@ -113,7 +118,7 @@ public abstract class Boomerang {
 		}
 	};
 	protected AbstractBoomerangSolver createBackwardSolver(final BackwardQuery backwardQuery) {
-		final BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg(), backwardQuery,genField){
+		final BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg(), backwardQuery,genField, backwardCallSummaries, backwardFieldSummaries){
 
 			@Override
 			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
@@ -179,7 +184,7 @@ public abstract class Boomerang {
 
 
 	protected AbstractBoomerangSolver createForwardSolver(final ForwardQuery sourceQuery) {
-		ForwardBoomerangSolver solver = new ForwardBoomerangSolver(icfg(), sourceQuery,genField){
+		ForwardBoomerangSolver solver = new ForwardBoomerangSolver(icfg(), sourceQuery,genField, forwardCallSummaries, forwardFieldSummaries){
 			@Override
 			protected void onReturnFromCall(Statement callSite, Statement returnSite, final Node<Statement, Val> returnedNode, final boolean unbalanced) {
 				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));

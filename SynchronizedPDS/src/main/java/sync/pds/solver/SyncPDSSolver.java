@@ -27,7 +27,6 @@ import sync.pds.solver.nodes.SingleNode;
 import sync.pds.weights.SetDomain;
 import wpds.impl.NormalRule;
 import wpds.impl.PopRule;
-import wpds.impl.PostStar;
 import wpds.impl.PushRule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
@@ -139,7 +138,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		callingPDS.poststar(callAutomaton);
 		fieldPDS.poststar(fieldAutomaton);
 	}
-	
+	public SyncPDSSolver(Map<Transition<Stmt, INode<Fact>>, WeightedPAutomaton<Stmt, INode<Fact>, Weight<Stmt>>> callSummaries,Map<Transition<Field, INode<Node<Stmt, Fact>>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, Weight<Field>>> fieldSummaries){
+		callAutomaton.registerListener(new CallAutomatonListener());
+		fieldAutomaton.registerListener(new FieldUpdateListener());
+		callingPDS.poststar(callAutomaton,callSummaries);
+		fieldPDS.poststar(fieldAutomaton,fieldSummaries);
+	}
 	
 	private class CallAutomatonListener implements WPAUpdateListener<Stmt, INode<Fact>,Weight<Stmt>>{
 

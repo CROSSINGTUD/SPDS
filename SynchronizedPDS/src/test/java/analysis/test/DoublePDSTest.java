@@ -179,6 +179,7 @@ public class DoublePDSTest {
 		
 		solver.solve(node(1,"v"));
 		System.out.println(solver.getReachedStates());
+		solver.debugOutput();
 		assertTrue(solver.getReachedStates().contains(node(6,"y")));
 	}
 	
