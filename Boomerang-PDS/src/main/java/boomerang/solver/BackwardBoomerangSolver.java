@@ -47,7 +47,11 @@ public abstract class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 	}
 
 	@Override
-	protected boolean killFlow(SootMethod m, Stmt curr, Val value) {
+	protected boolean killFlow(SootMethod m, Stmt curr, Val value) {	
+		if(value.equals(Val.statics()))
+			return false;
+		if (!m.getActiveBody().getLocals().contains(value.value()))
+			return true;
 		return false;
 	}
 
@@ -105,8 +109,8 @@ public abstract class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 			i++;
 		}
 		
-		if(callSite instanceof AssignStmt && calleeSp instanceof ReturnStmt){
-			AssignStmt as = (AssignStmt) callSite;
+		if(callSite.getUnit().get() instanceof AssignStmt && calleeSp instanceof ReturnStmt){
+			AssignStmt as = (AssignStmt) callSite.getUnit().get();
 			ReturnStmt retStmt = (ReturnStmt) calleeSp;
 			if(as.getLeftOp().equals(fact.value())){
 				return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
