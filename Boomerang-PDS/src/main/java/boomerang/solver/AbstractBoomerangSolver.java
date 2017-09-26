@@ -45,11 +45,9 @@ import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, Val, Field>{
 
-	private static final boolean SPARSE = true;
-	private static final boolean INTERPROCEDURAL = true;
-	
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
+	private boolean INTERPROCEDURAL = true;
 	private Collection<Node<Statement, Val>> fieldFlows = Sets.newHashSet();
 	private Collection<RefType> allocationTypes = Sets.newHashSet();
 	private Collection<AllocationTypeListener> allocationTypeListeners = Sets.newHashSet();
@@ -133,19 +131,17 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			}
 			out.addAll(computeNormalFlow(method,curr, value, (Stmt) succ));
 		}
-		if(SPARSE){
-			List<Unit> succsOf = icfg.getSuccsOf(curr);
-			while(out.size() == 1 && succsOf.size() == 1){
-				List<State> l = Lists.newArrayList(out);
-				State state = l.get(0);
-				Unit succ = succsOf.get(0);
-				if(!state.equals(new Node<Statement,Val>(new Statement((Stmt)succ,method),value)))
-					break;
-				out.clear();
-				out.addAll(computeNormalFlow(method,curr, value, (Stmt) succ));
-				succsOf = icfg.getSuccsOf(succ);
-				curr = (Stmt) succ;
-			}
+		List<Unit> succsOf = icfg.getSuccsOf(curr);
+		while(out.size() == 1 && succsOf.size() == 1){
+			List<State> l = Lists.newArrayList(out);
+			State state = l.get(0);
+			Unit succ = succsOf.get(0);
+			if(!state.equals(new Node<Statement,Val>(new Statement((Stmt)succ,method),value)))
+				break;
+			out.clear();
+			out.addAll(computeNormalFlow(method,curr, value, (Stmt) succ));
+			succsOf = icfg.getSuccsOf(succ);
+			curr = (Stmt) succ;
 		}
 		return out;
 	}
