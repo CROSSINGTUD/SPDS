@@ -171,9 +171,6 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 			Stmt returnSite) {
 		Statement returnSiteStatement = new Statement(returnSite,icfg.getMethodOf(returnSite));
 
-		if(value.equals(Val.statics())){
-			return Collections.singleton(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS,returnSiteStatement));
-		}
 		if (curr instanceof ReturnStmt) {
 			Value op = ((ReturnStmt) curr).getOp();
 			if (op.equals(value.value())) {
@@ -183,7 +180,7 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 			}
 		}
 		if (!method.isStatic()) {
-			if (value.value().equals(method.getActiveBody().getThisLocal())) {
+			if (method.getActiveBody().getThisLocal().equals(value.value())) {
 				if (callSite.containsInvokeExpr()) {
 					if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
 						InstanceInvokeExpr iie = (InstanceInvokeExpr) callSite.getInvokeExpr();
@@ -201,6 +198,9 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 				}
 			}
 			index++;
+		}
+		if(value.equals(Val.statics())){
+			return Collections.singleton(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS,returnSiteStatement));
 		}
 		return Collections.emptySet();
 	}
