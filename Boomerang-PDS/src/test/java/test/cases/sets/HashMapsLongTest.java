@@ -3,11 +3,13 @@ package test.cases.sets;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.selfrunning.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
+@Ignore
 public class HashMapsLongTest extends AbstractBoomerangTest{
 	@Test
 	public void addAndRetrieve(){

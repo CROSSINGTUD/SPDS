@@ -1,10 +1,12 @@
 package test.cases.subclassing;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.selfrunning.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
+@Ignore
 public class InnerClassWithThreadTest extends AbstractBoomerangTest {
 	private static Allocation param;
 	@Test

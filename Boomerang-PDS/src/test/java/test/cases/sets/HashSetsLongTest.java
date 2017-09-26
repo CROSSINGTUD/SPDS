@@ -2,11 +2,13 @@ package test.cases.sets;
 
 import java.util.HashSet;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.selfrunning.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
+@Ignore
 public class HashSetsLongTest extends AbstractBoomerangTest{
 	@Test
 	public void addAndRetrieve(){

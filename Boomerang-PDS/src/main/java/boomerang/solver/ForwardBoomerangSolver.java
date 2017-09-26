@@ -26,6 +26,7 @@ import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
+import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
@@ -68,6 +69,9 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 			}
 			i++;
 		}
+		if(fact.equals(Val.statics()))
+			return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
+					fact, returnSite, PDSSystem.CALLS));
 		return Collections.emptySet();
 	}
 	
@@ -75,6 +79,8 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 
 	@Override
 	protected boolean killFlow(SootMethod m, Stmt curr, Val value) {
+		if(value.equals(Val.statics()))
+			return false;
 		if (!m.getActiveBody().getLocals().contains(value.value()))
 			return true;
 		if (curr instanceof AssignStmt) {
@@ -97,7 +103,7 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	@Override
 	public Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Val fact, Stmt succ) {
 		Set<State> out = Sets.newHashSet();
-		if (!isFieldWriteWithBase(curr, fact.value())) {
+		if (!isFieldWriteWithBase(curr, fact)) {
 			// always maintain data-flow if not a field write // killFlow has
 			// been taken care of
 			out.add(new Node<Statement, Val>(new Statement((Stmt) succ, method), fact));
@@ -113,6 +119,10 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 				if (leftOp instanceof InstanceFieldRef) {
 					InstanceFieldRef ifr = (InstanceFieldRef) leftOp;
 					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
+							new Field(ifr.getField()), PDSSystem.FIELDS));
+				} else if(leftOp instanceof StaticFieldRef){
+					StaticFieldRef ifr = (StaticFieldRef) leftOp;
+					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), Val.statics(),
 							new Field(ifr.getField()), PDSSystem.FIELDS));
 				} else if(leftOp instanceof ArrayRef){
 					ArrayRef arrayRef = (ArrayRef) leftOp;
@@ -130,8 +140,14 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 							new Statement(succ, method), new Val(leftOp,method), new Field(ifr.getField()));
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
 				}
-			}
-			if(rightOp instanceof ArrayRef){
+			} else if(rightOp instanceof StaticFieldRef){
+				StaticFieldRef ifr = (StaticFieldRef) rightOp;
+				if (Val.statics().equals(fact)) {
+					NodeWithLocation<Statement, Val, Field> succNode = new NodeWithLocation<>(
+							new Statement(succ, method), new Val(leftOp,method), new Field(ifr.getField()));
+					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
+				}
+			} else if(rightOp instanceof ArrayRef){
 				ArrayRef arrayRef = (ArrayRef) rightOp;
 				Value base = arrayRef.getBase();
 				if (base.equals(fact.value())) {
@@ -139,8 +155,7 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 							new Statement(succ, method), new Val(leftOp,method), Field.array());
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
 				}
-			}
-			if(rightOp instanceof CastExpr){
+			} else if(rightOp instanceof CastExpr){
 				CastExpr castExpr = (CastExpr) rightOp;
 				if (castExpr.getOp().equals(fact.value())) {
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
@@ -155,6 +170,10 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 	public Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite,
 			Stmt returnSite) {
 		Statement returnSiteStatement = new Statement(returnSite,icfg.getMethodOf(returnSite));
+
+		if(value.equals(Val.statics())){
+			return Collections.singleton(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS,returnSiteStatement));
+		}
 		if (curr instanceof ReturnStmt) {
 			Value op = ((ReturnStmt) curr).getOp();
 			if (op.equals(value.value())) {
@@ -183,7 +202,6 @@ public abstract class ForwardBoomerangSolver extends AbstractBoomerangSolver {
 			}
 			index++;
 		}
-
 		return Collections.emptySet();
 	}
 	

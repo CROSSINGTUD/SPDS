@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.junit.Test;
 
+import test.cases.fields.Alloc;
 import test.core.selfrunning.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
@@ -26,7 +27,7 @@ public class ArrayListsLongTest extends AbstractBoomerangTest{
 	@Test
 	public void addAndRetrieveByIndex1(){
 		List<Object> list = new ArrayList<Object>();
-		AllocatedObject alias = new AllocatedObject(){};
+		Alloc alias = new Alloc();
 		list.add(alias);
 		Object ir = list.get(0);
 		Object query2 = ir;

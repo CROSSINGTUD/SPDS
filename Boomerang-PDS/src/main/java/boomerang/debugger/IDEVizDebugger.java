@@ -32,13 +32,12 @@ public class IDEVizDebugger extends Debugger{
 	@Override
 	public void reachableNodes(Query q, Set<Node<Statement, Val>> reachedStates) {
 		System.out.println(ideVizFile.getAbsolutePath() +q.toString().replace(" ",""));
-		IDEToJSON<SootMethod, Unit, Value, Object, InterproceduralCFG<Unit, SootMethod>> ideToJson = new IDEToJSON<SootMethod, Unit, Value, Object, InterproceduralCFG<Unit,SootMethod>>(new File(ideVizFile.getAbsolutePath() +q.toString().replace(" ","").replace(":", "").replaceAll("<", "").replace(">", "")), icfg);
+		IDEToJSON<SootMethod, Unit, Val, Object, InterproceduralCFG<Unit, SootMethod>> ideToJson = new IDEToJSON<SootMethod, Unit, Val, Object, InterproceduralCFG<Unit,SootMethod>>(new File(ideVizFile.getAbsolutePath() +q.toString().replace(" ","").replace(":", "").replaceAll("<", "").replace(">", "")), icfg);
 		for(Node<Statement,Val> states : reachedStates){
-			ExplodedSuperGraph<SootMethod, Unit, Value, Object> esg = ideToJson.getOrCreateESG(states.stmt().getMethod(), (q instanceof ForwardQuery ? Direction.Forward : Direction.Backward));
-			Value startFact = states.fact().value();
+			ExplodedSuperGraph<SootMethod, Unit, Val, Object> esg = ideToJson.getOrCreateESG(states.stmt().getMethod(), (q instanceof ForwardQuery ? Direction.Forward : Direction.Backward));
 			if(states.stmt().getUnit().isPresent()){
 				Stmt start = states.stmt().getUnit().get();
-				esg.normalFlow(start, startFact, start, startFact);
+				esg.normalFlow(start, states.fact(), start, states.fact());
 			}
 		}
 		ideToJson.writeToFile();

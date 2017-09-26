@@ -315,7 +315,7 @@ public abstract class Boomerang {
 			queryToSolvers.getOrCreate(sourceQuery).addFieldAutomatonListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 				@Override
 				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
-					if(!(t.getStart() instanceof GeneratedState) && t.getStart().fact().equals(node.asNode()) && t.getTarget().fact().equals(sourceQuery.asNode()) && t.getLabel().equals(Field.empty())){
+					if(!(t.getStart() instanceof GeneratedState) && t.getStart().fact().equals(node.asNode()) && t.getTarget().fact().equals(sourceQuery.asNode())){
 						fieldWritePoi.addBaseAllocation(sourceQuery);
 						forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(node.stmt())).addByPassingAllocation(sourceQuery);
 					}
@@ -381,7 +381,6 @@ public abstract class Boomerang {
 		AbstractBoomerangSolver solver = queryToSolvers.getOrCreate(query);
 		if (unit.isPresent()) {
 			for (Unit succ : icfg().getSuccsOf(unit.get())) {
-				
 				Node<Statement, Val> source = new Node<Statement, Val>(
 						new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact());
 				if(isMultiArrayAllocation(unit.get())){

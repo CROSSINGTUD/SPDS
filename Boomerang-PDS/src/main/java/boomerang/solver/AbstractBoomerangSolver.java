@@ -28,6 +28,7 @@ import soot.jimple.AssignStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
+import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.SyncPDSUpdateListener;
@@ -147,12 +148,22 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	}
 	protected Field getWrittenField(Stmt curr) {
 		AssignStmt as = (AssignStmt) curr;
+		if(as.getLeftOp() instanceof StaticFieldRef){
+			StaticFieldRef staticFieldRef = (StaticFieldRef) as.getLeftOp();
+			return new Field(staticFieldRef.getField());
+		}
 		InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
 		return new Field(ifr.getField());
 	}
-	protected boolean isFieldWriteWithBase(Stmt curr, Value base) {
+	protected boolean isFieldWriteWithBase(Stmt curr, Val base) {
 		if(curr instanceof AssignStmt){
 			AssignStmt as = (AssignStmt) curr;
+			if(base.equals(Val.statics())){
+				if(as.getLeftOp() instanceof StaticFieldRef){
+					return true;
+				}
+				return false;
+			}
 			if(as.getLeftOp() instanceof InstanceFieldRef){
 				InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
 				return ifr.getBase().equals(base);
