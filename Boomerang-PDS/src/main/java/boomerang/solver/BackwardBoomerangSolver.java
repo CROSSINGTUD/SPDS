@@ -25,6 +25,7 @@ import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
+import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.CallPopNode;
@@ -54,7 +55,7 @@ public abstract class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 	protected Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite, Stmt returnSite) {
 		Statement returnSiteStatement = new Statement(returnSite,icfg.getMethodOf(returnSite));
 		if (!method.isStatic()) {
-			if (value.value().equals(method.getActiveBody().getThisLocal())) {
+			if (method.getActiveBody().getThisLocal().equals(value.value())) {
 				if(callSite.containsInvokeExpr()){
 					if(callSite.getInvokeExpr() instanceof InstanceInvokeExpr){
 						InstanceInvokeExpr iie = (InstanceInvokeExpr) callSite.getInvokeExpr();
@@ -73,7 +74,9 @@ public abstract class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 			}
 			index++;
 		}
-
+		if(value.equals(Val.statics())){
+			return Collections.singleton(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS,returnSiteStatement));
+		}
 		return Collections.emptySet();
 	}
 
@@ -110,6 +113,10 @@ public abstract class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 						new Val(retStmt.getOp(),callee), returnSite, PDSSystem.CALLS));
 			}
 		}
+		if(fact.equals(Val.statics())){
+			return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
+					fact, returnSite, PDSSystem.CALLS));
+		}
 		return Collections.emptySet();
 	}
 
@@ -140,6 +147,10 @@ public abstract class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 					InstanceFieldRef ifr = (InstanceFieldRef) rightOp;
 					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
 							new Field(ifr.getField()), PDSSystem.FIELDS));
+				} else if(rightOp instanceof StaticFieldRef){
+					StaticFieldRef ifr = (StaticFieldRef) rightOp;
+					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), Val.statics(),
+							new Field(ifr.getField()), PDSSystem.FIELDS));
 				} else if(rightOp instanceof CastExpr){
 					CastExpr castExpr = (CastExpr) rightOp;
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(castExpr.getOp(),method)));
@@ -156,6 +167,13 @@ public abstract class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 				InstanceFieldRef ifr = (InstanceFieldRef) leftOp;
 				Value base = ifr.getBase();
 				if (base.equals(fact.value())) {
+					NodeWithLocation<Statement, Val, Field> succNode = new NodeWithLocation<>(
+							new Statement(succ, method), new Val(rightOp,method), new Field(ifr.getField()));
+					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
+				}
+			} else if(leftOp instanceof StaticFieldRef){
+				StaticFieldRef ifr = (StaticFieldRef) leftOp;
+				if (fact.equals(Val.statics())) {
 					NodeWithLocation<Statement, Val, Field> succNode = new NodeWithLocation<>(
 							new Statement(succ, method), new Val(rightOp,method), new Field(ifr.getField()));
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));

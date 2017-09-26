@@ -144,7 +144,7 @@ public abstract class Boomerang {
 					Stmt stmt = optUnit.get();
 					if (stmt instanceof AssignStmt) {
 						AssignStmt as = (AssignStmt) stmt;
-						if (node.fact().value().equals(as.getLeftOp()) && isAllocationVal(as.getRightOp())) {
+						if (node.fact().equals(new Val(as.getLeftOp(),icfg().getMethodOf(as))) && isAllocationVal(as.getRightOp())) {
 							final ForwardQuery forwardQuery = new ForwardQuery(node.stmt(),
 									new Val(as.getLeftOp(), icfg().getMethodOf(stmt)));
 							backwardToForwardQueries.put(backwardQuery, forwardQuery);
