@@ -111,7 +111,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			if(killFlow(method, curr, value)){
 				return Collections.emptySet();
 			}
-			if(curr.containsInvokeExpr() && valueUsedInStatement(method,curr,curr.getInvokeExpr(), value) && INTERPROCEDURAL){
+			if(curr.containsInvokeExpr() && valueUsedInStatement(curr, value) && INTERPROCEDURAL){
 				return callFlow(method, curr, curr.getInvokeExpr(), value);
 			} else if(icfg.isExitStmt(curr)){
 				return returnFlow(method,curr, value);
@@ -189,7 +189,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	}
 	protected abstract boolean killFlow(SootMethod method, Stmt curr, Val value);
 	
-	public boolean valueUsedInStatement(SootMethod method, Stmt u, InvokeExpr invokeExpr, Val value) {
+	public boolean valueUsedInStatement(Stmt u, Val value) {
 		if(value.equals(Val.statics()))
 			return true;
 		if(u instanceof AssignStmt && isBackward()){
@@ -197,14 +197,17 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			if(assignStmt.getLeftOp().equals(value.value()))
 				return true;
 		}
-		if(invokeExpr instanceof InstanceInvokeExpr){
-			InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
-			if(iie.getBase().equals(value.value()))
-				return true;
-		}
-		for(Value arg : invokeExpr.getArgs()){
-			if(arg.equals(value.value())){
-				return true;
+		if(u.containsInvokeExpr()){
+			InvokeExpr invokeExpr = u.getInvokeExpr();
+			if(invokeExpr instanceof InstanceInvokeExpr){
+				InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
+				if(iie.getBase().equals(value.value()))
+					return true;
+			}
+			for(Value arg : invokeExpr.getArgs()){
+				if(arg.equals(value.value())){
+					return true;
+				}
 			}
 		}
 		return false;
@@ -442,7 +445,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 					@Override
 					public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
 						if(reachableNode.asNode().equals(new Node<Statement,Val>(callPopNode.getReturnSite(),callPopNode.location()))){
-							if(!valueUsedInStatement(icfg.getMethodOf(callSite), (Stmt)callSite, ((Stmt) callSite).getInvokeExpr(), callPopNode.location())){
+							if(!valueUsedInStatement((Stmt)callSite,  callPopNode.location())){
 								//TODO why do we need this?
 								return;
 							}
