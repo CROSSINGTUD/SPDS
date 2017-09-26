@@ -19,6 +19,7 @@ import soot.Local;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
+import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.CastExpr;
 import soot.jimple.InstanceFieldRef;
@@ -155,6 +156,11 @@ public abstract class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 					StaticFieldRef ifr = (StaticFieldRef) rightOp;
 					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), Val.statics(),
 							new Field(ifr.getField()), PDSSystem.FIELDS));
+				} else if(rightOp instanceof ArrayRef){
+					ArrayRef ifr = (ArrayRef) rightOp;
+					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
+							Field.array(), PDSSystem.FIELDS));
+					leftSideMatches = false;
 				} else if(rightOp instanceof CastExpr){
 					CastExpr castExpr = (CastExpr) rightOp;
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(castExpr.getOp(),method)));
@@ -182,7 +188,15 @@ public abstract class BackwardBoomerangSolver extends AbstractBoomerangSolver{
 							new Statement(succ, method), new Val(rightOp,method), new Field(ifr.getField()));
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
 				}
-			}
+			} else if (leftOp instanceof ArrayRef) {
+				ArrayRef ifr = (ArrayRef) leftOp;
+				Value base = ifr.getBase();
+				if (base.equals(fact.value())) {
+					NodeWithLocation<Statement, Val, Field> succNode = new NodeWithLocation<>(
+							new Statement(succ, method), new Val(rightOp,method), Field.array());
+					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
+				}
+			} 
 		}
 		if(!leftSideMatches)
 			out.add(new Node<Statement, Val>(new Statement(succ, method), fact));
