@@ -397,7 +397,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		if (!updateListeners.add(listener)) {
 			return;
 		}
-		for (WitnessNode<Stmt, Fact, Field> reachableNode : Lists.newArrayList(reachedStates.values())) {
+		for (WitnessNode<Stmt, Fact, Field> reachableNode : Lists.newArrayList(reachedStates.keySet())) {
 			listener.onReachableNodeAdded(reachableNode);
 		}
 	}

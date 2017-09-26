@@ -57,7 +57,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	private static final boolean DISABLE_CALLPOI = false;
 	Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
@@ -150,6 +150,9 @@ public abstract class Boomerang {
 				} else if(isFieldLoad(node.stmt())){
 					backwardHandleFieldRead(node, createFieldLoad(node.stmt()), backwardQuery);
 				}
+				if(isBackwardEnterCall(node.stmt())){
+					backwardHandleEnterCall(node, forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(node.stmt())), backwardQuery);
+				}
 			}
 
 		});
@@ -157,6 +160,15 @@ public abstract class Boomerang {
 		return solver;
 	}
 	
+	protected void backwardHandleEnterCall(WitnessNode<Statement, Val, Field> node, ForwardCallSitePOI returnSite,
+			BackwardQuery backwardQuery) {
+		returnSite.returnsFromCall(backwardQuery, node.asNode());
+	}
+
+	protected boolean isBackwardEnterCall(Statement stmt) {
+		return icfg().isExitStmt(stmt.getUnit().get());
+	}
+
 	private void forwardSolve(final ForwardQuery forwardQuery, BackwardQuery backwardQuery) {
 		backwardToForwardQueries.put(backwardQuery, forwardQuery);
 		forwardSolve(forwardQuery);
@@ -222,6 +234,9 @@ public abstract class Boomerang {
 					forwardHandleFieldWrite(node, createArrayFieldStore(node.stmt()), sourceQuery);
 				} else if(isFieldLoad(node.stmt())){
 					forwardHandleFieldLoad(node, createFieldLoad(node.stmt()), sourceQuery);
+				}
+				if(isBackwardEnterCall(node.stmt())){
+					forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(node.stmt())).addByPassingAllocation(sourceQuery);
 				}
 			}
 		});

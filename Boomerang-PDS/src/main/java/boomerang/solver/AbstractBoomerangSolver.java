@@ -382,6 +382,35 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return "Solver for: " + query.toString();
 	}
 	
+
+	protected void onReturnFlow(final Unit callSite, Unit returnSite, final SootMethod method, final Stmt returnStmt, final Val value,
+			Collection<? extends State> outFlow) {
+		handleUnbalancedFlow(callSite, returnSite, method, returnStmt, value, outFlow);
+		for(State r : outFlow){
+			if(r instanceof CallPopNode){
+				final CallPopNode<Val,Statement> callPopNode = (CallPopNode) r;
+				this.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
+					
+					@Override
+					public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+						if(reachableNode.asNode().equals(new Node<Statement,Val>(callPopNode.getReturnSite(),callPopNode.location()))){
+							if(!valueUsedInStatement((Stmt)callSite,  callPopNode.location())){
+								//TODO why do we need this?
+								return;
+							}
+							onReturnFromCall(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), callPopNode.getReturnSite(), reachableNode.asNode(),unbalancedMethod.contains(method));
+						}
+					}
+				});
+			}
+		}
+	}
+
+	protected abstract void onReturnFromCall(Statement statement, Statement returnSite,  Node<Statement, Val> node, boolean unbalanced);
+	
+	
+	
+
 	public void debugFieldAutomaton(final Statement statement) {
 		if(!Boomerang.DEBUG)
 			return;
@@ -433,30 +462,4 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			}
 		}
 
-
-	protected void onReturnFlow(final Unit callSite, Unit returnSite, final SootMethod method, final Stmt returnStmt, final Val value,
-			Collection<? extends State> outFlow) {
-		handleUnbalancedFlow(callSite, returnSite, method, returnStmt, value, outFlow);
-		for(State r : outFlow){
-			if(r instanceof CallPopNode){
-				final CallPopNode<Val,Statement> callPopNode = (CallPopNode) r;
-				this.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
-					
-					@Override
-					public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
-						if(reachableNode.asNode().equals(new Node<Statement,Val>(callPopNode.getReturnSite(),callPopNode.location()))){
-							if(!valueUsedInStatement((Stmt)callSite,  callPopNode.location())){
-								//TODO why do we need this?
-								return;
-							}
-							onReturnFromCall(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), callPopNode.getReturnSite(), reachableNode.asNode(),unbalancedMethod.contains(method));
-						}
-					}
-				});
-			}
-		}
-	}
-
-	protected abstract void onReturnFromCall(Statement statement, Statement returnSite,  Node<Statement, Val> node, boolean unbalanced);
-	
 }
