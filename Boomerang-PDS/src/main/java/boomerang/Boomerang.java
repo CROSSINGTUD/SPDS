@@ -57,7 +57,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang {
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	private static final boolean DISABLE_CALLPOI = false;
 	Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver>() {
@@ -116,7 +116,7 @@ public abstract class Boomerang {
 		}
 	};
 	protected AbstractBoomerangSolver createBackwardSolver(final BackwardQuery backwardQuery) {
-		final BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg(), backwardQuery,genField, backwardCallSummaries, backwardFieldSummaries){
+		final BackwardBoomerangSolver solver = new BackwardBoomerangSolver(bwicfg(), backwardQuery, genField, backwardCallSummaries, backwardFieldSummaries){
 
 			@Override
 			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
@@ -139,38 +139,16 @@ public abstract class Boomerang {
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
-				Optional<Stmt> optUnit = node.stmt().getUnit();
-				if (optUnit.isPresent()) {
-					Stmt stmt = optUnit.get();
-					if (stmt instanceof AssignStmt) {
-						AssignStmt as = (AssignStmt) stmt;
-						if (node.fact().equals(new Val(as.getLeftOp(),icfg().getMethodOf(as))) && isAllocationVal(as.getRightOp())) {
-							final ForwardQuery forwardQuery = new ForwardQuery(node.stmt(),
-									new Val(as.getLeftOp(), icfg().getMethodOf(stmt)));
-							backwardToForwardQueries.put(backwardQuery, forwardQuery);
-							forwardSolve(forwardQuery);
-							queryToSolvers.getOrCreate(backwardQuery).addCallAutomatonListener(new WPAUpdateListener<Statement, INode<Val>, Weight<Statement>>() {
-
-								@Override
-								public void onWeightAdded(Transition<Statement, INode<Val>> t, Weight<Statement> w) {
-									if(t.getTarget() instanceof GeneratedState){
-										GeneratedState<Val,Statement> generatedState = (GeneratedState) t.getTarget();
-										queryToSolvers.getOrCreate(forwardQuery).addUnbalancedFlow(generatedState.location().getMethod());
-									}
-								}
-							});
-						}
-
-						if (as.getRightOp() instanceof InstanceFieldRef) {
-							InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
-							handleFieldRead(node, fieldReads.getOrCreate(new FieldReadPOI(node.stmt(), new Val(ifr.getBase(),node.stmt().getMethod()), new Field(ifr.getField()), new Val(as.getLeftOp(),node.stmt().getMethod()))), backwardQuery);
-						}
-						
-
-						if (as.getLeftOp() instanceof InstanceFieldRef) {
-							backwardHandleFieldWrite(node, forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(node.stmt())), backwardQuery);
-						}
-					}
+				if(isAllocationNode(node.stmt(), node.fact())){
+					forwardSolve(new ForwardQuery(node.stmt(),
+							getAllocatedVal(node.stmt())),backwardQuery);
+				}
+				if(isFieldStore(node.stmt())){
+					backwardHandleFieldWrite(node, forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(node.stmt())), backwardQuery);
+				} else if(isArrayStore(node.stmt())){
+//					forwardHandleFieldWrite(node, createArrayFieldStore(node.stmt()), sourceQuery);
+				} else if(isFieldLoad(node.stmt())){
+					backwardHandleFieldRead(node, createFieldLoad(node.stmt()), backwardQuery);
 				}
 			}
 
@@ -178,8 +156,40 @@ public abstract class Boomerang {
 		
 		return solver;
 	}
+	
+	private void forwardSolve(final ForwardQuery forwardQuery, BackwardQuery backwardQuery) {
+		backwardToForwardQueries.put(backwardQuery, forwardQuery);
+		forwardSolve(forwardQuery);
+		queryToSolvers.getOrCreate(backwardQuery).addCallAutomatonListener(new WPAUpdateListener<Statement, INode<Val>, Weight<Statement>>() {
 
+			@Override
+			public void onWeightAdded(Transition<Statement, INode<Val>> t, Weight<Statement> w) {
+				if(t.getTarget() instanceof GeneratedState){
+					GeneratedState<Val,Statement> generatedState = (GeneratedState) t.getTarget();
+					queryToSolvers.getOrCreate(forwardQuery).addUnbalancedFlow(generatedState.location().getMethod());
+				}
+			}
+		});
+	}
 
+	protected static Val getAllocatedVal(Statement s) {
+		AssignStmt optUnit = (AssignStmt) s.getUnit().get();
+		return new Val(optUnit.getLeftOp(), s.getMethod());
+	}
+
+	protected static boolean isAllocationNode(Statement s, Val fact) {
+		Optional<Stmt> optUnit = s.getUnit();
+		if (optUnit.isPresent()) {
+			Stmt stmt = optUnit.get();
+			if (stmt instanceof AssignStmt) {
+				AssignStmt as = (AssignStmt) stmt;
+				if (as.getLeftOp().equals(fact.value()) && isAllocationVal(as.getRightOp())) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 
 	protected AbstractBoomerangSolver createForwardSolver(final ForwardQuery sourceQuery) {
 		ForwardBoomerangSolver solver = new ForwardBoomerangSolver(icfg(), sourceQuery,genField, forwardCallSummaries, forwardFieldSummaries){
@@ -207,11 +217,11 @@ public abstract class Boomerang {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
 				if(isFieldStore(node.stmt())){
-					handleFieldWrite(node, createFieldStore(node.stmt()), sourceQuery);
+					forwardHandleFieldWrite(node, createFieldStore(node.stmt()), sourceQuery);
 				} else if(isArrayStore(node.stmt())){
-					handleFieldWrite(node, createArrayFieldStore(node.stmt()), sourceQuery);
+					forwardHandleFieldWrite(node, createArrayFieldStore(node.stmt()), sourceQuery);
 				} else if(isFieldLoad(node.stmt())){
-					handleFieldLoad(node, createFieldLoad(node.stmt()), sourceQuery);
+					forwardHandleFieldLoad(node, createFieldLoad(node.stmt()), sourceQuery);
 				}
 			}
 		});
@@ -284,7 +294,7 @@ public abstract class Boomerang {
 
 
 
-	protected void handleFieldRead(final WitnessNode<Statement, Val, Field> node, FieldReadPOI fieldRead, final BackwardQuery sourceQuery) {	
+	protected void backwardHandleFieldRead(final WitnessNode<Statement, Val, Field> node, FieldReadPOI fieldRead, final BackwardQuery sourceQuery) {	
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
 				fieldRead.getBaseVar());
 		if (node.fact().equals(fieldRead.getStoredVar())) {
@@ -302,7 +312,7 @@ public abstract class Boomerang {
 		return val instanceof NullConstant || val instanceof NewExpr || val instanceof NewArrayExpr || val instanceof NewMultiArrayExpr;
 	}
 
-	protected void handleFieldWrite(final WitnessNode<Statement, Val, Field> node, final FieldWritePOI fieldWritePoi, final ForwardQuery sourceQuery) {
+	protected void forwardHandleFieldWrite(final WitnessNode<Statement, Val, Field> node, final FieldWritePOI fieldWritePoi, final ForwardQuery sourceQuery) {
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
 				fieldWritePoi.getBaseVar());
 		if (node.fact().equals(fieldWritePoi.getStoredVar())) {
@@ -322,7 +332,7 @@ public abstract class Boomerang {
 		}
 	}
 
-	private void handleFieldLoad(final WitnessNode<Statement, Val, Field> node, final FieldReadPOI fieldReadPoi, final ForwardQuery sourceQuery) {
+	private void forwardHandleFieldLoad(final WitnessNode<Statement, Val, Field> node, final FieldReadPOI fieldReadPoi, final ForwardQuery sourceQuery) {
 		if (node.fact().equals(fieldReadPoi.getBaseVar())) {
 			queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
 

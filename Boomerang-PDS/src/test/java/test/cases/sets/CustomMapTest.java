@@ -60,7 +60,8 @@ public class CustomMapTest extends AbstractBoomerangTest {
 		Alloc alloc = new Alloc();
 		MyMap map = new MyMap();
 		map.add(alloc);
-		Object alias = map.m.content;
+		MyInnerMap load = map.m;
+		Object alias = load.content;
 		queryFor(alias);
 	}
 	

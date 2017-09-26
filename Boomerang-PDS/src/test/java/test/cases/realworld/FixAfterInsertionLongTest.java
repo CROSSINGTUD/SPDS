@@ -1,10 +1,12 @@
 package test.cases.realworld;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.cases.realworld.FixAfterInsertion.Entry;
 import test.core.selfrunning.AbstractBoomerangTest;
 
+@Ignore
 public class FixAfterInsertionLongTest  extends AbstractBoomerangTest{
 
 	@Test
