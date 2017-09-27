@@ -36,6 +36,7 @@ public class TestingResultReporter implements ResultReporter<TransitionFunction>
 		for(final Entry<Unit, Assertion> e : stmtToResults.entries()){
 			if(e.getValue() instanceof ComparableResult){
 				final ComparableResult<TransitionFunction> expectedResults = (ComparableResult) e.getValue();
+//				System.out.println(Joiner.on("\n").join(seedSolver.getNodesToWeights().entrySet()));
 				for(Entry<Node<Statement, Val>, TransitionFunction> s : seedSolver.getNodesToWeights().entrySet()){
 					Node<Statement,Val> node = s.getKey();
 					if(!node.fact().equals(expectedResults.getAccessGraph()))
@@ -47,7 +48,6 @@ public class TestingResultReporter implements ResultReporter<TransitionFunction>
 					}
 					
 				}
-//				TypestateDomainValue<State> resultAt = solver.resultAt(e.getKey(), expectedResults.getAccessGraph());
 			}
 		}
 	}

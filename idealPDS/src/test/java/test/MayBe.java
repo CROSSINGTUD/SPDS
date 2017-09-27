@@ -2,10 +2,12 @@ package test;
 
 import boomerang.jimple.Val;
 import soot.Unit;
-import typestate.ConcreteState;
-import typestate.TypestateDomainValue;
+import typestate.TransitionFunction;
+import typestate.finiteautomata.ITransition;
+import typestate.finiteautomata.IdentityTransition;
+import typestate.finiteautomata.State;
 
-public class MayBe extends ExpectedResults<ConcreteState> {
+public class MayBe extends ExpectedResults<TransitionFunction> {
 
 	MayBe(Unit unit, Val accessGraph, InternalState state) {
 		super(unit, accessGraph, state);
@@ -14,8 +16,11 @@ public class MayBe extends ExpectedResults<ConcreteState> {
 		return "Maybe " + super.toString();
 	}
 	@Override
-	public void computedResults(TypestateDomainValue<ConcreteState> results) {
-		for(ConcreteState s : results.getStates()){
+	public void computedResults(TransitionFunction results) {
+		for(ITransition t : results.values()){
+			if(t instanceof IdentityTransition)
+				continue;
+			State s = t.to();
 			if(state == InternalState.ACCEPTING){
 				satisfied |= !s.isErrorState();
 			} else if(state == InternalState.ERROR){
@@ -23,4 +28,4 @@ public class MayBe extends ExpectedResults<ConcreteState> {
 			}
 		}
 	}
-}	
+}

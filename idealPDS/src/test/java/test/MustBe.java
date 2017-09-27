@@ -4,6 +4,7 @@ import boomerang.jimple.Val;
 import soot.Unit;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.ITransition;
+import typestate.finiteautomata.IdentityTransition;
 import typestate.finiteautomata.State;
 
 public class MustBe extends ExpectedResults<TransitionFunction> {
@@ -19,6 +20,9 @@ public class MustBe extends ExpectedResults<TransitionFunction> {
 	@Override
 	public void computedResults(TransitionFunction val) {
 		for(ITransition t : val.values()){
+			if(t instanceof IdentityTransition){
+				continue;
+			}
 			State s = t.to();
 			if(state == InternalState.ACCEPTING){
 				satisfied |= !s.isErrorState();
