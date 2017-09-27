@@ -1,6 +1,6 @@
 package typestate.finiteautomata;
 
-public interface ITransition<State> {
+public interface ITransition {
 	public State from();
 	public State to();
 }

@@ -10,7 +10,7 @@ import boomerang.accessgraph.AccessGraph;
 import boomerang.cfg.ExtendedICFG;
 import heros.EdgeFunction;
 import heros.solver.Pair;
-import ideal.Analysis;
+import ideal.IDEALAnalysis;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;

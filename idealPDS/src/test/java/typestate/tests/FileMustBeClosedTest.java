@@ -26,7 +26,11 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 	public void simple0() {
 		File file = new File();
 		file.open();
+		escape(file);
 		mustBeInErrorState(file);
+	}
+
+	private void escape(File other) {
 	}
 
 	@Test

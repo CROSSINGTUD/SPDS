@@ -1,6 +1,6 @@
 package typestate.finiteautomata;
 
-public class Transition<State> implements ITransition<State> {
+public class Transition implements ITransition {
   private final State from;
   private final State to;
 
@@ -49,7 +49,7 @@ public class Transition<State> implements ITransition<State> {
   }
 
   public String toString() {
-    return "" + from + " to " + to;
+    return "" + from + " -> " + to;
   }
 
 }

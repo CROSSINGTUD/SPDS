@@ -2,6 +2,7 @@ package sync.pds.solver;
 
 import java.util.AbstractMap;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
@@ -35,6 +36,7 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
+import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends Location, W extends Weight> {
@@ -48,6 +50,8 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	protected final WeightedPushdownSystem<Stmt, INode<Fact>, W> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, W>();
 	protected final WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W> fieldPDS = new WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W>();
+	protected final Map<Node<Stmt,Fact>, W> nodesToWeights = Maps.newHashMap(); 
+	
 	protected final WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W>() {
 		@Override
 		public INode<Node<Stmt,Fact>> createState(INode<Node<Stmt,Fact>> d, Field loc) {
@@ -113,10 +117,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private Multimap<WitnessNode<Stmt, Fact, Field>, Transition<Field, INode<Node<Stmt,Fact>>>> queuedFieldWitness = HashMultimap.create();
 
 	public SyncPDSSolver(){
-		callAutomaton.registerListener(new CallAutomatonListener());
-		fieldAutomaton.registerListener(new FieldUpdateListener());
-		callingPDS.poststar(callAutomaton);
-		fieldPDS.poststar(fieldAutomaton);
+		this(Maps.<Transition<Stmt, INode<Fact>>, WeightedPAutomaton<Stmt, INode<Fact>, W>>newHashMap(),Maps.<Transition<Field, INode<Node<Stmt, Fact>>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>>newHashMap());
 	}
 	public SyncPDSSolver(Map<Transition<Stmt, INode<Fact>>, WeightedPAutomaton<Stmt, INode<Fact>, W>> callSummaries,Map<Transition<Field, INode<Node<Stmt, Fact>>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>> fieldSummaries){
 		callAutomaton.registerListener(new CallAutomatonListener());
@@ -125,6 +126,8 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		fieldPDS.poststar(fieldAutomaton,fieldSummaries);
 	}
 	
+	
+
 	private class CallAutomatonListener implements WPAUpdateListener<Stmt, INode<Fact>,W>{
 
 		@Override
@@ -146,9 +149,78 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		callAutomaton
 				.addTransition(callTrans);
 		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
+		computeValues(source);
 		processNode(startNode);
 	}
 
+	private void computeValues(Node<Stmt, Fact> source) {
+		nodesToWeights.put(source, callAutomaton.getOne());
+		callAutomaton.registerListener(new ValueComputationListener(wrap(source.fact()),source.stmt()));
+	}
+	
+	private class ValueComputationListener extends WPAStateListener<Stmt, INode<Fact>, W>{
+
+		private Stmt s;
+
+		public ValueComputationListener(INode<Fact> state, Stmt s) {
+			super(state);
+			this.s = s;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Stmt, INode<Fact>> t, W w) {
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<Stmt, INode<Fact>> t, W w) {
+			W weightAtTarget = nodesToWeights.get(new Node<Stmt,Fact>(s,t.getTarget().fact()));
+			W extendWith = (W) weightAtTarget.extendWith(w);
+			Node<Stmt, Fact> succNode = new Node<Stmt,Fact>(t.getLabel(),t.getStart().fact());
+			W weightAtSource = nodesToWeights.get(succNode);
+			W newVal = (weightAtSource == null ? extendWith : (W) weightAtSource.combineWith(extendWith));
+			if(!newVal.equals(weightAtSource)){
+				nodesToWeights.put(succNode, newVal);
+				callAutomaton.registerListener(new ValueComputationListener(t.getStart(),t.getLabel()));
+			}
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((s == null) ? 0 : s.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ValueComputationListener other = (ValueComputationListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (s == null) {
+				if (other.s != null)
+					return false;
+			} else if (!s.equals(other.s))
+				return false;
+			return true;
+		}
+
+		private SyncPDSSolver getOuterType() {
+			return SyncPDSSolver.this;
+		}
+	}
+	
+	public Map<Node<Stmt, Fact>, W> getNodesToWeights(){
+		return nodesToWeights;
+	}
+	
 	private void await() {
 		while(!worklist.isEmpty()){
 			WitnessNode<Stmt, Fact, Field> pop = worklist.pop();
@@ -165,7 +237,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			return;
 		Node<Stmt, Fact> curr = witnessNode.asNode();
 		Collection<? extends State> successors = computeSuccessor(curr);
-//		System.out.println(curr+ " FLows tot \t\t\t "+successors);
 		for (State s : successors) {
 			if (s instanceof Node) {
 				Node<Stmt, Fact> succ = (Node<Stmt, Fact>) s;

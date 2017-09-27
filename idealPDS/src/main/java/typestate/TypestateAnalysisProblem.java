@@ -8,13 +8,12 @@ import ideal.IDEALAnalysisDefinition;
 import soot.SootMethod;
 import soot.Unit;
 import sync.pds.solver.WeightFunctions;
-import typestate.finiteautomata.State;
 
-public abstract class TypestateAnalysisProblem extends IDEALAnalysisDefinition<TransitionFunction<State>> {
+public abstract class TypestateAnalysisProblem extends IDEALAnalysisDefinition<TransitionFunction> {
 	private TypestateChangeFunction func;
 
 	@Override
-	public WeightFunctions<Statement, Val, Statement, TransitionFunction<State>> weightFunctions() {
+	public WeightFunctions<Statement, Val, Statement, TransitionFunction> weightFunctions() {
 		return new TypestateEdgeFunctions(getOrCreateTransitionFunctions());
 	}
 

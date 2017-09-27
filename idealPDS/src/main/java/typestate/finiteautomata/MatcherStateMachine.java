@@ -34,12 +34,12 @@ public abstract class MatcherStateMachine implements TypestateChangeFunction {
 		transition.add(trans);
 	}
 
-	public Set<Transition<State>> getReturnTransitionsFor(Node<Statement,Val> curr, Statement pops) {
+	public Set<Transition> getReturnTransitionsFor(Node<Statement,Val> curr, Statement pops) {
 //		System.out.println(curr);
 		return getMatchingTransitions(curr.stmt().getMethod(), curr.fact(), Type.OnReturn);
 	}
 
-	public Set<Transition<State>> getCallTransitionsFor(Node<Statement,Val> curr, Node<Statement,Val> succ, Statement push) {
+	public Set<Transition> getCallTransitionsFor(Node<Statement,Val> curr, Node<Statement,Val> succ, Statement push) {
 		return getMatchingTransitions(succ.stmt().getMethod(),succ.fact(), Type.OnCall);
 	}
 
@@ -63,20 +63,20 @@ public abstract class MatcherStateMachine implements TypestateChangeFunction {
 //		return res;
 //	}
 
-	private Set<Transition<State>> getMatchingTransitions(SootMethod method, Val node, Type type) {
-		Set<Transition<State>> res = new HashSet<>();
+	private Set<Transition> getMatchingTransitions(SootMethod method, Val node, Type type) {
+		Set<Transition> res = new HashSet<>();
 //		if (node.getFieldCount() == 0) { //TODO How do we check this?
 			for (MatcherTransition trans : transition) {
 				if (trans.matches(method) && trans.getType().equals(type)) {
 					Parameter param = trans.getParam();
 					if (param.equals(Parameter.This) && isThisValue(method, node))
-						res.add(new Transition<State>(trans.from(), trans.to()));
+						res.add(new Transition(trans.from(), trans.to()));
 					if (param.equals(Parameter.Param1)
 							&& method.getActiveBody().getParameterLocal(0).equals(node.value()))
-						res.add(new Transition<State>(trans.from(), trans.to()));
+						res.add(new Transition(trans.from(), trans.to()));
 					if (param.equals(Parameter.Param2)
 							&& method.getActiveBody().getParameterLocal(1).equals(node.value()))
-						res.add(new Transition<State>(trans.from(), trans.to()));
+						res.add(new Transition(trans.from(), trans.to()));
 				}
 //			}
 		}

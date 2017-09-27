@@ -3,17 +3,26 @@ package test;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
-import ideal.AnalysisSolver;
-import ideal.FactAtStatement;
-import ideal.IFactAtStatement;
+import boomerang.Boomerang;
+import boomerang.ForwardQuery;
+import boomerang.jimple.Statement;
+import boomerang.jimple.Val;
+import boomerang.solver.AbstractBoomerangSolver;
 import ideal.ResultReporter;
 import soot.Unit;
-import typestate.TypestateDomainValue;
+import sync.pds.solver.nodes.INode;
+import sync.pds.solver.nodes.Node;
+import typestate.TransitionFunction;
+import typestate.finiteautomata.State;
+import wpds.impl.Transition;
+import wpds.interfaces.WPAStateListener;
+import wpds.interfaces.WPAUpdateListener;
 
-public class TestingResultReporter<State> implements ResultReporter<TypestateDomainValue<State>>{
+public class TestingResultReporter implements ResultReporter<TransitionFunction>{
 	private Multimap<Unit, Assertion> stmtToResults = HashMultimap.create();
 	public TestingResultReporter(Set<Assertion> expectedResults) {
 		for(Assertion e : expectedResults){
@@ -23,21 +32,25 @@ public class TestingResultReporter<State> implements ResultReporter<TypestateDom
 	}
 
 	@Override
-	public void onSeedFinished(IFactAtStatement seed, AnalysisSolver<TypestateDomainValue<State>> solver) {
-		for(Entry<Unit, Assertion> e : stmtToResults.entries()){
+	public void onSeedFinished(ForwardQuery seed, AbstractBoomerangSolver<TransitionFunction> seedSolver) {
+		for(final Entry<Unit, Assertion> e : stmtToResults.entries()){
 			if(e.getValue() instanceof ComparableResult){
-				ComparableResult expectedResults = (ComparableResult) e.getValue();
-				TypestateDomainValue<State> resultAt = solver.resultAt(e.getKey(), expectedResults.getAccessGraph());
-				if(resultAt != null)
-					expectedResults.computedResults(resultAt);
+				final ComparableResult<TransitionFunction> expectedResults = (ComparableResult) e.getValue();
+				for(Entry<Node<Statement, Val>, TransitionFunction> s : seedSolver.getNodesToWeights().entrySet()){
+					Node<Statement,Val> node = s.getKey();
+					if(!node.fact().equals(expectedResults.getAccessGraph()))
+						continue;
+					if(node.stmt().getUnit().isPresent()){
+						if(node.stmt().getUnit().get().equals(e.getKey())){
+							expectedResults.computedResults(s.getValue());
+						}
+					}
+					
+				}
+//				TypestateDomainValue<State> resultAt = solver.resultAt(e.getKey(), expectedResults.getAccessGraph());
 			}
 		}
 	}
 
-	@Override
-	public void onSeedTimeout(IFactAtStatement seed) {
-		// TODO Auto-generated method stub
-		
-	}
 
 }

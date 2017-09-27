@@ -1,12 +1,10 @@
 package typestate.finiteautomata;
 
-public class IdentityTransition<State> implements ITransition<State> {
+public class IdentityTransition implements ITransition {
 
-	public IdentityTransition() {
-	}
+	private static IdentityTransition instance;
 
-	public boolean equals(Object o) {
-		return o instanceof IdentityTransition;
+	private IdentityTransition() {
 	}
 
 	@Override
@@ -19,4 +17,14 @@ public class IdentityTransition<State> implements ITransition<State> {
 		throw new RuntimeException("Unreachable");
 	}
 
+	@Override
+	public String toString() {
+		return "ID -> ID";
+	}
+	
+	public static IdentityTransition v(){
+		if(instance == null)
+			instance = new IdentityTransition();
+		return instance;
+	}
 }

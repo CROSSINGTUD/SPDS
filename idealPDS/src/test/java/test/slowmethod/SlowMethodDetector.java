@@ -17,7 +17,7 @@ import boomerang.accessgraph.AccessGraph;
 import boomerang.cfg.IExtendedICFG;
 import boomerang.ifdssolver.IPathEdge;
 import boomerang.ifdssolver.IPropagationController;
-import ideal.Analysis;
+import ideal.IDEALAnalysis;
 import ideal.ResultReporter;
 import ideal.debug.IDebugger;
 import soot.SootMethod;
@@ -72,8 +72,8 @@ public abstract class SlowMethodDetector extends IDEALTestingFramework {
 		return contains;
 	}
 
-	protected Analysis<TypestateDomainValue<ConcreteState>> createAnalysis() {
-		return new Analysis<TypestateDomainValue<ConcreteState>>(new TypestateAnalysisProblem<ConcreteState>() {
+	protected IDEALAnalysis<TypestateDomainValue<ConcreteState>> createAnalysis() {
+		return new IDEALAnalysis<TypestateDomainValue<ConcreteState>>(new TypestateAnalysisProblem<ConcreteState>() {
 			@Override
 			public ResultReporter<TypestateDomainValue<ConcreteState>> resultReporter() {
 				return SlowMethodDetector.this.testingResultReporter;
@@ -128,7 +128,7 @@ public abstract class SlowMethodDetector extends IDEALTestingFramework {
 					}
 					@Override
 					public boolean getTrackStaticFields() {
-						return Analysis.ALIASING_FOR_STATIC_FIELDS;
+						return IDEALAnalysis.ALIASING_FOR_STATIC_FIELDS;
 					}
 					
 				};

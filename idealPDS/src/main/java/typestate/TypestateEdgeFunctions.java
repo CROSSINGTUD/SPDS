@@ -6,10 +6,9 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.Node;
-import typestate.finiteautomata.State;
 import typestate.finiteautomata.Transition;
 
-public class TypestateEdgeFunctions implements WeightFunctions<Statement,Val,Statement,TransitionFunction<State>> {
+public class TypestateEdgeFunctions implements WeightFunctions<Statement,Val,Statement,TransitionFunction> {
 
 	private TypestateChangeFunction func;
 
@@ -18,34 +17,34 @@ public class TypestateEdgeFunctions implements WeightFunctions<Statement,Val,Sta
 	}
 	
 	@Override
-	public TransitionFunction<State> push(Node<Statement, Val> curr, Node<Statement, Val> succ, Statement calleeSp) {
-		Set<? extends Transition<State>> trans = func.getCallTransitionsFor(curr, succ, calleeSp);
+	public TransitionFunction push(Node<Statement, Val> curr, Node<Statement, Val> succ, Statement calleeSp) {
+		Set<? extends Transition> trans = func.getCallTransitionsFor(curr, succ, calleeSp);
 		if (trans.isEmpty())	
 			return TransitionFunction.one();
-		return new TransitionFunction<State>(trans);
+		return new TransitionFunction(trans);
 	}
 
 	@Override
-	public TransitionFunction<State> normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
-		return TransitionFunction.<State>one();
+	public TransitionFunction normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
+		return TransitionFunction.one();
 	}
 
 	@Override
-	public TransitionFunction<State> pop(Node<Statement, Val> curr, Statement location) {
-		Set<? extends Transition<State>> trans = func.getReturnTransitionsFor(curr, location);
+	public TransitionFunction pop(Node<Statement, Val> curr, Statement location) {
+		Set<? extends Transition> trans = func.getReturnTransitionsFor(curr, location);
 		if (trans.isEmpty())
-			return TransitionFunction.<State>one();
-		return new TransitionFunction<State>(trans);
+			return TransitionFunction.one();
+		return new TransitionFunction(trans);
 	}
 
 	@Override
-	public TransitionFunction<State> getOne() {
-		return TransitionFunction.<State>one();
+	public TransitionFunction getOne() {
+		return TransitionFunction.one();
 	}
 
 	@Override
-	public TransitionFunction<State> getZero() {
-		return TransitionFunction.<State>zero();
+	public TransitionFunction getZero() {
+		return TransitionFunction.zero();
 	}
 
 

@@ -8,5 +8,5 @@ public interface ComparableResult<State> {
 
 	public Val getAccessGraph();
 	public Unit getStmt();
-	public void computedResults(TransitionFunction<State> val);
+	public void computedResults(State val);
 }

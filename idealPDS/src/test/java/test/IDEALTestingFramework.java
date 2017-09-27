@@ -8,9 +8,9 @@ import java.util.Set;
 import com.google.common.collect.Lists;
 
 import boomerang.jimple.Val;
-import ideal.Analysis;
+import ideal.IDEALAnalysis;
+import ideal.ResultReporter;
 import soot.Body;
-import soot.Local;
 import soot.SceneTransformer;
 import soot.SootMethod;
 import soot.Unit;
@@ -21,21 +21,19 @@ import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import test.ExpectedResults.InternalState;
 import test.core.selfrunning.AbstractTestingFramework;
 import test.core.selfrunning.ImprecisionException;
-import typestate.ConcreteState;
 import typestate.TransitionFunction;
 import typestate.TypestateAnalysisProblem;
 import typestate.TypestateChangeFunction;
-import typestate.finiteautomata.State;
 
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected JimpleBasedInterproceduralCFG icfg;
 	protected long analysisTime;
-	protected TestingResultReporter<ConcreteState> testingResultReporter;
+	protected TestingResultReporter testingResultReporter;
 
 	protected abstract TypestateChangeFunction createTypestateChangeFunction();
 
-	protected Analysis<TransitionFunction<State>> createAnalysis() {
-		return new Analysis<TransitionFunction<State>>(new TypestateAnalysisProblem() {
+	protected IDEALAnalysis<TransitionFunction> createAnalysis() {
+		return new IDEALAnalysis<TransitionFunction>(new TypestateAnalysisProblem() {
 
 			@Override
 			public JimpleBasedInterproceduralCFG icfg() {
@@ -71,6 +69,12 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			public boolean enableStrongUpdates() {
 				return false;
 			}
+
+
+			@Override
+			public ResultReporter<TransitionFunction> resultReporter() {
+				return testingResultReporter;
+			}
 		});
 	}
 
@@ -81,7 +85,8 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				icfg = new JimpleBasedInterproceduralCFG(true);
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
-//				testingResultReporter = new TestingResultReporter(expectedResults);
+				System.out.println(sootTestMethod.getActiveBody());
+				testingResultReporter = new TestingResultReporter(expectedResults);
 				
 				executeAnalysis();
 				List<Assertion> unsound = Lists.newLinkedList();

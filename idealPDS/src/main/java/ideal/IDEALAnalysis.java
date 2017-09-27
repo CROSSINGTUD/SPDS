@@ -19,7 +19,7 @@ import soot.util.queue.QueueReader;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.Weight;
 
-public class Analysis<W extends Weight> {
+public class IDEALAnalysis<W extends Weight> {
 
 	public static boolean ENABLE_STATIC_FIELDS = true;
 	public static boolean ALIASING_FOR_STATIC_FIELDS = false;
@@ -30,7 +30,7 @@ public class Analysis<W extends Weight> {
 	private final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final IDEALAnalysisDefinition<W> analysisDefinition;
 
-	public Analysis(IDEALAnalysisDefinition<W> analysisDefinition) {
+	public IDEALAnalysis(IDEALAnalysisDefinition<W> analysisDefinition) {
 		this.analysisDefinition = analysisDefinition;
 		this.icfg = analysisDefinition.icfg();
 	}

@@ -17,11 +17,11 @@ import wpds.impl.Weight;
 public class PerSeedAnalysisContext<W extends Weight> {
 
 	private IDEALAnalysisDefinition<W> analysisDefinition;
-	private Node<Statement, Val> seed;
+	private ForwardQuery seed;
 
 	public PerSeedAnalysisContext(IDEALAnalysisDefinition<W> analysisDefinition, Node<Statement, Val> seed) {
 		this.analysisDefinition = analysisDefinition;
-		this.seed = seed;
+		this.seed = new ForwardQuery(seed.stmt(), seed.fact());
 	}
 
 	public void run() {
@@ -58,7 +58,8 @@ public class PerSeedAnalysisContext<W extends Weight> {
 			}
 
 		};
-		boomerang.solve(new ForwardQuery(seed.stmt(), seed.fact()));
+		boomerang.solve(seed);
+		analysisDefinition.resultReporter().onSeedFinished(seed, boomerang.getSolvers().getOrCreate(seed));
 	}
 
 }
