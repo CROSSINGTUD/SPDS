@@ -53,11 +53,11 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<RefType> allocationTypes = Sets.newHashSet();
 	private Collection<AllocationTypeListener> allocationTypeListeners = Sets.newHashSet();
 	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
-	private Collection<ReachableMethodListener> reachableMethodListeners = Sets.newHashSet();
+	private Collection<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
 	private Collection<SootMethod> unbalancedMethod = Sets.newHashSet();
 	private final Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> generatedFieldState;
 	private Multimap<SootMethod,Transition<Field,INode<Node<Statement,Val>>>> perMethodFieldTransitions = HashMultimap.create();
-	private Multimap<SootMethod, MethodBasedFieldTransitionListener> perMethodFieldTransitionsListener = HashMultimap.create();
+	private Multimap<SootMethod, MethodBasedFieldTransitionListener<W>> perMethodFieldTransitionsListener = HashMultimap.create();
 	
 	
 	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, W>> callSummaries, Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> fieldSummaries){
@@ -429,12 +429,12 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 			@Override
 			public Weight getZero() {
-				return fieldPDS.getZero();
+				return getCallWeights().getZero();
 			}
 
 			@Override
 			public Weight getOne() {
-				return fieldPDS.getOne();
+				return getCallWeights().getOne();
 			}
 
 			@Override

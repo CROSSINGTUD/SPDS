@@ -2,7 +2,7 @@ package test.cases.fields;
 
 import org.junit.Test;
 
-import test.core.selfrunning.AbstractBoomerangTest;
+import test.core.AbstractBoomerangTest;
 
 public class NullAllocationConstructorTest extends AbstractBoomerangTest{
 	private class A{

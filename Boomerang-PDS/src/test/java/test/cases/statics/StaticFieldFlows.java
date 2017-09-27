@@ -3,7 +3,7 @@ package test.cases.statics;
 import org.junit.Test;
 
 import test.cases.fields.Alloc;
-import test.core.selfrunning.AbstractBoomerangTest;
+import test.core.AbstractBoomerangTest;
 
 public class StaticFieldFlows extends AbstractBoomerangTest {
 	private static Object alloc;

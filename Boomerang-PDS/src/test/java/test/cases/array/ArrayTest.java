@@ -2,7 +2,7 @@ package test.cases.array;
 
 import org.junit.Test;
 
-import test.core.selfrunning.AbstractBoomerangTest;
+import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
 public class ArrayTest extends AbstractBoomerangTest {

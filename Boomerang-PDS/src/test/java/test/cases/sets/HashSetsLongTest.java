@@ -5,7 +5,7 @@ import java.util.HashSet;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import test.core.selfrunning.AbstractBoomerangTest;
+import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
 @Ignore

@@ -1,4 +1,4 @@
-package test.core.selfrunning;
+package test.core;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -45,6 +45,7 @@ import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.Node;
+import test.core.selfrunning.AbstractTestingFramework;
 import wpds.impl.Weight.NoWeight;
 
 public class AbstractBoomerangTest extends AbstractTestingFramework {

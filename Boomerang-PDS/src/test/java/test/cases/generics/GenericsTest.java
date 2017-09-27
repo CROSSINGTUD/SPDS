@@ -4,7 +4,7 @@ import org.junit.Test;
 
 import soot.Scene;
 import soot.SootClass;
-import test.core.selfrunning.AbstractBoomerangTest;
+import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
 public class GenericsTest extends AbstractBoomerangTest{

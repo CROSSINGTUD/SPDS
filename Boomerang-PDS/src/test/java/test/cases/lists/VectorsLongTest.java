@@ -7,7 +7,7 @@ import java.util.Vector;
 
 import org.junit.Test;
 
-import test.core.selfrunning.AbstractBoomerangTest;
+import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
 public class VectorsLongTest extends AbstractBoomerangTest{
