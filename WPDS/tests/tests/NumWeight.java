@@ -3,7 +3,7 @@ package tests;
 import wpds.impl.Weight;
 import wpds.interfaces.Location;
 
-public class NumWeight<N extends Location> extends Weight<N> {
+public class NumWeight extends Weight {
 
 	private int i;
 
@@ -15,23 +15,23 @@ public class NumWeight<N extends Location> extends Weight<N> {
 	}
 
 	@Override
-	public Weight<N> extendWith(Weight<N> other) {
+	public Weight extendWith(Weight other) {
 		if (this.equals(one()))
 			return other;
 		if (other.equals(one()))
 			return this;
 
-		NumWeight<N> o = (NumWeight<N>) other;
-		return new NumWeight<N>(o.i + i);
+		NumWeight o = (NumWeight) other;
+		return new NumWeight(o.i + i);
 	}
 
 	@Override
-	public Weight<N> combineWith(Weight<N> other) {
+	public Weight combineWith(Weight other) {
 		if (other.equals(zero()))
 			return this;
 		if (this.equals(zero()))
 			return other;
-		NumWeight<N> o = (NumWeight<N>) other;
+		NumWeight o = (NumWeight) other;
 		if (o.i == i)
 			return o;
 		return zero();
@@ -39,9 +39,9 @@ public class NumWeight<N extends Location> extends Weight<N> {
 
 	private static NumWeight one;
 
-	public static <N extends Location> NumWeight<N> one() {
+	public static <N extends Location> NumWeight one() {
 		if (one == null)
-			one = new NumWeight<N>() {
+			one = new NumWeight() {
 				@Override
 				public String toString() {
 					return "<ONE>";
@@ -56,9 +56,9 @@ public class NumWeight<N extends Location> extends Weight<N> {
 
 	private static NumWeight zero;
 
-	public static <N extends Location> NumWeight<N> zero() {
+	public static <N extends Location> NumWeight zero() {
 		if (zero == null)
-			zero = new NumWeight<N>() {
+			zero = new NumWeight() {
 				@Override
 				public String toString() {
 					return "<ZERO>";

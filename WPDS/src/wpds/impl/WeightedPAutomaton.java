@@ -29,7 +29,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
-public abstract class WeightedPAutomaton<N extends Location, D extends State, W extends Weight<N>>
+public abstract class WeightedPAutomaton<N extends Location, D extends State, W extends Weight>
 		implements LabeledGraph<D, N> {
 	private Map<Transition<N, D>, W> transitionToWeights = new HashMap<>();
 	// Set Q is implicit

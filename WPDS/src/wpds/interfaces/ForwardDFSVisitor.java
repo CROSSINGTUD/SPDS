@@ -9,7 +9,7 @@ import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 
-public class ForwardDFSVisitor<N extends Location,D extends State, W extends Weight<N>> extends WPAStateListener<N, D, W>{
+public class ForwardDFSVisitor<N extends Location,D extends State, W extends Weight> extends WPAStateListener<N, D, W>{
 	private Set<ReachabilityListener<N,D>> listeners = Sets.newHashSet();
 	protected WeightedPAutomaton<N, D, W> aut;
 	private Set<Transition<N,D>> visited =  Sets.newHashSet();

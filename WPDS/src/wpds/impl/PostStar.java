@@ -14,7 +14,7 @@ import wpds.interfaces.WPDSUpdateListener;
 import wpds.wildcard.ExclusionWildcard;
 import wpds.wildcard.Wildcard;
 
-public class PostStar<N extends Location, D extends State, W extends Weight<N>> {
+public class PostStar<N extends Location, D extends State, W extends Weight> {
 	private IPushdownSystem<N, D, W> pds;
 	private WeightedPAutomaton<N, D, W> fa;
 	private Map<Transition<N,D>, WeightedPAutomaton<N, D, W>> summaries = Maps.newHashMap();
@@ -92,7 +92,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		@Override
 		public void onOutTransitionAdded(final Transition<N, D> t, W weight) {
 			if(t.getLabel().equals(popLabel)){
-				final W newWeight = (W) weight.extendWithIn(ruleWeight);
+				final W newWeight = (W) weight.extendWith(ruleWeight);
 				update(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget()), newWeight);
 			}
 		}
@@ -156,7 +156,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 		@Override
 		public void onOutTransitionAdded(final Transition<N, D> t, W weight) {
 			if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
-				W newWeight = (W) weight.extendWithIn(rule.getWeight());
+				W newWeight = (W) weight.extendWith(rule.getWeight());
 				D p = rule.getS2();
 				N l2 = rule.getL2();
 				if (l2 instanceof ExclusionWildcard) {
@@ -229,7 +229,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight<N>> 
 					summary.registerListener(new WPAUpdateListener<N, D, W>() {
 
 						@Override
-						public void onWeightAdded(Transition<N, D> t, Weight<N> w) {
+						public void onWeightAdded(Transition<N, D> t, Weight w) {
 							if((t.getLabel().equals(fa.epsilon()) && t.getTarget().equals(irState))){
 								update(t, (W) w);
 							}

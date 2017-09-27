@@ -3,7 +3,7 @@ package tests;
 import wpds.impl.Weight;
 import wpds.interfaces.Location;
 
-public class MinSemiring<N extends Location> extends Weight<N> {
+public class MinSemiring extends Weight {
 	int i;
 
 	public MinSemiring(int i) {
@@ -14,30 +14,30 @@ public class MinSemiring<N extends Location> extends Weight<N> {
 	}
 
 	@Override
-	public Weight<N> extendWith(Weight<N> other) {
+	public Weight extendWith(Weight other) {
 		if (other.equals(one()))
 			return this;
 		if (this.equals(one()))
 			return other;
-		MinSemiring<N> o = (MinSemiring<N>) other;
-		return new MinSemiring<N>(o.i + i);
+		MinSemiring o = (MinSemiring) other;
+		return new MinSemiring(o.i + i);
 	}
 
 	@Override
-	public Weight<N> combineWith(Weight<N> other) {
+	public Weight combineWith(Weight other) {
 		if (other.equals(zero()))
 			return this;
 		if (this.equals(zero()))
 			return other;
-		MinSemiring<N> o = (MinSemiring<N>) other;
+		MinSemiring o = (MinSemiring) other;
 		return new MinSemiring(Math.min(o.i, i));
 	}
 
 	private static MinSemiring one;
 
-	public static <N extends Location> MinSemiring<N> one() {
+	public static <N extends Location> MinSemiring one() {
 		if (one == null)
-			one = new MinSemiring<N>(0) {
+			one = new MinSemiring(0) {
 				@Override
 				public String toString() {
 					return "<ONE>";
@@ -48,9 +48,9 @@ public class MinSemiring<N extends Location> extends Weight<N> {
 
 	private static MinSemiring zero;
 
-	public static <N extends Location> MinSemiring<N> zero() {
+	public static <N extends Location> MinSemiring zero() {
 		if (zero == null)
-			zero = new MinSemiring<N>(110000) {
+			zero = new MinSemiring(110000) {
 				@Override
 				public String toString() {
 					return "<ZERO>";

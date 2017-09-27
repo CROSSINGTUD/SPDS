@@ -70,7 +70,7 @@ public class Statement implements Location {
 			return false;
 		return true;
 	}
-
+	
 	public static Statement epsilon() {
 		if (epsilon == null) {
 			epsilon = new Statement("eps_s");

@@ -5,7 +5,7 @@ import wpds.interfaces.Location;
 import wpds.interfaces.State;
 
 public class PushdownSystem<N extends Location, D extends State>
-    extends WeightedPushdownSystem<N, D, NoWeight<N>> {
+    extends WeightedPushdownSystem<N, D, NoWeight> {
   @Override
   public NoWeight getZero() {
     return NoWeight.NO_WEIGHT_ZERO;
@@ -17,7 +17,7 @@ public class PushdownSystem<N extends Location, D extends State>
   }
 
   @Override
-  public boolean addRule(Rule<N, D, NoWeight<N>> rule) {
+  public boolean addRule(Rule<N, D, NoWeight> rule) {
     if (!(rule instanceof UNormalRule) && !(rule instanceof UPopRule)
         && !(rule instanceof UPushRule))
       throw new RuntimeException("Trying to add a weighted rule to an unweighted PDS!");

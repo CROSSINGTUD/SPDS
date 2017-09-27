@@ -18,19 +18,19 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.impl.WeightedPushdownSystem;
 
 public class WPDSPostStarTests {
-  private WeightedPushdownSystem<StackSymbol, Abstraction, NumWeight<StackSymbol>> pds;
+  private WeightedPushdownSystem<StackSymbol, Abstraction, NumWeight> pds;
 
   @Before
   public void init() {
-    pds = new WeightedPushdownSystem<StackSymbol, Abstraction, NumWeight<StackSymbol>>() {
+    pds = new WeightedPushdownSystem<StackSymbol, Abstraction, NumWeight>() {
 
       @Override
-      public NumWeight<StackSymbol> getZero() {
+      public NumWeight getZero() {
         return NumWeight.zero();
       }
 
       @Override
-      public NumWeight<StackSymbol> getOne() {
+      public NumWeight getOne() {
         return NumWeight.one();
       }
     };
@@ -40,7 +40,7 @@ public class WPDSPostStarTests {
   public void simple() {
     pds.addRule(wnormal(1, "a", 2, "b", w(2)));
     pds.addRule(wnormal(2, "b", 3, "c", w(3)));
-    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>> fa =
+    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight> fa =
         waccepts(1, "a", w(0));
     pds.poststar(fa);
     assertEquals(fa.getTransitions().size(), 3);
@@ -54,7 +54,7 @@ public class WPDSPostStarTests {
     pds.addRule(wnormal(1, "b", 1, "c", w(3)));
     pds.addRule(wnormal(1, "a", 1, "d", w(3)));
     pds.addRule(wnormal(1, "d", 1, "c", w(3)));
-    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>> fa =
+    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight> fa =
         waccepts(1, "a", w(0));
     pds.poststar(fa);
     System.out.println(fa);
@@ -69,7 +69,7 @@ public class WPDSPostStarTests {
     pds.addRule(wpush(1, "b", 1, "c", "d", w(3)));
     pds.addRule(wnormal(1, "c", 1, "e", w(1)));
     pds.addRule(wpop(1, "e", 1, w(5)));
-    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>> fa =
+    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight> fa =
         waccepts(1, "a", w(0));
     pds.poststar(fa);
     assertEquals(fa.getWeightFor(t(1, "b", ACC)), w(2));
@@ -82,7 +82,7 @@ public class WPDSPostStarTests {
     pds.addRule(wpush(2, "b", 3, "c", "d", w(3)));
     pds.addRule(wnormal(3, "c", 4, "e", w(1)));
     pds.addRule(wpop(4, "e", 5, w(5)));
-    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>> fa =
+    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight> fa =
         waccepts(1, "a", w(0));
     pds.poststar(fa);
     System.out.println(fa);
@@ -98,7 +98,7 @@ public class WPDSPostStarTests {
     pds.addRule(wnormal(3, "d", 1, "f", w(5)));
     pds.addRule(wpush(1, "f", 2, "call", "g", w(6)));
     pds.addRule(wnormal(3, "g", 4, "h", w(7)));
-    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>> fa =
+    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight> fa =
         waccepts(1, "a", w(0));
     pds.poststar(fa);
     System.out.println(fa);
@@ -113,7 +113,7 @@ public class WPDSPostStarTests {
     pds.addRule(wpush(1, "b", 2, "call", "d", w(2)));
     pds.addRule(wnormal(2, "call", 2, "e", w(3)));
     pds.addRule(wpop(2, "e", 3, w(4)));
-    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>> fa =
+    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight> fa =
         waccepts(1, "a", w(0));
     pds.poststar(fa);
     System.out.println(fa);
@@ -129,7 +129,7 @@ public class WPDSPostStarTests {
     pds.addRule(wnormal(3, "d", 3, "f", w(0)));
     pds.addRule(wpush(3, "f", 2, "call", "g", w(0)));
     pds.addRule(wnormal(3, "g", 4, "h", w(0)));
-    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>> fa =
+    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight> fa =
         waccepts(1, "a", w(0));
     pds.poststar(fa);
     System.out.println(fa);
@@ -139,7 +139,7 @@ public class WPDSPostStarTests {
   }
 
 
-  private static NumWeight<StackSymbol> w(int i) {
-    return new NumWeight<>(i);
+  private static NumWeight w(int i) {
+    return new NumWeight(i);
   }
 }

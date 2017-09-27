@@ -28,6 +28,7 @@ import sync.pds.weights.SetDomain;
 import wpds.impl.NormalRule;
 import wpds.impl.PopRule;
 import wpds.impl.PushRule;
+import wpds.impl.Rule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -45,30 +46,30 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private static final boolean DEBUG = true;
 	private LinkedList<WitnessNode<Stmt,Fact,Field>> worklist = Lists.newLinkedList();
 
-	protected final WeightedPushdownSystem<Stmt, INode<Fact>, Weight<Stmt>> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, Weight<Stmt>>() {
+	protected final WeightedPushdownSystem<Stmt, INode<Fact>, Weight> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, Weight>() {
 		@Override
-		public Weight<Stmt> getZero() {
+		public Weight getZero() {
 			return SetDomain.zero();
 		}
 
 		@Override
-		public Weight<Stmt> getOne() {
+		public Weight getOne() {
 			return SetDomain.one();
 		}
 	};
-	protected final WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, Weight<Field>> fieldPDS = new WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, Weight<Field>>() {
+	protected final WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, Weight> fieldPDS = new WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, Weight>() {
 
 		@Override
-		public Weight<Field> getZero() {
+		public Weight getZero() {
 			return SetDomain.zero();
 		}
 
 		@Override
-		public Weight<Field> getOne() {
+		public Weight getOne() {
 			return SetDomain.one();
 		}
 	};
-	protected final WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, Weight<Field>> fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, Weight<Field>>() {
+	protected final WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, Weight> fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, Weight>() {
 		@Override
 		public INode<Node<Stmt,Fact>> createState(INode<Node<Stmt,Fact>> d, Field loc) {
 			if (loc.equals(emptyField()))
@@ -82,12 +83,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 
 		@Override
-		public Weight<Field> getZero() {
+		public Weight getZero() {
 			return fieldPDS.getZero();
 		}
 
 		@Override
-		public Weight<Field> getOne() {
+		public Weight getOne() {
 			return fieldPDS.getOne();
 		}
 
@@ -97,7 +98,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	};
 
-	protected final WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>> callAutomaton = new WeightedPAutomaton<Stmt, INode<Fact>,Weight<Stmt>>() {
+	protected final WeightedPAutomaton<Stmt, INode<Fact>,Weight> callAutomaton = new WeightedPAutomaton<Stmt, INode<Fact>,Weight>() {
 		@Override
 		public INode<Fact> createState(INode<Fact> d, Stmt loc) {
 			return generateCallState(d, loc);
@@ -109,12 +110,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 
 		@Override
-		public Weight<Stmt> getZero() {
+		public Weight getZero() {
 			return callingPDS.getZero();
 		}
 
 		@Override
-		public Weight<Stmt> getOne() {
+		public Weight getOne() {
 			return callingPDS.getOne();
 		}
 
@@ -138,17 +139,17 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		callingPDS.poststar(callAutomaton);
 		fieldPDS.poststar(fieldAutomaton);
 	}
-	public SyncPDSSolver(Map<Transition<Stmt, INode<Fact>>, WeightedPAutomaton<Stmt, INode<Fact>, Weight<Stmt>>> callSummaries,Map<Transition<Field, INode<Node<Stmt, Fact>>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, Weight<Field>>> fieldSummaries){
+	public SyncPDSSolver(Map<Transition<Stmt, INode<Fact>>, WeightedPAutomaton<Stmt, INode<Fact>, Weight>> callSummaries,Map<Transition<Field, INode<Node<Stmt, Fact>>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, Weight>> fieldSummaries){
 		callAutomaton.registerListener(new CallAutomatonListener());
 		fieldAutomaton.registerListener(new FieldUpdateListener());
 		callingPDS.poststar(callAutomaton,callSummaries);
 		fieldPDS.poststar(fieldAutomaton,fieldSummaries);
 	}
 	
-	private class CallAutomatonListener implements WPAUpdateListener<Stmt, INode<Fact>,Weight<Stmt>>{
+	private class CallAutomatonListener implements WPAUpdateListener<Stmt, INode<Fact>,Weight>{
 
 		@Override
-		public void onWeightAdded(Transition<Stmt, INode<Fact>> t, Weight<Stmt> w) {
+		public void onWeightAdded(Transition<Stmt, INode<Fact>> t, Weight w) {
 			if(!(t.getStart() instanceof GeneratedState)){
 				setCallingContextReachable(new Node<Stmt,Fact>(t.getString(),t.getStart().fact()));
 			}
@@ -239,7 +240,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	public boolean addNormalCallFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
 		return callingPDS.addRule(
-				new NormalRule<Stmt, INode<Fact>,Weight<Stmt>>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt(),callingPDS.getOne()));
+				new NormalRule<Stmt, INode<Fact>,Weight>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt(),callingPDS.getOne()));
 	}
 
 	public void synchedEmptyStackReachable(final Node<Stmt,Fact> sourceNode, final EmptyStackWitnessListener<Stmt,Fact> listener){
@@ -280,9 +281,9 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			public void onReachableNodeAdded(WitnessNode<Stmt, Fact, Field> reachableNode) {
 				if(!reachableNode.asNode().equals(sourceNode))
 					return;
-				fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, Weight<Field>>() {
+				fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, Weight>() {
 					@Override
-					public void onWeightAdded(Transition<Field, INode<Node<Stmt, Fact>>> t, Weight<Field> w) {
+					public void onWeightAdded(Transition<Field, INode<Node<Stmt, Fact>>> t, Weight w) {
 						if(t.getStart() instanceof GeneratedState)
 							return;
 						if(!t.getStart().fact().equals(sourceNode))
@@ -290,9 +291,9 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 						listener.fieldWitness(t);
 					}
 				});
-				callAutomaton.registerListener(new WPAUpdateListener<Stmt, INode<Fact>, Weight<Stmt>>() {
+				callAutomaton.registerListener(new WPAUpdateListener<Stmt, INode<Fact>, Weight>() {
 					@Override
-					public void onWeightAdded(Transition<Stmt, INode<Fact>> t, Weight<Stmt> w) {
+					public void onWeightAdded(Transition<Stmt, INode<Fact>> t, Weight w) {
 						if(t.getStart() instanceof GeneratedState)
 							return;
 						if(!t.getStart().fact().equals(sourceNode.fact()))
@@ -308,16 +309,13 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	public boolean addNormalFieldFlow(Node<Stmt,Fact> curr, Node<Stmt, Fact> succ) {
 		if (succ instanceof ExclusionNode) {
 			ExclusionNode<Stmt, Fact, Field> exNode = (ExclusionNode) succ;
-			return fieldPDS.addRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, Weight<Field>>(asFieldFact(curr),
-					fieldWildCard(), asFieldFact(succ), exclusionFieldWildCard(exNode.exclusion()), fieldPDS.getOne()));
+			return fieldPDS.addRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, Weight>(asFieldFact(curr),
+					fieldWildCard(), asFieldFact(succ), exclusionFieldWildCard(exNode.exclusion()), getFieldWeights().normal(curr,succ)));
 		}
-		return fieldPDS.addRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, Weight<Field>>(asFieldFact(curr),
-				fieldWildCard(), asFieldFact(succ), fieldWildCard(), fieldPDS.getOne()));
+		return fieldPDS.addRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, Weight>(asFieldFact(curr),
+				fieldWildCard(), asFieldFact(succ), fieldWildCard(), getFieldWeights().normal(curr,succ)));
 	}
 
-	public abstract Field exclusionFieldWildCard(Field exclusion);
-
-	public abstract Field fieldWildCard();
 
 	protected INode<Node<Stmt,Fact>> asFieldFact(Node<Stmt, Fact> node) {
 		return new SingleNode<Node<Stmt,Fact>>(new Node<Stmt,Fact>(node.stmt(), node.fact()));
@@ -328,11 +326,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		Object location = popNode.location();
 		if (system.equals(PDSSystem.FIELDS)) {
 			NodeWithLocation<Stmt, Fact, Field> node = (NodeWithLocation) location;
-			fieldPDS.addRule(new PopRule<Field, INode<Node<Stmt,Fact>>, Weight<Field>>(asFieldFact(curr), node.location(),
-					asFieldFact(node.fact()), fieldPDS.getOne()));
+			fieldPDS.addRule(new PopRule<Field, INode<Node<Stmt,Fact>>, Weight>(asFieldFact(curr), node.location(),
+					asFieldFact(node.fact()), getFieldWeights().pop(curr, node.location())));
 			addNormalCallFlow(curr, node.fact());
 		} else if (system.equals(PDSSystem.CALLS)) {
-			callingPDS.addRule(new PopRule<Stmt, INode<Fact>, Weight<Stmt>>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location),callingPDS.getOne()));
+			callingPDS.addRule(new PopRule<Stmt, INode<Fact>, Weight>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location),getCallWeights().pop(curr, curr.stmt())));
 			//TODO we have an unchecked cast here, branch directly based on PopNode type?
 			CallPopNode<Fact, Stmt> callPopNode = (CallPopNode) popNode;
 			Stmt returnSite = callPopNode.getReturnSite();
@@ -343,25 +341,33 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	public boolean processPush(Node<Stmt,Fact> curr, Location location, Node<Stmt, Fact> succ, PDSSystem system) {
 		boolean added = false;
 		if (system.equals(PDSSystem.FIELDS)) {
-			added |= fieldPDS.addRule(new PushRule<Field, INode<Node<Stmt,Fact>>, Weight<Field>>(asFieldFact(curr),
-					fieldWildCard(), asFieldFact(succ),  (Field) location,fieldWildCard(), fieldPDS.getOne()));
+			added |= fieldPDS.addRule(new PushRule<Field, INode<Node<Stmt,Fact>>, Weight>(asFieldFact(curr),
+					fieldWildCard(), asFieldFact(succ),  (Field) location,fieldWildCard(), getFieldWeights().push(curr,succ,(Field)location)));
 			added |= addNormalCallFlow(curr, succ);
 
 		} else if (system.equals(PDSSystem.CALLS)) {
 			added |= addNormalFieldFlow(curr, succ);
-			added |= callingPDS.addRule(new PushRule<Stmt, INode<Fact>, Weight<Stmt>>(wrap(curr.fact()), curr.stmt(),
-					wrap(succ.fact()), succ.stmt(), (Stmt) location,callingPDS.getOne()));
+			added |= callingPDS.addRule(new PushRule<Stmt, INode<Fact>, Weight>(wrap(curr.fact()), curr.stmt(),
+					wrap(succ.fact()), succ.stmt(), (Stmt) location,getCallWeights().push(curr, succ, (Stmt) location)));
 
 		}
 		return added;
 	}
+	
 
+	protected WeightFunctions<Stmt, Fact, Field> getFieldWeights() {
+		return new OneWeightFunctions<Stmt,Fact,Field>(fieldPDS.getOne());
+	}
+	
+	protected WeightFunctions<Stmt, Fact, Stmt> getCallWeights() {
+		return new OneWeightFunctions<Stmt,Fact,Stmt>(callingPDS.getOne());
+	}
 
-	private class FieldUpdateListener implements WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, Weight<Field>> {
+	private class FieldUpdateListener implements WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, Weight> {
 
 		@Override
 		public void onWeightAdded(Transition<Field, INode<Node<Stmt,Fact>>> t,
-				Weight<Field> w) {
+				Weight w) {
 			INode<Node<Stmt,Fact>> n = t.getStart();
 			if(!(n instanceof GeneratedState)){
 				Node<Stmt,Fact> fact = n.fact();
@@ -439,6 +445,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	public abstract Field emptyField();
 
 	public abstract Stmt epsilonStmt();
+	
+	public abstract Field exclusionFieldWildCard(Field exclusion);
+
+	public abstract Field fieldWildCard();
 
 	public Set<Node<Stmt, Fact>> getReachedStates() {
 		Set<Node<Stmt,Fact>> res = Sets.newHashSet();

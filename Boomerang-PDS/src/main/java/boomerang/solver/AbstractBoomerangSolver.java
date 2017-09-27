@@ -60,16 +60,16 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	private Multimap<SootMethod, MethodBasedFieldTransitionListener> perMethodFieldTransitionsListener = HashMultimap.create();
 	
 	
-	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, Weight<Statement>>> callSummaries, Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight<Field>>> fieldSummaries){
+	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, Weight>> callSummaries, Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight>> fieldSummaries){
 		super(callSummaries, fieldSummaries);
 
 		this.icfg = icfg;
 		this.query = query;
 		this.unbalancedMethod.add(query.asNode().stmt().getMethod());
-		this.fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+		this.fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight>() {
 
 			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight w) {
 				addTransitionToMethod(t.getStart().fact().stmt().getMethod(), t);
 				addTransitionToMethod(t.getTarget().fact().stmt().getMethod(), t);
 			}
@@ -285,14 +285,14 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return Field.exclusionWildcard(exclusion);
 	}
 	
-	public WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight<Field>> getFieldAutomaton(){
+	public WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight> getFieldAutomaton(){
 		return fieldAutomaton;
 	}
 
-	public void addFieldAutomatonListener(WPAUpdateListener<Field, INode<Node<Statement, Val>>, Weight<Field>> listener) {
+	public void addFieldAutomatonListener(WPAUpdateListener<Field, INode<Node<Statement, Val>>, Weight> listener) {
 		fieldAutomaton.registerListener(listener);
 	}
-	public void addCallAutomatonListener(WPAUpdateListener<Statement, INode<Val>, Weight<Statement>> listener) {
+	public void addCallAutomatonListener(WPAUpdateListener<Statement, INode<Val>, Weight> listener) {
 		callAutomaton.registerListener(listener);
 	}
 	public void addUnbalancedFlow(SootMethod m) {
@@ -414,7 +414,7 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	public void debugFieldAutomaton(final Statement statement) {
 		if(!Boomerang.DEBUG)
 			return;
-		final WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight<Field>> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight<Field>>(){
+		final WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight>(){
 
 			@Override
 			public Field epsilon() {
@@ -428,12 +428,12 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			}
 
 			@Override
-			public Weight<Field> getZero() {
+			public Weight getZero() {
 				return fieldPDS.getZero();
 			}
 
 			@Override
-			public Weight<Field> getOne() {
+			public Weight getOne() {
 				return fieldPDS.getOne();
 			}
 
@@ -441,10 +441,10 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			public boolean isGeneratedState(INode<Node<Statement, Val>> d) {
 				return d instanceof GeneratedState;
 			}};
-		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight<Field>>() {
+		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight>() {
 			
 			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight<Field> w) {
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight w) {
 				if(t.getStart().fact().stmt().equals(statement) && !(t.getStart() instanceof GeneratedState)){
 					fieldAutomaton.registerDFSListener(t.getStart(),new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 						@Override

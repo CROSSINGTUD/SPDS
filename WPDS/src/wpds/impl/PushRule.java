@@ -3,7 +3,7 @@ package wpds.impl;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 
-public class PushRule<N extends Location, D extends State, W extends Weight<N>>
+public class PushRule<N extends Location, D extends State, W extends Weight>
     extends Rule<N, D, W> {
 
   protected N callSite;

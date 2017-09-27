@@ -4,7 +4,7 @@ import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 
-public class BackwardDFSEpsilonVisitor<N extends Location,D extends State, W extends Weight<N>> extends BackwardDFSVisitor<N,D,W>{
+public class BackwardDFSEpsilonVisitor<N extends Location,D extends State, W extends Weight> extends BackwardDFSVisitor<N,D,W>{
 
 	public BackwardDFSEpsilonVisitor(WeightedPAutomaton<N, D, W> aut, D startState,
 			ReachabilityListener<N, D> listener) {

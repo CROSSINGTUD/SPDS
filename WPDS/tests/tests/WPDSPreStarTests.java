@@ -19,19 +19,19 @@ import wpds.impl.WeightedPushdownSystem;
 
 @Ignore 
 public class WPDSPreStarTests {
-  private WeightedPushdownSystem<StackSymbol, Abstraction, NumWeight<StackSymbol>> pds;
+  private WeightedPushdownSystem<StackSymbol, Abstraction, NumWeight> pds;
 
   @Before
   public void init() {
-    pds = new WeightedPushdownSystem<StackSymbol, Abstraction, NumWeight<StackSymbol>>() {
+    pds = new WeightedPushdownSystem<StackSymbol, Abstraction, NumWeight>() {
 
       @Override
-      public NumWeight<StackSymbol> getZero() {
+      public NumWeight getZero() {
         return NumWeight.zero();
       }
 
       @Override
-      public NumWeight<StackSymbol> getOne() {
+      public NumWeight getOne() {
         return NumWeight.one();
       }
     };
@@ -41,7 +41,7 @@ public class WPDSPreStarTests {
   public void simple() {
     pds.addRule(wnormal(1, "a", 2, "b", w(2)));
     pds.addRule(wnormal(2, "b", 3, "c", w(3)));
-    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>> fa =
+    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight> fa =
         waccepts(3, "c", w(0));
     pds.prestar(fa);
     assertEquals(fa.getTransitions().size(), 3);
@@ -55,7 +55,7 @@ public class WPDSPreStarTests {
     pds.addRule(wnormal(1, "b", 1, "c", w(4)));
     pds.addRule(wnormal(1, "a", 1, "d", w(3)));
     pds.addRule(wnormal(1, "d", 1, "c", w(3)));
-    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>> fa =
+    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight> fa =
         waccepts(1, "c", w(0));
     pds.prestar(fa);
     System.out.println(fa);
@@ -72,7 +72,7 @@ public class WPDSPreStarTests {
     pds.addRule(wnormal(1, "c", 1, "e", w(1)));
     pds.addRule(wpop(1, "e", 1, w(5)));
     pds.addRule(wnormal(1, "d", 1, "f", w(6)));
-    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight<StackSymbol>> fa =
+    WeightedPAutomaton<StackSymbol, Abstraction, NumWeight> fa =
         waccepts(1, "f", w(0));
     pds.prestar(fa);
     System.out.println(fa);
@@ -81,7 +81,7 @@ public class WPDSPreStarTests {
     assertEquals(fa.getWeightFor(t(1, "c", 1)), w(6));
   }
 
-  private static NumWeight<StackSymbol> w(int i) {
-    return new NumWeight<>(i);
+  private static NumWeight w(int i) {
+    return new NumWeight(i);
   }
 }

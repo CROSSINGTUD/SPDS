@@ -9,7 +9,7 @@ import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 
-public class BackwardDFSVisitor<N extends Location,D extends State, W extends Weight<N>> implements WPAUpdateListener<N, D, W>{
+public class BackwardDFSVisitor<N extends Location,D extends State, W extends Weight> implements WPAUpdateListener<N, D, W>{
 	
 	private Set<D> reachableStates = Sets.newHashSet();
 	private ReachabilityListener<N,D> listener;
@@ -50,7 +50,7 @@ public class BackwardDFSVisitor<N extends Location,D extends State, W extends We
 
 
 	@Override
-	public void onWeightAdded(Transition<N, D> t, Weight<N> w) {
+	public void onWeightAdded(Transition<N, D> t, Weight w) {
 		if(reachableStates.contains(t.getTarget()))
 			addReachable(t);
 	}

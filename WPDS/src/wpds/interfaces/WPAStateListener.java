@@ -3,7 +3,7 @@ package wpds.interfaces;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 
-public abstract class WPAStateListener<N extends Location, D extends State, W extends Weight<N>>{
+public abstract class WPAStateListener<N extends Location, D extends State, W extends Weight>{
 	
 
 	protected final D state;

@@ -11,7 +11,7 @@ import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 
-public interface IPushdownSystem<N extends Location, D extends State, W extends Weight<N>> {
+public interface IPushdownSystem<N extends Location, D extends State, W extends Weight> {
 
   public boolean addRule(Rule<N, D, W> rule);
 

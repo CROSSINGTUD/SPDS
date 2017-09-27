@@ -10,7 +10,7 @@ import sync.pds.solver.nodes.Node;
 import wpds.impl.Weight;
 import wpds.interfaces.Location;
 
-public class SetDomain<N extends Location,Stmt,Fact> extends Weight<N>{
+public class SetDomain<N,Stmt,Fact> extends Weight{
 
 	private static SetDomain one;
 	private static SetDomain zero;
@@ -30,7 +30,7 @@ public class SetDomain<N extends Location,Stmt,Fact> extends Weight<N>{
 		this.rep = null;
 	}
 	@Override
-	public Weight<N> extendWith(Weight<N> other) {
+	public Weight extendWith(Weight other) {
 		if(other.equals(one())){
 			return this;
 		}
@@ -41,7 +41,7 @@ public class SetDomain<N extends Location,Stmt,Fact> extends Weight<N>{
 	}
 
 	@Override
-	public Weight<N> combineWith(Weight<N> other) {
+	public Weight combineWith(Weight other) {
 		if(other.equals(zero()))
 			return this;
 		if(this.equals(zero()))

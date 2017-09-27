@@ -11,7 +11,7 @@ import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.wildcard.Wildcard;
 
-public class PreStar<N extends Location, D extends State, W extends Weight<N>> {
+public class PreStar<N extends Location, D extends State, W extends Weight> {
   private LinkedList<Transition<N, D>> worklist = Lists.newLinkedList();
   private IPushdownSystem<N, D, W> pds;
   private WeightedPAutomaton<N, D, W> fa;
@@ -24,7 +24,6 @@ public class PreStar<N extends Location, D extends State, W extends Weight<N>> {
 
     for (Transition<N, D> trans : Sets.newHashSet(fa.getTransitions())) {
       W one = pds.getOne();
-      one.setRange(trans.getLabel(), trans.getLabel());
       fa.addWeightForTransition(trans, one);
     }
     for (PopRule<N, D, W> r : pds.getPopRules()) {
@@ -89,9 +88,9 @@ public class PreStar<N extends Location, D extends State, W extends Weight<N>> {
     W lt = getOrCreateWeight(trans);
     W fr = weight;
     for (Transition<N, D> prev : previous) {
-      fr = (W) fr.extendWithIn(getOrCreateWeight(prev));
+      fr = (W) fr.extendWith(getOrCreateWeight(prev));
     }
-    W newLt = (W) lt.combineWithIn(fr);
+    W newLt = (W) lt.combineWith(fr);
     fa.addWeightForTransition(trans, newLt);
     if (!lt.equals(newLt)) {
       worklist.add(trans);
@@ -104,7 +103,7 @@ public class PreStar<N extends Location, D extends State, W extends Weight<N>> {
       return w;
 
     W z = pds.getZero();
-    z.setRange(trans.getLabel(), trans.getLabel());
+//    z.setRange(trans.getLabel(), trans.getLabel());
     return z;
   }
 }
