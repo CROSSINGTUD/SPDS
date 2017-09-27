@@ -289,6 +289,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		return fieldAutomaton;
 	}
 
+	public WeightedPAutomaton<Statement, INode<Val>, W> getCallAutomaton(){
+		return callAutomaton;
+	}
+
 	public void addFieldAutomatonListener(WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> listener) {
 		fieldAutomaton.registerListener(listener);
 	}

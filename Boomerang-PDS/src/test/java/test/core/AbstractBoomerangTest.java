@@ -3,6 +3,7 @@ package test.core;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 
@@ -217,12 +218,18 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 			};
 			if(query instanceof BackwardQuery){
-				solver.addBackwardQuery((BackwardQuery)query,new EmptyStackWitnessListener<Statement, Val>() {
-					@Override
-					public void witnessFound(Node<Statement, Val> allocation) {
-						results.add(allocation);	
+				solver.solve(query);
+				for (Entry<Query, AbstractBoomerangSolver<NoWeight>> fw : solver.getSolvers().entrySet()) {
+					if(fw.getKey() instanceof ForwardQuery){
+						fw.getValue().synchedEmptyStackReachable(query.asNode(),new EmptyStackWitnessListener<Statement, Val>() {
+							@Override
+							public void witnessFound(Node<Statement, Val> allocation) {
+								results.add(allocation);	
+							}
+						});
 					}
-				});
+				}
+				
 			}else{
 				solver.solve(query);
 				for(Node<Statement, Val> s : solver.getForwardReachableStates()){

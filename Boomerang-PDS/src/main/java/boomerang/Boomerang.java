@@ -41,8 +41,6 @@ import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-import sync.pds.solver.EmptyStackWitnessListener;
-import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.WitnessNode;
@@ -51,7 +49,6 @@ import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
-import sync.pds.weights.SetDomain;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -61,7 +58,6 @@ import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang<W extends Weight> {
 	public static final boolean DEBUG = false;
-	private static final boolean DISABLE_CALLPOI = false;
 	private Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
 		@Override
@@ -81,7 +77,7 @@ public abstract class Boomerang<W extends Weight> {
 				solver.addAllocatedType(type);
 			}
 			
-			for(ReachableMethodListener l : reachableMethodsListener){
+			for(ReachableMethodListener<W> l : reachableMethodsListener){
 				solver.registerReachableMethodListener(l);
 			}
 			return solver;
@@ -90,11 +86,10 @@ public abstract class Boomerang<W extends Weight> {
 	private BackwardsInterproceduralCFG bwicfg;
 	private Collection<ForwardQuery> forwardQueries = Sets.newHashSet();
 	private Collection<BackwardQuery> backwardQueries = Sets.newHashSet();
-
 	private EmptyCalleeFlow forwardEmptyCalleeFlow = new ForwardEmptyCalleeFlow(); 
 	private EmptyCalleeFlow backwardEmptyCalleeFlow = new BackwardEmptyCalleeFlow(); 
 	private Collection<RefType> allocatedTypes = Sets.newHashSet();
-	private Collection<ReachableMethodListener> reachableMethodsListener = Sets.newHashSet();
+	private Collection<ReachableMethodListener<W>> reachableMethodsListener = Sets.newHashSet();
 	private Multimap<BackwardQuery, ForwardQuery> backwardToForwardQueries = HashMultimap.create();
 	private Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, W>> backwardCallSummaries = Maps.newHashMap();
 	private Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> backwardFieldSummaries = Maps.newHashMap();
@@ -390,14 +385,6 @@ public abstract class Boomerang<W extends Weight> {
 		return bwicfg;
 	}
 
-	public void addBackwardQuery(final BackwardQuery backwardQueryNode,
-			EmptyStackWitnessListener<Statement, Val> listener) {
-		backwardSolve(backwardQueryNode);
-		for (ForwardQuery fw : backwardToForwardQueries.get(backwardQueryNode)) {
-			queryToSolvers.getOrCreate(fw).synchedEmptyStackReachable(backwardQueryNode.asNode(), listener);
-		}
-	}
-
 	public void solve(Query query) {
 		if (query instanceof ForwardQuery) {
 			forwardSolve((ForwardQuery) query);
@@ -411,7 +398,7 @@ public abstract class Boomerang<W extends Weight> {
 	protected void backwardSolve(BackwardQuery query) {
 		backwardQueries.add(query);
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
-		AbstractBoomerangSolver solver = queryToSolvers.getOrCreate(query);
+		AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
 		if (unit.isPresent()) {
 			for (Unit succ : new BackwardsInterproceduralCFG(icfg()).getSuccsOf(unit.get())) {
 				solver.solve(query.asNode(), new Node<Statement, Val>(
@@ -423,7 +410,7 @@ public abstract class Boomerang<W extends Weight> {
 	private void forwardSolve(ForwardQuery query) {
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
 		forwardQueries.add(query);
-		AbstractBoomerangSolver solver = queryToSolvers.getOrCreate(query);
+		AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
 		if (unit.isPresent()) {
 			for (Unit succ : icfg().getSuccsOf(unit.get())) {
 				Node<Statement, Val> source = new Node<Statement, Val>(
@@ -498,7 +485,7 @@ public abstract class Boomerang<W extends Weight> {
 			return true;
 		}
 
-		private Boomerang getOuterType() {
+		private Boomerang<W> getOuterType() {
 			return Boomerang.this;
 		}
 
@@ -542,9 +529,9 @@ public abstract class Boomerang<W extends Weight> {
 			});
 		}
 		protected void importFlowsAtReturnSite(final ForwardQuery byPassingAllocation, final Query flowQuery, final Node<Statement, Val> returnedNode) {
-			AbstractBoomerangSolver byPassingSolver = queryToSolvers.get(byPassingAllocation);
-		    final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight> byPassingFieldAutomaton = byPassingSolver.getFieldAutomaton();
-		    final AbstractBoomerangSolver flowSolver = queryToSolvers.getOrCreate(flowQuery);
+			AbstractBoomerangSolver<W> byPassingSolver = queryToSolvers.get(byPassingAllocation);
+		    final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> byPassingFieldAutomaton = byPassingSolver.getFieldAutomaton();
+		    final AbstractBoomerangSolver<W> flowSolver = queryToSolvers.getOrCreate(flowQuery);
 		    byPassingSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(returnedNode.stmt().getMethod()) {
 		    	@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
@@ -595,7 +582,7 @@ public abstract class Boomerang<W extends Weight> {
 			return true;
 		}
 
-		private Boomerang getOuterType() {
+		private Boomerang<W> getOuterType() {
 			return Boomerang.this;
 		}
 		
@@ -614,7 +601,6 @@ public abstract class Boomerang<W extends Weight> {
 		}
 	}
 	private abstract class FieldStmtPOI extends AbstractPOI<Statement, Val, Field> {
-		private Multimap<Query,Val> aliases = HashMultimap.create();
 		public FieldStmtPOI(Statement statement, Val base, Field field, Val storedVar) {
 			super(statement, base, field, storedVar);
 		}
@@ -651,9 +637,9 @@ public abstract class Boomerang<W extends Weight> {
 	}
 	class ImportToSolver implements ReachabilityListener<Field, INode<Node<Statement,Val>>>{
 		
-		private AbstractBoomerangSolver flowSolver;
+		private AbstractBoomerangSolver<W> flowSolver;
 
-		public ImportToSolver(AbstractBoomerangSolver flowSolver) {
+		public ImportToSolver(AbstractBoomerangSolver<W> flowSolver) {
 			this.flowSolver = flowSolver;
 		}
 
@@ -690,7 +676,7 @@ public abstract class Boomerang<W extends Weight> {
 			return true;
 		}
 
-		private Boomerang getOuterType() {
+		private Boomerang<W> getOuterType() {
 			return Boomerang.this;
 		}
 		
@@ -699,7 +685,7 @@ public abstract class Boomerang<W extends Weight> {
 	}
 	public boolean addAllocationType(RefType type){
 		if(allocatedTypes.add(type)){
-			for(AbstractBoomerangSolver solvers : queryToSolvers.values()){
+			for(AbstractBoomerangSolver<W> solvers : queryToSolvers.values()){
 				solvers.addAllocatedType(type);
 			}
 			return true;
@@ -707,9 +693,9 @@ public abstract class Boomerang<W extends Weight> {
 		return false;
 	}
 
-	public void registerReachableMethodListener(ReachableMethodListener l){
+	public void registerReachableMethodListener(ReachableMethodListener<W> l){
 		if(reachableMethodsListener.add(l)){
-			for(AbstractBoomerangSolver s : queryToSolvers.values()){
+			for(AbstractBoomerangSolver<W> s : queryToSolvers.values()){
 				s.registerReachableMethodListener(l);
 			}
 		}
