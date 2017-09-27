@@ -15,12 +15,12 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPDSUpdateListener;
 import wpds.wildcard.Wildcard;
 
-public abstract class WeightedPushdownSystem<N extends Location, D extends State, W extends Weight>
+public class WeightedPushdownSystem<N extends Location, D extends State, W extends Weight>
 		implements IPushdownSystem<N, D, W> {
-	Set<PushRule<N, D, W>> pushRules = Sets.newHashSet();
-	Set<PopRule<N, D, W>> popRules = Sets.newHashSet();
-	Set<NormalRule<N, D, W>> normalRules = Sets.newHashSet();
-	Set<WPDSUpdateListener<N, D, W>> listeners = Sets.newHashSet();
+	protected final Set<PushRule<N, D, W>> pushRules = Sets.newHashSet();
+	protected final Set<PopRule<N, D, W>> popRules = Sets.newHashSet();
+	protected final Set<NormalRule<N, D, W>> normalRules = Sets.newHashSet();
+	protected final Set<WPDSUpdateListener<N, D, W>> listeners = Sets.newHashSet();
 
 	@Override
 	public boolean addRule(Rule<N, D, W> rule) {

@@ -6,15 +6,6 @@ import wpds.interfaces.State;
 
 public class PushdownSystem<N extends Location, D extends State>
     extends WeightedPushdownSystem<N, D, NoWeight> {
-  @Override
-  public NoWeight getZero() {
-    return NoWeight.NO_WEIGHT_ZERO;
-  }
-
-  @Override
-  public NoWeight getOne() {
-    return NoWeight.NO_WEIGHT_ONE;
-  }
 
   @Override
   public boolean addRule(Rule<N, D, NoWeight> rule) {

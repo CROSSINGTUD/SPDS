@@ -23,7 +23,7 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
     fa = initialAutomaton;
 
     for (Transition<N, D> trans : Sets.newHashSet(fa.getTransitions())) {
-      W one = pds.getOne();
+      W one = fa.getOne();
       fa.addWeightForTransition(trans, one);
     }
     for (PopRule<N, D, W> r : pds.getPopRules()) {
@@ -102,7 +102,7 @@ public class PreStar<N extends Location, D extends State, W extends Weight> {
     if (w != null)
       return w;
 
-    W z = pds.getZero();
+    W z = fa.getZero();
 //    z.setRange(trans.getLabel(), trans.getLabel());
     return z;
   }

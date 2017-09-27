@@ -22,18 +22,7 @@ public class WPDSPostStarTests {
 
   @Before
   public void init() {
-    pds = new WeightedPushdownSystem<StackSymbol, Abstraction, NumWeight>() {
-
-      @Override
-      public NumWeight getZero() {
-        return NumWeight.zero();
-      }
-
-      @Override
-      public NumWeight getOne() {
-        return NumWeight.one();
-      }
-    };
+    pds = new WeightedPushdownSystem<StackSymbol, Abstraction, NumWeight>();
   }
 
   @Test

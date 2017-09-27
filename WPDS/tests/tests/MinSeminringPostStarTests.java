@@ -22,18 +22,7 @@ public class MinSeminringPostStarTests {
 
   @Before
   public void init() {
-    pds = new WeightedPushdownSystem<StackSymbol, Abstraction, MinSemiring>() {
-
-      @Override
-      public MinSemiring getZero() {
-        return MinSemiring.zero();
-      }
-
-      @Override
-      public MinSemiring getOne() {
-        return MinSemiring.one();
-      }
-    };
+    pds = new WeightedPushdownSystem<StackSymbol, Abstraction, MinSemiring>();
   }
 
   @Test

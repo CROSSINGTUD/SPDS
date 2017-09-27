@@ -75,4 +75,5 @@ public class Val {
 			staticInstance = new Val("STATIC");
 		return staticInstance;
 	}
+
 }

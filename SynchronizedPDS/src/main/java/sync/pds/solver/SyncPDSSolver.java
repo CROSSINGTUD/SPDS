@@ -46,29 +46,8 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private static final boolean DEBUG = true;
 	private LinkedList<WitnessNode<Stmt,Fact,Field>> worklist = Lists.newLinkedList();
 
-	protected final WeightedPushdownSystem<Stmt, INode<Fact>, W> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, W>() {
-		@Override
-		public W getZero() {
-			return getCallWeights().getZero();
-		}
-
-		@Override
-		public W getOne() {
-			return getCallWeights().getOne();
-		}
-	};
-	protected final WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W> fieldPDS = new WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W>() {
-
-		@Override
-		public W getZero() {
-			return getFieldWeights().getZero();
-		}
-
-		@Override
-		public W getOne() {
-			return getFieldWeights().getOne();
-		}
-	};
+	protected final WeightedPushdownSystem<Stmt, INode<Fact>, W> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, W>();
+	protected final WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W> fieldPDS = new WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W>();
 	protected final WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W>() {
 		@Override
 		public INode<Node<Stmt,Fact>> createState(INode<Node<Stmt,Fact>> d, Field loc) {

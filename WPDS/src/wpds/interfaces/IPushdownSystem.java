@@ -15,10 +15,6 @@ public interface IPushdownSystem<N extends Location, D extends State, W extends 
 
   public boolean addRule(Rule<N, D, W> rule);
 
-  public W getZero();
-
-  public W getOne();
-
   public Set<D> getStates();
 
   public Set<NormalRule<N, D, W>> getNormalRules();
