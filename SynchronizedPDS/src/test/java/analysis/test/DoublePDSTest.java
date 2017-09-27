@@ -10,8 +10,10 @@ import org.junit.Test;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
+import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.SyncPDSSolver.PDSSystem;
+import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.Node;
@@ -89,14 +91,15 @@ public class DoublePDSTest {
 		}
 
 		@Override
-		protected NoWeight getOne() {
-			return NoWeight.NO_WEIGHT_ONE;
+		protected WeightFunctions<Statement, Variable, FieldRef, NoWeight> getFieldWeights() {
+			return new OneWeightFunctions<Statement, Variable, FieldRef, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
 		}
 
 		@Override
-		protected NoWeight getZero() {			
-			return NoWeight.NO_WEIGHT_ZERO;
+		protected WeightFunctions<Statement, Variable, Statement, NoWeight> getCallWeights() {
+			return new OneWeightFunctions<Statement, Variable, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
 		}
+
 	};
 	@Test
 	public void test1() {

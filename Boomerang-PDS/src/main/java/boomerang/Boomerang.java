@@ -139,13 +139,13 @@ public abstract class Boomerang<W extends Weight> {
 			}
 
 			@Override
-			protected W getOne() {
-				return Boomerang.this.getOne();
+			protected WeightFunctions<Statement, Val, Field, W> getFieldWeights() {
+				return Boomerang.this.getBackwardFieldWeights();
 			}
 
 			@Override
-			protected W getZero() {
-				return Boomerang.this.getZero();
+			protected WeightFunctions<Statement, Val, Statement, W> getCallWeights() {
+				return Boomerang.this.getBackwardCallWeights();
 			}
 			
 		};
@@ -173,10 +173,6 @@ public abstract class Boomerang<W extends Weight> {
 		return solver;
 	}
 	
-	protected abstract W getZero();
-
-	protected abstract W getOne();
-
 	protected void backwardHandleEnterCall(WitnessNode<Statement, Val, Field> node, ForwardCallSitePOI returnSite,
 			BackwardQuery backwardQuery) {
 		returnSite.returnsFromCall(backwardQuery, node.asNode());
@@ -242,20 +238,12 @@ public abstract class Boomerang<W extends Weight> {
 
 			@Override
 			protected WeightFunctions<Statement, Val, Statement, W> getCallWeights() {
-				WeightFunctions<Statement, Val, Statement, W> weights = Boomerang.this.getForwardCallWeights();
-				if(weights != null)
-					return weights;
-				return super.getCallWeights();
+				return Boomerang.this.getForwardCallWeights();
 			}
 
 			@Override
-			protected W getOne() {
-				return Boomerang.this.getOne();
-			}
-
-			@Override
-			protected W getZero() {				
-				return Boomerang.this.getZero();
+			protected WeightFunctions<Statement, Val, Field, W> getFieldWeights() {
+				return Boomerang.this.getForwardFieldWeights();
 			}
 		};
 		
@@ -727,7 +715,12 @@ public abstract class Boomerang<W extends Weight> {
 		}
 	}
 	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
-
+	protected abstract WeightFunctions<Statement, Val, Field, W> getForwardFieldWeights();
+	protected abstract WeightFunctions<Statement, Val, Field, W> getBackwardFieldWeights();
+	protected abstract WeightFunctions<Statement, Val, Statement, W> getBackwardCallWeights();
+	protected abstract WeightFunctions<Statement, Val, Statement, W> getForwardCallWeights();
+	
+	
 	public Collection<? extends Node<Statement, Val>> getForwardReachableStates() {
 		Set<Node<Statement, Val>> res = Sets.newHashSet();
 		for (Query q : queryToSolvers.keySet()) {
@@ -743,10 +736,6 @@ public abstract class Boomerang<W extends Weight> {
 	public abstract Debugger createDebugger();
 
 
-	protected WeightFunctions<Statement, Val, Statement, W> getForwardCallWeights() {
-		return null;
-	}
-	
 	public void debugOutput() {
 		if(!DEBUG)
 			return;

@@ -21,6 +21,7 @@ import boomerang.Query;
 import boomerang.WholeProgramBoomerang;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
+import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
@@ -41,6 +42,8 @@ import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
+import sync.pds.solver.OneWeightFunctions;
+import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.Weight.NoWeight;
 
@@ -193,13 +196,23 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 
 				@Override
-				protected NoWeight getZero() {
-					return NoWeight.NO_WEIGHT_ZERO;
+				protected WeightFunctions<Statement, Val, Field, NoWeight> getForwardFieldWeights() {
+					return new OneWeightFunctions<Statement, Val, Field, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
 				}
 
 				@Override
-				protected NoWeight getOne() {
-					return NoWeight.NO_WEIGHT_ONE;
+				protected WeightFunctions<Statement, Val, Field, NoWeight> getBackwardFieldWeights() {
+					return new OneWeightFunctions<Statement, Val, Field, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
+				}
+
+				@Override
+				protected WeightFunctions<Statement, Val, Statement, NoWeight> getBackwardCallWeights() {
+					return new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
+				}
+
+				@Override
+				protected WeightFunctions<Statement, Val, Statement, NoWeight> getForwardCallWeights() {
+					return new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
 				}
 			};
 			if(query instanceof BackwardQuery){
@@ -242,16 +255,26 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				return new IDEVizDebugger(ideVizFile,icfg);
 			}
 
-
 			@Override
-			protected NoWeight getZero() {
-				return NoWeight.NO_WEIGHT_ZERO;
+			protected WeightFunctions<Statement, Val, Field, NoWeight> getForwardFieldWeights() {
+				return new OneWeightFunctions<Statement, Val, Field, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
 			}
 
 			@Override
-			protected NoWeight getOne() {
-				return NoWeight.NO_WEIGHT_ONE;
+			protected WeightFunctions<Statement, Val, Field, NoWeight> getBackwardFieldWeights() {
+				return new OneWeightFunctions<Statement, Val, Field, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
 			}
+
+			@Override
+			protected WeightFunctions<Statement, Val, Statement, NoWeight> getBackwardCallWeights() {
+				return new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
+			}
+
+			@Override
+			protected WeightFunctions<Statement, Val, Statement, NoWeight> getForwardCallWeights() {
+				return new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
+			}
+
 		};
 		solver.wholeProgramAnalysis();
 		DefaultValueMap<Query, AbstractBoomerangSolver<NoWeight>> solvers = solver.getSolvers();

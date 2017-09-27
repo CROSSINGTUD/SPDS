@@ -355,16 +355,9 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 	
 
-	protected WeightFunctions<Stmt, Fact, Field, W> getFieldWeights() {
-		return new OneWeightFunctions<Stmt,Fact,Field,W>(getZero(), getOne());
-	}
+	protected abstract WeightFunctions<Stmt, Fact, Field, W> getFieldWeights();
 	
-	protected WeightFunctions<Stmt, Fact, Stmt, W> getCallWeights() {
-		return new OneWeightFunctions<Stmt,Fact,Stmt,W>(getZero(), getOne());
-	}
-
-	protected abstract W getOne();
-	protected abstract W getZero();
+	protected abstract WeightFunctions<Stmt, Fact, Stmt, W> getCallWeights();
 
 	private class FieldUpdateListener implements WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, W> {
 
