@@ -44,7 +44,7 @@ import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
-public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, Val, Field>{
+public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W>{
 
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
@@ -60,16 +60,16 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 	private Multimap<SootMethod, MethodBasedFieldTransitionListener> perMethodFieldTransitionsListener = HashMultimap.create();
 	
 	
-	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, Weight>> callSummaries, Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight>> fieldSummaries){
+	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, W>> callSummaries, Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> fieldSummaries){
 		super(callSummaries, fieldSummaries);
 
 		this.icfg = icfg;
 		this.query = query;
 		this.unbalancedMethod.add(query.asNode().stmt().getMethod());
-		this.fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight>() {
+		this.fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 
 			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight w) {
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
 				addTransitionToMethod(t.getStart().fact().stmt().getMethod(), t);
 				addTransitionToMethod(t.getTarget().fact().stmt().getMethod(), t);
 			}
@@ -285,14 +285,14 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 		return Field.exclusionWildcard(exclusion);
 	}
 	
-	public WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight> getFieldAutomaton(){
+	public WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W> getFieldAutomaton(){
 		return fieldAutomaton;
 	}
 
-	public void addFieldAutomatonListener(WPAUpdateListener<Field, INode<Node<Statement, Val>>, Weight> listener) {
+	public void addFieldAutomatonListener(WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> listener) {
 		fieldAutomaton.registerListener(listener);
 	}
-	public void addCallAutomatonListener(WPAUpdateListener<Statement, INode<Val>, Weight> listener) {
+	public void addCallAutomatonListener(WPAUpdateListener<Statement, INode<Val>, W> listener) {
 		callAutomaton.registerListener(listener);
 	}
 	public void addUnbalancedFlow(SootMethod m) {
@@ -441,10 +441,10 @@ public abstract class AbstractBoomerangSolver extends SyncPDSSolver<Statement, V
 			public boolean isGeneratedState(INode<Node<Statement, Val>> d) {
 				return d instanceof GeneratedState;
 			}};
-		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, Weight>() {
+		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 			
 			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight w) {
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
 				if(t.getStart().fact().stmt().equals(statement) && !(t.getStart() instanceof GeneratedState)){
 					fieldAutomaton.registerDFSListener(t.getStart(),new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 						@Override

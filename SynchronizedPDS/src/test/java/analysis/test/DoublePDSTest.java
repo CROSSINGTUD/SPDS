@@ -18,6 +18,7 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
+import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.wildcard.ExclusionWildcard;
@@ -55,7 +56,7 @@ public class DoublePDSTest {
 	private FieldRef epsilonField = new FieldRef("eps_f");
 	private Statement epsilonCallSite = new Statement(-1);
 	
-	private SyncPDSSolver<Statement, Variable, FieldRef> solver = new SyncPDSSolver<Statement, Variable, FieldRef>() {
+	private SyncPDSSolver<Statement, Variable, FieldRef, NoWeight> solver = new SyncPDSSolver<Statement, Variable, FieldRef, NoWeight>() {
 
 		@Override
 		public Collection<State> computeSuccessor(Node<Statement, Variable> node) {
@@ -85,6 +86,16 @@ public class DoublePDSTest {
 		@Override
 		public FieldRef exclusionFieldWildCard(FieldRef exclusion) {
 			return new ExclusionWildcardField(exclusion);
+		}
+
+		@Override
+		protected NoWeight getOne() {
+			return NoWeight.NO_WEIGHT_ONE;
+		}
+
+		@Override
+		protected NoWeight getZero() {			
+			return NoWeight.NO_WEIGHT_ZERO;
 		}
 	};
 	@Test

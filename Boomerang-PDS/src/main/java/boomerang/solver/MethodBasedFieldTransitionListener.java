@@ -11,7 +11,7 @@ import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.WPAUpdateListener;
 
-public abstract class MethodBasedFieldTransitionListener implements WPAUpdateListener<Field, INode<Node<Statement,Val>>, NoWeight>{
+public abstract class MethodBasedFieldTransitionListener<W extends Weight> implements WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>{
 	private final SootMethod method;
 	public MethodBasedFieldTransitionListener(SootMethod method) {
 		this.method = method;
@@ -22,7 +22,7 @@ public abstract class MethodBasedFieldTransitionListener implements WPAUpdateLis
 	}
 	
 	@Override
-	public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, Weight w) {
+	public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
 		onAddedTransition(t);
 	}
 

@@ -42,6 +42,7 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.nodes.Node;
+import wpds.impl.Weight.NoWeight;
 
 public class AbstractBoomerangTest extends AbstractTestingFramework {
 
@@ -180,7 +181,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	private Set<Node<Statement, Val>> runQuery(Collection<? extends Query> queries) {
 		final Set<Node<Statement, Val>> results = Sets.newHashSet();
 		for (Query query : queries) {
-			Boomerang solver = new Boomerang() {
+			Boomerang<NoWeight> solver = new Boomerang<NoWeight>() {
 				@Override
 				public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 					return icfg;
@@ -189,6 +190,16 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				@Override
 				public Debugger createDebugger() {
 					return new IDEVizDebugger(ideVizFile,icfg);
+				}
+
+				@Override
+				protected NoWeight getZero() {
+					return NoWeight.NO_WEIGHT_ZERO;
+				}
+
+				@Override
+				protected NoWeight getOne() {
+					return NoWeight.NO_WEIGHT_ONE;
 				}
 			};
 			if(query instanceof BackwardQuery){
@@ -220,7 +231,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	}
 	private void runWholeProgram() {
 		final Set<Node<Statement, Val>> results = Sets.newHashSet();
-		WholeProgramBoomerang solver = new WholeProgramBoomerang() {
+		WholeProgramBoomerang<NoWeight> solver = new WholeProgramBoomerang<NoWeight>() {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 				return icfg;
@@ -230,9 +241,20 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			public Debugger createDebugger() {
 				return new IDEVizDebugger(ideVizFile,icfg);
 			}
+
+
+			@Override
+			protected NoWeight getZero() {
+				return NoWeight.NO_WEIGHT_ZERO;
+			}
+
+			@Override
+			protected NoWeight getOne() {
+				return NoWeight.NO_WEIGHT_ONE;
+			}
 		};
 		solver.wholeProgramAnalysis();
-		DefaultValueMap<Query, AbstractBoomerangSolver> solvers = solver.getSolvers();
+		DefaultValueMap<Query, AbstractBoomerangSolver<NoWeight>> solvers = solver.getSolvers();
 		for(final Query q : solvers.keySet()){
 			if(!(q instanceof ForwardQuery))
 				throw new RuntimeException("Unexpected solver found, whole program analysis should only trigger forward queries");

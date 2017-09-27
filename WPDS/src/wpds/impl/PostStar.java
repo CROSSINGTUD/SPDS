@@ -229,7 +229,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 					summary.registerListener(new WPAUpdateListener<N, D, W>() {
 
 						@Override
-						public void onWeightAdded(Transition<N, D> t, Weight w) {
+						public void onWeightAdded(Transition<N, D> t, W w) {
 							if((t.getLabel().equals(fa.epsilon()) && t.getTarget().equals(irState))){
 								update(t, (W) w);
 							}

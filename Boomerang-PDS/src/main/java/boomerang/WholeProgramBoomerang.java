@@ -13,16 +13,17 @@ import soot.jimple.AssignStmt;
 import soot.jimple.NewExpr;
 import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
+import wpds.impl.Weight;
 
-public abstract class WholeProgramBoomerang extends Boomerang{
+public abstract class WholeProgramBoomerang<W extends Weight> extends Boomerang<W>{
 	public void wholeProgramAnalysis(){
 		List<SootMethod> reachableMethods = Scene.v().getEntryPoints();
 		for(SootMethod m : reachableMethods){
 			analyzeMethod(m);
 		}
-		registerReachableMethodListener(new ReachableMethodListener() {
+		registerReachableMethodListener(new ReachableMethodListener<W>() {
 			@Override
-			public void reachable(AbstractBoomerangSolver solver, SootMethod m) {
+			public void reachable(AbstractBoomerangSolver<W> solver, SootMethod m) {
 				analyzeMethod(m);
 			}
 		});
