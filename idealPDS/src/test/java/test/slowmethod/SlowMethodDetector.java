@@ -91,7 +91,7 @@ public abstract class SlowMethodDetector extends IDEALTestingFramework {
 
 			@Override
 			public TypestateChangeFunction<ConcreteState> createTypestateChangeFunction() {
-				return SlowMethodDetector.this.createTypestateChangeFunction();
+				return SlowMethodDetector.this.getStateMachine();
 			}
 
 			@Override

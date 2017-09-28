@@ -1,5 +1,6 @@
 package test;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -7,8 +8,10 @@ import java.util.Set;
 
 import com.google.common.collect.Lists;
 
+import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import ideal.IDEALAnalysis;
+import ideal.IDEALAnalysisDefinition;
 import ideal.ResultReporter;
 import soot.Body;
 import soot.SceneTransformer;
@@ -18,34 +21,27 @@ import soot.Value;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
+import sync.pds.solver.WeightFunctions;
 import test.ExpectedResults.InternalState;
 import test.core.selfrunning.AbstractTestingFramework;
 import test.core.selfrunning.ImprecisionException;
 import typestate.TransitionFunction;
-import typestate.TypestateAnalysisProblem;
-import typestate.TypestateChangeFunction;
+import typestate.finiteautomata.MatcherStateMachine;
 
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected JimpleBasedInterproceduralCFG icfg;
 	protected long analysisTime;
 	protected TestingResultReporter testingResultReporter;
 
-	protected abstract TypestateChangeFunction createTypestateChangeFunction();
+	protected abstract MatcherStateMachine getStateMachine();
 
 	protected IDEALAnalysis<TransitionFunction> createAnalysis() {
-		return new IDEALAnalysis<TransitionFunction>(new TypestateAnalysisProblem() {
+		return new IDEALAnalysis<TransitionFunction>(new IDEALAnalysisDefinition<TransitionFunction>() {
 
 			@Override
 			public JimpleBasedInterproceduralCFG icfg() {
 				return icfg;
 			}
-
-
-			@Override
-			public TypestateChangeFunction createTypestateChangeFunction() {
-				return IDEALTestingFramework.this.createTypestateChangeFunction();
-			}
-
 
 			@Override
 			public boolean enableAliasing() {
@@ -75,9 +71,18 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			public ResultReporter<TransitionFunction> resultReporter() {
 				return testingResultReporter;
 			}
+
+			@Override
+			public Collection<Val> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
+				return  IDEALTestingFramework.this.getStateMachine().generateSeed(method, stmt, calledMethod);
+			}
+
+			@Override
+			public WeightFunctions<Statement, Val, Statement, TransitionFunction> weightFunctions() {
+				return IDEALTestingFramework.this.getStateMachine();
+			}
 		});
 	}
-
 
 	@Override
 	protected SceneTransformer createAnalysisTransformer() throws ImprecisionException {

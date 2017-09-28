@@ -5,14 +5,10 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.beust.jcommander.internal.Sets;
 import com.google.common.collect.Lists;
 
 import typestate.finiteautomata.ITransition;
-import typestate.finiteautomata.IdentityTransition;
 import typestate.finiteautomata.Transition;
 import wpds.impl.Weight;
 
@@ -57,9 +53,9 @@ public class TransitionFunction extends Weight {
 		Set<ITransition> ress = new HashSet<>();
 		for (ITransition first : otherTransitions) {
 			for (ITransition second : value) {
-				if (second instanceof IdentityTransition) {
+				if (second.equals(Transition.identity())) {
 					ress.add(first);
-				} else if (first instanceof IdentityTransition) {
+				} else if (first.equals(Transition.identity())) {
 					ress.add(second);
 				} else if (first.to().equals(second.from()))
 					ress.add(new Transition(first.from(), second.to()));
@@ -72,17 +68,20 @@ public class TransitionFunction extends Weight {
 	public Weight combineWith(Weight other) {
 		if(!(other instanceof TransitionFunction))
 			throw new RuntimeException();
-		if(this.equals(one()))
-			return other;
-		if (other.equals(one())) {
-			Set<ITransition> transitions = new HashSet<>(value);
-			transitions.add(IdentityTransition.v());
-			return new TransitionFunction(transitions);
-		}
+
 		if(other.equals(zero()))
 			return this;
+		if (other.equals(one())) {
+			Set<ITransition> transitions = new HashSet<>(value);
+			transitions.add(Transition.identity());
+			return new TransitionFunction(transitions);
+		}
 		TransitionFunction func = (TransitionFunction) other;
 		Set<ITransition> transitions =  new HashSet<>(func.value);
+		if(this.equals(one())){
+			transitions.add(Transition.identity());
+			return new TransitionFunction(transitions);
+		}
 		transitions.addAll(value);
 		return new TransitionFunction(transitions);
 	};

@@ -22,26 +22,42 @@ import soot.jimple.AssignStmt;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.Stmt;
+import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.Node;
-import typestate.TypestateChangeFunction;
+import typestate.TransitionFunction;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
 
-public abstract class MatcherStateMachine implements TypestateChangeFunction {
+public abstract class MatcherStateMachine implements  WeightFunctions<Statement, Val, Statement, TransitionFunction> {
 	public Set<MatcherTransition> transition = new HashSet<>();
 
 	public void addTransition(MatcherTransition trans) {
 		transition.add(trans);
 	}
+	
+	@Override
+	public TransitionFunction getOne() {
+		return TransitionFunction.one();
+	}
 
-	public Set<Transition> getReturnTransitionsFor(Node<Statement,Val> curr, Statement pops) {
-//		System.out.println(curr);
+	@Override
+	public TransitionFunction getZero() {
+		return TransitionFunction.zero();
+	}
+	
+	public TransitionFunction pop(Node<Statement,Val> curr, Statement pops) {
 		return getMatchingTransitions(curr.stmt().getMethod(), curr.fact(), Type.OnReturn);
 	}
 
-	public Set<Transition> getCallTransitionsFor(Node<Statement,Val> curr, Node<Statement,Val> succ, Statement push) {
+	public TransitionFunction push(Node<Statement,Val> curr, Node<Statement,Val> succ, Statement push) {
 		return getMatchingTransitions(succ.stmt().getMethod(),succ.fact(), Type.OnCall);
 	}
+	
+	@Override
+	public TransitionFunction normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
+		return getOne();
+	}
+	
 
 //	public Set<Transition<State>> getCallToReturnTransitionsFor(AccessGraph d1, Unit callSite, AccessGraph d2,
 //			Unit returnSite, AccessGraph d3) {
@@ -63,8 +79,8 @@ public abstract class MatcherStateMachine implements TypestateChangeFunction {
 //		return res;
 //	}
 
-	private Set<Transition> getMatchingTransitions(SootMethod method, Val node, Type type) {
-		Set<Transition> res = new HashSet<>();
+	private TransitionFunction getMatchingTransitions(SootMethod method, Val node, Type type) {
+		Set<ITransition> res = new HashSet<>();
 //		if (node.getFieldCount() == 0) { //TODO How do we check this?
 			for (MatcherTransition trans : transition) {
 				if (trans.matches(method) && trans.getType().equals(type)) {
@@ -81,7 +97,9 @@ public abstract class MatcherStateMachine implements TypestateChangeFunction {
 //			}
 		}
 			
-		return res;
+		if(res.isEmpty())
+			return getOne();
+		return new TransitionFunction(res);
 	}
 
 	private boolean isThisValue(SootMethod method, Val node) {
@@ -190,5 +208,7 @@ public abstract class MatcherStateMachine implements TypestateChangeFunction {
 	public String toString() {
 		return Joiner.on("\n").join(transition);
 	}
+
+	public abstract Collection<Val> generateSeed(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod); 
 }
 	

@@ -21,7 +21,7 @@ public class PrintStreamTest extends IDEALTestingFramework {
 	}
 
 	@Override
-	protected TypestateChangeFunction<ConcreteState> createTypestateChangeFunction() {
+	protected TypestateChangeFunction<ConcreteState> getStateMachine() {
 		return new PrintStreamStateMachine();
 	}
 }

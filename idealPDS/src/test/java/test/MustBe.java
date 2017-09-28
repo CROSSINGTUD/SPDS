@@ -4,8 +4,8 @@ import boomerang.jimple.Val;
 import soot.Unit;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.ITransition;
-import typestate.finiteautomata.IdentityTransition;
 import typestate.finiteautomata.State;
+import typestate.finiteautomata.Transition;
 
 public class MustBe extends ExpectedResults<TransitionFunction> {
 
@@ -20,7 +20,7 @@ public class MustBe extends ExpectedResults<TransitionFunction> {
 	@Override
 	public void computedResults(TransitionFunction val) {
 		for(ITransition t : val.values()){
-			if(t instanceof IdentityTransition){
+			if(t.equals(Transition.identity())){
 				continue;
 			}
 			State s = t.to();

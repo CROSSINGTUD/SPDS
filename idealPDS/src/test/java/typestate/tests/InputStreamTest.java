@@ -44,7 +44,7 @@ public class InputStreamTest extends IDEALTestingFramework {
 	}
 
 	@Override
-	protected TypestateChangeFunction<ConcreteState> createTypestateChangeFunction() {
+	protected TypestateChangeFunction<ConcreteState> getStateMachine() {
 		return new InputStreamStateMachine();
 	}
 	

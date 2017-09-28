@@ -60,7 +60,7 @@ public class StackTest extends IDEALTestingFramework {
 	}
 
 	@Override
-	protected TypestateChangeFunction<ConcreteState> createTypestateChangeFunction() {
+	protected TypestateChangeFunction<ConcreteState> getStateMachine() {
 		return new VectorStateMachine();
 	}
 }
