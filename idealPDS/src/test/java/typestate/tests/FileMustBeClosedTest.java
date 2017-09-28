@@ -122,6 +122,24 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		File field = container.field;
 		field.open();
 	}
+	
+	@Test
+	public void flowViaFieldNotUnbalanced() {
+		ObjectWithField container = new ObjectWithField();
+		container.field = new File();
+		open(container);
+		if (staticallyUnknown()){
+			container.field.close();
+			mustBeInAcceptingState(container.field);
+		}
+		mayBeInErrorState(container.field);
+		mayBeInAcceptingState(container.field);
+	}
+
+	private void open(ObjectWithField container) {
+		File field = container.field;
+		field.open();
+	}
 
 	@Test
 	public void indirectFlow() {
