@@ -5,7 +5,7 @@ import soot.Unit;
 
 public abstract class ExpectedResults<State> implements Assertion, ComparableResult<State>{
 	final Unit unit;
-	final Val accessGraph;
+	final Val val;
 	final InternalState state;
 	protected boolean satisfied;
 	protected boolean imprecise;
@@ -13,9 +13,9 @@ public abstract class ExpectedResults<State> implements Assertion, ComparableRes
 	enum InternalState{
 		ERROR, ACCEPTING;
 	}
-	ExpectedResults(Unit unit, Val accessGraph, InternalState state){
+	ExpectedResults(Unit unit, Val val, InternalState state){
 		this.unit = unit;
-		this.accessGraph = accessGraph;
+		this.val = val;
 		this.state = state;
 	}
 	public boolean isSatisfied(){
@@ -26,8 +26,8 @@ public abstract class ExpectedResults<State> implements Assertion, ComparableRes
 		return imprecise;
 	}
 
-	public Val getAccessGraph() {
-		return accessGraph;
+	public Val getVal() {
+		return val;
 	}
 	public Unit getStmt() {
 		return unit;
@@ -36,7 +36,7 @@ public abstract class ExpectedResults<State> implements Assertion, ComparableRes
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((accessGraph == null) ? 0 : accessGraph.hashCode());
+		result = prime * result + ((val == null) ? 0 : val.hashCode());
 		result = prime * result + ((state == null) ? 0 : state.hashCode());
 		result = prime * result + ((unit == null) ? 0 : unit.hashCode());
 		return result;
@@ -50,10 +50,10 @@ public abstract class ExpectedResults<State> implements Assertion, ComparableRes
 		if (getClass() != obj.getClass())
 			return false;
 		ExpectedResults other = (ExpectedResults) obj;
-		if (accessGraph == null) {
-			if (other.accessGraph != null)
+		if (val == null) {
+			if (other.val != null)
 				return false;
-		} else if (!accessGraph.equals(other.accessGraph))
+		} else if (!val.equals(other.val))
 			return false;
 		if (state != other.state)
 			return false;
@@ -66,7 +66,7 @@ public abstract class ExpectedResults<State> implements Assertion, ComparableRes
 	}
 	@Override
 	public String toString() {
-		return "[" + accessGraph +" @ " + unit + " in state " + state + "]";
+		return "[" + val +" @ " + unit + " in state " + state + "]";
 	}
 	
 }

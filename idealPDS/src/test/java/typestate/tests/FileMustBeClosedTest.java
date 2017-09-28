@@ -38,7 +38,21 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		mustBeInErrorState(file);
 		mustBeInErrorState(alias);
 	}
-
+	@Test
+	public void simpleNoStrongUpdate() {
+		File file = new File();
+		File alias;
+		if (staticallyUnknown()) {
+			alias = file;
+			alias.open();
+			mustBeInErrorState(file);
+		} else{
+			alias = new File();
+		}
+		alias.open();
+		mayBeInErrorState(file);
+		mayBeInErrorState(alias);
+	}
 	@Test
 	public void branching() {
 		File file = new File();

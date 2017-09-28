@@ -63,6 +63,8 @@ public class Transition implements ITransition {
 	}
 
 	public String toString() {
+		if(rep != null)
+			return rep;
 		return "" + from + " -> " + to;
 	}
 

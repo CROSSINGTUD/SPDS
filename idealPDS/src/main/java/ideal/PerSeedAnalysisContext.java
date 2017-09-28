@@ -1,14 +1,22 @@
 package ideal;
 
+import java.util.Map.Entry;
+
+import javax.sound.midi.Synthesizer;
+
+import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.ForwardQuery;
+import boomerang.Query;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.solver.AbstractBoomerangSolver;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.Node;
@@ -21,6 +29,9 @@ public class PerSeedAnalysisContext<W extends Weight> {
 	private final IDEALWeightFunctions<W> idealWeightFunctions;
 	private final W zero;
 	private final W one;
+	public static enum Phases {
+		ObjectFlow, ValueFlow
+	};
 
 	public PerSeedAnalysisContext(IDEALAnalysisDefinition<W> analysisDefinition, Node<Statement, Val> seed) {
 		this.analysisDefinition = analysisDefinition;
@@ -31,18 +42,22 @@ public class PerSeedAnalysisContext<W extends Weight> {
 	}
 
 	public void run() {
-		Boomerang<W> boomerang = new Boomerang<W>() {
-			
+		runPhase(Phases.ObjectFlow);
+		runPhase(Phases.ValueFlow);
+	}
+
+	private void runPhase(final Phases phase) {
+		final Boomerang<W> boomerang = new Boomerang<W>() {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 				return analysisDefinition.icfg();
 			}
-			
+
 			@Override
 			public Debugger createDebugger() {
 				return null;
 			}
-			
+
 			@Override
 			protected WeightFunctions<Statement, Val, Statement, W> getForwardCallWeights() {
 				return idealWeightFunctions;
@@ -64,8 +79,39 @@ public class PerSeedAnalysisContext<W extends Weight> {
 			}
 
 		};
+		idealWeightFunctions.setPhase(phase);
 		boomerang.solve(seed);
-		analysisDefinition.resultReporter().onSeedFinished(seed, boomerang.getSolvers().getOrCreate(seed));
+		idealWeightFunctions.registerListener(new NonOneFlowListener<W>() {
+			@Override
+			public void nonOneFlow(final Node<Statement, Val> curr, final W weight) {
+				if(phase.equals(Phases.ValueFlow)){
+					return;
+				}
+				boomerang.solve(new BackwardQuery(curr.stmt(),curr.fact()));
+				idealWeightFunctions.potentialStrongUpdate(curr.stmt(), weight);
+				for(final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()){
+					if(e.getKey() instanceof ForwardQuery){
+						e.getValue().synchedEmptyStackReachable(curr, new EmptyStackWitnessListener<Statement, Val>() {
+							@Override
+							public void witnessFound(Node<Statement, Val> targetFact) {
+								if(!e.getKey().asNode().equals(seed.asNode())){
+									System.out.println("No strong update " + curr);
+									idealWeightFunctions.noStrongUpdate(curr.stmt(), weight);
+								}
+							}
+						});
+					}
+				}
+			}
+		});
+		if(phase.equals(Phases.ValueFlow)){
+			analysisDefinition.resultReporter().onSeedFinished(seed, boomerang.getSolvers().getOrCreate(seed));
+		}
+	}
+
+	private void computeValueFlowGraph() {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

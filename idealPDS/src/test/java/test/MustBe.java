@@ -9,8 +9,8 @@ import typestate.finiteautomata.Transition;
 
 public class MustBe extends ExpectedResults<TransitionFunction> {
 
-	MustBe(Unit unit, Val accessGraph, InternalState state) {
-		super(unit, accessGraph, state);
+	MustBe(Unit unit, Val val, InternalState state) {
+		super(unit, val, state);
 	}
 
 	public String toString(){
@@ -19,6 +19,7 @@ public class MustBe extends ExpectedResults<TransitionFunction> {
 
 	@Override
 	public void computedResults(TransitionFunction val) {
+		System.out.println(val + " " + unit + " " + val);
 		for(ITransition t : val.values()){
 			if(t.equals(Transition.identity())){
 				continue;

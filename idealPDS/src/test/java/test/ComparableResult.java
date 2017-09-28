@@ -6,7 +6,7 @@ import typestate.TransitionFunction;
 
 public interface ComparableResult<State> {
 
-	public Val getAccessGraph();
+	public Val getVal();
 	public Unit getStmt();
 	public void computedResults(State val);
 }
