@@ -296,7 +296,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 			if (t.getString().equals(fa.epsilon())) {
 				W newWeight = fa.getWeightFor(transition);
 				update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
-						(W) weight.extendWith(newWeight));
+						(W) newWeight.extendWith(weight));
 			}	
 		};
 
