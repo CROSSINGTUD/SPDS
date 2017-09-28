@@ -22,6 +22,7 @@ import wpds.impl.Weight;
 public class IDEALAnalysis<W extends Weight> {
 
 	public static boolean ENABLE_STATIC_FIELDS = true;
+	public static boolean ENABLE_STRONG_UPDATES = true;
 	public static boolean ALIASING_FOR_STATIC_FIELDS = false;
 	public static boolean SEED_IN_APPLICATION_CLASS_METHOD = false;
 	public static boolean PRINT_OPTIONS = false;

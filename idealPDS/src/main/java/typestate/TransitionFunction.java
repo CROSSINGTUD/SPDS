@@ -46,7 +46,7 @@ public class TransitionFunction extends Weight {
 			return this;
 		if(this.equals(one()))
 			return other;
-		if(other.equals(zero()))
+		if(other.equals(zero()) || this.equals(zero()))
 			return zero();
 		TransitionFunction func = (TransitionFunction) other;
 		Set<ITransition> otherTransitions = func.value;
@@ -61,6 +61,13 @@ public class TransitionFunction extends Weight {
 					ress.add(new Transition(first.from(), second.to()));
 			}
 		}
+//		System.out.println("Extend " + this  +" with " + other);
+//		System.out.println("   is " +new TransitionFunction(ress));
+//		if(other.toString().contains("OPENED -> CLOSED")){
+//			System.out.println(2);
+//		}
+		if(ress.isEmpty())
+			return zero();
 		return new TransitionFunction(ress);
 	}
 
@@ -68,20 +75,20 @@ public class TransitionFunction extends Weight {
 	public Weight combineWith(Weight other) {
 		if(!(other instanceof TransitionFunction))
 			throw new RuntimeException();
-
+		if(this.equals(zero()))
+			return other;
 		if(other.equals(zero()))
 			return this;
-		if (other.equals(one())) {
-			Set<ITransition> transitions = new HashSet<>(value);
-			transitions.add(Transition.identity());
-			return new TransitionFunction(transitions);
+		if (other.equals(one()) && this.equals(one())) {
+			return one();
 		}
 		TransitionFunction func = (TransitionFunction) other;
-		Set<ITransition> transitions =  new HashSet<>(func.value);
-		if(this.equals(one())){
+		if (other.equals(one()) || this.equals(one())) {
+			Set<ITransition> transitions = new HashSet<>((other.equals(one()) ? value : func.value));
 			transitions.add(Transition.identity());
 			return new TransitionFunction(transitions);
 		}
+		Set<ITransition> transitions = new HashSet<>(func.value);
 		transitions.addAll(value);
 		return new TransitionFunction(transitions);
 	};

@@ -1,5 +1,9 @@
 package test;
 
+import java.util.Set;
+
+import com.google.common.collect.Sets;
+
 import boomerang.jimple.Val;
 import soot.Unit;
 import typestate.TransitionFunction;
@@ -20,17 +24,19 @@ public class MustBe extends ExpectedResults<TransitionFunction> {
 	@Override
 	public void computedResults(TransitionFunction val) {
 		System.out.println(val + " " + unit + " " + val);
+		Set<State> states = Sets.newHashSet();
 		for(ITransition t : val.values()){
-			if(t.equals(Transition.identity())){
-				continue;
+			if(!t.equals(Transition.identity())){
+				states.add(t.to());
 			}
-			State s = t.to();
+		}
+		for(State s : states){
 			if(state == InternalState.ACCEPTING){
 				satisfied |= !s.isErrorState();
-				imprecise = val.values().size() > 1;
+				imprecise = states.size() > 1;
 			} else if(state == InternalState.ERROR){
 				satisfied |= s.isErrorState();
-				imprecise = val.values().size() > 1;
+				imprecise = states.size() > 1;
 			}
 		}
 	}
