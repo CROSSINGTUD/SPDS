@@ -277,9 +277,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 	}
 	
 	private class UpdateEpsilonOnPushListener extends WPAStateListener<N, D, W>{
-		
-
-
 		private Transition<N, D> transition;
 
 		public UpdateEpsilonOnPushListener(Transition<N, D> transition){

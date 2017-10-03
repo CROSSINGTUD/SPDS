@@ -39,7 +39,7 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		return weight;
 	}
 
-	private void addOtherThanOneWeight(Node<Statement, Val> curr, W weight) {
+	public void addOtherThanOneWeight(Node<Statement, Val> curr, W weight) {
 		if(nonOneFlowNodes.put(curr, weight)){
 			for(NonOneFlowListener<W> l : Lists.newArrayList(listeners)){
 				l.nonOneFlow(curr,weight);
@@ -52,9 +52,9 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		
 		W weight = delegate.normal(curr, succ);
 		
-		if (isObjectFlowPhase() && !weight.equals(getOne())){
-			addOtherThanOneWeight(curr, weight);
-		}
+//		if (isObjectFlowPhase() && !weight.equals(getOne())){
+//			addOtherThanOneWeight(curr, weight);
+//		}
 		if(isValueFlowPhase() && IDEALAnalysis.ENABLE_STRONG_UPDATES){
 			if(potentialStrongUpdates.containsKey(curr.stmt())){
 				W w = potentialStrongUpdates.get(curr.stmt());
@@ -79,9 +79,9 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	@Override
 	public W pop(Node<Statement, Val> curr, Statement location) {
 		W weight = delegate.pop(curr, location);
-		if (isObjectFlowPhase() && !weight.equals(getOne())){
-			addOtherThanOneWeight(curr, weight);
-		}
+//		if (isObjectFlowPhase() && !weight.equals(getOne())){
+//			addOtherThanOneWeight(curr, weight);
+//		}
 		return weight;
 	}
 

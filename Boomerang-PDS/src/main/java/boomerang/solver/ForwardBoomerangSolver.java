@@ -211,7 +211,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			Node<Statement, Val> curr = new Node<Statement, Val>(succ, query.asNode().fact());
 			for(Unit callSite : icfg.getCallersOf(m)){
 				for(Unit returnSite : icfg.getSuccsOf(callSite)){
-//					this.processPush(curr, new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), curr, PDSSystem.CALLS);
+					this.processPush(curr, new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), curr, PDSSystem.CALLS);
 				}
 			}
 		}

@@ -215,8 +215,7 @@ public abstract class Boomerang<W extends Weight> {
 		ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(icfg(), sourceQuery,genField, forwardCallSummaries, forwardFieldSummaries){
 			@Override
 			protected void onReturnFromCall(Statement callSite, Statement returnSite, final Node<Statement, Val> returnedNode, final boolean unbalanced) {
-				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
-				callSitePoi.returnsFromCall(sourceQuery, returnedNode);
+				Boomerang.this.onForwardReturnFromCall(callSite, returnedNode, sourceQuery);
 			}
 			
 			@Override
@@ -258,6 +257,11 @@ public abstract class Boomerang<W extends Weight> {
 			}
 		});
 		return solver;
+	}
+	
+	protected void onForwardReturnFromCall(Statement callSite, Node<Statement, Val> returnedNode, Query sourceQuery){
+		final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
+		callSitePoi.returnsFromCall(sourceQuery, returnedNode);
 	}
 
 	protected FieldReadPOI createFieldLoad(Statement s) {	

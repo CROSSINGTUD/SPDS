@@ -7,7 +7,6 @@ import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
 
-//@Ignore
 public class AllAliasTest extends AbstractBoomerangTest{
 	@Test
 	public void test() {

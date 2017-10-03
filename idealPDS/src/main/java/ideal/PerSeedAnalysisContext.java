@@ -2,8 +2,6 @@ package ideal;
 
 import java.util.Map.Entry;
 
-import javax.sound.midi.Synthesizer;
-
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.ForwardQuery;
@@ -19,8 +17,14 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
+import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.SingleNode;
+import wpds.impl.Transition;
 import wpds.impl.Weight;
+import wpds.impl.WeightedPAutomaton;
+import wpds.interfaces.WPAStateListener;
+import wpds.interfaces.WPAUpdateListener;
 
 public class PerSeedAnalysisContext<W extends Weight> {
 
@@ -78,6 +82,32 @@ public class PerSeedAnalysisContext<W extends Weight> {
 				return new OneWeightFunctions<Statement, Val, Statement, W>(zero, one);
 			}
 
+			@Override
+			protected void onForwardReturnFromCall(final Statement callSite, final Node<Statement, Val> returnedNode,
+					Query sourceQuery) {
+				super.onForwardReturnFromCall(callSite, returnedNode, sourceQuery);
+				if(sourceQuery.equals(seed) && phase.equals(Phases.ObjectFlow)){
+					final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = this.getSolvers().getOrCreate(seed).getCallAutomaton();
+					callAutomaton.registerListener(new WPAStateListener<Statement,INode<Val>,W>(new SingleNode<Val>(returnedNode.fact())) {
+
+						@Override
+						public void onOutTransitionAdded(Transition<Statement, INode<Val>> t, W w) {
+							if(t.getLabel().equals(Statement.epsilon())){
+								if(!w.equals(one)){
+									System.out.println("ON RETUrn " + callSite +t + w + returnedNode);
+									idealWeightFunctions.addOtherThanOneWeight(new Node<Statement,Val>(callSite, t.getStart().fact()), w);
+								}
+							}
+						}
+
+						@Override
+						public void onInTransitionAdded(Transition<Statement, INode<Val>> t, W w) {
+							
+							
+						}
+					});
+				}
+			}
 		};
 		idealWeightFunctions.setPhase(phase);
 		boomerang.solve(seed);
