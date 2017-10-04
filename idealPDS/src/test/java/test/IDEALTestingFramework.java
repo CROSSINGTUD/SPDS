@@ -8,6 +8,8 @@ import java.util.Set;
 
 import com.google.common.collect.Lists;
 
+import boomerang.debugger.Debugger;
+import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import ideal.IDEALAnalysis;
@@ -80,6 +82,11 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			@Override
 			public WeightFunctions<Statement, Val, Statement, TransitionFunction> weightFunctions() {
 				return IDEALTestingFramework.this.getStateMachine();
+			}
+			
+			@Override
+			public Debugger<TransitionFunction> debugger() {
+				return new IDEVizDebugger<TransitionFunction>(ideVizFile,icfg);
 			}
 		});
 	}
@@ -179,7 +186,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 
 	}
 
-	protected void mustBeInAcceptingState(Object variable) {
+	protected static void mustBeInAcceptingState(Object variable) {
 	}
 
 	/**

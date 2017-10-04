@@ -2,6 +2,7 @@ package ideal;
 
 import java.util.Collection;
 
+import boomerang.debugger.Debugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import soot.SootMethod;
@@ -60,4 +61,5 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 		return str;
 	}
 
+	public abstract Debugger<W> debugger();
 }

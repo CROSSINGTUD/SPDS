@@ -524,7 +524,7 @@ public abstract class Boomerang<W extends Weight> {
 							@Override
 							public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
 								if(reachableNode.asNode().equals(returnedNode)){
-									importFlowsAtReturnSite(byPassing, flowQuery, returnedNode);
+								importFlowsAtReturnSite(byPassing, flowQuery, returnedNode);
 								}
 							}
 						});
@@ -731,7 +731,7 @@ public abstract class Boomerang<W extends Weight> {
 			return;
 		Debugger debugger = createDebugger();
 		for (Query q : queryToSolvers.keySet()) {
-			debugger.reachableNodes(q,queryToSolvers.getOrCreate(q).getReachedStates());
+			debugger.reachableNodes(q,queryToSolvers.getOrCreate(q).getNodesToWeights());
 			debugger.reachableCallNodes(q,queryToSolvers.getOrCreate(q).getReachedStates());
 			debugger.reachableFieldNodes(q,queryToSolvers.getOrCreate(q).getReachedStates());
 			

@@ -1,6 +1,8 @@
 package boomerang.debugger;
 
 import java.io.File;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import boomerang.ForwardQuery;
@@ -10,14 +12,17 @@ import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
 import heros.debug.visualization.ExplodedSuperGraph;
 import heros.debug.visualization.IDEToJSON;
+import heros.debug.visualization.ExplodedSuperGraph.ESGNode;
 import heros.debug.visualization.IDEToJSON.Direction;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.Stmt;
+import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import wpds.impl.Weight;
 
-public class IDEVizDebugger extends Debugger{
+public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 
 	private File ideVizFile;
 //	private IDEToJSON<SootMethod, Unit, Value, Object, InterproceduralCFG<Unit,SootMethod>> ideToJson;
@@ -30,14 +35,20 @@ public class IDEVizDebugger extends Debugger{
 	}
 
 	@Override
-	public void reachableNodes(Query q, Set<Node<Statement, Val>> reachedStates) {
+	public void reachableNodes(Query q, Map<Node<Statement, INode<Val>>, W> reachedStates) {
 		System.out.println(ideVizFile.getAbsolutePath() +q.toString().replace(" ",""));
 		IDEToJSON<SootMethod, Unit, Val, Object, InterproceduralCFG<Unit, SootMethod>> ideToJson = new IDEToJSON<SootMethod, Unit, Val, Object, InterproceduralCFG<Unit,SootMethod>>(new File(ideVizFile.getAbsolutePath() +q.toString().replace(" ","").replace(":", "").replaceAll("<", "").replace(">", "")), icfg);
-		for(Node<Statement,Val> states : reachedStates){
-			ExplodedSuperGraph<SootMethod, Unit, Val, Object> esg = ideToJson.getOrCreateESG(states.stmt().getMethod(), (q instanceof ForwardQuery ? Direction.Forward : Direction.Backward));
-			if(states.stmt().getUnit().isPresent()){
-				Stmt start = states.stmt().getUnit().get();
-				esg.normalFlow(start, states.fact(), start, states.fact());
+		for(Entry<Node<Statement, INode<Val>>, W> e : reachedStates.entrySet()){
+			Node<Statement, INode<Val>> key = e.getKey();
+			Statement stmt = key.stmt();
+			INode<Val> fact = key.fact();
+			if(stmt.getMethod() == null)
+				continue;
+			ExplodedSuperGraph<SootMethod, Unit, Val, Object> esg = ideToJson.getOrCreateESG(stmt.getMethod(), (q instanceof ForwardQuery ? Direction.Forward : Direction.Backward));
+			if(stmt.getUnit().isPresent()){
+				Stmt start = stmt.getUnit().get();
+				esg.normalFlow(start, fact.fact(), start, fact.fact());
+				esg.setValue(esg.new ESGNode(start, fact.fact()),e.getValue());
 			}
 		}
 		ideToJson.writeToFile();

@@ -8,7 +8,6 @@ import typestate.impl.statemachines.FileMustBeClosedStateMachine;
 import typestate.test.helper.File;
 import typestate.test.helper.ObjectWithField;
 
-@SuppressWarnings("deprecation")
 public class FileMustBeClosedTest extends IDEALTestingFramework{
 	@Test
 	public void simple() {
@@ -329,11 +328,11 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		File file = new File();
 		file.open();
 		mustBeInErrorState(file);
-		wrappedClose(file);
+		wrappedParamClose(file);
 		mustBeInAcceptingState(file);
 	}
 
-	private void wrappedClose(File o1) {
+	private void wrappedParamClose(File o1) {
 		close(o1);
 	}
 

@@ -49,8 +49,6 @@ public class TransitionFunction extends Weight {
 		if(other.equals(zero()) || this.equals(zero())){
 			return zero();
 		}
-//		if(this.equals(other))
-//			return this;
 		TransitionFunction func = (TransitionFunction) other;
 		Set<ITransition> otherTransitions = func.value;
 		Set<ITransition> ress = new HashSet<>();
@@ -65,11 +63,6 @@ public class TransitionFunction extends Weight {
 				}
 			}
 		}
-//		System.out.println("Extend " + this  +" with " + other);
-//		System.out.println("   is " +new TransitionFunction(ress));
-//		if(other.toString().contains("OPENED -> CLOSED")){
-//			System.out.println(2);
-//		}
 		if(ress.isEmpty()){
 			return zero();
 		}
