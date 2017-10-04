@@ -50,7 +50,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	protected final WeightedPushdownSystem<Stmt, INode<Fact>, W> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, W>();
 	protected final WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W> fieldPDS = new WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W>();
-	protected final Map<Node<Stmt,Fact>, W> nodesToWeights = Maps.newHashMap(); 
+	protected final Map<Node<Stmt,INode<Fact>>, W> nodesToWeights = Maps.newHashMap(); 
 	
 	protected final WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W>() {
 		@Override
@@ -154,7 +154,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 	private void computeValues(Node<Stmt, Fact> source) {
-		nodesToWeights.put(source, callAutomaton.getOne());
+		nodesToWeights.put(new Node<Stmt,INode<Fact>>(source.stmt(),wrap(source.fact())), callAutomaton.getOne());
 		callAutomaton.registerListener(new ValueComputationListener(wrap(source.fact()),source.stmt()));
 	}
 	
@@ -173,12 +173,13 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 		@Override
 		public void onInTransitionAdded(Transition<Stmt, INode<Fact>> t, W w) {
-			W weightAtTarget = nodesToWeights.get(new Node<Stmt,Fact>(s,t.getTarget().fact()));
+			W weightAtTarget = nodesToWeights.get(new Node<Stmt,INode<Fact>>(s,t.getTarget()));
 			W extendWith = (W) weightAtTarget.extendWith(w);
-			Node<Stmt, Fact> succNode = new Node<Stmt,Fact>(t.getLabel(),t.getStart().fact());
+			Node<Stmt, INode<Fact>> succNode = new Node<Stmt,INode<Fact>>(t.getLabel(),t.getStart());
 			W weightAtSource = nodesToWeights.get(succNode);
 			W newVal = (weightAtSource == null ? extendWith : (W) weightAtSource.combineWith(extendWith));
 			if(!newVal.equals(weightAtSource)){
+//				System.out.println(t + "  " + newVal + " was "+ weightAtSource +"   " + weightAtTarget + w);
 				nodesToWeights.put(succNode, newVal);
 				callAutomaton.registerListener(new ValueComputationListener(t.getStart(),t.getLabel()));
 			}
@@ -217,7 +218,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	}
 	
-	public Map<Node<Stmt, Fact>, W> getNodesToWeights(){
+	public Map<Node<Stmt, INode<Fact>>, W> getNodesToWeights(){
 		return nodesToWeights;
 	}
 	

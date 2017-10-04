@@ -49,6 +49,8 @@ public class TransitionFunction extends Weight {
 		if(other.equals(zero()) || this.equals(zero())){
 			return zero();
 		}
+//		if(this.equals(other))
+//			return this;
 		TransitionFunction func = (TransitionFunction) other;
 		Set<ITransition> otherTransitions = func.value;
 		Set<ITransition> ress = new HashSet<>();
@@ -59,7 +61,6 @@ public class TransitionFunction extends Weight {
 				} else if (first.equals(Transition.identity())) {
 					ress.add(second);
 				} else if (first.to().equals(second.from())){
-					System.out.println("Can extends " + this + other);
 					ress.add(new Transition(first.from(), second.to()));
 				}
 			}

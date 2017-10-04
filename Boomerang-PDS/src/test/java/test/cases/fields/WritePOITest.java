@@ -192,5 +192,36 @@ public class WritePOITest extends AbstractBoomerangTest {
 		Object query1 = b.b;
 		queryFor(query1);
 	}
+	
+	@Test
+	public void test() {
+		ObjectWithField a = new ObjectWithField();
+		ObjectWithField b = a;
+		Alloc file = new Alloc();
+		bar(a, file);
+		Object z = b.field;
+		queryFor(z);
+	}
+
+	private void bar(ObjectWithField a, Alloc file) {
+		a.field = file;
+	}
+	@Test
+	public void test2() {
+		ObjectWithField a = new ObjectWithField();
+		ObjectWithField b = a;
+		Alloc file = new Alloc();
+		bar(a, b, file);
+		queryFor(b.field);
+	}
+
+	private void bar(ObjectWithField a, ObjectWithField b, Alloc file) {
+		a.field = file;
+	}
+	
+	private static class ObjectWithField{
+		private Object field = null;
+	}
+
 	private static class Alloc implements AllocatedObject{};
 }

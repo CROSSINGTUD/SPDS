@@ -37,9 +37,9 @@ public class TestingResultReporter implements ResultReporter<TransitionFunction>
 			if(e.getValue() instanceof ComparableResult){
 				final ComparableResult<TransitionFunction> expectedResults = (ComparableResult) e.getValue();
 //				System.out.println(Joiner.on("\n").join(seedSolver.getNodesToWeights().entrySet()));
-				for(Entry<Node<Statement, Val>, TransitionFunction> s : seedSolver.getNodesToWeights().entrySet()){
-					Node<Statement,Val> node = s.getKey();
-					if(!node.fact().equals(expectedResults.getVal()))
+				for(Entry<Node<Statement, INode<Val>>, TransitionFunction> s : seedSolver.getNodesToWeights().entrySet()){
+					Node<Statement, INode<Val>> node = s.getKey();
+					if(!node.fact().fact().equals(expectedResults.getVal()))
 						continue;
 					if(node.stmt().getUnit().isPresent()){
 						if(node.stmt().getUnit().get().equals(e.getKey())){

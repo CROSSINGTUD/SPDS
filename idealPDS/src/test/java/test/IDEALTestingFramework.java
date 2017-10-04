@@ -167,24 +167,19 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	 * Code.
 	 */
 
-	@Deprecated
 	protected static void mayBeInErrorState(Object variable) {
 
 	}
 
-	@Deprecated
 	protected static void mustBeInErrorState(Object variable) {
 
 	}
 
-	@Deprecated
 	protected static void mayBeInAcceptingState(Object variable) {
 
 	}
 
-	@Deprecated
 	protected void mustBeInAcceptingState(Object variable) {
-
 	}
 
 	/**

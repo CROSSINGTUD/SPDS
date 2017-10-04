@@ -301,12 +301,16 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		File a = container.field;
 		otherContainer.field = a;
 		flowsToField(container);
+//		mustBeInErrorState( container.field);
 		mustBeInErrorState(a);
 	}
 
-	private void flowsToField(ObjectWithField container) {
-		File field = container.field;
+	private void flowsToField(ObjectWithField parameterContainer) {
+		File field = parameterContainer.field;
 		field.open();
+		mustBeInErrorState(field);
+		File aliasedVar = parameterContainer.field;
+		mustBeInErrorState(aliasedVar);
 	}
 
 	@Test
@@ -319,6 +323,22 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		file.wrappedClose();
 		mustBeInAcceptingState(alias);
 		mustBeInAcceptingState(file);
+	}
+	@Test
+	public void wrappedClose2() {
+		File file = new File();
+		file.open();
+		mustBeInErrorState(file);
+		wrappedClose(file);
+		mustBeInAcceptingState(file);
+	}
+
+	private void wrappedClose(File o1) {
+		close(o1);
+	}
+
+	private void close(File o2) {
+		o2.close();
 	}
 
 	@Test

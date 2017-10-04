@@ -2,6 +2,8 @@ package ideal;
 
 import java.util.Map.Entry;
 
+import com.google.common.base.Joiner;
+
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.ForwardQuery;
@@ -51,6 +53,7 @@ public class PerSeedAnalysisContext<W extends Weight> {
 	}
 
 	private void runPhase(final Phases phase) {
+		System.out.println("STARTING PHASE " + phase);
 		final Boomerang<W> boomerang = new Boomerang<W>() {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
@@ -87,12 +90,13 @@ public class PerSeedAnalysisContext<W extends Weight> {
 					Query sourceQuery) {
 				super.onForwardReturnFromCall(callSite, returnedNode, sourceQuery);
 				if(sourceQuery.equals(seed) && phase.equals(Phases.ObjectFlow)){
+					System.out.println("callsite " + callSite  + returnedNode);
 					final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = this.getSolvers().getOrCreate(seed).getCallAutomaton();
 					callAutomaton.registerListener(new WPAStateListener<Statement,INode<Val>,W>(new SingleNode<Val>(returnedNode.fact())) {
 
 						@Override
 						public void onOutTransitionAdded(Transition<Statement, INode<Val>> t, W w) {
-							if(t.getLabel().equals(Statement.epsilon())){
+							if(t.getLabel().equals(returnedNode.stmt())){
 								if(!w.equals(one)){
 									System.out.println("ON RETUrn " + callSite +t + w + returnedNode);
 									idealWeightFunctions.addOtherThanOneWeight(new Node<Statement,Val>(callSite, t.getStart().fact()), w);
@@ -102,7 +106,10 @@ public class PerSeedAnalysisContext<W extends Weight> {
 
 						@Override
 						public void onInTransitionAdded(Transition<Statement, INode<Val>> t, W w) {
-							
+							if(!w.equals(one)){
+//								System.out.println("ON RETUrn " + callSite +t + w + returnedNode);
+//								idealWeightFunctions.addOtherThanOneWeight(new Node<Statement,Val>(callSite, t.getStart().fact()), w);
+							}
 							
 						}
 					});
@@ -117,11 +124,9 @@ public class PerSeedAnalysisContext<W extends Weight> {
 				if(phase.equals(Phases.ValueFlow)){
 					return;
 				}
-				Boomerang<W> weightsLessBoomerang = weightsLessBoomerang();
-				
-				weightsLessBoomerang.solve(new BackwardQuery(curr.stmt(),curr.fact()));
+				boomerang.solve(new BackwardQuery(curr.stmt(),curr.fact()));
 				idealWeightFunctions.potentialStrongUpdate(curr.stmt(), weight);
-				for(final Entry<Query, AbstractBoomerangSolver<W>> e : weightsLessBoomerang.getSolvers().entrySet()){
+				for(final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()){
 					if(e.getKey() instanceof ForwardQuery){
 						e.getValue().synchedEmptyStackReachable(curr, new EmptyStackWitnessListener<Statement, Val>() {
 							@Override
@@ -136,44 +141,15 @@ public class PerSeedAnalysisContext<W extends Weight> {
 				}
 			}
 		});
+		System.out.println(boomerang.getSolvers().get(seed).getCallAutomaton());
+		System.out.println("");
+		System.out.println("NODES TO WEIGHT");
+		System.out.println(Joiner.on("\n").join(boomerang.getSolvers().get(seed).getNodesToWeights().entrySet()));
+		System.out.println("END NODES TO WEIGHT");
 		if(phase.equals(Phases.ValueFlow)){
 			analysisDefinition.resultReporter().onSeedFinished(seed, boomerang.getSolvers().getOrCreate(seed));
+
 		}
-	}
-
-	private Boomerang<W> weightsLessBoomerang() {
-		return new Boomerang<W>() {
-			@Override
-			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
-				return analysisDefinition.icfg();
-			}
-
-			@Override
-			public Debugger createDebugger() {
-				return null;
-			}
-
-			@Override
-			protected WeightFunctions<Statement, Val, Statement, W> getForwardCallWeights() {
-				return new OneWeightFunctions<Statement, Val, Statement, W>(zero, one);
-			}
-
-			@Override
-			protected WeightFunctions<Statement, Val, Field, W> getForwardFieldWeights() {
-				return new OneWeightFunctions<Statement, Val, Field, W>(zero, one);
-			}
-
-			@Override
-			protected WeightFunctions<Statement, Val, Field, W> getBackwardFieldWeights() {
-				return new OneWeightFunctions<Statement, Val, Field, W>(zero, one);
-			}
-
-			@Override
-			protected WeightFunctions<Statement, Val, Statement, W> getBackwardCallWeights() {
-				return new OneWeightFunctions<Statement, Val, Statement, W>(zero, one);
-			}
-
-		};
 	}
 
 }

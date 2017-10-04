@@ -59,8 +59,10 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 			if(potentialStrongUpdates.containsKey(curr.stmt())){
 				W w = potentialStrongUpdates.get(curr.stmt());
 				System.err.println(curr.stmt() + "  " + w);
-				if(!weakUpdates.contains(curr.stmt()))
+				if(!weakUpdates.contains(curr.stmt())){
+					System.out.println("Strong update " + curr);
 					return w;
+				}
 				weight = (W) weight.combineWith(w);
 				System.err.println("No strong update" + weight);
 			}
