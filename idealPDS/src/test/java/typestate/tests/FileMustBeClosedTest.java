@@ -28,6 +28,7 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 	}
 
 	private void escape(File other) {
+		mustBeInErrorState(other);
 	}
 
 	@Test
