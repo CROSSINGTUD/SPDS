@@ -22,6 +22,7 @@ import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
+import wpds.impl.ConnectPushListener;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -89,34 +90,23 @@ public class PerSeedAnalysisContext<W extends Weight> {
 			protected void onForwardReturnFromCall(final Statement callSite, final Node<Statement, Val> returnedNode,
 					Query sourceQuery) {
 				super.onForwardReturnFromCall(callSite, returnedNode, sourceQuery);
-				if(sourceQuery.equals(seed) && phase.equals(Phases.ObjectFlow)){
-					System.out.println("callsite " + callSite  + returnedNode);
-					final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = this.getSolvers().getOrCreate(seed).getCallAutomaton();
-					callAutomaton.registerListener(new WPAStateListener<Statement,INode<Val>,W>(new SingleNode<Val>(returnedNode.fact())) {
-
-						@Override
-						public void onOutTransitionAdded(Transition<Statement, INode<Val>> t, W w) {
-							if(t.getLabel().equals(returnedNode.stmt())){
-								if(!w.equals(one)){
-									System.out.println("ON RETUrn " + callSite +t + w + returnedNode);
-									idealWeightFunctions.addOtherThanOneWeight(new Node<Statement,Val>(callSite, t.getStart().fact()), w);
-								}
-							}
-						}
-
-						@Override
-						public void onInTransitionAdded(Transition<Statement, INode<Val>> t, W w) {
-							if(!w.equals(one)){
-//								System.out.println("ON RETUrn " + callSite +t + w + returnedNode);
-//								idealWeightFunctions.addOtherThanOneWeight(new Node<Statement,Val>(callSite, t.getStart().fact()), w);
-							}
-							
-						}
-					});
-				}
+				
 			}
 		};
 		idealWeightFunctions.setPhase(phase);
+		if(phase.equals(Phases.ObjectFlow)){
+			final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = boomerang.getSolvers().getOrCreate(seed).getCallAutomaton();
+			callAutomaton.registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>,W>() {
+
+				@Override
+				public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
+					if(!w.equals(one)){
+						System.out.println("ON RETUrn " + callSite +returnedFact + returnSite + w);
+						idealWeightFunctions.addOtherThanOneWeight(new Node<Statement,Val>(callSite, returnedFact.fact()), w);
+					}
+				}
+			});
+		}
 		boomerang.solve(seed);
 		idealWeightFunctions.registerListener(new NonOneFlowListener<W>() {
 			@Override

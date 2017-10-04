@@ -238,7 +238,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 				}
 				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
 				update(new Transition<N, D>(irState, transitionLabel, t.getTarget()), weight);
-				fa.registerListener(new UpdateEpsilonOnPushListener(new Transition<N, D>(irState, transitionLabel, t.getTarget())));
+				fa.registerListener(new UpdateEpsilonOnPushListener(new Transition<N, D>(irState, transitionLabel, t.getTarget()), rule.getL1()));
 			}
 		}
 
@@ -278,10 +278,12 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 	
 	private class UpdateEpsilonOnPushListener extends WPAStateListener<N, D, W>{
 		private Transition<N, D> transition;
+		private N callSite;
 
-		public UpdateEpsilonOnPushListener(Transition<N, D> transition){
+		public UpdateEpsilonOnPushListener(Transition<N, D> transition, N callSite){
 			super(transition.getStart());
 			this.transition = transition;
+			this.callSite = callSite;
 		}
 
 		@Override
@@ -292,15 +294,19 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 		public void onInTransitionAdded(Transition<N, D> t, W weight) {
 			if (t.getString().equals(fa.epsilon())) {
 				W newWeight = fa.getWeightFor(transition);
-				update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
-						(W) newWeight.extendWith(weight));
+				if(update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
+						(W) newWeight.extendWith(weight))){
+					fa.reconnectPush(callSite, transition.getLabel(),t.getStart(), newWeight, weight);
+				}
 			}	
-		};
+		}
 
 		@Override
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
 			result = prime * result + ((transition == null) ? 0 : transition.hashCode());
 			return result;
 		}
@@ -314,6 +320,13 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 			if (getClass() != obj.getClass())
 				return false;
 			UpdateEpsilonOnPushListener other = (UpdateEpsilonOnPushListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (callSite == null) {
+				if (other.callSite != null)
+					return false;
+			} else if (!callSite.equals(other.callSite))
+				return false;
 			if (transition == null) {
 				if (other.transition != null)
 					return false;
@@ -322,11 +335,16 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 			return true;
 		}
 
+		private PostStar getOuterType() {
+			return PostStar.this;
+		};
+
+
 		
 	}
 	
-	private void update(Transition<N, D> trans, W weight) {
-		fa.addWeightForTransition(trans, weight);
+	private boolean update(Transition<N, D> trans, W weight) {
+		return fa.addWeightForTransition(trans, weight);
 	}
 
 

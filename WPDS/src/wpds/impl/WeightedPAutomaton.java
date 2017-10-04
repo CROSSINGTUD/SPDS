@@ -50,6 +50,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private List<WeightedPAutomaton<N, D, W>> nestedAutomatons = Lists.newArrayList();
 	private Map<D, ReachabilityListener<N, D>> stateToEpsilonReachabilityListener = Maps.newHashMap();
 	private Map<D, ReachabilityListener<N, D>> stateToReachabilityListener = Maps.newHashMap();
+	private Set<ReturnSiteWithWeights> connectedPushes = Sets.newHashSet();
+	private Set<ConnectPushListener<N,D,W>> conntectedPushListeners = Sets.newHashSet();
 
 	public abstract D createState(D d, N loc);
 
@@ -336,5 +338,97 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		}
 		
 		return nested;
+	}
+
+	public void reconnectPush(N callSite, N returnSite,D returnedFact,  W combinedWeight, W returnedWeight) {
+		WeightedPAutomaton<N, D, W>.ReturnSiteWithWeights returnSiteWithWeights = new ReturnSiteWithWeights(callSite, returnSite, returnedFact,combinedWeight, returnedWeight);
+		if( connectedPushes.add(returnSiteWithWeights )){
+			for( ConnectPushListener<N, D, W> l : Lists.newArrayList(conntectedPushListeners)){
+				l.connect(returnSiteWithWeights.callSite, returnSiteWithWeights.returnSite, returnSiteWithWeights.returnedFact, returnSiteWithWeights.returnedWeight);
+			}
+		}
+	}
+	
+	public void registerConnectPushListener(ConnectPushListener<N, D, W> l){
+		if(conntectedPushListeners.add(l)){
+			for(WeightedPAutomaton<N, D, W>.ReturnSiteWithWeights e : Lists.newArrayList(connectedPushes)){
+				l.connect(e.callSite, e.returnSite, e.returnedFact,e.returnedWeight);
+			}
+		}
+	}
+	private class ReturnSiteWithWeights{
+
+		private final N returnSite;
+		private final W combinedWeight;
+		private final W returnedWeight;
+		private final D returnedFact;
+		private final N callSite;
+
+		public ReturnSiteWithWeights(N callSite, N returnSite, D returnedFact, W combinedWeight, W returnedWeight) {
+			this.callSite =  callSite;
+			this.returnSite = returnSite;
+			this.returnedFact = returnedFact;
+			this.combinedWeight = combinedWeight;
+			this.returnedWeight = returnedWeight;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
+			result = prime * result + ((combinedWeight == null) ? 0 : combinedWeight.hashCode());
+			result = prime * result + ((returnSite == null) ? 0 : returnSite.hashCode());
+			result = prime * result + ((returnedFact == null) ? 0 : returnedFact.hashCode());
+			result = prime * result + ((returnedWeight == null) ? 0 : returnedWeight.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ReturnSiteWithWeights other = (ReturnSiteWithWeights) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (callSite == null) {
+				if (other.callSite != null)
+					return false;
+			} else if (!callSite.equals(other.callSite))
+				return false;
+			if (combinedWeight == null) {
+				if (other.combinedWeight != null)
+					return false;
+			} else if (!combinedWeight.equals(other.combinedWeight))
+				return false;
+			if (returnSite == null) {
+				if (other.returnSite != null)
+					return false;
+			} else if (!returnSite.equals(other.returnSite))
+				return false;
+			if (returnedFact == null) {
+				if (other.returnedFact != null)
+					return false;
+			} else if (!returnedFact.equals(other.returnedFact))
+				return false;
+			if (returnedWeight == null) {
+				if (other.returnedWeight != null)
+					return false;
+			} else if (!returnedWeight.equals(other.returnedWeight))
+				return false;
+			return true;
+		}
+
+		private WeightedPAutomaton getOuterType() {
+			return WeightedPAutomaton.this;
+		}
+
+		
+		
 	}
 }
