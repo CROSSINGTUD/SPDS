@@ -30,7 +30,7 @@ public class Val {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((m == null) ? 0 : m.hashCode());
+//		result = prime * result + ((m == null) ? 0 : m.hashCode());
 		result = prime * result + ((rep == null) ? 0 : rep.hashCode());
 		result = prime * result + ((v == null) ? 0 : v.hashCode());
 		return result;
@@ -45,11 +45,11 @@ public class Val {
 		if (getClass() != obj.getClass())
 			return false;
 		Val other = (Val) obj;
-		if (m == null) {
-			if (other.m != null)
-				return false;
-		} else if (!m.equals(other.m))
-			return false;
+//		if (m == null) {
+//			if (other.m != null)
+//				return false;
+//		} else if (!m.equals(other.m))
+//			return false;
 		if (rep == null) {
 			if (other.rep != null)
 				return false;
