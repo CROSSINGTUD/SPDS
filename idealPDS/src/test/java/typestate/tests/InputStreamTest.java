@@ -4,16 +4,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
-import ideal.debug.IDebugger;
-import ideal.debug.NullDebugger;
 import test.IDEALTestingFramework;
-import test.slowmethod.SlowMethodDetector;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
-import typestate.TypestateDomainValue;
+import typestate.finiteautomata.MatcherStateMachine;
 import typestate.impl.statemachines.InputStreamStateMachine;
 
 public class InputStreamTest extends IDEALTestingFramework {
@@ -44,12 +38,7 @@ public class InputStreamTest extends IDEALTestingFramework {
 	}
 
 	@Override
-	protected TypestateChangeFunction<ConcreteState> getStateMachine() {
+	protected MatcherStateMachine getStateMachine() {
 		return new InputStreamStateMachine();
-	}
-	
-	@Override
-	protected IDebugger<TypestateDomainValue<ConcreteState>> getDebugger() {
-		return new NullDebugger<TypestateDomainValue<ConcreteState>>();
 	}
 }

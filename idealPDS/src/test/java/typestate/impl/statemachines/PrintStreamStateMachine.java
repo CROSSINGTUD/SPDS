@@ -5,22 +5,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import boomerang.accessgraph.AccessGraph;
+import boomerang.jimple.Val;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
-import typestate.TypestateDomainValue;
 import typestate.finiteautomata.MatcherStateMachine;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
+import typestate.finiteautomata.State;
 
-public class PrintStreamStateMachine extends MatcherStateMachine<ConcreteState> implements TypestateChangeFunction<ConcreteState> {
+public class PrintStreamStateMachine extends MatcherStateMachine{
 
 
-	public static enum States implements ConcreteState {
+	public static enum States implements State {
 		NONE, CLOSED, ERROR;
 
 		@Override
@@ -28,12 +26,17 @@ public class PrintStreamStateMachine extends MatcherStateMachine<ConcreteState> 
 			return this == ERROR;
 		}
 
+		@Override
+		public boolean isInitialState() {
+			return false;
+		}
+
 	}
 
 	public PrintStreamStateMachine() {
 		addTransition(
-				new MatcherTransition<ConcreteState>(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.CLOSED, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+				new MatcherTransition(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
+		addTransition(new MatcherTransition(States.CLOSED, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
 	}
 
 	private Set<SootMethod> closeMethods() {
@@ -53,12 +56,8 @@ public class PrintStreamStateMachine extends MatcherStateMachine<ConcreteState> 
 	}
 
 	@Override
-	public Collection<AccessGraph> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
-		return this.generateThisAtAnyCallSitesOf(unit, calledMethod, closeMethods());
+	public Collection<Val> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+		return this.generateThisAtAnyCallSitesOf(m, unit, calledMethod, closeMethods());
 	}
 
-	@Override
-	public TypestateDomainValue<ConcreteState> getBottomElement() {
-		return new TypestateDomainValue<ConcreteState>(States.CLOSED);
-	}
 }

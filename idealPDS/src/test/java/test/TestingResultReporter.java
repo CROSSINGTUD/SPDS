@@ -14,6 +14,7 @@ import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import ideal.ResultReporter;
 import soot.Unit;
+import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import typestate.TransitionFunction;
@@ -39,7 +40,7 @@ public class TestingResultReporter implements ResultReporter<TransitionFunction>
 //				System.out.println(Joiner.on("\n").join(seedSolver.getNodesToWeights().entrySet()));
 				for(Entry<Transition<Statement, INode<Val>>, TransitionFunction> s : seedSolver.getTransitionsToFinalWeights().entrySet()){
 					Transition<Statement, INode<Val>> node = s.getKey();
-					if(!node.getStart().fact().equals(expectedResults.getVal()))
+					if((node.getStart() instanceof GeneratedState)  || !node.getStart().fact().equals(expectedResults.getVal()))
 						continue;
 					if(node.getLabel().getUnit().isPresent()){
 						if(node.getLabel().getUnit().get().equals(e.getKey())){

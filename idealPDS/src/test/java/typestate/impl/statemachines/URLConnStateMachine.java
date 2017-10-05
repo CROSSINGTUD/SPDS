@@ -4,21 +4,19 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-import boomerang.accessgraph.AccessGraph;
+import boomerang.jimple.Val;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
-import typestate.TypestateDomainValue;
 import typestate.finiteautomata.MatcherStateMachine;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
+import typestate.finiteautomata.State;
 
-public class URLConnStateMachine extends MatcherStateMachine<ConcreteState> implements TypestateChangeFunction<ConcreteState> {
+public class URLConnStateMachine extends MatcherStateMachine{
 
-	public static enum States implements ConcreteState {
+	public static enum States implements State {
 		NONE, INIT, CONNECTED, ERROR;
 
 		@Override
@@ -26,13 +24,18 @@ public class URLConnStateMachine extends MatcherStateMachine<ConcreteState> impl
 			return this == ERROR;
 		}
 
+		@Override
+		public boolean isInitialState() {
+			return false;
+		}
+
 	}
 
 	public URLConnStateMachine() {
-		addTransition(new MatcherTransition<ConcreteState>(States.CONNECTED, illegalOpertaion(), Parameter.This, States.ERROR,
+		addTransition(new MatcherTransition(States.CONNECTED, illegalOpertaion(), Parameter.This, States.ERROR,
 				Type.OnReturn));
 		addTransition(
-				new MatcherTransition<ConcreteState>(States.ERROR, illegalOpertaion(), Parameter.This, States.ERROR, Type.OnReturn));
+				new MatcherTransition(States.ERROR, illegalOpertaion(), Parameter.This, States.ERROR, Type.OnReturn));
 	}
 
 	private Set<SootMethod> connect() {
@@ -46,12 +49,7 @@ public class URLConnStateMachine extends MatcherStateMachine<ConcreteState> impl
 	}
 
 	@Override
-	public Collection<AccessGraph> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
-		return this.generateThisAtAnyCallSitesOf(unit, calledMethod, connect());
-	}
-
-	@Override
-	public TypestateDomainValue<ConcreteState> getBottomElement() {
-		return new TypestateDomainValue<ConcreteState>(States.CONNECTED);
+	public Collection<Val> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+		return this.generateThisAtAnyCallSitesOf(m, unit, calledMethod, connect());
 	}
 }

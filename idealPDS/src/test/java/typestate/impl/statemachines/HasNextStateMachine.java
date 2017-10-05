@@ -7,28 +7,24 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import boomerang.accessgraph.AccessGraph;
-import soot.Local;
+import boomerang.jimple.Val;
 import soot.RefType;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
-import typestate.TypestateDomainValue;
 import typestate.finiteautomata.MatcherStateMachine;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
-import typestate.finiteautomata.Transition;
+import typestate.finiteautomata.State;
 
-public class HasNextStateMachine extends MatcherStateMachine<ConcreteState>  implements TypestateChangeFunction<ConcreteState> {
+public class HasNextStateMachine extends MatcherStateMachine {
 
 	private Set<SootMethod> hasNextMethods;
 
-	public static enum States implements ConcreteState {
+	public static enum States implements State {
 		NONE, INIT, HASNEXT, ERROR;
 
 		@Override
@@ -36,22 +32,27 @@ public class HasNextStateMachine extends MatcherStateMachine<ConcreteState>  imp
 			return this == ERROR;
 		}
 
+		@Override
+		public boolean isInitialState() {
+			return false;
+		}
+
 	}
 
 	public HasNextStateMachine() {
-		addTransition(new MatcherTransition<ConcreteState>(States.NONE, retrieveIteratorConstructors(), Parameter.This, States.INIT,
+		addTransition(new MatcherTransition(States.NONE, retrieveIteratorConstructors(), Parameter.This, States.INIT,
 				Type.None));
 		addTransition(
-				new MatcherTransition<ConcreteState>(States.INIT, retrieveNextMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.ERROR, retrieveNextMethods(), Parameter.This, States.ERROR,
+				new MatcherTransition(States.INIT, retrieveNextMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+		addTransition(new MatcherTransition(States.ERROR, retrieveNextMethods(), Parameter.This, States.ERROR,
 				Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.HASNEXT, retrieveNextMethods(), Parameter.This, States.INIT,
+		addTransition(new MatcherTransition(States.HASNEXT, retrieveNextMethods(), Parameter.This, States.INIT,
 				Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.INIT, retrieveHasNextMethods(), Parameter.This, States.HASNEXT,
+		addTransition(new MatcherTransition(States.INIT, retrieveHasNextMethods(), Parameter.This, States.HASNEXT,
 				Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.HASNEXT, retrieveHasNextMethods(), Parameter.This, States.HASNEXT,
+		addTransition(new MatcherTransition(States.HASNEXT, retrieveHasNextMethods(), Parameter.This, States.HASNEXT,
 				Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.ERROR, retrieveHasNextMethods(), Parameter.This, States.ERROR,
+		addTransition(new MatcherTransition(States.ERROR, retrieveHasNextMethods(), Parameter.This, States.ERROR,
 				Type.OnReturn));
 	}
 
@@ -92,13 +93,13 @@ public class HasNextStateMachine extends MatcherStateMachine<ConcreteState>  imp
 	}
 
 	@Override
-	public Collection<AccessGraph> generateSeed(SootMethod method, Unit unit, Collection<SootMethod> calledMethod) {
+	public Collection<Val> generateSeed(SootMethod method, Unit unit, Collection<SootMethod> calledMethod) {
 		for (SootMethod m : calledMethod) {
 			if (retrieveIteratorConstructors().contains(m)) {
 				if (unit instanceof AssignStmt) {
-					Set<AccessGraph> out = new HashSet<>();
+					Set<Val> out = new HashSet<>();
 					AssignStmt stmt = (AssignStmt) unit;
-					out.add(new AccessGraph((Local) stmt.getLeftOp(), stmt.getLeftOp().getType()));
+					out.add(new Val(stmt.getLeftOp(), method));
 					return out;
 				}
 			}
@@ -107,19 +108,4 @@ public class HasNextStateMachine extends MatcherStateMachine<ConcreteState>  imp
 		return Collections.emptySet();
 	}
 
-	@Override
-	public Set<Transition<ConcreteState>> getReturnTransitionsFor(AccessGraph callerD1, Unit callSite, SootMethod calleeMethod,
-			Unit exitStmt, AccessGraph exitNode, Unit returnSite, AccessGraph retNode) {
-//		if (retrieveHasNextMethods().contains(calleeMethod)) {
-//			if (icfg.getMethodOf(callSite).getSignature().contains("java.lang.Object next()"))
-//				return Collections.emptySet();
-//		}
-
-		return super.getReturnTransitionsFor(callerD1, callSite, calleeMethod, exitStmt, exitNode, returnSite, retNode);
-	}
-
-	@Override
-	public TypestateDomainValue<ConcreteState> getBottomElement() {
-		return new TypestateDomainValue<ConcreteState>(States.INIT);
-	}
 }

@@ -16,7 +16,7 @@ public class BackwardEmptyCalleeFlow extends EmptyCalleeFlow {
 	@Override
 	protected Collection<? extends State> systemArrayCopyFlow(SootMethod caller, Stmt callSite, Val value,
 			Stmt returnSite) {
-		if(value.value().equals(callSite.getInvokeExpr().getArg(2))){
+		if(value.equals(new Val(callSite.getInvokeExpr().getArg(2),caller))){
 			Value arg = callSite.getInvokeExpr().getArg(0);
 			return Collections.singleton(new Node<Statement, Val>(new Statement(returnSite, caller), new Val(arg,caller)));
 		}

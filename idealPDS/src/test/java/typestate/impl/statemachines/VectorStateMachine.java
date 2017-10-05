@@ -6,21 +6,19 @@ import java.util.List;
 import java.util.Set;
 import java.util.Vector;
 
-import boomerang.accessgraph.AccessGraph;
+import boomerang.jimple.Val;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
-import typestate.TypestateDomainValue;
 import typestate.finiteautomata.MatcherStateMachine;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
+import typestate.finiteautomata.State;
 
-public class VectorStateMachine extends MatcherStateMachine<ConcreteState> implements TypestateChangeFunction<ConcreteState> {
+public class VectorStateMachine extends MatcherStateMachine {
 
-	public static enum States implements ConcreteState {
+	public static enum States implements State {
 		INIT, NOT_EMPTY, ACCESSED_EMPTY;
 
 		@Override
@@ -28,21 +26,26 @@ public class VectorStateMachine extends MatcherStateMachine<ConcreteState> imple
 			return this == ACCESSED_EMPTY;
 		}
 
+		@Override
+		public boolean isInitialState() {
+			return false;
+		}
+
 	}
 
 	public VectorStateMachine() {
 		addTransition(
-				new MatcherTransition<ConcreteState>(States.INIT, addElement(), Parameter.This, States.NOT_EMPTY, Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.INIT, accessElement(), Parameter.This, States.ACCESSED_EMPTY,
+				new MatcherTransition(States.INIT, addElement(), Parameter.This, States.NOT_EMPTY, Type.OnReturn));
+		addTransition(new MatcherTransition(States.INIT, accessElement(), Parameter.This, States.ACCESSED_EMPTY,
 				Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.NOT_EMPTY, accessElement(), Parameter.This, States.NOT_EMPTY,
+		addTransition(new MatcherTransition(States.NOT_EMPTY, accessElement(), Parameter.This, States.NOT_EMPTY,
 				Type.OnReturn));
 
-		addTransition(new MatcherTransition<ConcreteState>(States.NOT_EMPTY, removeAllElements(), Parameter.This, States.INIT,
+		addTransition(new MatcherTransition(States.NOT_EMPTY, removeAllElements(), Parameter.This, States.INIT,
 				Type.OnReturn));
 		addTransition(
-				new MatcherTransition<ConcreteState>(States.INIT, removeAllElements(), Parameter.This, States.INIT, Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.ACCESSED_EMPTY, accessElement(), Parameter.This,
+				new MatcherTransition(States.INIT, removeAllElements(), Parameter.This, States.INIT, Type.OnReturn));
+		addTransition(new MatcherTransition(States.ACCESSED_EMPTY, accessElement(), Parameter.This,
 				States.ACCESSED_EMPTY, Type.OnReturn));
 	}
 
@@ -67,16 +70,11 @@ public class VectorStateMachine extends MatcherStateMachine<ConcreteState> imple
 	}
 
 	@Override
-	public Collection<AccessGraph> generateSeed(SootMethod m, Unit unit,
+	public Collection<Val> generateSeed(SootMethod m, Unit unit,
 			Collection<SootMethod> calledMethod) {
 		if(m.toString().contains("<clinit>"))
 			return Collections.emptySet();
-		return generateAtAllocationSiteOf(unit,Vector.class);
-	}
-	
-	@Override
-	public TypestateDomainValue<ConcreteState> getBottomElement() {
-		return new TypestateDomainValue<ConcreteState>(States.INIT);
+		return generateAtAllocationSiteOf(m, unit,Vector.class);
 	}
 
 }

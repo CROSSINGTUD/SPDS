@@ -6,43 +6,47 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import boomerang.accessgraph.AccessGraph;
+import boomerang.jimple.Val;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
-import typestate.TypestateDomainValue;
 import typestate.finiteautomata.MatcherStateMachine;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
+import typestate.finiteautomata.State;
 
-public class InputStreamStateMachine extends MatcherStateMachine<ConcreteState> implements TypestateChangeFunction<ConcreteState> {
+public class InputStreamStateMachine extends MatcherStateMachine{
 
-	public static enum States implements ConcreteState {
+	public static enum States implements State {
 		 OPEN, CLOSED, ERROR;
 
 		@Override
 		public boolean isErrorState() {
 			return this == ERROR;
 		}
+
+		@Override
+		public boolean isInitialState() {
+			// TODO Auto-generated method stub
+			return false;
+		}
 	}
 
 	InputStreamStateMachine() {
 		addTransition(
-				new MatcherTransition<ConcreteState>(States.OPEN, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
+				new MatcherTransition(States.OPEN, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
 		addTransition(
-				new MatcherTransition<ConcreteState>(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.OPEN, readMethods(), Parameter.This, States.OPEN, Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.ERROR, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.CLOSED, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.ERROR, closeMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+				new MatcherTransition(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
+		addTransition(new MatcherTransition(States.OPEN, readMethods(), Parameter.This, States.OPEN, Type.OnReturn));
+		addTransition(new MatcherTransition(States.ERROR, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+		addTransition(new MatcherTransition(States.CLOSED, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+		addTransition(new MatcherTransition(States.ERROR, closeMethods(), Parameter.This, States.ERROR, Type.OnReturn));
 
-		addTransition(new MatcherTransition<ConcreteState>(States.CLOSED, nativeReadMethods(), Parameter.This, States.ERROR, Type.OnCallToReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.ERROR, nativeReadMethods(), Parameter.This, States.ERROR, Type.OnCallToReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.OPEN, nativeReadMethods(), Parameter.This, States.OPEN, Type.OnCallToReturn));
+		addTransition(new MatcherTransition(States.CLOSED, nativeReadMethods(), Parameter.This, States.ERROR, Type.OnCallToReturn));
+		addTransition(new MatcherTransition(States.ERROR, nativeReadMethods(), Parameter.This, States.ERROR, Type.OnCallToReturn));
+		addTransition(new MatcherTransition(States.OPEN, nativeReadMethods(), Parameter.This, States.OPEN, Type.OnCallToReturn));
 	}
 
 
@@ -89,15 +93,9 @@ public class InputStreamStateMachine extends MatcherStateMachine<ConcreteState> 
 	}
 
 	@Override
-	public Collection<AccessGraph> generateSeed(SootMethod method, Unit unit,
+	public Collection<Val> generateSeed(SootMethod method, Unit unit,
 			Collection<SootMethod> calledMethod) {
-		
-		return this.generateThisAtAnyCallSitesOf(unit, calledMethod, constructors());
+		return this.generateThisAtAnyCallSitesOf(method, unit, calledMethod, constructors());
 	}
 
-
-	@Override
-	public TypestateDomainValue<ConcreteState> getBottomElement() {
-		return new TypestateDomainValue<ConcreteState>(States.OPEN);
-	}
 }

@@ -9,8 +9,7 @@ import java.security.cert.CertificateException;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
+import typestate.finiteautomata.MatcherStateMachine;
 import typestate.impl.statemachines.KeyStoreStateMachine;
 
 public class KeystoreTest extends IDEALTestingFramework {
@@ -56,7 +55,7 @@ public class KeystoreTest extends IDEALTestingFramework {
 	}
 
 	@Override
-	protected TypestateChangeFunction<ConcreteState> getStateMachine() {
+	protected MatcherStateMachine getStateMachine() {
 		return new KeyStoreStateMachine();
 	}
 }

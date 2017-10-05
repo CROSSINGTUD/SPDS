@@ -6,8 +6,7 @@ import java.net.HttpURLConnection;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
+import typestate.finiteautomata.MatcherStateMachine;
 import typestate.impl.statemachines.URLConnStateMachine;
 
 public class URLConnTest extends IDEALTestingFramework {
@@ -71,7 +70,7 @@ public class URLConnTest extends IDEALTestingFramework {
 	}
 
 	@Override
-	protected TypestateChangeFunction<ConcreteState> getStateMachine() {
+	protected MatcherStateMachine getStateMachine() {
 		return new URLConnStateMachine();
 	}
 }

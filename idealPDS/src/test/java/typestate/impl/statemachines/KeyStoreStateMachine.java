@@ -6,23 +6,20 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import boomerang.accessgraph.AccessGraph;
-import soot.Local;
+import boomerang.jimple.Val;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
-import typestate.TypestateDomainValue;
 import typestate.finiteautomata.MatcherStateMachine;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
+import typestate.finiteautomata.State;
 
-public class KeyStoreStateMachine extends MatcherStateMachine<ConcreteState> implements TypestateChangeFunction<ConcreteState> {
+public class KeyStoreStateMachine extends MatcherStateMachine{
 
-	public static enum States implements ConcreteState {
+	public static enum States implements State {
 		NONE, INIT, LOADED, ERROR;
 
 		@Override
@@ -30,16 +27,22 @@ public class KeyStoreStateMachine extends MatcherStateMachine<ConcreteState> imp
 			return this == ERROR;
 		}
 
+		@Override
+		public boolean isInitialState() {
+			// TODO Auto-generated method stub
+			return false;
+		}
+
 	}
 
 	public KeyStoreStateMachine() {
 		// addTransition(new MatcherTransition(States.NONE,
 		// keyStoreConstructor(),Parameter.This, States.INIT, Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.INIT, loadMethods(), Parameter.This, States.LOADED, Type.OnReturn));
+		addTransition(new MatcherTransition(States.INIT, loadMethods(), Parameter.This, States.LOADED, Type.OnReturn));
 
-		addTransition(new MatcherTransition<ConcreteState>(States.INIT, anyMethodOtherThanLoad(), Parameter.This, States.ERROR,
+		addTransition(new MatcherTransition(States.INIT, anyMethodOtherThanLoad(), Parameter.This, States.ERROR,
 				Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.ERROR, anyMethodOtherThanLoad(), Parameter.This, States.ERROR,
+		addTransition(new MatcherTransition(States.ERROR, anyMethodOtherThanLoad(), Parameter.This, States.ERROR,
 				Type.OnReturn));
 
 	}
@@ -72,23 +75,18 @@ public class KeyStoreStateMachine extends MatcherStateMachine<ConcreteState> imp
 	}
 
 	@Override
-	public Collection<AccessGraph> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+	public Collection<Val> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
 		if (unit instanceof AssignStmt) {
 			AssignStmt stmt = (AssignStmt) unit;
 			if(stmt.containsInvokeExpr()){
 				if(keyStoreConstructor().contains(stmt.getInvokeExpr().getMethod())){
-					Set<AccessGraph> out = new HashSet<>();
-					out.add(new AccessGraph((Local) stmt.getLeftOp(), stmt.getLeftOp().getType()));
+					Set<Val> out = new HashSet<>();
+					out.add(new Val(stmt.getLeftOp(), m));
 					return out;
 				}
 			}
 		}
 		return Collections.emptySet();
-	}
-
-	@Override
-	public TypestateDomainValue<ConcreteState> getBottomElement() {
-		return new TypestateDomainValue<ConcreteState>(States.INIT);
 	}
 
 }

@@ -9,13 +9,8 @@ import java.util.LinkedList;
 
 import org.junit.Test;
 
-import ideal.debug.IDebugger;
-import ideal.debug.NullDebugger;
 import test.IDEALTestingFramework;
-import test.slowmethod.SlowMethodDetector;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
-import typestate.TypestateDomainValue;
+import typestate.finiteautomata.MatcherStateMachine;
 import typestate.impl.statemachines.SocketStateMachine;
 
 public class SocketTest extends IDEALTestingFramework {
@@ -72,12 +67,7 @@ public class SocketTest extends IDEALTestingFramework {
 	}
 
 	@Override
-	protected TypestateChangeFunction<ConcreteState> getStateMachine() {
+	protected MatcherStateMachine getStateMachine() {
 		return new SocketStateMachine();
-	}
-
-	@Override
-	protected IDebugger<TypestateDomainValue<ConcreteState>> getDebugger() {
-		return new NullDebugger<>();
 	}
 }

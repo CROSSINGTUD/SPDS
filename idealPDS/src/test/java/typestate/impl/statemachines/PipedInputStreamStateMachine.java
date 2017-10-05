@@ -1,45 +1,39 @@
 package typestate.impl.statemachines;
 
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-import boomerang.accessgraph.AccessGraph;
-import boomerang.cfg.ExtendedICFG;
-import heros.EdgeFunction;
-import heros.solver.Pair;
-import ideal.IDEALAnalysis;
-import soot.SootClass;
+import boomerang.jimple.Val;
 import soot.SootMethod;
 import soot.Unit;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
-import typestate.TypestateDomainValue;
 import typestate.finiteautomata.MatcherStateMachine;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
 import typestate.finiteautomata.State;
 
-public class PipedInputStreamStateMachine extends MatcherStateMachine<ConcreteState> implements TypestateChangeFunction<ConcreteState> {
+public class PipedInputStreamStateMachine extends MatcherStateMachine {
 
-	public static enum States implements ConcreteState {
+	public static enum States implements State {
 		INIT, CONNECTED, ERROR;
 
 		@Override
 		public boolean isErrorState() {
 			return this == ERROR;
 		}
+
+		@Override
+		public boolean isInitialState() {
+			return false;
+		}
 	}
 
 	PipedInputStreamStateMachine() {
 		addTransition(
-				new MatcherTransition<ConcreteState>(States.INIT, connect(), Parameter.This, States.CONNECTED, Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.INIT, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.CONNECTED, readMethods(), Parameter.This, States.CONNECTED, Type.OnReturn));
-		addTransition(new MatcherTransition<ConcreteState>(States.ERROR, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+				new MatcherTransition(States.INIT, connect(), Parameter.This, States.CONNECTED, Type.OnReturn));
+		addTransition(new MatcherTransition(States.INIT, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+		addTransition(new MatcherTransition(States.CONNECTED, readMethods(), Parameter.This, States.CONNECTED, Type.OnReturn));
+		addTransition(new MatcherTransition(States.ERROR, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
 	}
 
 	private Set<SootMethod> connect() {
@@ -53,13 +47,8 @@ public class PipedInputStreamStateMachine extends MatcherStateMachine<ConcreteSt
 
 
 	@Override
-	public Collection<AccessGraph> generateSeed(SootMethod m, Unit unit,
+	public Collection<Val> generateSeed(SootMethod m, Unit unit,
 			Collection<SootMethod> calledMethod) {
-		return generateAtAllocationSiteOf(unit, java.io.PipedInputStream.class);
-	}
-
-	@Override
-	public TypestateDomainValue<ConcreteState> getBottomElement() {
-		return new TypestateDomainValue<ConcreteState>(States.INIT);
+		return generateAtAllocationSiteOf(m, unit, java.io.PipedInputStream.class);
 	}
 }

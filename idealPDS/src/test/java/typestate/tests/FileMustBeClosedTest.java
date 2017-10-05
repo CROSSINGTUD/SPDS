@@ -17,7 +17,6 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		file.close();
 		mustBeInAcceptingState(file);
 	}
-
 	@Test
 	public void simple0() {
 		File file = new File();
@@ -62,7 +61,27 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		file.close();
 		mustBeInAcceptingState(file);
 	}
-
+	@Test
+	public void branchingMay() {
+		File file = new File();
+		if (staticallyUnknown())
+			file.open();
+		else
+			file.close();
+		System.out.println(2);
+		mayBeInErrorState(file);
+		mayBeInAcceptingState(file);
+	}
+	@Test
+	public void continued() {
+		File file = new File();
+		file.open();
+		file.close();
+		mustBeInAcceptingState(file);
+		mustBeInAcceptingState(file);
+		mustBeInAcceptingState(file);
+		System.out.println(2);
+	}
 	@Test
 	public void aliasing() {
 		File file = new File();

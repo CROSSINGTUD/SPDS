@@ -3,8 +3,7 @@ package typestate.tests;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
+import typestate.finiteautomata.MatcherStateMachine;
 import typestate.impl.statemachines.FileMustBeClosedStateMachine;
 import typestate.test.helper.File;
 import typestate.test.helper.ObjectWithField;
@@ -89,7 +88,7 @@ public class FileMustBeClosedNullPOATest extends IDEALTestingFramework {
 	}
 
 	@Override
-	protected TypestateChangeFunction<ConcreteState> getStateMachine() {
+	protected MatcherStateMachine getStateMachine() {
 		return new FileMustBeClosedStateMachine();
 	}
 }

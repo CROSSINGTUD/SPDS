@@ -3,7 +3,9 @@ package ideal;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Sets;
 
 import boomerang.jimple.Statement;
@@ -30,6 +32,7 @@ public class IDEALAnalysis<W extends Weight> {
 
 	private final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final IDEALAnalysisDefinition<W> analysisDefinition;
+	private int methods;
 
 	public IDEALAnalysis(IDEALAnalysisDefinition<W> analysisDefinition) {
 		this.analysisDefinition = analysisDefinition;
@@ -38,11 +41,15 @@ public class IDEALAnalysis<W extends Weight> {
 
 	public void run() {
 		printOptions();
+		long before = System.currentTimeMillis();
 		Set<Node<Statement,Val>> initialSeeds = computeSeeds();
+		long after = System.currentTimeMillis();
+		System.out.println("Computed seeds in: "+ (after-before)  + " ms");
 		if (initialSeeds.isEmpty())
 			System.err.println("No seeds found!");
 		else
 			System.err.println("Analysing " + initialSeeds.size() + " seeds!");
+		
 		for (Node<Statement, Val> seed : initialSeeds) {
 			new PerSeedAnalysisContext<W>(analysisDefinition, seed).run();
 		}
@@ -77,6 +84,7 @@ public class IDEALAnalysis<W extends Weight> {
 				seeds.add(new Node<Statement,Val>(new Statement((Stmt)u, method),fact));
 			}
 		}
+		System.out.println(methods++);
 		return seeds;
 	}
 

@@ -8,8 +8,7 @@ import java.util.List;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
+import typestate.finiteautomata.MatcherStateMachine;
 import typestate.impl.statemachines.HasNextStateMachine;
 
 public class IteratorTest extends IDEALTestingFramework {
@@ -107,7 +106,7 @@ public class IteratorTest extends IDEALTestingFramework {
 	}
 
 	@Override
-	protected TypestateChangeFunction<ConcreteState> getStateMachine() {
+	protected MatcherStateMachine getStateMachine() {
 		return new HasNextStateMachine();
 	}
 }

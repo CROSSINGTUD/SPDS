@@ -5,8 +5,7 @@ import java.util.Stack;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
-import typestate.ConcreteState;
-import typestate.TypestateChangeFunction;
+import typestate.finiteautomata.MatcherStateMachine;
 import typestate.impl.statemachines.VectorStateMachine;
 
 @SuppressWarnings("deprecation")
@@ -60,7 +59,7 @@ public class StackTest extends IDEALTestingFramework {
 	}
 
 	@Override
-	protected TypestateChangeFunction<ConcreteState> getStateMachine() {
+	protected MatcherStateMachine getStateMachine() {
 		return new VectorStateMachine();
 	}
 }
