@@ -1,61 +1,63 @@
 package wpds.interfaces;
 
-import java.util.Set;
+import java.util.Collection;
+import java.util.LinkedList;
 
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Multimap;
 
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 
-public class ForwardDFSVisitor<N extends Location,D extends State, W extends Weight> extends WPAStateListener<N, D, W>{
-	private Set<ReachabilityListener<N,D>> listeners = Sets.newHashSet();
+public class ForwardDFSVisitor<N extends Location,D extends State, W extends Weight> implements WPAUpdateListener<N, D,W>{
+	private Multimap<D, ReachabilityListener<N,D>> listeners = HashMultimap.create();
 	protected WeightedPAutomaton<N, D, W> aut;
-	private Set<Transition<N,D>> visited =  Sets.newHashSet();
+	private Multimap<D, D> transitiveClosure = HashMultimap.create();
 	
-	
-	public ForwardDFSVisitor(WeightedPAutomaton<N,D,W> aut, D startState){
-		super(startState);
+	public ForwardDFSVisitor(WeightedPAutomaton<N,D,W> aut){
 		this.aut = aut;
 	}
-	
+	public void registerListener(D state, final ReachabilityListener<N, D> l) {
+		if(listeners.put(state, l)){
+			for(D d : Lists.newArrayList(transitiveClosure.get(state))){
+				aut.registerListener(new TransitiveClosure(d,state) {
 
-	private void addReachable(Transition<N, D> s) {
-		if(!visited.add(s))
-			return;
-		for(ReachabilityListener<N,D> l : Lists.newArrayList(listeners)){
-			l.reachable(s);
-		}
-		if(!continueWith(s)){
-			return;
-		}
-		aut.registerListener(new TransitiveListener(s.getTarget()));
+					@Override
+					public void onOutTransitionAdded(Transition<N, D> t, W w) {
+						l.reachable(t);
+					}
+
+				});
+			}
+		}	
 	}
 	
-	private class TransitiveListener extends WPAStateListener<N, D, W>{
+	private abstract class TransitiveClosure extends WPAStateListener<N,D,W>{
 
-		public TransitiveListener(D state) {
+		private D source;
+
+		public TransitiveClosure(D state, D source) {
 			super(state);
+			this.source = source;
 		}
 
-		@Override
-		public void onOutTransitionAdded(Transition<N, D> t, W weight) {
-			addReachable(t);	
-		}
 
 		@Override
-		public void onInTransitionAdded(Transition<N, D> t, W weight) {
-			
+		public void onInTransitionAdded(Transition<N, D> t, W w) {
 		}
+
 
 		@Override
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((source == null) ? 0 : source.hashCode());
 			return result;
 		}
+
 
 		@Override
 		public boolean equals(Object obj) {
@@ -65,45 +67,80 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 				return false;
 			if (getClass() != obj.getClass())
 				return false;
-			TransitiveListener other = (TransitiveListener) obj;
+			TransitiveClosure other = (TransitiveClosure) obj;
 			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (source == null) {
+				if (other.source != null)
+					return false;
+			} else if (!source.equals(other.source))
 				return false;
 			return true;
 		}
 
+
 		private ForwardDFSVisitor getOuterType() {
 			return ForwardDFSVisitor.this;
 		}
+		
 	}
-
-
 
 	protected boolean continueWith(Transition<N, D> t) {
 		return true;
 	}
-
-
-
 	@Override
-	public void onOutTransitionAdded(Transition<N, D> t, W weight) {
-		addReachable(t);
-	}
-
-
-	@Override
-	public void onInTransitionAdded(Transition<N, D> t, W weight) {
+	public void onWeightAdded(Transition<N, D> t, W w) {
 		
+		D i = t.getStart();
+		D j = t.getTarget();
+		if(!continueWith(t))
+			return;
+		addTransitiveClosure(i, i);
+		addTransitiveClosure(j, j);
+		insertStar(i,j);
 	}
 
-	public void registerListener(ReachabilityListener<N, D> l){
-		if(listeners.add(l)){
-			for(Transition<N, D> t : Lists.newArrayList(visited)){
-				l.reachable(t);
+
+	private void addTransitiveClosure(D i, D j) {
+		if(transitiveClosure.put(i, j)){
+			for(final ReachabilityListener<N, D> listener : Lists.newLinkedList(listeners.get(i))){
+				aut.registerListener(new TransitiveClosure(j, i) {
+					@Override
+					public void onOutTransitionAdded(Transition<N, D> t, W w) {
+						listener.reachable(t);
+					}
+
+				});
 			}
 		}
 	}
-
-
+	private void insertStar(D i, D j) {
+		if(!transitiveClosure.get(i).contains(j)){
+			for(D k : aut.getStates()){
+				Collection<D> outOfK = transitiveClosure.get(k);
+				if(!outOfK.contains(j) && outOfK.contains(i)){
+					adaptStar(j,k);
+				}
+			}
+		}	
+	}
+	
+	
+	private void adaptStar(D j, D k) {
+		LinkedList<D> redNodes = Lists.newLinkedList();
+		redNodes.add(j);
+		while(!redNodes.isEmpty()){
+			D l = redNodes.poll();
+			addTransitiveClosure(k, l);
+			for(Transition<N,D> t : Lists.newArrayList(aut.getTransitionsOutOf(l))){
+				Collection<D> outOfK = transitiveClosure.get(k);
+				D m = t.getTarget();
+				if(!outOfK.contains(m)){
+					redNodes.add(m);
+				}
+			}
+		}
+	}
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -111,7 +148,6 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 		result = prime * result + ((aut == null) ? 0 : aut.hashCode());
 		return result;
 	}
-
 
 	@Override
 	public boolean equals(Object obj) {
@@ -129,6 +165,8 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			return false;
 		return true;
 	}
+
+
 	
 	
 	

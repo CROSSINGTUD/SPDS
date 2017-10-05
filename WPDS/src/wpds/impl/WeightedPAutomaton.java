@@ -51,6 +51,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private Set<ReturnSiteWithWeights> connectedPushes = Sets.newHashSet();
 	private Set<ConnectPushListener<N,D,W>> conntectedPushListeners = Sets.newHashSet();
 	private Map<Transition<N, D>, W> transitionsToFinalWeights = Maps.newHashMap();
+	private ForwardDFSVisitor<N, D, W> dfsVisitor;
+	private ForwardDFSVisitor<N, D, W> dfsEpsVisitor;
 
 	public abstract D createState(D d, N loc);
 
@@ -256,14 +258,14 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public void registerDFSListener(D state, ReachabilityListener<N, D> l) {
-		ForwardDFSVisitor<N, D, W> dfsVisitor = getStateToDFS().get(state);
+//		ForwardDFSVisitor<N, D, W> dfsVisitor = getStateToDFS().get(state);
 		stateToReachabilityListener.put(state,l);
 		if (dfsVisitor == null) {
-			dfsVisitor = new ForwardDFSVisitor<N, D, W>(this, state);
-			getStateToDFS().put(state, dfsVisitor);
+			dfsVisitor = new ForwardDFSVisitor<N, D, W>(this);
+//			getStateToDFS().put(state, dfsVisitor);
 			this.registerListener(dfsVisitor);
 		}
-		dfsVisitor.registerListener(l);
+		dfsVisitor.registerListener(state, l);
 	}
 
 	protected Map<D, ForwardDFSVisitor<N, D, W>> getStateToDFS() {
@@ -271,17 +273,17 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public void registerDFSEpsilonListener(D state, ReachabilityListener<N, D> l) {
-		ForwardDFSVisitor<N, D, W> dfsVisitor = getStateToEpsilonDFS().get(state);
+//		ForwardDFSVisitor<N, D, W> dfsVisitor = getStateToEpsilonDFS().get(state);
 		stateToEpsilonReachabilityListener.put(state,l);
-		if (dfsVisitor == null) {
-			dfsVisitor = new ForwardDFSEpsilonVisitor<N, D, W>(this, state);
-			getStateToEpsilonDFS().put(state, dfsVisitor);
-			this.registerListener(dfsVisitor);
+		if (dfsEpsVisitor == null) {
+			dfsEpsVisitor = new ForwardDFSEpsilonVisitor<N, D, W>(this);
+//			getStateToEpsilonDFS().put(state, dfsVisitor);
+			this.registerListener(dfsEpsVisitor);
 		}
 		for(WeightedPAutomaton<N, D, W> nested : nestedAutomatons){
 			nested.registerDFSEpsilonListener(state, l);
 		}
-		dfsVisitor.registerListener(l);
+		dfsEpsVisitor.registerListener(state,l);
 	}
 	
 	protected Map<D, ForwardDFSVisitor<N, D, W>> getStateToEpsilonDFS() {

@@ -6,8 +6,9 @@ import wpds.impl.WeightedPAutomaton;
 
 public class ForwardDFSEpsilonVisitor<N extends Location,D extends State, W extends Weight> extends ForwardDFSVisitor<N,D,W>{
 
-	public ForwardDFSEpsilonVisitor(WeightedPAutomaton<N, D, W> aut, D startState) {
-		super(aut, startState);
+
+	public ForwardDFSEpsilonVisitor(WeightedPAutomaton<N, D, W> aut) {
+		super(aut);
 	}
 
 	@Override
