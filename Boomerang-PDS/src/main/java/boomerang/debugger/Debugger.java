@@ -8,11 +8,12 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import wpds.impl.Transition;
 import wpds.impl.Weight;
 
 public class Debugger<W extends Weight> {
 
-	public void reachableNodes(Query q, Map<Node<Statement, INode<Val>>, W> map) {
+	public void reachableNodes(Query q, Map<Transition<Statement, INode<Val>>, W> map) {
 	}
 
 	public void reachableCallNodes(Query q, Set<Node<Statement, Val>> reachedStates) {

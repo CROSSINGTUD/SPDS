@@ -75,7 +75,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 			if (param.equals(value.value())) {
 				if(callSite.containsInvokeExpr()){
 					InvokeExpr ie = callSite.getInvokeExpr();
-					return Collections.singleton(new CallPopNode<Val,Statement>(new Val(ie.getArg(index),method), PDSSystem.CALLS,returnSiteStatement));
+					return Collections.singleton(new CallPopNode<Val,Statement>(new Val(ie.getArg(index),icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 				}
 			}
 			index++;

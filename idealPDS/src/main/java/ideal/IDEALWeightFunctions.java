@@ -58,7 +58,7 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		if(isValueFlowPhase() && IDEALAnalysis.ENABLE_STRONG_UPDATES){
 			if(potentialStrongUpdates.containsKey(curr.stmt())){
 				W w = potentialStrongUpdates.get(curr.stmt());
-				System.err.println(curr.stmt() + "  " + w);
+				System.err.println("Potential strong update "+ curr + "  " + w);
 				if(!weakUpdates.contains(curr.stmt())){
 					System.out.println("Strong update " + curr);
 					return w;

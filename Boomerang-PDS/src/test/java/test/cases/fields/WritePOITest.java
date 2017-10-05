@@ -215,6 +215,23 @@ public class WritePOITest extends AbstractBoomerangTest {
 		queryFor(b.field);
 	}
 
+	@Test
+	public void fieldStoreAndLoad2() {
+		ObjectWithField container = new ObjectWithField();
+		container.field = new Alloc();
+		ObjectWithField otherContainer = new ObjectWithField();
+		Object a = container.field;
+		otherContainer.field = a;
+		flowsToField(container);
+//		mustBeInErrorState( container.field);
+		queryFor(a);
+	}
+
+	private void flowsToField(ObjectWithField parameterContainer) {
+		Object field = parameterContainer.field;
+		Object aliasedVar = parameterContainer.field;
+	}
+
 	private void bar(ObjectWithField a, ObjectWithField b, Alloc file) {
 		a.field = file;
 	}

@@ -723,13 +723,13 @@ public abstract class Boomerang<W extends Weight> {
 		return queryToSolvers;
 	}
 	
-	public abstract Debugger createDebugger();
+	public abstract Debugger<W> createDebugger();
 
 
 	public void debugOutput() {
 		if(!DEBUG)
 			return;
-		Debugger debugger = createDebugger();
+		Debugger<W> debugger = createDebugger();
 		for (Query q : queryToSolvers.keySet()) {
 			debugger.reachableNodes(q,queryToSolvers.getOrCreate(q).getNodesToWeights());
 			debugger.reachableCallNodes(q,queryToSolvers.getOrCreate(q).getReachedStates());

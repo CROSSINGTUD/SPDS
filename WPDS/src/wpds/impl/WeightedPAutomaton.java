@@ -2,8 +2,6 @@ package wpds.impl;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -112,10 +110,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		for (D source : states) {
 			Collection<Transition<N, D>> collection = transitionsOutOf.get(source);
 			for (D target : states) {
-				List<N> labels = Lists.newLinkedList();
+				List<String> labels = Lists.newLinkedList();
 				for (Transition<N, D> t : collection) {
 					if (t.getTarget().equals(target)) {
-						labels.add(t.getString());
+						labels.add(t.getString().toString()+ " W: "+ transitionToWeights.get(t));
 					}
 				}
 				if (!labels.isEmpty()) {
@@ -206,6 +204,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			for (WPAStateListener<N, D, W> l : Lists.newArrayList(stateListeners.get(trans.getTarget()))) {
 				l.onInTransitionAdded(trans, weight);
 			}
+			return true;
 		}
 		return added;
 	}

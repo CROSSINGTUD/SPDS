@@ -20,6 +20,7 @@ import soot.Value;
 import soot.jimple.Stmt;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import wpds.impl.Transition;
 import wpds.impl.Weight;
 
 public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
@@ -35,13 +36,13 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 	}
 
 	@Override
-	public void reachableNodes(Query q, Map<Node<Statement, INode<Val>>, W> reachedStates) {
+	public void reachableNodes(Query q, Map<Transition<Statement, INode<Val>>, W> reachedStates) {
 		System.out.println(ideVizFile.getAbsolutePath() +q.toString().replace(" ",""));
 		IDEToJSON<SootMethod, Unit, Val, Object, InterproceduralCFG<Unit, SootMethod>> ideToJson = new IDEToJSON<SootMethod, Unit, Val, Object, InterproceduralCFG<Unit,SootMethod>>(new File(ideVizFile.getAbsolutePath() +q.toString().replace(" ","").replace(":", "").replaceAll("<", "").replace(">", "")), icfg);
-		for(Entry<Node<Statement, INode<Val>>, W> e : reachedStates.entrySet()){
-			Node<Statement, INode<Val>> key = e.getKey();
-			Statement stmt = key.stmt();
-			INode<Val> fact = key.fact();
+		for(Entry<Transition<Statement, INode<Val>>, W> e : reachedStates.entrySet()){
+			Transition<Statement, INode<Val>> key = e.getKey();
+			Statement stmt = key.getLabel();
+			INode<Val> fact = key.getStart();
 			if(stmt.getMethod() == null)
 				continue;
 			ExplodedSuperGraph<SootMethod, Unit, Val, Object> esg = ideToJson.getOrCreateESG(stmt.getMethod(), (q instanceof ForwardQuery ? Direction.Forward : Direction.Backward));

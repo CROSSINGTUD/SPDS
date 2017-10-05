@@ -1,5 +1,6 @@
 package boomerang.jimple;
 
+import soot.Local;
 import soot.SootMethod;
 import soot.Value;
 
@@ -11,8 +12,15 @@ public class Val {
 	private static Val staticInstance;
 	
 	public Val(Value v, SootMethod m){
+		if(v == null)
+			throw new RuntimeException("Value must not be null!");
 		this.v = v;
 		this.m = m;
+		if(!m.hasActiveBody())
+			throw new RuntimeException("No active body for method");
+		if(v instanceof Local && !m.getActiveBody().getLocals().contains(v)){
+			throw new RuntimeException("Creating a Local with wrong method." +v + " "+  m);
+		}
 		this.rep = null;
 	}
 	
@@ -24,6 +32,10 @@ public class Val {
 
 	public Value value(){
 		return v;
+	}
+	
+	public SootMethod m(){
+		return m;
 	}
 	
 	@Override

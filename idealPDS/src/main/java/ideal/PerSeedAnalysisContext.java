@@ -94,19 +94,18 @@ public class PerSeedAnalysisContext<W extends Weight> {
 			}
 		};
 		idealWeightFunctions.setPhase(phase);
-		if(phase.equals(Phases.ObjectFlow)){
-			final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = boomerang.getSolvers().getOrCreate(seed).getCallAutomaton();
-			callAutomaton.registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>,W>() {
+		final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = boomerang.getSolvers().getOrCreate(seed).getCallAutomaton();
+		callAutomaton.registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>,W>() {
 
-				@Override
-				public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
-					if(!w.equals(one)){
-						System.out.println("ON RETUrn " + callSite +returnedFact + returnSite + w);
-						idealWeightFunctions.addOtherThanOneWeight(new Node<Statement,Val>(callSite, returnedFact.fact()), w);
-					}
+			@Override
+			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
+				System.out.println("CONNET RETUrn " + callSite +returnedFact + returnSite + w);
+				if(!w.equals(one)){
+					System.out.println("ON RETUrn " + callSite +returnedFact + returnSite + w);
+					idealWeightFunctions.addOtherThanOneWeight(new Node<Statement,Val>(callSite, returnedFact.fact()), w);
 				}
-			});
-		}
+			}
+		});
 		boomerang.solve(seed);
 		idealWeightFunctions.registerListener(new NonOneFlowListener<W>() {
 			@Override
@@ -131,7 +130,7 @@ public class PerSeedAnalysisContext<W extends Weight> {
 				}
 			}
 		});
-		System.out.println(boomerang.getSolvers().get(seed).getCallAutomaton());
+		System.out.println(boomerang.getSolvers().get(seed).getCallAutomaton().toDotString());
 		System.out.println("");
 		if(phase.equals(Phases.ValueFlow)){
 		System.out.println("NODES TO WEIGHT");
@@ -140,7 +139,7 @@ public class PerSeedAnalysisContext<W extends Weight> {
 		}
 		if(phase.equals(Phases.ValueFlow)){
 			analysisDefinition.resultReporter().onSeedFinished(seed, boomerang.getSolvers().getOrCreate(seed));
-			boomerang.debugOutput();
+//			boomerang.debugOutput();
 		}
 	}
 

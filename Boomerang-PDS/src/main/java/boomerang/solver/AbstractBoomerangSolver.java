@@ -79,16 +79,17 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		
 		//TODO recap, I assume we can implement this more easily.
 		this.generatedFieldState = genField;
+		
 	}
 	
 	private void addTransitionToMethod(SootMethod method, Transition<Field, INode<Node<Statement, Val>>> t) {
 		if(perMethodFieldTransitions.put(method, t)){
-			for(MethodBasedFieldTransitionListener l : Lists.newArrayList(perMethodFieldTransitionsListener.get(method))){
+			for(MethodBasedFieldTransitionListener<W> l : Lists.newArrayList(perMethodFieldTransitionsListener.get(method))){
 				l.onAddedTransition(t);
 			}
 		}
 	}
-	public void registerFieldTransitionListener(MethodBasedFieldTransitionListener l) {
+	public void registerFieldTransitionListener(MethodBasedFieldTransitionListener<W> l) {
 		if(perMethodFieldTransitionsListener.put(l.getMethod(),l)){
 			for(Transition<Field, INode<Node<Statement, Val>>> t : Lists.newArrayList(perMethodFieldTransitions.get(l.getMethod()))){
 				l.onAddedTransition(t);
@@ -360,12 +361,12 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	
 	protected void addReachableMethod(SootMethod m){
 		if(reachableMethods.add(m)){
-			for(ReachableMethodListener l : Lists.newArrayList(reachableMethodListeners)){
+			for(ReachableMethodListener<W> l : Lists.newArrayList(reachableMethodListeners)){
 				l.reachable(this, m);
 			}
 		}
 	}
-	public void registerReachableMethodListener(ReachableMethodListener listener){
+	public void registerReachableMethodListener(ReachableMethodListener<W> listener){
 		if(reachableMethodListeners.add(listener)){
 			for(SootMethod m : Lists.newArrayList(reachableMethods)){
 				listener.reachable(this, m);

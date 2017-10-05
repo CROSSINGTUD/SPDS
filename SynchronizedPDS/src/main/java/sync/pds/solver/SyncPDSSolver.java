@@ -50,7 +50,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	protected final WeightedPushdownSystem<Stmt, INode<Fact>, W> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, W>();
 	protected final WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W> fieldPDS = new WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W>();
-	protected final Map<Node<Stmt,INode<Fact>>, W> nodesToWeights = Maps.newHashMap(); 
+	protected final Map<Transition<Stmt, INode<Fact>>, W> nodesToWeights = Maps.newHashMap(); 
 	
 	protected final WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W>() {
 		@Override
@@ -149,22 +149,21 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		callAutomaton
 				.addTransition(callTrans);
 		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
-		computeValues(source);
+		computeValues(callTrans);
 		processNode(startNode);
 	}
 
-	private void computeValues(Node<Stmt, Fact> source) {
-		nodesToWeights.put(new Node<Stmt,INode<Fact>>(source.stmt(),wrap(source.fact())), callAutomaton.getOne());
-		callAutomaton.registerListener(new ValueComputationListener(wrap(source.fact()),source.stmt()));
+	private void computeValues(Transition<Stmt, INode<Fact>> callTrans) {
+		nodesToWeights.put(callTrans, callAutomaton.getOne());
+		callAutomaton.registerListener(new ValueComputationListener(callTrans));
 	}
 	
 	private class ValueComputationListener extends WPAStateListener<Stmt, INode<Fact>, W>{
+		private Transition<Stmt, INode<Fact>> trans;
 
-		private Stmt s;
-
-		public ValueComputationListener(INode<Fact> state, Stmt s) {
-			super(state);
-			this.s = s;
+		public ValueComputationListener(Transition<Stmt, INode<Fact>> trans) {
+			super(trans.getStart());
+			this.trans = trans;
 		}
 
 		@Override
@@ -173,15 +172,15 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 		@Override
 		public void onInTransitionAdded(Transition<Stmt, INode<Fact>> t, W w) {
-			W weightAtTarget = nodesToWeights.get(new Node<Stmt,INode<Fact>>(s,t.getTarget()));
+			W weightAtTarget = nodesToWeights.get(trans);
 			W extendWith = (W) weightAtTarget.extendWith(w);
-			Node<Stmt, INode<Fact>> succNode = new Node<Stmt,INode<Fact>>(t.getLabel(),t.getStart());
-			W weightAtSource = nodesToWeights.get(succNode);
+			W weightAtSource = nodesToWeights.get(t);
+			
 			W newVal = (weightAtSource == null ? extendWith : (W) weightAtSource.combineWith(extendWith));
 			if(!newVal.equals(weightAtSource)){
 //				System.out.println(t + "  " + newVal + " was "+ weightAtSource +"   " + weightAtTarget + w);
-				nodesToWeights.put(succNode, newVal);
-				callAutomaton.registerListener(new ValueComputationListener(t.getStart(),t.getLabel()));
+				nodesToWeights.put(t, newVal);
+				callAutomaton.registerListener(new ValueComputationListener(t));
 			}
 		}
 
@@ -190,7 +189,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((s == null) ? 0 : s.hashCode());
+			result = prime * result + ((trans == null) ? 0 : trans.hashCode());
 			return result;
 		}
 
@@ -205,10 +204,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			ValueComputationListener other = (ValueComputationListener) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
-			if (s == null) {
-				if (other.s != null)
+			if (trans == null) {
+				if (other.trans != null)
 					return false;
-			} else if (!s.equals(other.s))
+			} else if (!trans.equals(other.trans))
 				return false;
 			return true;
 		}
@@ -218,7 +217,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	}
 	
-	public Map<Node<Stmt, INode<Fact>>, W> getNodesToWeights(){
+	public Map<Transition<Stmt, INode<Fact>>, W> getNodesToWeights(){
 		return nodesToWeights;
 	}
 	
