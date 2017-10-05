@@ -52,6 +52,7 @@ import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
+import wpds.interfaces.ForwardDFSVisitor;
 import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
@@ -363,10 +364,9 @@ public abstract class Boomerang<W extends Weight> {
 
 	private void forwardHandleFieldLoad(final WitnessNode<Statement, Val, Field> node, final FieldReadPOI fieldReadPoi, final ForwardQuery sourceQuery) {
 		if (node.fact().equals(fieldReadPoi.getBaseVar())) {
-			queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
-
+			queryToSolvers.getOrCreate(sourceQuery).registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(node.stmt().getMethod()) {
 				@Override
-				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					if(t.getStart().fact().equals(node.asNode()) && t.getTarget().fact().equals(sourceQuery.asNode())){
 						fieldReadPoi.addBaseAllocation(sourceQuery);
 					}
@@ -514,10 +514,12 @@ public abstract class Boomerang<W extends Weight> {
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					if(t.getStart().fact().equals(byPassing.asNode())){
 						queryToSolvers.getOrCreate(byPassing).registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
+
+
 							@Override
 							public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
 								if(reachableNode.asNode().equals(returnedNode)){
-								importFlowsAtReturnSite(byPassing, flowQuery, returnedNode);
+									importFlowsAtReturnSite(byPassing, flowQuery, returnedNode);
 								}
 							}
 						});
@@ -606,11 +608,9 @@ public abstract class Boomerang<W extends Weight> {
 			final AbstractBoomerangSolver<W> flowSolver = queryToSolvers.get(flowAllocation);
 			assert !flowSolver.getSuccsOf(getStmt()).isEmpty();
 //			System.out.println(this.toString() + "     " + baseAllocation + "   " + flowAllocation);
-			
-			baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
-
+			baseSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(getStmt().getMethod()) {
 				@Override
-				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt()) && !(aliasedVariableAtStmt instanceof GeneratedState)){
 						Val alias = aliasedVariableAtStmt.fact().fact();
@@ -628,7 +628,6 @@ public abstract class Boomerang<W extends Weight> {
 					}
 				}
 			});
-			
 		}
 		
 	}
