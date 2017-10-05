@@ -57,7 +57,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang<W extends Weight> {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	private Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
 		@Override

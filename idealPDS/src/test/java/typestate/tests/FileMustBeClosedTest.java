@@ -150,11 +150,11 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		mayBeInAcceptingState(b.field);
 	}
 
-	private void flows(ObjectWithField a, ObjectWithField b) {
+	private void flows(ObjectWithField aInner, ObjectWithField bInner) {
 		File file = new File();
 		file.open();
-		a.field = file;
-		File alias = b.field;
+		aInner.field = file;
+		File alias = bInner.field;
 		mustBeInErrorState(alias);
 		alias.close();
 	}

@@ -99,9 +99,7 @@ public class PerSeedAnalysisContext<W extends Weight> {
 
 			@Override
 			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
-				System.out.println("CONNET RETUrn " + callSite +returnedFact + returnSite + w);
 				if(!w.equals(one)){
-					System.out.println("ON RETUrn " + callSite +returnedFact + returnSite + w);
 					idealWeightFunctions.addOtherThanOneWeight(new Node<Statement,Val>(callSite, returnedFact.fact()), w);
 				}
 			}
