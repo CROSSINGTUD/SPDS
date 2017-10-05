@@ -152,7 +152,6 @@ public abstract class Boomerang<W extends Weight> {
 							getAllocatedVal(node.stmt())),backwardQuery);
 				}
 				if(isFieldStore(node.stmt())){
-					backwardHandleFieldWrite(node, forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(node.stmt())), backwardQuery);
 				} else if(isArrayStore(node.stmt())){
 //					forwardHandleFieldWrite(node, createArrayFieldStore(node.stmt()), sourceQuery);
 				} else if(isFieldLoad(node.stmt())){
@@ -339,11 +338,6 @@ public abstract class Boomerang<W extends Weight> {
 		}
 	}
 
-	protected void backwardHandleFieldWrite(final WitnessNode<Statement, Val, Field> witness, final ForwardCallSitePOI fieldWrite,
-			final BackwardQuery backwardQuery) {
-		fieldWrite.returnsFromCall(backwardQuery,witness.asNode());
-	}
-	
 	public static boolean isAllocationVal(Value val) {
 		return val instanceof NullConstant || val instanceof NewExpr || val instanceof NewArrayExpr || val instanceof NewMultiArrayExpr;
 	}
@@ -361,7 +355,6 @@ public abstract class Boomerang<W extends Weight> {
 				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
 					if(!(t.getStart() instanceof GeneratedState) && t.getStart().fact().equals(node.asNode()) && t.getTarget().fact().equals(sourceQuery.asNode())){
 						fieldWritePoi.addBaseAllocation(sourceQuery);
-						forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(node.stmt())).addByPassingAllocation(sourceQuery);
 					}
 				}
 			});
