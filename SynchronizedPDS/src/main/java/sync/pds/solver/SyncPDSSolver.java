@@ -101,6 +101,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		public W getOne() {
 			return getCallWeights().getOne();
 		}
+		
+		public boolean addWeightForTransition(Transition<Stmt,INode<Fact>> trans, W weight) {
+			if(preventCallTransitionAdd(trans,weight))
+				return false;
+			return super.addWeightForTransition(trans, weight);
+		};
 
 		@Override
 		public boolean isGeneratedState(INode<Fact> d) {
@@ -118,6 +124,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	public SyncPDSSolver(){
 		this(Maps.<Transition<Stmt, INode<Fact>>, WeightedPAutomaton<Stmt, INode<Fact>, W>>newHashMap(),Maps.<Transition<Field, INode<Node<Stmt, Fact>>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>>newHashMap());
+	}
+	
+	protected boolean preventCallTransitionAdd(Transition<Stmt, INode<Fact>> trans, W weight) {
+		return false;
 	}
 	public SyncPDSSolver(Map<Transition<Stmt, INode<Fact>>, WeightedPAutomaton<Stmt, INode<Fact>, W>> callSummaries,Map<Transition<Field, INode<Node<Stmt, Fact>>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>> fieldSummaries){
 		callAutomaton.registerListener(new CallAutomatonListener());

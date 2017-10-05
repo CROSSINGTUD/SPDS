@@ -79,7 +79,19 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		
 		//TODO recap, I assume we can implement this more easily.
 		this.generatedFieldState = genField;
-		
+	}
+	
+	@Override
+	protected boolean preventCallTransitionAdd(Transition<Statement, INode<Val>> t, W weight) {
+		if(t.getStart() instanceof GeneratedState)
+			return  false;
+		SootMethod m = t.getStart().fact().m();
+		SootMethod method = t.getLabel().getMethod();
+		if(m == null || method == null)
+			return false;
+		if(!m.equals(method))
+			return true;
+		return false;
 	}
 	
 	private void addTransitionToMethod(SootMethod method, Transition<Field, INode<Node<Statement, Val>>> t) {
