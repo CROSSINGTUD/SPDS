@@ -22,27 +22,25 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	public void registerListener(D state, final ReachabilityListener<N, D> l) {
 		if(listeners.put(state, l)){
 			for(D d : Lists.newArrayList(transitiveClosure.get(state))){
-				aut.registerListener(new TransitiveClosure(d,state) {
-
-					@Override
-					public void onOutTransitionAdded(Transition<N, D> t, W w) {
-						l.reachable(t);
-					}
-
-				});
+				aut.registerListener(new TransitiveClosure(d,state,l));
 			}
 		}	
 	}
 	
-	private abstract class TransitiveClosure extends WPAStateListener<N,D,W>{
+	private class TransitiveClosure extends WPAStateListener<N,D,W>{
 
 		private D source;
+		private ReachabilityListener<N, D> listener;
 
-		public TransitiveClosure(D state, D source) {
+		public TransitiveClosure(D state, D source, ReachabilityListener<N, D> l) {
 			super(state);
 			this.source = source;
+			this.listener = l;
 		}
-
+		@Override
+		public void onOutTransitionAdded(Transition<N, D> t, W w) {
+			listener.reachable(t);
+		}
 
 		@Override
 		public void onInTransitionAdded(Transition<N, D> t, W w) {
@@ -55,6 +53,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((source == null) ? 0 : source.hashCode());
+			result = prime * result + ((listener == null) ? 0 : listener.hashCode());
 			return result;
 		}
 
@@ -75,6 +74,11 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 					return false;
 			} else if (!source.equals(other.source))
 				return false;
+			if (listener == null) {
+				if (other.listener != null)
+					return false;
+			} else if (!listener.equals(other.listener))
+				return false;
 			return true;
 		}
 
@@ -93,10 +97,10 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 		
 		D i = t.getStart();
 		D j = t.getTarget();
-		if(!continueWith(t))
-			return;
 		addTransitiveClosure(i, i);
 		addTransitiveClosure(j, j);
+		if(!continueWith(t))
+			return;
 		insertStar(i,j);
 	}
 
@@ -104,13 +108,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	private void addTransitiveClosure(D i, D j) {
 		if(transitiveClosure.put(i, j)){
 			for(final ReachabilityListener<N, D> listener : Lists.newLinkedList(listeners.get(i))){
-				aut.registerListener(new TransitiveClosure(j, i) {
-					@Override
-					public void onOutTransitionAdded(Transition<N, D> t, W w) {
-						listener.reachable(t);
-					}
-
-				});
+				aut.registerListener(new TransitiveClosure(j, i, listener));
 			}
 		}
 	}
