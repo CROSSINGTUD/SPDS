@@ -469,4 +469,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			}
 		}
 
+	public Map<Transition<Statement, INode<Val>>, W> getTransitionsToFinalWeights() {
+		return callAutomaton.getTransitionsToFinalWeights();
+	}
+
 }

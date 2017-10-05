@@ -134,7 +134,7 @@ public class PerSeedAnalysisContext<W extends Weight> {
 		System.out.println("");
 		if(phase.equals(Phases.ValueFlow)){
 		System.out.println("NODES TO WEIGHT");
-		System.out.println(Joiner.on("\n").join(boomerang.getSolvers().get(seed).getNodesToWeights().entrySet()));
+		System.out.println(Joiner.on("\n").join(boomerang.getSolvers().get(seed).getTransitionsToFinalWeights().entrySet()));
 		System.out.println("END NODES TO WEIGHT");
 		}
 		if(phase.equals(Phases.ValueFlow)){

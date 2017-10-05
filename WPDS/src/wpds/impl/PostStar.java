@@ -221,7 +221,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 				final N gammaPrime = rule.getL2();
 				final D irState = fa.createState(p, gammaPrime);
 				if(!SUMMARIES){
-					update(new Transition<N, D>(p, gammaPrime, irState), rule.getWeight());
+					update(new Transition<N, D>(p, gammaPrime, irState),fa.getOne());
 				} else{
 					if(!fa.isGeneratedState(irState))
 						throw new RuntimeException("State must be generated");
@@ -237,7 +237,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 					});
 				}
 				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
-				update(new Transition<N, D>(irState, transitionLabel, t.getTarget()), weight);
+				update(new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W)weight.extendWith(rule.getWeight()));
 				fa.registerListener(new UpdateEpsilonOnPushListener(new Transition<N, D>(irState, transitionLabel, t.getTarget()), rule.getL1()));
 			}
 		}

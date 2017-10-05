@@ -50,6 +50,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private Map<D, ReachabilityListener<N, D>> stateToReachabilityListener = Maps.newHashMap();
 	private Set<ReturnSiteWithWeights> connectedPushes = Sets.newHashSet();
 	private Set<ConnectPushListener<N,D,W>> conntectedPushListeners = Sets.newHashSet();
+	private Map<Transition<N, D>, W> transitionsToFinalWeights = Maps.newHashMap();
 
 	public abstract D createState(D d, N loc);
 
@@ -430,4 +431,73 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		
 		
 	}
+	public void computeValues(Transition<N, D> callTrans) {
+		transitionsToFinalWeights.put(callTrans, this.getOne());
+		registerListener(new ValueComputationListener(callTrans));
+	}
+
+	public Map<Transition<N,D>, W> getTransitionsToFinalWeights() {
+		return transitionsToFinalWeights;
+	}
+
+	private class ValueComputationListener extends WPAStateListener<N, D, W>{
+		private Transition<N,D> trans;
+
+		public ValueComputationListener(Transition<N,D> trans) {
+			super(trans.getStart());
+			this.trans = trans;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<N,D> t, W w) {
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<N,D> t, W w) {
+			W weightAtTarget = transitionsToFinalWeights.get(trans);
+			W extendWith = (W) weightAtTarget.extendWith(w);
+			W weightAtSource = transitionsToFinalWeights.get(t);
+			
+			W newVal = (weightAtSource == null ? extendWith : (W) weightAtSource.combineWith(extendWith));
+			if(!newVal.equals(weightAtSource)){
+//				System.out.println(t + "  " + newVal + " was "+ weightAtSource +"   " + weightAtTarget + w);
+				transitionsToFinalWeights.put(t, newVal);
+				registerListener(new ValueComputationListener(t));
+			}
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((trans == null) ? 0 : trans.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ValueComputationListener other = (ValueComputationListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (trans == null) {
+				if (other.trans != null)
+					return false;
+			} else if (!trans.equals(other.trans))
+				return false;
+			return true;
+		}
+
+		private WeightedPAutomaton getOuterType() {
+			return WeightedPAutomaton.this;
+		}
+
+	}
+	
 }

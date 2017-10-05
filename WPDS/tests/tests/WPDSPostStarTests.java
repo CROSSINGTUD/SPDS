@@ -9,11 +9,14 @@ import static tests.TestHelper.wnormal;
 import static tests.TestHelper.wpop;
 import static tests.TestHelper.wpush;
 
+import java.util.Map;
+
 import org.junit.Before;
 import org.junit.Test;
 
 import tests.TestHelper.Abstraction;
 import tests.TestHelper.StackSymbol;
+import wpds.impl.Transition;
 import wpds.impl.WeightedPAutomaton;
 import wpds.impl.WeightedPushdownSystem;
 
@@ -61,8 +64,15 @@ public class WPDSPostStarTests {
     WeightedPAutomaton<StackSymbol, Abstraction, NumWeight> fa =
         waccepts(1, "a", w(0));
     pds.poststar(fa);
+    System.out.println(fa);
     assertEquals(fa.getWeightFor(t(1, "b", ACC)), w(2));
     assertEquals(fa.getWeightFor(t(1, "d", ACC)), w(11));
+    assertEquals(fa.getWeightFor(t(1, "e", a(1,"c"))), w(1));
+    fa.computeValues(t(ACC, "a", ACC));
+    Map<Transition<StackSymbol, Abstraction>, NumWeight> weights = fa.getTransitionsToFinalWeights();
+    System.out.println(weights);
+    assertEquals(weights.get(t(1, "e", a(1,"c"))), w(6));
+    
   }
 
   @Test
@@ -92,10 +102,13 @@ public class WPDSPostStarTests {
     pds.poststar(fa);
     System.out.println(fa);
     System.out.println(fa.toDotString());
-    assertEquals(w(19), fa.getWeightFor(t(1, "f", ACC)));
-    assertEquals(w(32), fa.getWeightFor(t(3, "g", ACC)));
+    assertEquals(w(15), fa.getWeightFor(t(1, "f", ACC)));
+    assertEquals(w(7), fa.getWeightFor(t(3, "EPS", a(2,"call"))));
+    assertEquals(w(10), fa.getWeightFor(t(3, "d", ACC)));
+    
+    assertEquals(w(28), fa.getWeightFor(t(3, "g", ACC)));
+    assertEquals(w(35), fa.getWeightFor(t(4, "h", ACC)));
   }
-
   @Test
   public void oneCall() {
     pds.addRule(wnormal(1, "a", 1, "b", w(1)));

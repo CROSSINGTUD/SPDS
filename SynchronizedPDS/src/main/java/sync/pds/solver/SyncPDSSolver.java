@@ -154,72 +154,9 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 	private void computeValues(Transition<Stmt, INode<Fact>> callTrans) {
-		nodesToWeights.put(callTrans, callAutomaton.getOne());
-		callAutomaton.registerListener(new ValueComputationListener(callTrans));
+		callAutomaton.computeValues(callTrans);
 	}
-	
-	private class ValueComputationListener extends WPAStateListener<Stmt, INode<Fact>, W>{
-		private Transition<Stmt, INode<Fact>> trans;
 
-		public ValueComputationListener(Transition<Stmt, INode<Fact>> trans) {
-			super(trans.getStart());
-			this.trans = trans;
-		}
-
-		@Override
-		public void onOutTransitionAdded(Transition<Stmt, INode<Fact>> t, W w) {
-		}
-
-		@Override
-		public void onInTransitionAdded(Transition<Stmt, INode<Fact>> t, W w) {
-			W weightAtTarget = nodesToWeights.get(trans);
-			W extendWith = (W) weightAtTarget.extendWith(w);
-			W weightAtSource = nodesToWeights.get(t);
-			
-			W newVal = (weightAtSource == null ? extendWith : (W) weightAtSource.combineWith(extendWith));
-			if(!newVal.equals(weightAtSource)){
-//				System.out.println(t + "  " + newVal + " was "+ weightAtSource +"   " + weightAtTarget + w);
-				nodesToWeights.put(t, newVal);
-				callAutomaton.registerListener(new ValueComputationListener(t));
-			}
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((trans == null) ? 0 : trans.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			ValueComputationListener other = (ValueComputationListener) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (trans == null) {
-				if (other.trans != null)
-					return false;
-			} else if (!trans.equals(other.trans))
-				return false;
-			return true;
-		}
-
-		private SyncPDSSolver getOuterType() {
-			return SyncPDSSolver.this;
-		}
-	}
-	
-	public Map<Transition<Stmt, INode<Fact>>, W> getNodesToWeights(){
-		return nodesToWeights;
-	}
 	
 	private void await() {
 		while(!worklist.isEmpty()){

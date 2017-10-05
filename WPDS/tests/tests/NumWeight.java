@@ -20,7 +20,8 @@ public class NumWeight extends Weight {
 			return other;
 		if (other.equals(one()))
 			return this;
-
+		if(this.equals(zero()) || other.equals(zero()))
+			return zero();
 		NumWeight o = (NumWeight) other;
 		return new NumWeight(o.i + i);
 	}

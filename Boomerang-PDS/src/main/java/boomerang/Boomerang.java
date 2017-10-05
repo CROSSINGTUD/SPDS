@@ -731,7 +731,7 @@ public abstract class Boomerang<W extends Weight> {
 			return;
 		Debugger<W> debugger = createDebugger();
 		for (Query q : queryToSolvers.keySet()) {
-			debugger.reachableNodes(q,queryToSolvers.getOrCreate(q).getNodesToWeights());
+			debugger.reachableNodes(q,queryToSolvers.getOrCreate(q).getTransitionsToFinalWeights());
 			debugger.reachableCallNodes(q,queryToSolvers.getOrCreate(q).getReachedStates());
 			debugger.reachableFieldNodes(q,queryToSolvers.getOrCreate(q).getReachedStates());
 			
