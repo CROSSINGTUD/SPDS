@@ -24,7 +24,21 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		escape(file);
 		mustBeInErrorState(file);
 	}
-
+	@Test
+	public void recursion() {
+		File file = new File();
+		file.open();
+		mustBeInErrorState(file);
+		recursive(file);
+		mustBeInAcceptingState(file);
+	}
+	private void recursive(File file) {
+		file.close();
+		if(!staticallyUnknown()){
+			File alias = file;
+			recursive(alias);
+		}
+	}
 	private void escape(File other) {
 		mustBeInErrorState(other);
 	}

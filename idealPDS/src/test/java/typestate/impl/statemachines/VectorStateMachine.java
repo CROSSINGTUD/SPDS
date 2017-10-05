@@ -70,11 +70,10 @@ public class VectorStateMachine extends MatcherStateMachine {
 	}
 
 	@Override
-	public Collection<Val> generateSeed(SootMethod m, Unit unit,
-			Collection<SootMethod> calledMethod) {
-		if(m.toString().contains("<clinit>"))
+	public Collection<Val> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+		if (m.toString().contains("<clinit>"))
 			return Collections.emptySet();
-		return generateAtAllocationSiteOf(m, unit,Vector.class);
+		return generateAtAllocationSiteOf(m, unit, Vector.class);
 	}
 
 }

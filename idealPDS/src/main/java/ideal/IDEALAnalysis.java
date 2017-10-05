@@ -32,7 +32,6 @@ public class IDEALAnalysis<W extends Weight> {
 
 	private final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final IDEALAnalysisDefinition<W> analysisDefinition;
-	private int methods;
 
 	public IDEALAnalysis(IDEALAnalysisDefinition<W> analysisDefinition) {
 		this.analysisDefinition = analysisDefinition;
@@ -84,7 +83,6 @@ public class IDEALAnalysis<W extends Weight> {
 				seeds.add(new Node<Statement,Val>(new Statement((Stmt)u, method),fact));
 			}
 		}
-		System.out.println(methods++);
 		return seeds;
 	}
 
