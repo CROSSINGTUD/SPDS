@@ -79,20 +79,20 @@ public class Field implements Location {
 
 	public static Field empty() {
 		if (empty == null) {
-			empty = new EmptyField();
+			empty = new EmptyField("{}");
 		}
 		return empty;
 	}
 	
 	private static class EmptyField extends Field implements Empty{
-		public EmptyField() {
-			super("{}");
+		public EmptyField(String rep) {
+			super(rep);
 		}
 	}
 
 	public static Field epsilon() {
 		if (epsilon == null) {
-			epsilon = new Field("eps_f");
+			epsilon = new EmptyField("eps_f");
 		}
 		return epsilon;
 	}

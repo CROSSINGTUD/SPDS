@@ -6,6 +6,7 @@ import java.util.LinkedList;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 
 import wpds.impl.Transition;
 import wpds.impl.Weight;
@@ -15,6 +16,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	private Multimap<D, ReachabilityListener<N,D>> listeners = HashMultimap.create();
 	protected WeightedPAutomaton<N, D, W> aut;
 	private Multimap<D, D> transitiveClosure = HashMultimap.create();
+	private Multimap<D, D> inverseTransitiveClosure = HashMultimap.create();
 	
 	public ForwardDFSVisitor(WeightedPAutomaton<N,D,W> aut){
 		this.aut = aut;
@@ -29,12 +31,12 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	
 	private class TransitiveClosure extends WPAStateListener<N,D,W>{
 
-		private D source;
+//		private D source;
 		private ReachabilityListener<N, D> listener;
 
 		public TransitiveClosure(D state, D source, ReachabilityListener<N, D> l) {
 			super(state);
-			this.source = source;
+//			this.source = source;
 			this.listener = l;
 		}
 		@Override
@@ -52,7 +54,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((source == null) ? 0 : source.hashCode());
+//			result = prime * result + ((source == null) ? 0 : source.hashCode());
 			result = prime * result + ((listener == null) ? 0 : listener.hashCode());
 			return result;
 		}
@@ -69,11 +71,11 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			TransitiveClosure other = (TransitiveClosure) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
-			if (source == null) {
-				if (other.source != null)
-					return false;
-			} else if (!source.equals(other.source))
-				return false;
+//			if (source == null) {
+//				if (other.source != null)
+//					return false;
+//			} else if (!source.equals(other.source))
+//				return false;
 			if (listener == null) {
 				if (other.listener != null)
 					return false;
@@ -94,7 +96,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	}
 	@Override
 	public void onWeightAdded(Transition<N, D> t, W w) {
-		
+
 		D i = t.getStart();
 		D j = t.getTarget();
 		addTransitiveClosure(i, i);
@@ -107,20 +109,21 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 
 	private void addTransitiveClosure(D i, D j) {
 		if(transitiveClosure.put(i, j)){
-			for(final ReachabilityListener<N, D> listener : Lists.newLinkedList(listeners.get(i))){
+			inverseTransitiveClosure.put(j, i);
+			for(final ReachabilityListener<N, D> listener : Lists.newArrayList(listeners.get(i))){
 				aut.registerListener(new TransitiveClosure(j, i, listener));
 			}
 		}
 	}
 	private void insertStar(D i, D j) {
-		if(!transitiveClosure.get(i).contains(j)){
-			for(D k : aut.getStates()){
-				Collection<D> outOfK = transitiveClosure.get(k);
-				if(!outOfK.contains(j) && outOfK.contains(i)){
-					adaptStar(j,k);
-				}
-			}
-		}	
+		Collection<D> col = Sets.newHashSet(inverseTransitiveClosure.get(i));
+		if(col.contains(j))
+			return;
+		Collection<D> intoJ = inverseTransitiveClosure.get(j);
+		for(D k : col){
+			if(!intoJ.contains(k))
+				adaptStar(j,k);
+		}
 	}
 	
 	
@@ -130,10 +133,12 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 		while(!redNodes.isEmpty()){
 			D l = redNodes.poll();
 			addTransitiveClosure(k, l);
-			for(Transition<N,D> t : Lists.newArrayList(aut.getTransitionsOutOf(l))){
+			for(Transition<N,D> t : aut.getTransitionsOutOf(l)){
 				Collection<D> outOfK = transitiveClosure.get(k);
 				D m = t.getTarget();
 				if(!outOfK.contains(m)){
+					if(!continueWith(t))
+						continue;
 					redNodes.add(m);
 				}
 			}

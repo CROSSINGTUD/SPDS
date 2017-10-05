@@ -197,11 +197,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		W oldWeight = transitionToWeights.get(trans);
 		W newWeight = (W) (oldWeight == null ? weight : oldWeight.combineWith(weight));
 		if (!newWeight.equals(oldWeight)) {
-			if(trans.getLabel().toString().contains("FileMustBeClosedTest.branchingMay mayBeInErrorState(file)")){
-				if(trans.getStart().toString().contains("file") && !isGeneratedState(trans.getTarget()))
-					if(newWeight.toString().contains("OPENED -> CLOSED") && newWeight.toString().contains("INIT -> CLOSED")&& newWeight.toString().contains("INIT -> OPENED"))
-						System.out.println("THERE: " + trans + " " + newWeight);
-			}
 			transitionToWeights.put(trans, newWeight);
 			for (WPAUpdateListener<N, D, W> l : Lists.newArrayList(listeners)) {
 				l.onWeightAdded(trans, newWeight);

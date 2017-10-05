@@ -14,6 +14,7 @@ import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.Stmt;
+import wpds.interfaces.Empty;
 import wpds.interfaces.Location;
 
 public class Statement implements Location {
@@ -73,9 +74,17 @@ public class Statement implements Location {
 	
 	public static Statement epsilon() {
 		if (epsilon == null) {
-			epsilon = new Statement("eps_s");
+			epsilon = new EpsStatement();
 		}
 		return epsilon;
+	}
+	
+	private static class EpsStatement extends Statement implements Empty{
+
+		public EpsStatement() {
+			super("Eps_s");
+		}
+		
 	}
 
 	@Override

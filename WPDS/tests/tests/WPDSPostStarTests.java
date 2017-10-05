@@ -16,6 +16,7 @@ import org.junit.Test;
 
 import tests.TestHelper.Abstraction;
 import tests.TestHelper.StackSymbol;
+import wpds.impl.PostStar;
 import wpds.impl.Transition;
 import wpds.impl.WeightedPAutomaton;
 import wpds.impl.WeightedPushdownSystem;
@@ -25,6 +26,7 @@ public class WPDSPostStarTests {
 
   @Before
   public void init() {
+	  PostStar.SUMMARIES = false;
     pds = new WeightedPushdownSystem<StackSymbol, Abstraction, NumWeight>();
   }
 

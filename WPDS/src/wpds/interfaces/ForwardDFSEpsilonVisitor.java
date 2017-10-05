@@ -13,6 +13,6 @@ public class ForwardDFSEpsilonVisitor<N extends Location,D extends State, W exte
 
 	@Override
 	protected boolean continueWith(Transition<N, D> t) {
-		return t.getLabel().equals(aut.epsilon()) || t.getLabel() instanceof Empty;
+		return t.getLabel() instanceof Empty;
 	}
 }
