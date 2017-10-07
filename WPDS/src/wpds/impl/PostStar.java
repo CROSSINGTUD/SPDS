@@ -166,7 +166,10 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 				}
 				if (l2 instanceof Wildcard) {
 					l2 = t.getString();
+					if(l2.equals(fa.epsilon()))
+						return;
 				}
+				
 				update(new Transition<N, D>(p, l2, t.getTarget()), newWeight);
 			}
 		}
@@ -236,7 +239,10 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 						}
 					});
 				}
+				if(rule.getCallSite() instanceof Wildcard  && t.getLabel().equals(fa.epsilon()))
+					return;
 				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
+				
 				update(new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W)weight.extendWith(rule.getWeight()));
 				fa.registerListener(new UpdateEpsilonOnPushListener(new Transition<N, D>(irState, transitionLabel, t.getTarget()), rule.getL1()));
 			}
