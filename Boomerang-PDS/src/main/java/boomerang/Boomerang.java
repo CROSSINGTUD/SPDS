@@ -2,6 +2,7 @@ package boomerang;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -493,8 +494,24 @@ public abstract class Boomerang<W extends Weight> {
 		private Statement callSite;
 		private Set<QueryWithVal> returnsFromCall = Sets.newHashSet();
 		private Set<ForwardQuery> byPassingAllocations = Sets.newHashSet();
+		
 		public ForwardCallSitePOI(Statement callSite){
 			this.callSite = callSite;
+		}
+		private Multimap<Query,Query> importGraph = HashMultimap.create();
+
+		private boolean introducesLoop(ForwardQuery baseAllocation, Query flowAllocation) {
+			importGraph.put(baseAllocation, flowAllocation);
+			LinkedList<Query> worklist = Lists.newLinkedList();
+			worklist.add(flowAllocation);
+			Set<Query> visited = Sets.newHashSet();
+			while(!worklist.isEmpty()){
+				Query curr = worklist.pop();
+				if(visited.add(curr)){
+					worklist.addAll(importGraph.get(curr));
+				}
+			}
+			return visited.contains(baseAllocation);
 		}
 
 		public void returnsFromCall(final Query flowQuery, Node<Statement, Val> returnedNode) {
@@ -507,6 +524,8 @@ public abstract class Boomerang<W extends Weight> {
 
 		private void eachPair(final ForwardQuery byPassing, final Query flowQuery, final Node<Statement,Val> returnedNode){
 			if(byPassing.equals(flowQuery)) 
+				return;
+			if(introducesLoop(byPassing, flowQuery))
 				return;
 			queryToSolvers.getOrCreate(flowQuery).registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(byPassing.asNode().stmt().getMethod()) {
 				
@@ -593,6 +612,8 @@ public abstract class Boomerang<W extends Weight> {
 		
 		@Override
 		public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
+			if(Boomerang.this instanceof WholeProgramBoomerang)
+				throw new RuntimeException("should not be invoked!");
 			if(flowAllocation instanceof ForwardQuery){
 			} else if(flowAllocation instanceof BackwardQuery){
 				executeImportAliases(baseAllocation, flowAllocation);
@@ -600,14 +621,31 @@ public abstract class Boomerang<W extends Weight> {
 		}
 	}
 	private abstract class FieldStmtPOI extends AbstractPOI<Statement, Val, Field> {
+		private Multimap<Query,Query> importGraph = HashMultimap.create();
 		public FieldStmtPOI(Statement statement, Val base, Field field, Val storedVar) {
 			super(statement, base, field, storedVar);
+		}
+
+		private boolean introducesLoop(ForwardQuery baseAllocation, Query flowAllocation) {
+			importGraph.put(baseAllocation, flowAllocation);
+			LinkedList<Query> worklist = Lists.newLinkedList();
+			worklist.add(flowAllocation);
+			Set<Query> visited = Sets.newHashSet();
+			while(!worklist.isEmpty()){
+				Query curr = worklist.pop();
+				if(visited.add(curr)){
+					worklist.addAll(importGraph.get(curr));
+				}
+			}
+			return visited.contains(baseAllocation);
 		}
 		protected void executeImportAliases(final ForwardQuery baseAllocation, final Query flowAllocation){
 			final AbstractBoomerangSolver<W> baseSolver = queryToSolvers.get(baseAllocation);
 			final AbstractBoomerangSolver<W> flowSolver = queryToSolvers.get(flowAllocation);
+			if(introducesLoop(baseAllocation, flowAllocation)){
+				return;
+			}
 			assert !flowSolver.getSuccsOf(getStmt()).isEmpty();
-//			System.out.println(this.toString() + "     " + baseAllocation + "   " + flowAllocation);
 			baseSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(getStmt().getMethod()) {
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {

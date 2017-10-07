@@ -3,7 +3,6 @@ package boomerang.solver;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -13,7 +12,6 @@ import com.beust.jcommander.internal.Lists;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 
 import boomerang.Boomerang;
@@ -60,6 +58,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private final Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> generatedFieldState;
 	private Multimap<SootMethod,Transition<Field,INode<Node<Statement,Val>>>> perMethodFieldTransitions = HashMultimap.create();
 	private Multimap<SootMethod, MethodBasedFieldTransitionListener<W>> perMethodFieldTransitionsListener = HashMultimap.create();
+	private Multimap<Statement,Transition<Field,INode<Node<Statement,Val>>>> perStatementFieldTransitions = HashMultimap.create();
+	private Multimap<Statement, StatementBasedFieldTransitionListener<W>> perStatementFieldTransitionsListener = HashMultimap.create();
 	
 	
 	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, W>> callSummaries, Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> fieldSummaries){
@@ -74,6 +74,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
 				addTransitionToMethod(t.getStart().fact().stmt().getMethod(), t);
 				addTransitionToMethod(t.getTarget().fact().stmt().getMethod(), t);
+				addTransitionToStatement(t.getStart().fact().stmt(), t);
 			}
 		});
 		
@@ -107,6 +108,22 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				l.onAddedTransition(t);
 			}
 		}
+	}
+	
+	private void addTransitionToStatement(Statement s, Transition<Field, INode<Node<Statement, Val>>> t) {
+		if(perStatementFieldTransitions.put(s, t)){
+			for(StatementBasedFieldTransitionListener<W> l : Lists.newArrayList(perStatementFieldTransitionsListener.get(s))){
+				l.onAddedTransition(t);
+			}
+		}
+	}
+	public void registerStatementFieldTransitionListener(
+			StatementBasedFieldTransitionListener<W> l) {
+		if(perStatementFieldTransitionsListener.put(l.getStmt(),l)){
+			for(Transition<Field, INode<Node<Statement, Val>>> t : Lists.newArrayList(perStatementFieldTransitions.get(l.getStmt()))){
+				l.onAddedTransition(t);
+			}
+		}	
 	}
 	public INode<Node<Statement,Val>> generateFieldState(final INode<Node<Statement,Val>> d, final Field loc) {
 		Entry<INode<Node<Statement,Val>>, Field> e = new AbstractMap.SimpleEntry<>(d, loc);
@@ -484,5 +501,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	public Map<Transition<Statement, INode<Val>>, W> getTransitionsToFinalWeights() {
 		return callAutomaton.getTransitionsToFinalWeights();
 	}
+
 
 }

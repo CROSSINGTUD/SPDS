@@ -26,19 +26,17 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	public void registerListener(D state, final ReachabilityListener<N, D> l) {
 		if(listeners.put(state, l)){
 			for(D d : Lists.newArrayList(inverseReaches.get(state))){
-				aut.registerListener(new TransitiveClosure(d,state,l));
+				aut.registerListener(new TransitiveClosure(d,l));
 			}
 		}	
 	}
 	
 	private class TransitiveClosure extends WPAStateListener<N,D,W>{
 
-		private D source;
 		private ReachabilityListener<N, D> listener;
 
-		public TransitiveClosure(D state, D source, ReachabilityListener<N, D> l) {
+		public TransitiveClosure(D state, ReachabilityListener<N, D> l) {
 			super(state);
-			this.source = source;
 			this.listener = l;
 		}
 		@Override
@@ -56,7 +54,6 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((source == null) ? 0 : source.hashCode());
 			result = prime * result + ((listener == null) ? 0 : listener.hashCode());
 			return result;
 		}
@@ -72,11 +69,6 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 				return false;
 			TransitiveClosure other = (TransitiveClosure) obj;
 			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (source == null) {
-				if (other.source != null)
-					return false;
-			} else if (!source.equals(other.source))
 				return false;
 			if (listener == null) {
 				if (other.listener != null)
@@ -155,7 +147,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	private void inverseReaches(D from, D to) {
 		if(inverseReaches.put(from, to)){
 			for(ReachabilityListener<N, D> l : Lists.newArrayList(listeners.get(from))){
-				aut.registerListener(new TransitiveClosure(to, from, l));
+				aut.registerListener(new TransitiveClosure(to, l));
 			}
 		}
 		
