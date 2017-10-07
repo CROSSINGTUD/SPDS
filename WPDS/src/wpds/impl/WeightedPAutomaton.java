@@ -275,7 +275,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 //			getStateToEpsilonDFS().put(state, dfsVisitor);
 			this.registerListener(dfsEpsVisitor);
 		}
-		for(WeightedPAutomaton<N, D, W> nested : nestedAutomatons){
+		for(WeightedPAutomaton<N, D, W> nested : Lists.newLinkedList(nestedAutomatons)){
 			nested.registerDFSEpsilonListener(state, l);
 		}
 		dfsEpsVisitor.registerListener(state,l);
