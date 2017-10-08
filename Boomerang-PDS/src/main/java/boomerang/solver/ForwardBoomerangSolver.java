@@ -44,7 +44,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	public ForwardBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, ForwardQuery query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField, Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, W>> callSummaries, Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>,W>> fieldSummaries) {
 		super(icfg, query, genField, callSummaries, fieldSummaries);
 	}
-
+	
 	@Override
 	public Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite, Statement callSite, InvokeExpr invokeExpr,
 			Val fact, SootMethod callee, Stmt calleeSp) {

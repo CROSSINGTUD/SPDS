@@ -3,10 +3,12 @@ package wpds.interfaces;
 import java.util.LinkedList;
 import java.util.Map;
 
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Table;
 
 import wpds.impl.Transition;
 import wpds.impl.Weight;
@@ -18,7 +20,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	private Multimap<D, D> adjacent = HashMultimap.create();
 	private Multimap<D, D> reaches = HashMultimap.create();
 	private Multimap<D, D> inverseReaches = HashMultimap.create();
-	private Map<Edge, Index> index = Maps.newHashMap();
+	private Table<D,D,Integer> refCount = HashBasedTable.create();
 	
 	public ForwardDFSVisitor(WeightedPAutomaton<N,D,W> aut){
 		this.aut = aut;
@@ -26,7 +28,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	public void registerListener(D state, final ReachabilityListener<N, D> l) {
 		if(listeners.put(state, l)){
 			for(D d : Lists.newArrayList(inverseReaches.get(state))){
-				aut.registerListener(new TransitiveClosure(d,l));
+				aut.registerListener(new TransitiveClosure(d,state, l));
 			}
 		}	
 	}
@@ -34,9 +36,11 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	private class TransitiveClosure extends WPAStateListener<N,D,W>{
 
 		private ReachabilityListener<N, D> listener;
+		private D s;
 
-		public TransitiveClosure(D state, ReachabilityListener<N, D> l) {
+		public TransitiveClosure(D state, D s, ReachabilityListener<N, D> l) {
 			super(state);
+			this.s = s;
 			this.listener = l;
 		}
 		@Override
@@ -55,6 +59,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((listener == null) ? 0 : listener.hashCode());
+			result = prime * result + ((s == null) ? 0 : s.hashCode());
 			return result;
 		}
 
@@ -69,6 +74,11 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 				return false;
 			TransitiveClosure other = (TransitiveClosure) obj;
 			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (s == null) {
+				if (other.s != null)
+					return false;
+			} else if (!s.equals(other.s))
 				return false;
 			if (listener == null) {
 				if (other.listener != null)
@@ -102,41 +112,32 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 
 	private void insertEdge(D a, D b) {
 		LinkedList<Edge> worklist = Lists.newLinkedList();
-		if(index(a,b).refcount == 0){
+		if(refCount.get(a,b) == null){
 			makeClosure(a, b);
 			worklist.add(new Edge(a,b));
+			refCount.put(a, b, 1);
 		}
 		makeEdge(a,b);
-		index(a, b).refcount += 1;
 		
 		for(D x : Lists.newArrayList(reaches.get(a))){
-			if(index(x,b).refcount == 0){
+			if(refCount.get(x,b) == null){
 				makeClosure(x,b);
 				worklist.add(new Edge(x,b));
+				refCount.put(x,b,1);
 			}
-			index(x,b).refcount += 1;
 		}
 		while(!worklist.isEmpty()){
 			Edge e = worklist.poll();
 			D x = e.from;
 			D y = e.to; 
 			for(D z : Lists.newArrayList(adjacent.get(y))){
-				if(index(e.from,z).refcount == 0){
+				if(refCount.get(x,z) == null){
 					makeClosure(x, z);
 					worklist.add(new Edge(x,z));
+					refCount.put(x,z,1);
 				}
-				index(x,z).refcount += 1;
 			}
 		}
-	}
-	private Index index(D from, D to){
-		ForwardDFSVisitor<N, D, W>.Edge edge = new Edge(from,to);
-		Index i = index.get(edge);
-		if(i == null){
-			i = new Index();
-			index.put(edge, i);
-		}
-		return i;
 	}
 
 	private void makeEdge(D from, D to){
@@ -147,7 +148,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 	private void inverseReaches(D from, D to) {
 		if(inverseReaches.put(from, to)){
 			for(ReachabilityListener<N, D> l : Lists.newArrayList(listeners.get(from))){
-				aut.registerListener(new TransitiveClosure(to, l));
+				aut.registerListener(new TransitiveClosure(to, from, l));
 			}
 		}
 		
@@ -171,7 +172,6 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
-			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((from == null) ? 0 : from.hashCode());
 			result = prime * result + ((to == null) ? 0 : to.hashCode());
 			return result;
@@ -185,8 +185,6 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			if (getClass() != obj.getClass())
 				return false;
 			Edge other = (Edge) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
 			if (from == null) {
 				if (other.from != null)
 					return false;
@@ -198,9 +196,6 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			} else if (!to.equals(other.to))
 				return false;
 			return true;
-		}
-		private ForwardDFSVisitor getOuterType() {
-			return ForwardDFSVisitor.this;
 		}
 		
 	}

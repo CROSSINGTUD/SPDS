@@ -53,6 +53,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private Map<Transition<N, D>, W> transitionsToFinalWeights = Maps.newHashMap();
 	private ForwardDFSVisitor<N, D, W> dfsVisitor;
 	private ForwardDFSVisitor<N, D, W> dfsEpsVisitor;
+	public int failedAdditions;
+	public int failedDirectAdditions;
 
 	public abstract D createState(D d, N loc);
 
@@ -61,7 +63,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	public Collection<Transition<N, D>> getTransitions() {
 		return Lists.newArrayList(transitions);
 	}
-
+	
 	public Collection<Transition<N, D>> getTransitionsOutOf(D state) {
 		return Lists.newArrayList(transitionsOutOf.get(state));
 	}
@@ -71,11 +73,11 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public boolean addTransition(Transition<N, D> trans) {
-		if (trans.getStart().equals(trans.getTarget()) && trans.getLabel().equals(epsilon())) {
-			return false;
+		boolean addWeightForTransition = addWeightForTransition(trans, getOne());
+		if(!addWeightForTransition){
+			failedDirectAdditions++;
 		}
-
-		return addWeightForTransition(trans, getOne());
+		return addWeightForTransition;
 	}
 
 	public D getInitialState() {
@@ -189,6 +191,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	public boolean addWeightForTransition(Transition<N, D> trans, W weight) {
 		if (weight == null)
 			throw new IllegalArgumentException("Weight must not be null!");
+		if (trans.getStart().equals(trans.getTarget()) && trans.getLabel().equals(epsilon())) {
+			failedAdditions++;
+			return false;
+		}
 		transitionsOutOf.get(trans.getStart()).add(trans);
 		transitionsInto.get(trans.getTarget()).add(trans);
 		states.add(trans.getTarget());
@@ -209,6 +215,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			}
 			return true;
 		}
+		if(!added)
+			failedAdditions++;
 		return added;
 	}
 
@@ -344,8 +352,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 
 	public void reconnectPush(N callSite, N returnSite,D returnedFact,  W combinedWeight, W returnedWeight) {
 		WeightedPAutomaton<N, D, W>.ReturnSiteWithWeights returnSiteWithWeights = new ReturnSiteWithWeights(callSite, returnSite, returnedFact,combinedWeight, returnedWeight);
-		if( connectedPushes.add(returnSiteWithWeights )){
-			for( ConnectPushListener<N, D, W> l : Lists.newArrayList(conntectedPushListeners)){
+		if(connectedPushes.add(returnSiteWithWeights )){
+			for(ConnectPushListener<N, D, W> l : Lists.newArrayList(conntectedPushListeners)){
 				l.connect(returnSiteWithWeights.callSite, returnSiteWithWeights.returnSite, returnSiteWithWeights.returnedFact, returnSiteWithWeights.returnedWeight);
 			}
 		}

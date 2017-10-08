@@ -27,6 +27,7 @@ import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
 import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
+import boomerang.solver.StatementBasedFieldTransitionListener;
 import heros.utilities.DefaultValueMap;
 import soot.RefType;
 import soot.SootMethod;
@@ -50,6 +51,7 @@ import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
+import wpds.impl.ConnectPushListener;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -257,12 +259,18 @@ public abstract class Boomerang<W extends Weight> {
 				}
 			}
 		});
+		solver.getCallAutomaton().registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
+
+			@Override
+			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W returnedWeight) {
+				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
+				callSitePoi.returnsFromCall(sourceQuery, new Node<Statement,Val>(returnSite, returnedFact.fact()));
+			}
+		});
 		return solver;
 	}
 	
 	protected void onForwardReturnFromCall(Statement callSite, Node<Statement, Val> returnedNode, Query sourceQuery){
-		final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
-		callSitePoi.returnsFromCall(sourceQuery, returnedNode);
 	}
 
 	protected FieldReadPOI createFieldLoad(Statement s) {	
@@ -335,7 +343,7 @@ public abstract class Boomerang<W extends Weight> {
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
 				fieldRead.getBaseVar());
 		if (node.fact().equals(fieldRead.getStoredVar())) {
-			backwardSolve(backwardQuery);
+//			backwardSolve(backwardQuery);
 			fieldRead.addFlowAllocation(sourceQuery);
 		}
 	}
@@ -455,7 +463,7 @@ public abstract class Boomerang<W extends Weight> {
 			int result = 1;
 			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((flowSourceQuery == null) ? 0 : flowSourceQuery.hashCode());
-			result = prime * result + ((returningFact == null) ? 0 : returningFact.hashCode());
+			result = prime * result + ((returningFact== null) ? 0 : returningFact.hashCode());
 			return result;
 		}
 
@@ -528,12 +536,12 @@ public abstract class Boomerang<W extends Weight> {
 			if(introducesLoop(byPassing, flowQuery))
 				return;
 			queryToSolvers.getOrCreate(flowQuery).registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(byPassing.asNode().stmt().getMethod()) {
-				
+				private boolean triggered = false;
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-					if(t.getStart().fact().equals(byPassing.asNode())){
+					if(!triggered && t.getStart().fact().equals(byPassing.asNode())){
+						triggered = true;
 						queryToSolvers.getOrCreate(byPassing).registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
-
 
 							@Override
 							public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
@@ -550,13 +558,16 @@ public abstract class Boomerang<W extends Weight> {
 			AbstractBoomerangSolver<W> byPassingSolver = queryToSolvers.get(byPassingAllocation);
 		    final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> byPassingFieldAutomaton = byPassingSolver.getFieldAutomaton();
 		    final AbstractBoomerangSolver<W> flowSolver = queryToSolvers.getOrCreate(flowQuery);
-		    byPassingSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(returnedNode.stmt().getMethod()) {
+//		    System.out.println(flowQuery + " " + callSite + " -> "+ returnedNode.stmt() + byPassingAllocation);
+		    byPassingSolver.registerStatementFieldTransitionListener(new StatementBasedFieldTransitionListener<W>(returnedNode.stmt()) {
 		    	@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-					if(!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(returnedNode.stmt())){
+					if(!(t.getStart() instanceof GeneratedState)){
 						Val byPassing = t.getStart().fact().fact();
-						if(byPassing.equals(returnedNode.fact()))
-							return;
+//						if(byPassing.equals(returnedNode.fact()))
+//							return;
+//						if(flowSolver.getFieldAutomaton().containsTransitions(t.getStart()))
+//							return;
 						byPassingFieldAutomaton.registerDFSListener(t.getStart(), new ImportToSolver(flowSolver));
 						flowSolver.setFieldContextReachable(new Node<Statement,Val>(returnedNode.stmt(),byPassing));
 						flowSolver.addNormalCallFlow(returnedNode,  new Node<Statement,Val>(returnedNode.stmt(),byPassing));
@@ -645,15 +656,18 @@ public abstract class Boomerang<W extends Weight> {
 			if(introducesLoop(baseAllocation, flowAllocation)){
 				return;
 			}
+			System.out.println(this);
 			assert !flowSolver.getSuccsOf(getStmt()).isEmpty();
-			baseSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(getStmt().getMethod()) {
+			baseSolver.registerStatementFieldTransitionListener(new StatementBasedFieldTransitionListener<W>(getStmt()) {
+			
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-					if(aliasedVariableAtStmt.fact().stmt().equals(getStmt()) && !(aliasedVariableAtStmt instanceof GeneratedState)){
+					if(!(aliasedVariableAtStmt instanceof GeneratedState)){
 						Val alias = aliasedVariableAtStmt.fact().fact();
 						final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut = baseSolver.getFieldAutomaton();
 						aut.registerDFSListener(t.getTarget(),new ImportToSolver(flowSolver));
+						
 						for(final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())){
 							Node<Statement, Val> aliasedVarAtSucc = new Node<Statement,Val>(succOfWrite,alias);
 							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
@@ -757,6 +771,14 @@ public abstract class Boomerang<W extends Weight> {
 
 
 	public void debugOutput() {
+		for (Query q : queryToSolvers.keySet()) {
+			System.out.println(q +" Nodes: " + queryToSolvers.getOrCreate(q).getReachedStates().size());
+			System.out.println(q +" Field Aut: " + queryToSolvers.getOrCreate(q).getFieldAutomaton().getTransitions().size());
+			System.out.println(q +" Field Aut (failed Additions): " + queryToSolvers.getOrCreate(q).getFieldAutomaton().failedAdditions);
+			System.out.println(q +" Field Aut (failed Direct Additions): " + queryToSolvers.getOrCreate(q).getFieldAutomaton().failedDirectAdditions);
+			System.out.println(q +" Call Aut: " + queryToSolvers.getOrCreate(q).getCallAutomaton().getTransitions().size());
+			System.out.println(q +" Call Aut (failed Additions): " + queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
+		}
 		if(!DEBUG)
 			return;
 		Debugger<W> debugger = createDebugger();

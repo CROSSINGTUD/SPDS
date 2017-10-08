@@ -6,6 +6,7 @@ public class Node<Stmt, Fact> implements State{
 
 	final protected Stmt stmt;
 	final protected Fact variable;
+	private int hashCode;
 
 	public Node(Stmt stmt, Fact variable) {
 		this.stmt = stmt;
@@ -22,10 +23,13 @@ public class Node<Stmt, Fact> implements State{
 
 	@Override
 	public int hashCode() {
+		if(hashCode != 0)
+			return hashCode;
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
 		result = prime * result + ((variable == null) ? 0 : variable.hashCode());
+		hashCode = result;
 		return result;
 	}
 

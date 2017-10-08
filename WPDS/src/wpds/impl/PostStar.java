@@ -220,6 +220,10 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 		@Override
 		public void onOutTransitionAdded(final Transition<N, D> t, W weight) {
 			if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
+				if(rule.getCallSite() instanceof Wildcard){
+					if(t.getLabel().equals(fa.epsilon()))
+						return;
+				}
 				final D p = rule.getS2();
 				final N gammaPrime = rule.getL2();
 				final D irState = fa.createState(p, gammaPrime);
@@ -239,10 +243,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 						}
 					});
 				}
-				if(rule.getCallSite() instanceof Wildcard  && t.getLabel().equals(fa.epsilon()))
-					return;
-				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
 				
+				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
 				update(new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W)weight.extendWith(rule.getWeight()));
 				fa.registerListener(new UpdateEpsilonOnPushListener(new Transition<N, D>(irState, transitionLabel, t.getTarget()), rule.getL1()));
 			}

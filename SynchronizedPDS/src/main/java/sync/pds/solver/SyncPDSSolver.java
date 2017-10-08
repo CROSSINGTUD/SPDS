@@ -74,7 +74,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		public W getOne() {
 			return getFieldWeights().getOne();
 		}
-
+		public boolean addWeightForTransition(Transition<Field,INode<Node<Stmt,Fact>>> trans, W weight) {
+			if(preventFieldTransitionAdd(trans,weight))
+				return false;
+			return super.addWeightForTransition(trans, weight);
+		};
 		@Override
 		public boolean isGeneratedState(INode<Node<Stmt, Fact>> d) {
 			return d instanceof GeneratedState;
@@ -114,18 +118,20 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	};
 
-	private final Map<WitnessNode<Stmt,Fact,Field>,WitnessNode<Stmt,Fact,Field>> reachedStates = Maps.newHashMap();
+	private final Set<WitnessNode<Stmt,Fact,Field>> reachedStates = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> callingContextReachable = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> fieldContextReachable = Sets.newHashSet();
 	private final Set<SyncPDSUpdateListener<Stmt, Fact, Field>> updateListeners = Sets.newHashSet();
 
-	private Multimap<WitnessNode<Stmt, Fact, Field>, Transition<Stmt, INode<Fact>>> queuedCallWitness = HashMultimap.create();
-	private Multimap<WitnessNode<Stmt, Fact, Field>, Transition<Field, INode<Node<Stmt,Fact>>>> queuedFieldWitness = HashMultimap.create();
 
 	public SyncPDSSolver(){
 		this(Maps.<Transition<Stmt, INode<Fact>>, WeightedPAutomaton<Stmt, INode<Fact>, W>>newHashMap(),Maps.<Transition<Field, INode<Node<Stmt, Fact>>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>>newHashMap());
 	}
 	
+	protected boolean preventFieldTransitionAdd(Transition<Field, INode<Node<Stmt, Fact>>> trans, W weight) {
+		return false;
+	}
+
 	protected boolean preventCallTransitionAdd(Transition<Stmt, INode<Fact>> trans, W weight) {
 		return false;
 	}
@@ -197,8 +203,8 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 					added = processNormal(curr, succ);
 				}
 				if (added){
-					maintainWitness(curr,succ);
-					worklist.add(new WitnessNode<Stmt,Fact,Field>(succ.stmt(),succ.fact()));
+					if(!reachedStates.contains(new WitnessNode<Stmt,Fact,Field>(succ.stmt(),succ.fact())))
+						worklist.add(new WitnessNode<Stmt,Fact,Field>(succ.stmt(),succ.fact()));
 				}
 			} else if (s instanceof PopNode) {
 				PopNode<Fact> popNode = (PopNode<Fact>) s;
@@ -208,21 +214,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		await();
 	}
 
-	private void maintainWitness(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
-		WitnessNode<Stmt, Fact, Field> currWit = new WitnessNode<Stmt,Fact,Field>(curr.stmt(),curr.fact());
-		WitnessNode<Stmt, Fact, Field> succWit = new WitnessNode<Stmt,Fact,Field>(succ.stmt(),succ.fact());
-
-		Collection<Transition<Stmt, INode<Fact>>> callWitnesses = queuedCallWitness.get(currWit);
-		queuedCallWitness.putAll(succWit, callWitnesses);
-		Collection<Transition<Field, INode<Node<Stmt,Fact>>>> fieldWitnesses = queuedFieldWitness.get(currWit);
-		queuedFieldWitness.putAll(succWit, fieldWitnesses);
-	}
 
 	private boolean addReachableState(WitnessNode<Stmt,Fact,Field> curr) {
-		if (reachedStates.containsKey(curr))
+		if (reachedStates.contains(curr))
 			return false;
 //		System.out.println(this.getClass() + " " + curr);
-		reachedStates.put(curr,curr);
+		reachedStates.add(curr);
 		for (SyncPDSUpdateListener<Stmt, Fact, Field> l : Lists.newLinkedList(updateListeners)) {
 			l.onReachableNodeAdded(curr);
 		}
@@ -396,7 +393,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		if (!updateListeners.add(listener)) {
 			return;
 		}
-		for (WitnessNode<Stmt, Fact, Field> reachableNode : Lists.newArrayList(reachedStates.keySet())) {
+		for (WitnessNode<Stmt, Fact, Field> reachableNode : Lists.newArrayList(reachedStates)) {
 			listener.onReachableNodeAdded(reachableNode);
 		}
 	}
@@ -445,7 +442,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	public Set<Node<Stmt, Fact>> getReachedStates() {
 		Set<Node<Stmt,Fact>> res = Sets.newHashSet();
-		for(WitnessNode<Stmt, Fact, Field> s : reachedStates.keySet())
+		for(WitnessNode<Stmt, Fact, Field> s : reachedStates)
 			res.add(s.asNode());
 		return res;
 	}
