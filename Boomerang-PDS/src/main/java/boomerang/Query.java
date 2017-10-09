@@ -47,6 +47,8 @@ public abstract class Query{
 	}
 
 	public Type getType() {
+		if(delegate == null || delegate.fact().value()==null)
+			return null;
 		return delegate.fact().value().getType();
 	}
 }

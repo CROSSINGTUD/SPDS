@@ -222,7 +222,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	protected abstract boolean killFlow(SootMethod method, Stmt curr, Val value);
 	
 	public boolean valueUsedInStatement(Stmt u, Val value) {
-		if(value.equals(Val.statics()))
+		if(value.equals(Val.statics()) || value.equals(Val.zero()))
 			return true;
 		if(u instanceof AssignStmt && isBackward()){
 			AssignStmt assignStmt = (AssignStmt) u;
@@ -276,7 +276,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			}
 		}
 		for(Unit returnSite : icfg.getSuccsOf(callSite)){
-			if(icfg.getCalleesOfCallAt(callSite).isEmpty()){
+			if(icfg.getCalleesOfCallAt(callSite).isEmpty() || value.equals(Val.zero())){
 				out.addAll(computeNormalFlow(caller, (Stmt)callSite, value,(Stmt) returnSite));
 			}
 			out.addAll(getEmptyCalleeFlow(caller, (Stmt)callSite, value,(Stmt) returnSite));

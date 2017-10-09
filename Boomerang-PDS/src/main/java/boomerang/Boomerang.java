@@ -2,6 +2,7 @@ package boomerang;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -30,6 +31,7 @@ import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import boomerang.solver.StatementBasedFieldTransitionListener;
 import heros.utilities.DefaultValueMap;
+import soot.PatchingChain;
 import soot.RefType;
 import soot.SootMethod;
 import soot.Unit;
@@ -47,6 +49,7 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.WitnessNode;
+import sync.pds.solver.SyncPDSSolver.PDSSystem;
 import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
@@ -197,6 +200,12 @@ public abstract class Boomerang<W extends Weight> {
 		});
 	}
 
+	protected void supplyZeroSeed(SootMethod m) {
+		for(Unit u : icfg().getStartPointsOf(m)){
+			forwardSolve(new ForwardQuery(new Statement((Stmt) u, m), Val.zero()));
+		}
+	}
+
 	protected static Val getAllocatedVal(Statement s) {
 		AssignStmt optUnit = (AssignStmt) s.getUnit().get();
 		return new Val(optUnit.getLeftOp(), s.getMethod());
@@ -217,7 +226,7 @@ public abstract class Boomerang<W extends Weight> {
 	}
 
 	protected AbstractBoomerangSolver<W> createForwardSolver(final ForwardQuery sourceQuery) {
-		ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(icfg(), sourceQuery,genField, forwardCallSummaries, forwardFieldSummaries){
+		final ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(icfg(), sourceQuery,genField, forwardCallSummaries, forwardFieldSummaries){
 			@Override
 			protected void onReturnFromCall(Statement callSite, Statement returnSite, final Node<Statement, Val> returnedNode, final boolean unbalanced) {
 				Boomerang.this.onForwardReturnFromCall(callSite, returnedNode, sourceQuery);
@@ -269,7 +278,93 @@ public abstract class Boomerang<W extends Weight> {
 				callSitePoi.returnsFromCall(sourceQuery, new Node<Statement,Val>(returnSite, returnedFact.fact()));
 			}
 		});
+		
+		if(sourceQuery.asNode().fact().equals(Val.zero())){
+			
+			solver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
+
+				@Override
+				public void onWeightAdded(Transition<Statement, INode<Val>> t, W w) {
+					if(isAllocationSite(t.getLabel())){
+						final ForwardQuery forwardQuery = new ForwardQuery(t.getLabel(), getAllocatedVal(t.getLabel()));
+						forwardSolve(forwardQuery);
+						solver.getCallAutomaton().registerListener(new ImportReachable(t.getTarget(), solver, forwardQuery));
+						solver.getCallAutomaton().registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
+
+							@Override
+							public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact,
+									W returnedWeight) {
+								for (Statement succ :queryToSolvers.getOrCreate(forwardQuery).getSuccsOf(forwardQuery.asNode().stmt())) {
+									Node<Statement, Val> curr = new Node<Statement, Val>(succ, forwardQuery.asNode().fact());
+									queryToSolvers.getOrCreate(forwardQuery).processPush(curr, returnSite, curr, PDSSystem.CALLS);
+								}
+							}
+						});
+					}
+				}
+			});
+		}
 		return solver;
+	}
+	
+	private class ImportReachable extends WPAStateListener<Statement, INode<Val>, W>{
+
+		private ForwardQuery importTo;
+		private AbstractBoomerangSolver<W> zeroSolver;
+
+		public ImportReachable(INode<Val> target, AbstractBoomerangSolver<W> zeroSolver,ForwardQuery forwardQuery) {
+			super(target);
+			this.importTo = forwardQuery;
+			this.zeroSolver = zeroSolver;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Statement, INode<Val>> t, W w) {
+//			if(t.getStart() instanceof GeneratedState){
+				for (Statement succ :queryToSolvers.getOrCreate(importTo).getSuccsOf(importTo.asNode().stmt())) {
+					Node<Statement, Val> curr = new Node<Statement, Val>(succ, importTo.asNode().fact());
+					queryToSolvers.getOrCreate(importTo).processPush(curr, t.getLabel(), curr, PDSSystem.CALLS);
+				}
+//			}
+			zeroSolver.getCallAutomaton().registerListener(new ImportReachable(t.getTarget(), zeroSolver,importTo));
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<Statement, INode<Val>> t, W w) {
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((importTo == null) ? 0 : importTo.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ImportReachable other = (ImportReachable) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (importTo == null) {
+				if (other.importTo != null)
+					return false;
+			} else if (!importTo.equals(other.importTo))
+				return false;
+			return true;
+		}
+
+		private Boomerang getOuterType() {
+			return Boomerang.this;
+		}
+		
 	}
 	
 	protected void onForwardReturnFromCall(Statement callSite, Node<Statement, Val> returnedNode, Query sourceQuery){
@@ -316,7 +411,16 @@ public abstract class Boomerang<W extends Weight> {
 		return false;
 	}
 
-
+	public static boolean isAllocationSite(Statement s) {
+		Optional<Stmt> optUnit = s.getUnit();
+		if (optUnit.isPresent()) {
+			Stmt stmt = optUnit.get();
+			if (stmt instanceof AssignStmt && isAllocationVal(((AssignStmt) stmt).getRightOp())) {
+				return true;
+			}
+		}
+		return false;
+	}
 	public static boolean isArrayStore(Statement s) {
 		Optional<Stmt> optUnit = s.getUnit();
 		if (optUnit.isPresent()) {
@@ -840,6 +944,21 @@ public abstract class Boomerang<W extends Weight> {
 			System.out.println(q +" Field Aut (failed Direct Additions): " + queryToSolvers.getOrCreate(q).getFieldAutomaton().failedDirectAdditions);
 			System.out.println(q +" Call Aut: " + queryToSolvers.getOrCreate(q).getCallAutomaton().getTransitions().size());
 			System.out.println(q +" Call Aut (failed Additions): " + queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
+			
+			Collection<Transition<Field, INode<Node<Statement, Val>>>> trans = queryToSolvers.getOrCreate(q).getFieldAutomaton().getTransitions();
+			Map<Integer, Set<Transition<Field, INode<Node<Statement, Val>>>>> map = new HashMap<>();
+			// Insert all elements into buckets based on their hash value
+			for(Transition<Field, INode<Node<Statement, Val>>> t : trans){
+			    if (!map.containsKey(t.hashCode()))
+			        map.put(t.hashCode(), new HashSet<Transition<Field, INode<Node<Statement, Val>>>>());
+			    map.get(t.hashCode()).add(t);
+			}
+			// Sum up the number of values in each bucket, subtract the number of buckets, so only duplicate values are counted
+			int collisions = -map.size();
+			for(Entry<Integer, Set<Transition<Field, INode<Node<Statement, Val>>>>> e : map.entrySet()){
+				collisions += e.getValue().size();
+			}
+			System.out.printf("Number of collisions: %d\n", collisions);
 		}
 		if(!DEBUG)
 			return;

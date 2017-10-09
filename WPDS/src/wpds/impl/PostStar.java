@@ -306,10 +306,9 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 		public void onInTransitionAdded(Transition<N, D> t, W weight) {
 			if (t.getString().equals(fa.epsilon())) {
 				W newWeight = fa.getWeightFor(transition);
-				if(update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
-						(W) newWeight.extendWith(weight))){
-					fa.reconnectPush(callSite, transition.getLabel(),t.getStart(), newWeight, weight);
-				}
+				update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
+						(W) newWeight.extendWith(weight));
+				fa.reconnectPush(callSite, transition.getLabel(),t.getStart(), newWeight, weight);
 			}	
 		}
 

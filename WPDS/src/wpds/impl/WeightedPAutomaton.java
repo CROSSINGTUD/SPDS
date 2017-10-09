@@ -200,7 +200,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		states.add(trans.getTarget());
 		states.add(trans.getStart());
 		boolean added = transitions.add(trans);
-		W oldWeight = transitionToWeights.get(trans);
+		W oldWeight = (added ? null : transitionToWeights.get(trans));
 		W newWeight = (W) (oldWeight == null ? weight : oldWeight.combineWith(weight));
 		if (!newWeight.equals(oldWeight)) {
 			transitionToWeights.put(trans, newWeight);
@@ -221,6 +221,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public W getWeightFor(Transition<N, D> trans) {
+		if(!transitions.contains(trans))
+			throw new RuntimeException("IllegalState");
 		return transitionToWeights.get(trans);
 	}
 
@@ -239,6 +241,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		if (!stateListeners.put(l.getState(), l)) {
 			return;
 		}
+
 		for (Transition<N, D> t : Lists.newArrayList(transitionsOutOf.get(l.getState()))) {
 			l.onOutTransitionAdded(t,transitionToWeights.get(t));
 		}
