@@ -47,7 +47,8 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 	private static final boolean DEBUG = true;
 	private LinkedList<WitnessNode<Stmt,Fact,Field>> worklist = Lists.newLinkedList();
-
+	private static final boolean FieldSensitive = true;
+	private static final boolean ContextSensitive = true;
 	protected final WeightedPushdownSystem<Stmt, INode<Fact>, W> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, W>();
 	protected final WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W> fieldPDS = new WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W>();
 	protected final Map<Transition<Stmt, INode<Fact>>, W> nodesToWeights = Maps.newHashMap(); 
@@ -320,29 +321,45 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		Object location = popNode.location();
 		if (system.equals(PDSSystem.FIELDS)) {
 			NodeWithLocation<Stmt, Fact, Field> node = (NodeWithLocation) location;
-			fieldPDS.addRule(new PopRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr), node.location(),
-					asFieldFact(node.fact()), getFieldWeights().pop(curr, node.location())));
+			if(FieldSensitive){
+				fieldPDS.addRule(new PopRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr), node.location(),
+						asFieldFact(node.fact()), getFieldWeights().pop(curr, node.location())));
+			} else{
+				addNormalFieldFlow(curr, node.fact());
+			}
 			addNormalCallFlow(curr, node.fact());
 		} else if (system.equals(PDSSystem.CALLS)) {
-			callingPDS.addRule(new PopRule<Stmt, INode<Fact>, W>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location),getCallWeights().pop(curr, curr.stmt())));
 			//TODO we have an unchecked cast here, branch directly based on PopNode type?
 			CallPopNode<Fact, Stmt> callPopNode = (CallPopNode) popNode;
 			Stmt returnSite = callPopNode.getReturnSite();
 			addNormalFieldFlow(curr, new Node<Stmt,Fact>(returnSite,(Fact)location));
+			if(ContextSensitive){
+				callingPDS.addRule(new PopRule<Stmt, INode<Fact>, W>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location),getCallWeights().pop(curr, curr.stmt())));
+			}else{
+				addNormalCallFlow(curr, new Node<Stmt,Fact>(returnSite,(Fact)location));
+			}
 		}
 	}
 
 	public boolean processPush(Node<Stmt,Fact> curr, Location location, Node<Stmt, Fact> succ, PDSSystem system) {
 		boolean added = false;
 		if (system.equals(PDSSystem.FIELDS)) {
+			if(FieldSensitive){
 			added |= fieldPDS.addRule(new PushRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
 					fieldWildCard(), asFieldFact(succ),  (Field) location,fieldWildCard(), getFieldWeights().push(curr,succ,(Field)location)));
+			} else{
+				added |= addNormalFieldFlow(curr, succ);
+			}
 			added |= addNormalCallFlow(curr, succ);
 
 		} else if (system.equals(PDSSystem.CALLS)) {
 			added |= addNormalFieldFlow(curr, succ);
-			added |= callingPDS.addRule(new PushRule<Stmt, INode<Fact>, W>(wrap(curr.fact()), curr.stmt(),
-					wrap(succ.fact()), succ.stmt(), (Stmt) location, getCallWeights().push(curr, succ, (Stmt) location)));
+			if(ContextSensitive){
+				added |= callingPDS.addRule(new PushRule<Stmt, INode<Fact>, W>(wrap(curr.fact()), curr.stmt(),
+						wrap(succ.fact()), succ.stmt(), (Stmt) location, getCallWeights().push(curr, succ, (Stmt) location)));
+			} else{
+				added |= addNormalCallFlow(curr, succ);
+			}
 
 		}
 		return added;
