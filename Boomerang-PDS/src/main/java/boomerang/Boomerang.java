@@ -58,6 +58,7 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.ForwardDFSVisitor;
 import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
+import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang<W extends Weight> {
@@ -360,12 +361,17 @@ public abstract class Boomerang<W extends Weight> {
 			fieldWritePoi.addFlowAllocation(sourceQuery);
 		}
 		if (node.fact().equals(fieldWritePoi.getBaseVar())) {
-			queryToSolvers.getOrCreate(sourceQuery).addFieldAutomatonListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
+			queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement,Val>>, W>(new SingleNode<Node<Statement,Val>>(node.asNode())) {
+
 				@Override
-				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
-					if(!(t.getStart() instanceof GeneratedState) && t.getStart().fact().equals(node.asNode()) && t.getTarget().fact().equals(sourceQuery.asNode())){
+				public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+					if(t.getTarget().fact().equals(sourceQuery.asNode())){
 						fieldWritePoi.addBaseAllocation(sourceQuery);
 					}
+				}
+
+				@Override
+				public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
 				}
 			});
 		}
@@ -656,7 +662,6 @@ public abstract class Boomerang<W extends Weight> {
 			if(introducesLoop(baseAllocation, flowAllocation)){
 				return;
 			}
-			System.out.println(this);
 			assert !flowSolver.getSuccsOf(getStmt()).isEmpty();
 			baseSolver.registerStatementFieldTransitionListener(new StatementBasedFieldTransitionListener<W>(getStmt()) {
 			

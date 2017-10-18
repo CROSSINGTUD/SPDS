@@ -232,7 +232,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 				} else{
 					if(!fa.isGeneratedState(irState))
 						throw new RuntimeException("State must be generated");
-					final WeightedPAutomaton<N, D, W> summary = getOrCreateSummaryAutomaton(new Transition<N, D>(p, gammaPrime, irState), rule.getWeight());
+					final WeightedPAutomaton<N, D, W> summary = getOrCreateSummaryAutomaton(new Transition<N, D>(p, gammaPrime, irState), fa.getOne());
 					summary.registerListener(new WPAUpdateListener<N, D, W>() {
 
 						@Override
