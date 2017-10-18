@@ -28,6 +28,7 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
+import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.INode;
@@ -35,6 +36,7 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
+import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -206,15 +208,21 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	}
 	
 	@Override
-	public void addUnbalancedFlow(SootMethod m) {
-		for (Statement succ : getSuccsOf(query.asNode().stmt())) {
-			Node<Statement, Val> curr = new Node<Statement, Val>(succ, query.asNode().fact());
+	public void addUnbalancedFlow(SootMethod m, Collection<? extends State> outFlow) {
 			for(Unit callSite : icfg.getCallersOf(m)){
 				for(Unit returnSite : icfg.getSuccsOf(callSite)){
-					this.processPush(curr, new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), curr, PDSSystem.CALLS);
+//					Node<Statement, Val> unbalanced = new Node<Statement, Val>(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), Val.zero());
+					this.getCallAutomaton().addTransition(new Transition<Statement,INode<Val>>(new AllocNode<Val>(query.asNode().fact()),new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)),new AllocNode<Val>(query.asNode().fact())));
+					for(State s : outFlow){
+						if(s instanceof CallPopNode){
+							CallPopNode<Val,Statement> popNode = (CallPopNode) s;
+							setCallingContextReachable(new Node<Statement,Val>(popNode.getReturnSite(), popNode.location()));
+						}
+					}
+//					added |= addNormalFieldFlow(curr, succ);
+//					this.processPush(unbalanced, new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), query.asNode(), PDSSystem.CALLS);
 				}
 			}
-		}
 	}
 	
 }

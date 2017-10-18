@@ -48,6 +48,7 @@ import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.AllocNode;
+import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -56,14 +57,12 @@ import wpds.impl.ConnectPushListener;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
-import wpds.interfaces.ForwardDFSVisitor;
-import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang<W extends Weight> {
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	private Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
 		@Override
@@ -191,7 +190,7 @@ public abstract class Boomerang<W extends Weight> {
 			public void onWeightAdded(Transition<Statement, INode<Val>> t, W w) {
 				if(t.getTarget() instanceof GeneratedState){
 					GeneratedState<Val,Statement> generatedState = (GeneratedState) t.getTarget();
-					queryToSolvers.getOrCreate(forwardQuery).addUnbalancedFlow(generatedState.location().getMethod());
+//					queryToSolvers.getOrCreate(forwardQuery).addUnbalancedFlow(generatedState.location().getMethod(), Collections.empty);
 				}
 			}
 		});
@@ -487,7 +486,6 @@ public abstract class Boomerang<W extends Weight> {
 		}
 	}
 
-	
 	private boolean isMultiArrayAllocation(Stmt stmt) {
 		return (stmt instanceof AssignStmt) && ((AssignStmt)stmt).getRightOp() instanceof NewMultiArrayExpr;
 	}
