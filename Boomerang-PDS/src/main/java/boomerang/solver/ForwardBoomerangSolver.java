@@ -69,7 +69,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			}
 			i++;
 		}
-		if(fact.equals(Val.statics()) || (fact.equals(Val.zero())))
+		if(fact.equals(Val.statics()))
 			return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
 					fact, returnSite, PDSSystem.CALLS));
 		return Collections.emptySet();
@@ -79,7 +79,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 
 	@Override
 	protected boolean killFlow(SootMethod m, Stmt curr, Val value) {
-		if(value.equals(Val.statics()) || value.equals(Val.zero()))
+		if(value.equals(Val.statics()))
 			return false;
 		if (!m.getActiveBody().getLocals().contains(value.value()))
 			return true;
@@ -207,14 +207,14 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	
 	@Override
 	public void addUnbalancedFlow(SootMethod m) {
-//		for (Statement succ : getSuccsOf(query.asNode().stmt())) {
-//			Node<Statement, Val> curr = new Node<Statement, Val>(succ, query.asNode().fact());
-//			for(Unit callSite : icfg.getCallersOf(m)){
-//				for(Unit returnSite : icfg.getSuccsOf(callSite)){
-//					this.processPush(curr, new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), curr, PDSSystem.CALLS);
-//				}
-//			}
-//		}
+		for (Statement succ : getSuccsOf(query.asNode().stmt())) {
+			Node<Statement, Val> curr = new Node<Statement, Val>(succ, query.asNode().fact());
+			for(Unit callSite : icfg.getCallersOf(m)){
+				for(Unit returnSite : icfg.getSuccsOf(callSite)){
+					this.processPush(curr, new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), curr, PDSSystem.CALLS);
+				}
+			}
+		}
 	}
 	
 }

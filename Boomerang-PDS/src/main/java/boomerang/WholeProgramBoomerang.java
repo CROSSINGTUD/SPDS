@@ -17,17 +17,16 @@ import wpds.impl.Weight;
 
 public abstract class WholeProgramBoomerang<W extends Weight> extends Boomerang<W>{
 	public void wholeProgramAnalysis(){
-		List<SootMethod> entryPoint = Scene.v().getEntryPoints();
-		for(SootMethod m : entryPoint){
-			supplyZeroSeed(m);
+		List<SootMethod> reachableMethods = Scene.v().getEntryPoints();
+		for(SootMethod m : reachableMethods){
+			analyzeMethod(m);
 		}
-		
-//		registerReachableMethodListener(new ReachableMethodListener<W>() {
-//			@Override
-//			public void reachable(AbstractBoomerangSolver<W> solver, SootMethod m) {
-//				analyzeMethod(m);
-//			}
-//		});
+		registerReachableMethodListener(new ReachableMethodListener<W>() {
+			@Override
+			public void reachable(AbstractBoomerangSolver<W> solver, SootMethod m) {
+				analyzeMethod(m);
+			}
+		});
 	}
 	
 	public void analyzeMethod(SootMethod method) {
