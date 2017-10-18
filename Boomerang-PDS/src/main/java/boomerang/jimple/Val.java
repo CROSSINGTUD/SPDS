@@ -10,6 +10,7 @@ public class Val {
 	private final String rep; 
 
 	private static Val staticInstance;
+	private static Val zeroInstance;
 	
 	public Val(Value v, SootMethod m){
 		if(v == null)
@@ -86,6 +87,12 @@ public class Val {
 		if(staticInstance == null)
 			staticInstance = new Val("STATIC");
 		return staticInstance;
+	}
+
+	public static Val zero() {
+		if(zeroInstance == null)
+			zeroInstance = new Val("ZERO");
+		return zeroInstance;
 	}
 
 }

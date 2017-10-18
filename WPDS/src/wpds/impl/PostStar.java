@@ -4,6 +4,7 @@ import java.util.Map;
 
 import com.google.common.collect.Maps;
 
+import wpds.interfaces.Empty;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.ReachabilityListener;
@@ -42,12 +43,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 			} else if(rule instanceof PushRule){
 				aut.registerListener(new HandlePushListener((PushRule)rule));
 			} else if(rule instanceof PopRule){
-				aut.registerDFSEpsilonListener(rule.getS1(),new ReachabilityListener<N, D>() {
-					@Override
-					public void reachable(Transition<N, D> t) {
-						aut.registerListener(new HandlePopListener(t.getStart(), rule.getL1(),rule.getS2(),rule.getWeight()));
-					}
-				});
+				aut.registerListener(new HandlePopListener(aut, rule.getS1(), rule.getL1(),rule.getS2(),rule.getWeight()));
 			}
 		}
 
@@ -81,8 +77,10 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 		private N popLabel;
 		private D targetState;
 		private W ruleWeight;
-		public HandlePopListener(D state, N popLabel, D targetState, W ruleWeight) {
+		private WeightedPAutomaton<N, D, W> aut;
+		public HandlePopListener(WeightedPAutomaton<N, D, W> aut, D state, N popLabel, D targetState, W ruleWeight) {
 			super(state);
+			this.aut = aut;
 			this.targetState = targetState;
 			this.popLabel = popLabel;
 			this.ruleWeight = ruleWeight;
@@ -91,9 +89,15 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 
 		@Override
 		public void onOutTransitionAdded(final Transition<N, D> t, W weight) {
-			if(t.getLabel().equals(popLabel)){
+			if(t.getLabel().equals(popLabel) && fa.isGeneratedState(t.getTarget())){
+				if(popLabel instanceof Empty){
+					throw new RuntimeException("IllegalState");
+				}
 				final W newWeight = (W) weight.extendWith(ruleWeight);
 				update(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget()), newWeight);
+			}
+			if(t.getLabel() instanceof Empty){
+				aut.registerListener(new HandlePopListener(aut, t.getTarget(), popLabel, targetState, ruleWeight));
 			}
 		}
 

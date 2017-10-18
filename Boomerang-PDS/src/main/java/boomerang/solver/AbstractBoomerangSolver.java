@@ -331,7 +331,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	public void addCallAutomatonListener(WPAUpdateListener<Statement, INode<Val>, W> listener) {
 		callAutomaton.registerListener(listener);
 	}
-	public void addUnbalancedFlow(SootMethod m) {
+	public void addUnbalancedFlow(SootMethod m, Collection<? extends State> outFlow) {
 	}
 	public boolean addFieldFlow(Node<Statement, Val> fieldFlow) {
 		return fieldFlows.add(fieldFlow);
@@ -384,7 +384,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		if(unbalancedMethod.contains(method)){
 			SootMethod caller = icfg.getMethodOf(callSite);
 			unbalancedMethod.add(caller);
-			addUnbalancedFlow(method);
+			addUnbalancedFlow(method, outFlow);
 		}
 	}
 	
