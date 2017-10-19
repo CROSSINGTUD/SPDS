@@ -19,6 +19,7 @@ import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.ForwardQuery;
 import boomerang.Query;
+import boomerang.UnbalancedForwardQuery;
 import boomerang.WholeProgramBoomerang;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
@@ -129,10 +130,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					if (allocatesObjectOfInterest(expr)) {
 						Local local = (Local) as.getLeftOp();
 						Statement statement = new Statement(unit, icfg.getMethodOf(unit));
+						ForwardQuery forwardQuery = new ForwardQuery(statement, new Val(local,icfg.getMethodOf(unit)));
 						if(callSite != null){
-							statement = new Statement(callSite, icfg.getMethodOf(callSite));
+							return Optional.<Query>of(new UnbalancedForwardQuery(new Statement(callSite, icfg.getMethodOf(callSite)), forwardQuery));
 						}
-						return Optional.<Query>of(new ForwardQuery(statement, new Val(local,icfg.getMethodOf(unit))));
+						return Optional.<Query>of(forwardQuery);
 					}
 				}
 			}

@@ -73,6 +73,67 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 		}
 
 	}
+	
+	private class UpdateTransitivePopListener extends WPAStateListener<N, D, W> {
+
+		private D targetState;
+		private Transition<N, D> transition;
+
+		public UpdateTransitivePopListener(Transition<N, D> transition) {
+			super(transition.getTarget());
+			this.transition = transition;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<N, D> t, W w) {
+			W newWeight = fa.getWeightFor(transition);
+			update(new Transition<N, D>(transition.getStart(), t.getLabel(), t.getTarget()),
+					(W) newWeight.extendWith(w));
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<N, D> t, W w) {
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((targetState == null) ? 0 : targetState.hashCode());
+			result = prime * result + ((transition == null) ? 0 : transition.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			UpdateTransitivePopListener other = (UpdateTransitivePopListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (targetState == null) {
+				if (other.targetState != null)
+					return false;
+			} else if (!targetState.equals(other.targetState))
+				return false;
+			if (transition == null) {
+				if (other.transition != null)
+					return false;
+			} else if (!transition.equals(other.transition))
+				return false;
+			return true;
+		}
+
+		private PostStar getOuterType() {
+			return PostStar.this;
+		}
+	}
+	
 	private class HandlePopListener extends WPAStateListener<N, D, W> {
 		private N popLabel;
 		private D targetState;
@@ -95,18 +156,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 				}
 				final W newWeight = (W) weight.extendWith(ruleWeight);
 				update(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget()), newWeight);
-				fa.registerListener(new WPAStateListener<N,D,W>(t.getTarget()){
-
-					@Override
-					public void onOutTransitionAdded(Transition<N, D> t, W w) {
-						W currWeight = fa.getWeightFor(t);
-						update(new Transition<N, D>(targetState, t.getLabel(), t.getTarget()), (W) currWeight.extendWith(newWeight));
-					}
-
-					@Override
-					public void onInTransitionAdded(Transition<N, D> t, W w) {
-						
-					}});
+				
+				fa.registerListener(new UpdateTransitivePopListener(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget())));
 			}
 			if(t.getLabel() instanceof Empty){
 				aut.registerListener(new HandlePopListener(aut, t.getTarget(), popLabel, targetState, ruleWeight));
