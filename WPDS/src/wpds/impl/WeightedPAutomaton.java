@@ -64,14 +64,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		return Lists.newArrayList(transitions);
 	}
 	
-	public Collection<Transition<N, D>> getTransitionsOutOf(D state) {
-		return Lists.newArrayList(transitionsOutOf.get(state));
-	}
-
-	public Collection<Transition<N, D>> getTransitionsInto(D state) {
-		return Lists.newArrayList(transitionsInto.get(state));
-	}
-
 	public boolean addTransition(Transition<N, D> trans) {
 		boolean addWeightForTransition = addWeightForTransition(trans, getOne());
 		if(!addWeightForTransition){
