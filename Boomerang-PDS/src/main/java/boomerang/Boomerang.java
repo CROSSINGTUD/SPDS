@@ -249,7 +249,7 @@ public abstract class Boomerang<W extends Weight> {
 				
 				for(Unit callSite : icfg.getCallersOf(m)){
 					for(Unit returnSite : icfg.getSuccsOf(callSite)){
-						ForwardQuery forwardQuery = new UnbalancedForwardQuery(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), (query instanceof UnbalancedForwardQuery ? ((UnbalancedForwardQuery)query).sourceQuery():query));
+						final ForwardQuery forwardQuery = new UnbalancedForwardQuery(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), (query instanceof UnbalancedForwardQuery ? ((UnbalancedForwardQuery)query).sourceQuery():query));
 						final AbstractBoomerangSolver<W> unbalancedSolver = queryToSolvers.getOrCreate(forwardQuery);
 						
 						for(State s : outFlow){
@@ -259,10 +259,14 @@ public abstract class Boomerang<W extends Weight> {
 								unbalancedSolver.solve(forwardQuery.asNode(), returnedVal);
 //								unbalancedSolver.setCallingContextReachable(returnedVal);
 								queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerDFSListener(new SingleNode<Node<Statement,Val>>(returnedVal), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
-									
+						
 									@Override
 									public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
-										unbalancedSolver.getFieldAutomaton().addTransition(t);
+										if(t.getTarget().equals(new AllocNode<Node<Statement,Val>>(sourceQuery.asNode()))){
+											unbalancedSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(t.getStart(),t.getString(),new AllocNode<Node<Statement,Val>>(forwardQuery.asNode())));
+										} else{
+											unbalancedSolver.getFieldAutomaton().addTransition(t);
+										}
 									}
 								});
 								final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(new Statement((Stmt) callSite, icfg.getMethodOf(callSite))));
@@ -397,8 +401,6 @@ public abstract class Boomerang<W extends Weight> {
 			fieldWritePoi.addFlowAllocation(sourceQuery);
 		}
 		if (node.fact().equals(fieldWritePoi.getBaseVar())) {
-			if(fieldWritePoi.toString().contains("intermedi"))
-				System.err.println(fieldWritePoi + " "+sourceQuery);
 			queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new TriggerBaseAllocationAtFieldWrite(new SingleNode<Node<Statement,Val>>(node.asNode()),fieldWritePoi,sourceQuery));
 		}
 	}
