@@ -95,6 +95,18 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 				}
 				final W newWeight = (W) weight.extendWith(ruleWeight);
 				update(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget()), newWeight);
+				fa.registerListener(new WPAStateListener<N,D,W>(t.getTarget()){
+
+					@Override
+					public void onOutTransitionAdded(Transition<N, D> t, W w) {
+						W currWeight = fa.getWeightFor(t);
+						update(new Transition<N, D>(targetState, t.getLabel(), t.getTarget()), (W) currWeight.extendWith(newWeight));
+					}
+
+					@Override
+					public void onInTransitionAdded(Transition<N, D> t, W w) {
+						
+					}});
 			}
 			if(t.getLabel() instanceof Empty){
 				aut.registerListener(new HandlePopListener(aut, t.getTarget(), popLabel, targetState, ruleWeight));
@@ -306,10 +318,9 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 		public void onInTransitionAdded(Transition<N, D> t, W weight) {
 			if (t.getString().equals(fa.epsilon())) {
 				W newWeight = fa.getWeightFor(transition);
-				if(update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
-						(W) newWeight.extendWith(weight))){
-					fa.reconnectPush(callSite, transition.getLabel(),t.getStart(), newWeight, weight);
-				}
+				update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
+						(W) newWeight.extendWith(weight));
+				fa.reconnectPush(callSite, transition.getLabel(),t.getStart(), newWeight, weight);
 			}	
 		}
 

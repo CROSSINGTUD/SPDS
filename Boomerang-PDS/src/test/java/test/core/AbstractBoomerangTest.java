@@ -121,14 +121,18 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 
 	private class AllocationSiteOf implements ValueOfInterestInUnit {
-		public Optional<? extends Query> test(Stmt unit) {
+		public Optional<? extends Query> test(Stmt unit, Stmt callSite) {
 			if (unit instanceof AssignStmt) {
 				AssignStmt as = (AssignStmt) unit;
 				if (as.getLeftOp() instanceof Local && as.getRightOp() instanceof NewExpr) {
 					NewExpr expr = ((NewExpr) as.getRightOp());
 					if (allocatesObjectOfInterest(expr)) {
 						Local local = (Local) as.getLeftOp();
-						return Optional.<Query>of(new ForwardQuery(new Statement(unit, icfg.getMethodOf(unit)), new Val(local,icfg.getMethodOf(unit))));
+						Statement statement = new Statement(unit, icfg.getMethodOf(unit));
+						if(callSite != null){
+							statement = new Statement(callSite, icfg.getMethodOf(callSite));
+						}
+						return Optional.<Query>of(new ForwardQuery(statement, new Val(local,icfg.getMethodOf(unit))));
 					}
 				}
 			}
@@ -145,7 +149,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		}
 
 		@Override
-		public Optional<? extends Query> test(Stmt unit) {
+		public Optional<? extends Query> test(Stmt unit, Stmt callSite) {
 			Stmt stmt = (Stmt) unit;
 			if (!(stmt.containsInvokeExpr()))
 				return Optional.empty();
@@ -320,24 +324,24 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private Collection<? extends Query> extractQuery(ValueOfInterestInUnit predicate) {
 		Set<Query> queries = Sets.newHashSet();
-		extractQuery(sootTestMethod, predicate, queries, new HashSet<SootMethod>());
+		extractQuery(sootTestMethod, predicate, queries, null, new HashSet<SootMethod>());
 		return queries;
 	}
 
-	private void extractQuery(SootMethod m, ValueOfInterestInUnit predicate, Collection<Query> queries,
+	private void extractQuery(SootMethod m, ValueOfInterestInUnit predicate, Collection<Query> queries, Stmt callSite,
 			Set<SootMethod> visited) {
 		if (!m.hasActiveBody() || visited.contains(m))
 			return;
 		visited.add(m);
 		Body activeBody = m.getActiveBody();
-		for (Unit callSite : icfg.getCallsFromWithin(m)) {
-			for (SootMethod callee : icfg.getCalleesOfCallAt(callSite))
-				extractQuery(callee, predicate, queries, visited);
+		for (Unit cs : icfg.getCallsFromWithin(m)) {
+			for (SootMethod callee : icfg.getCalleesOfCallAt(cs))
+				extractQuery(callee, predicate, queries,(callSite == null ? (Stmt) cs : callSite), visited);
 		}
 		for (Unit u : activeBody.getUnits()) {
 			if (!(u instanceof Stmt))
 				continue;
-			Optional<? extends Query> optOfVal = predicate.test((Stmt) u);
+			Optional<? extends Query> optOfVal = predicate.test((Stmt) u,  callSite);
 			if (optOfVal.isPresent()) {
 				queries.add(optOfVal.get());
 			}
@@ -383,6 +387,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	}
 
 	private interface ValueOfInterestInUnit {
-		Optional<? extends Query> test(Stmt unit);
+		Optional<? extends Query> test(Stmt unit, Stmt callSite);
 	}
 }
