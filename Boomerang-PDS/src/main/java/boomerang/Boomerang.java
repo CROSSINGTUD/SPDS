@@ -603,22 +603,6 @@ public abstract class Boomerang<W extends Weight> {
 		public ForwardCallSitePOI(Statement callSite){
 			this.callSite = callSite;
 		}
-		private Multimap<Query,Query> importGraph = HashMultimap.create();
-
-		private boolean introducesLoop(ForwardQuery baseAllocation, Query flowAllocation) {
-			importGraph.put(baseAllocation, flowAllocation);
-			LinkedList<Query> worklist = Lists.newLinkedList();
-			worklist.add(flowAllocation);
-			Set<Query> visited = Sets.newHashSet();
-			while(!worklist.isEmpty()){
-				Query curr = worklist.pop();
-				if(visited.add(curr)){
-					worklist.addAll(importGraph.get(curr));
-				}
-			}
-			return visited.contains(baseAllocation);
-		}
-
 		public void returnsFromCall(final Query flowQuery, Node<Statement, Val> returnedNode) {
 			if(returnsFromCall.add(new QueryWithVal(flowQuery, returnedNode))){
 				for(final ForwardQuery byPassing : Lists.newArrayList(byPassingAllocations)){
@@ -630,9 +614,6 @@ public abstract class Boomerang<W extends Weight> {
 		private void eachPair(final ForwardQuery byPassing, final Query flowQuery, final Node<Statement,Val> returnedNode){
 			if(byPassing.equals(flowQuery)) 
 				return;
-			if(introducesLoop(byPassing, flowQuery))
-				return;
-//			System.out.println("CallSite" + callSite + flowQuery + byPassing + returnedNode);
 			queryToSolvers.getOrCreate(flowQuery).registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(unwrapUnbalanced(byPassing).stmt().getMethod()) {
 				private boolean triggered = false;
 				@Override
