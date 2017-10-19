@@ -264,9 +264,10 @@ public abstract class Boomerang<W extends Weight> {
 									public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
 										if(t.getTarget().equals(new AllocNode<Node<Statement,Val>>(sourceQuery.asNode()))){
 											unbalancedSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(t.getStart(),t.getString(),new AllocNode<Node<Statement,Val>>(forwardQuery.asNode())));
-										} else{
-											unbalancedSolver.getFieldAutomaton().addTransition(t);
 										}
+
+											unbalancedSolver.getFieldAutomaton().addTransition(t);
+										
 									}
 								});
 								final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(new Statement((Stmt) callSite, icfg.getMethodOf(callSite))));
