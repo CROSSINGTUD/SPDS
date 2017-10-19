@@ -48,6 +48,7 @@ import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.AllocNode;
+import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -56,12 +57,13 @@ import wpds.impl.ConnectPushListener;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
+import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang<W extends Weight> {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	private Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
 		@Override
@@ -241,6 +243,31 @@ public abstract class Boomerang<W extends Weight> {
 			@Override
 			protected WeightFunctions<Statement, Val, Field, W> getFieldWeights() {
 				return Boomerang.this.getForwardFieldWeights();
+			}
+			
+			@Override
+			public void addUnbalancedFlow(SootMethod m, Collection<? extends State> outFlow) {
+				for(Unit callSite : icfg.getCallersOf(m)){
+					for(Unit returnSite : icfg.getSuccsOf(callSite)){
+						ForwardQuery forwardQuery = new ForwardQuery(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), query.asNode().fact());
+						final AbstractBoomerangSolver<W> unbalancedSolver = queryToSolvers.getOrCreate(forwardQuery);
+						for(State s : outFlow){
+							if(s instanceof CallPopNode){
+								CallPopNode<Val,Statement> callPopNode = (CallPopNode<Val,Statement>) s;
+								Node<Statement, Val> returnedVal = new Node<Statement,Val>(new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), callPopNode.location());
+								unbalancedSolver.solve(forwardQuery.asNode(), returnedVal);
+//								unbalancedSolver.setCallingContextReachable(returnedVal);
+								queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerDFSListener(new SingleNode<Node<Statement,Val>>(returnedVal), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
+									
+									@Override
+									public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
+										unbalancedSolver.getFieldAutomaton().addTransition(t);
+									}
+								});
+							}
+						}
+					}
+				}
 			}
 		};
 		

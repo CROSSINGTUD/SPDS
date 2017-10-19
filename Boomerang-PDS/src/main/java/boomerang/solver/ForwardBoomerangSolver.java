@@ -207,22 +207,5 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		return Collections.emptySet();
 	}
 	
-	@Override
-	public void addUnbalancedFlow(SootMethod m, Collection<? extends State> outFlow) {
-			for(Unit callSite : icfg.getCallersOf(m)){
-				for(Unit returnSite : icfg.getSuccsOf(callSite)){
-//					Node<Statement, Val> unbalanced = new Node<Statement, Val>(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), Val.zero());
-					this.getCallAutomaton().addTransition(new Transition<Statement,INode<Val>>(new AllocNode<Val>(query.asNode().fact()),new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)),new AllocNode<Val>(query.asNode().fact())));
-					for(State s : outFlow){
-						if(s instanceof CallPopNode){
-							CallPopNode<Val,Statement> popNode = (CallPopNode) s;
-							setCallingContextReachable(new Node<Statement,Val>(popNode.getReturnSite(), popNode.location()));
-						}
-					}
-//					added |= addNormalFieldFlow(curr, succ);
-//					this.processPush(unbalanced, new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), query.asNode(), PDSSystem.CALLS);
-				}
-			}
-	}
 	
 }
