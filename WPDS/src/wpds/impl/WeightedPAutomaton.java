@@ -52,7 +52,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private Set<ReturnSiteWithWeights> connectedPushes = Sets.newHashSet();
 	private Set<ConnectPushListener<N,D,W>> conntectedPushListeners = Sets.newHashSet();
 	private Set<UnbalancedPopListener<N,D,W>> unbalancedPopListeners = Sets.newHashSet();
-	private Set<Transition<N,D>> unbalancedPops = Sets.newHashSet();
+	private Map<Transition<N,D>,W> unbalancedPops = Maps.newHashMap();
 	private Map<Transition<N, D>, W> transitionsToFinalWeights = Maps.newHashMap();
 	private ForwardDFSVisitor<N, D, W> dfsVisitor;
 	private ForwardDFSVisitor<N, D, W> dfsEpsVisitor;
@@ -119,7 +119,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 				if (!labels.isEmpty()) {
 					s += "\t\"" + wrapIfInitialOrFinalState(source) + "\"";
 					s += " -> \"" + wrapIfInitialOrFinalState(target) + "\"";
-					s += "[label=\"" + Joiner.on(",").join(labels) + "\"];\n";
+					s += "[label=\"" + Joiner.on("\\n").join(labels) + "\"];\n";
 				}
 			}
 		}
@@ -380,16 +380,21 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 	public void registerUnbalancedPopListener(UnbalancedPopListener<N, D, W> l){
 		if(unbalancedPopListeners.add(l)){
-			for(Transition<N, D> e : Lists.newArrayList(unbalancedPops)){
-				l.unbalancedPop(e.getStart(), e.getLabel(), e.getTarget());
+			for(Entry<Transition<N, D>, W> e : Lists.newArrayList(unbalancedPops.entrySet())){
+				Transition<N, D> t = e.getKey();
+				l.unbalancedPop(t.getStart(), t.getLabel(), t.getTarget(), e.getValue());
 			}
 		}
 	}
 
-	public void unbalancedPop(D targetState, N popLabel, D target) {
-		if(unbalancedPops.add(new Transition<N,D>(targetState,popLabel,target))){
+	public void unbalancedPop(D targetState, N popLabel, D target, W weight) {
+		Transition<N, D> t = new Transition<N,D>(targetState,popLabel,target);
+		W oldVal = unbalancedPops.get(t);
+		W newVal = (oldVal == null ? weight : (W) oldVal.combineWith(weight));
+		if(!newVal.equals(oldVal)){
+			unbalancedPops.put(t, newVal);
 			for(UnbalancedPopListener<N, D, W> l : Lists.newArrayList(unbalancedPopListeners)){
-				l.unbalancedPop(targetState,popLabel,target);
+				l.unbalancedPop(targetState,popLabel,target, newVal);
 			}
 		}
 	}
@@ -468,15 +473,15 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		
 		
 	}
-	public void computeValues(Transition<N, D> callTrans) {
-		transitionsToFinalWeights.put(callTrans, this.getOne());
+	public void computeValues(Transition<N, D> callTrans, W weight) {
+		transitionsToFinalWeights.put(callTrans, weight);
 		registerListener(new ValueComputationListener(callTrans));
 	}
 
 	public Map<Transition<N,D>, W> getTransitionsToFinalWeights() {
 		return transitionsToFinalWeights;
 	}
-
+	
 	private class ValueComputationListener extends WPAStateListener<N, D, W>{
 		private Transition<N,D> trans;
 
@@ -494,10 +499,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			W weightAtTarget = transitionsToFinalWeights.get(trans);
 			W extendWith = (W) weightAtTarget.extendWith(w);
 			W weightAtSource = transitionsToFinalWeights.get(t);
-			
 			W newVal = (weightAtSource == null ? extendWith : (W) weightAtSource.combineWith(extendWith));
+			if(t.toString().contains("FileMustBeClosedTest.escape return") && t.toString().contains("variable IDEALTestingFramework.mustBeInErrorState i"))
+				System.err.println(t + "  " + newVal + " was "+ weightAtSource +"   " + weightAtTarget + w);
 			if(!newVal.equals(weightAtSource)){
-//				System.out.println(t + "  " + newVal + " was "+ weightAtSource +"   " + weightAtTarget + w);
 				transitionsToFinalWeights.put(t, newVal);
 				registerListener(new ValueComputationListener(t));
 			}

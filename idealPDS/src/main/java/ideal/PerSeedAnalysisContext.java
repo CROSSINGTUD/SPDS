@@ -8,6 +8,7 @@ import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.ForwardQuery;
 import boomerang.Query;
+import boomerang.UnbalancedForwardQuery;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -85,13 +86,6 @@ public class PerSeedAnalysisContext<W extends Weight> {
 			protected WeightFunctions<Statement, Val, Statement, W> getBackwardCallWeights() {
 				return new OneWeightFunctions<Statement, Val, Statement, W>(zero, one);
 			}
-
-			@Override
-			protected void onForwardReturnFromCall(final Statement callSite, final Node<Statement, Val> returnedNode,
-					Query sourceQuery) {
-				super.onForwardReturnFromCall(callSite, returnedNode, sourceQuery);
-				
-			}
 		};
 		idealWeightFunctions.setPhase(phase);
 		final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = boomerang.getSolvers().getOrCreate(seed).getCallAutomaton();
@@ -128,15 +122,15 @@ public class PerSeedAnalysisContext<W extends Weight> {
 				}
 			}
 		});
-		System.out.println(boomerang.getSolvers().get(seed).getCallAutomaton().toDotString());
 		System.out.println("");
 		if(phase.equals(Phases.ValueFlow)){
-		System.out.println("NODES TO WEIGHT");
-		System.out.println(Joiner.on("\n").join(boomerang.getSolvers().get(seed).getTransitionsToFinalWeights().entrySet()));
-		System.out.println("END NODES TO WEIGHT");
-		}
-		if(phase.equals(Phases.ValueFlow)){
-			analysisDefinition.resultReporter().onSeedFinished(seed, boomerang.getSolvers().getOrCreate(seed));
+			for(Query q : boomerang.getSolvers().keySet()){
+				if(q instanceof ForwardQuery && q.equals(seed) ||  (q instanceof UnbalancedForwardQuery && ((UnbalancedForwardQuery) q).sourceQuery().equals(seed))){
+
+					System.out.println(boomerang.getSolvers().get(q).getCallAutomaton().toDotString());
+					analysisDefinition.resultReporter().onSeedFinished((ForwardQuery)q, boomerang.getSolvers().getOrCreate(q));
+				}
+			}
 //			boomerang.debugOutput();
 		}
 	}

@@ -259,7 +259,7 @@ public abstract class Boomerang<W extends Weight> {
 		solver.getCallAutomaton().registerUnbalancedPopListener(new UnbalancedPopListener<Statement, INode<Val>, W>() {
 
 			@Override
-			public void unbalancedPop(INode<Val> returningFact, Statement exitStmt, INode<Val> targetFact) {
+			public void unbalancedPop(INode<Val> returningFact, Statement exitStmt, INode<Val> targetFact, W weight) {
 				if(!Boomerang.this.icfg().getEndPointsOf(sourceQuery.asNode().stmt().getMethod()).contains(exitStmt.getUnit().get())){
 					return;
 				}
@@ -269,7 +269,7 @@ public abstract class Boomerang<W extends Weight> {
 						final AbstractBoomerangSolver<W> unbalancedSolver = queryToSolvers.getOrCreate(forwardQuery);
 						
 							Node<Statement, Val> returnedVal = new Node<Statement,Val>(new Statement((Stmt) returnSite, Boomerang.this.icfg().getMethodOf(returnSite)), returningFact.fact());
-							unbalancedSolver.solve(forwardQuery.asNode(), returnedVal);
+							unbalancedSolver.solve(forwardQuery.asNode(), returnedVal, weight);
 							queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerDFSListener(new SingleNode<Node<Statement,Val>>(returnedVal), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 					
 								@Override

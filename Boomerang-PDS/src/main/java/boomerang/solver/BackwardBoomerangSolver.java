@@ -203,16 +203,4 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 			out.add(new Node<Statement, Val>(new Statement(succ, method), fact));
 		return out;
 	}
-
-	@Override
-	public void addUnbalancedFlow(SootMethod m, Collection<? extends State> outFlow) {
-		for (Statement succ : getSuccsOf(query.asNode().stmt())) {
-			Node<Statement, Val> curr = new Node<Statement, Val>(succ, query.asNode().fact());
-			for(Unit callSite : icfg.getCallersOf(m)){
-				for(Unit returnSite : icfg.getSuccsOf(callSite)){
-					this.processPush(curr, new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), curr, PDSSystem.CALLS);
-				}
-			}
-		}
-	}
 }

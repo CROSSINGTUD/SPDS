@@ -158,7 +158,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 					
 					fa.registerListener(new UpdateTransitivePopListener(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget())));
 				} else{
-					fa.unbalancedPop(targetState,popLabel,t.getTarget());
+					fa.unbalancedPop(targetState,popLabel,t.getTarget(), weight);
 				}
 			}
 			if(t.getLabel() instanceof Empty){

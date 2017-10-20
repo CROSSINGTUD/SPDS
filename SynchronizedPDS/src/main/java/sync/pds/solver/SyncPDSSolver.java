@@ -2,7 +2,6 @@ package sync.pds.solver;
 
 import java.util.AbstractMap;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
@@ -25,18 +24,15 @@ import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
-import sync.pds.weights.SetDomain;
 import wpds.impl.NormalRule;
 import wpds.impl.PopRule;
 import wpds.impl.PushRule;
-import wpds.impl.Rule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
-import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends Location, W extends Weight> {
@@ -45,7 +41,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		FIELDS, CALLS
 	}
 
-	private static final boolean DEBUG = true;
 	private LinkedList<WitnessNode<Stmt,Fact,Field>> worklist = Lists.newLinkedList();
 	private static final boolean FieldSensitive = true;
 	private static final boolean ContextSensitive = true;
@@ -160,18 +155,21 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 	
 	public void solve(Node<Stmt,Fact> source, Node<Stmt, Fact> curr) {
+		solve(source,curr,callAutomaton.getOne());
+	}
+	
+	public void solve(Node<Stmt,Fact> source, Node<Stmt, Fact> curr,  W weight) {
 		Transition<Field, INode<Node<Stmt,Fact>>> fieldTrans = new Transition<Field, INode<Node<Stmt,Fact>>>(asFieldFact(curr), emptyField(), asFieldFactSource(source));
 		fieldAutomaton.addTransition(fieldTrans);
 		Transition<Stmt, INode<Fact>> callTrans = new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(source.fact()));
 		callAutomaton
 				.addTransition(callTrans);
 		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
-		computeValues(callTrans);
+		computeValues(callTrans, weight);
 		processNode(startNode);
 	}
-
-	private void computeValues(Transition<Stmt, INode<Fact>> callTrans) {
-		callAutomaton.computeValues(callTrans);
+	private void computeValues(Transition<Stmt, INode<Fact>> callTrans, W weight) {
+		callAutomaton.computeValues(callTrans,weight);
 	}
 
 	

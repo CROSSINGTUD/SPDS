@@ -331,8 +331,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	public void addCallAutomatonListener(WPAUpdateListener<Statement, INode<Val>, W> listener) {
 		callAutomaton.registerListener(listener);
 	}
-	public void addUnbalancedFlow(SootMethod m, Collection<? extends State> outFlow) {
-	}
 	public boolean addFieldFlow(Node<Statement, Val> fieldFlow) {
 		return fieldFlows.add(fieldFlow);
 	}
@@ -379,14 +377,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		}
 	}
 
-	protected void handleUnbalancedFlow(Unit callSite, Unit returnSite, SootMethod method, Stmt curr, Val value,
-			Collection<? extends State> outFlow) {
-		if(unbalancedMethod.contains(method)){
-			SootMethod caller = icfg.getMethodOf(callSite);
-			unbalancedMethod.add(caller);
-			addUnbalancedFlow(method, outFlow);
-		}
-	}
 	
 	protected void addReachableMethod(SootMethod m){
 		if(reachableMethods.add(m)){
@@ -421,7 +411,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	protected void onReturnFlow(final Unit callSite, Unit returnSite, final SootMethod method, final Stmt returnStmt, final Val value,
 			Collection<? extends State> outFlow) {
-		handleUnbalancedFlow(callSite, returnSite, method, returnStmt, value, outFlow);
 		for(State r : outFlow){
 			if(r instanceof CallPopNode){
 				final CallPopNode<Val,Statement> callPopNode = (CallPopNode) r;

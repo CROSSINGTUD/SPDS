@@ -20,6 +20,7 @@ import sync.pds.solver.nodes.Node;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.State;
 import wpds.impl.Transition;
+import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
@@ -33,12 +34,40 @@ public class TestingResultReporter implements ResultReporter<TransitionFunction>
 	}
 
 	@Override
-	public void onSeedFinished(ForwardQuery seed, AbstractBoomerangSolver<TransitionFunction> seedSolver) {
+	public void onSeedFinished(ForwardQuery seed,final AbstractBoomerangSolver<TransitionFunction> seedSolver) {
 		for(final Entry<Unit, Assertion> e : stmtToResults.entries()){
 			if(e.getValue() instanceof ComparableResult){
 				final ComparableResult<TransitionFunction> expectedResults = (ComparableResult) e.getValue();
 //				System.out.println(Joiner.on("\n").join(seedSolver.getNodesToWeights().entrySet()));
+				WeightedPAutomaton<Statement, INode<Val>, TransitionFunction> aut = new WeightedPAutomaton<Statement, INode<Val>, TransitionFunction>() {
+					@Override
+					public INode<Val> createState(INode<Val> d, Statement loc) {
+						return null;
+					}
+
+					@Override
+					public boolean isGeneratedState(INode<Val> d) {
+						return false;
+					}
+
+					@Override
+					public Statement epsilon() {
+						return seedSolver.getCallAutomaton().epsilon();
+					}
+
+					@Override
+					public TransitionFunction getZero() {
+						return seedSolver.getCallAutomaton().getZero();
+					}
+
+					@Override
+					public TransitionFunction getOne() {
+						return seedSolver.getCallAutomaton().getOne();
+					}
+				};
+				
 				for(Entry<Transition<Statement, INode<Val>>, TransitionFunction> s : seedSolver.getTransitionsToFinalWeights().entrySet()){
+					aut.addWeightForTransition(s.getKey(), s.getValue());
 					Transition<Statement, INode<Val>> node = s.getKey();
 					if((node.getStart() instanceof GeneratedState)  || !node.getStart().fact().equals(expectedResults.getVal()))
 						continue;
@@ -47,8 +76,9 @@ public class TestingResultReporter implements ResultReporter<TransitionFunction>
 							expectedResults.computedResults(s.getValue());
 						}
 					}
-					
 				}
+				System.out.println("FINAL WEIGHT AUTOMATON");
+				System.out.println(aut.toDotString());
 			}
 		}
 	}
