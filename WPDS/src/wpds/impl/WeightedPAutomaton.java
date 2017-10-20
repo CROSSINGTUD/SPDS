@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -124,23 +125,40 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		}
 		s += "}\n";
 		s += "Transitions: " + transitions.size() +"\n";
-		// s += "Initial State:" + initialState + "\n";
-		// s += "Final States:" + finalState + "\n";
-		// s = "digraph {\n";
-		//
-		// for(Transition<N, D> tran : sequentialTransitions){
-		// s += "\t\"" + wrapIfInitialOrFinalState(tran.getStart()) + "\"";
-		// s += " -> \"" + wrapIfInitialOrFinalState(tran.getTarget()) + "\"";
-		// s += "[label=\"" + tran.getLabel() + "\"];\n";
-		// }
-		// s += "}\n";
 		for(WeightedPAutomaton<N, D, W> nested : nestedAutomatons){
 			s += "NESTED -> \n";
 			s += nested.toDotString();
 		}
 		return s;
 	}
-
+	public String toLabelGroupedDotString() {
+		HashBasedTable<D, N, Collection<D>> groupedByTargetAndLabel = HashBasedTable.create();
+		for(Transition<N, D> t : transitions){
+			Collection<D> collection = groupedByTargetAndLabel.get(t.getTarget(), t.getLabel());
+			if(collection == null)
+				collection = Sets.newHashSet();
+			collection.add(t.getStart());
+			groupedByTargetAndLabel.put(t.getTarget(), t.getLabel(), collection);
+		}
+		String s = "digraph {\n";
+		for (D target : groupedByTargetAndLabel.rowKeySet()) {
+			for (N label : groupedByTargetAndLabel.columnKeySet()){
+				Collection<D> source = groupedByTargetAndLabel.get(target, label);
+				if(source == null)
+					continue;
+				s += "\t\"" +Joiner.on("\\n").join(source)+ "\"";
+				s += " -> \"" + wrapIfInitialOrFinalState(target) + "\"";
+				s += "[label=\"" + label + "\"];\n";
+			}
+		}
+		s += "}\n";
+		s += "Transitions: " + transitions.size() +"\n";
+		for(WeightedPAutomaton<N, D, W> nested : nestedAutomatons){
+			s += "NESTED -> \n";
+			s += nested.toDotString();
+		}
+		return s;
+	}
 	public abstract N epsilon();
 
 	public IRegEx<N> extractLanguage(D from) {

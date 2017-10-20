@@ -295,12 +295,12 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		for(final Query q : solvers.keySet()){
 			if(!(q instanceof ForwardQuery))
 				throw new RuntimeException("Unexpected solver found, whole program analysis should only trigger forward queries");
-			for(Query queryForCallSite : queryForCallSites){
-			solvers.get(q).synchedEmptyStackReachable(queryForCallSite.asNode(), new EmptyStackWitnessListener<Statement, Val>() {
-				@Override
-				public void witnessFound(Node<Statement, Val> targetFact) {
-					results.add(q.asNode());
-				}
+			for(final Query queryForCallSite : queryForCallSites){
+				solvers.get(q).synchedEmptyStackReachable(queryForCallSite.asNode(), new EmptyStackWitnessListener<Statement, Val>() {
+					@Override
+					public void witnessFound(Node<Statement, Val> targetFact) {
+						results.add(q.asNode());
+					}
 				});
 			}
 			for(Node<Statement, Val> s : solvers.get(q).getReachedStates()){

@@ -48,7 +48,6 @@ import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.AllocNode;
-import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -64,7 +63,7 @@ import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang<W extends Weight> {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	private Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
 		@Override
@@ -91,13 +90,10 @@ public abstract class Boomerang<W extends Weight> {
 		}
 	};
 	private BackwardsInterproceduralCFG bwicfg;
-	private Collection<ForwardQuery> forwardQueries = Sets.newHashSet();
-	private Collection<BackwardQuery> backwardQueries = Sets.newHashSet();
 	private EmptyCalleeFlow forwardEmptyCalleeFlow = new ForwardEmptyCalleeFlow(); 
 	private EmptyCalleeFlow backwardEmptyCalleeFlow = new BackwardEmptyCalleeFlow(); 
 	private Collection<RefType> allocatedTypes = Sets.newHashSet();
 	private Collection<ReachableMethodListener<W>> reachableMethodsListener = Sets.newHashSet();
-	private Multimap<BackwardQuery, ForwardQuery> backwardToForwardQueries = HashMultimap.create();
 	private Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, W>> backwardCallSummaries = Maps.newHashMap();
 	private Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> backwardFieldSummaries = Maps.newHashMap();
 	private Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, W>> forwardCallSummaries = Maps.newHashMap();
@@ -184,18 +180,7 @@ public abstract class Boomerang<W extends Weight> {
 	}
 
 	private void forwardSolve(final ForwardQuery forwardQuery, BackwardQuery backwardQuery) {
-		backwardToForwardQueries.put(backwardQuery, forwardQuery);
 		forwardSolve(forwardQuery);
-		queryToSolvers.getOrCreate(backwardQuery).addCallAutomatonListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
-
-			@Override
-			public void onWeightAdded(Transition<Statement, INode<Val>> t, W w) {
-				if(t.getTarget() instanceof GeneratedState){
-					GeneratedState<Val,Statement> generatedState = (GeneratedState) t.getTarget();
-//					queryToSolvers.getOrCreate(forwardQuery).addUnbalancedFlow(generatedState.location().getMethod(), Collections.empty);
-				}
-			}
-		});
 	}
 
 	protected static Val getAllocatedVal(Statement s) {
@@ -285,7 +270,6 @@ public abstract class Boomerang<W extends Weight> {
 						
 							Node<Statement, Val> returnedVal = new Node<Statement,Val>(new Statement((Stmt) returnSite, Boomerang.this.icfg().getMethodOf(returnSite)), returningFact.fact());
 							unbalancedSolver.solve(forwardQuery.asNode(), returnedVal);
-//								unbalancedSolver.setCallingContextReachable(returnedVal);
 							queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerDFSListener(new SingleNode<Node<Statement,Val>>(returnedVal), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 					
 								@Override
@@ -303,16 +287,6 @@ public abstract class Boomerang<W extends Weight> {
 				}
 			}
 		});
-//		if(sourceQuery.toString().contains("dQuery: (ReadTwiceSameFieldTest.readFieldTwice $r0.<init>(this),$r0)")){
-//			solver.getFieldAutomaton().registerListener(new WPAUpdateListener(){
-//
-//				@Override
-//				public void onWeightAdded(Transition t, Weight w) {
-//					if(t.toString().contains("ReadTwiceSameFieldTest.readFieldTwice this.queryFor(alias),alias")){
-//						System.err.println(2);
-//					}
-//				}});
-//		}
 		return solver;
 	}
 	
@@ -383,10 +357,7 @@ public abstract class Boomerang<W extends Weight> {
 
 
 	protected void backwardHandleFieldRead(final WitnessNode<Statement, Val, Field> node, FieldReadPOI fieldRead, final BackwardQuery sourceQuery) {	
-		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(),
-				fieldRead.getBaseVar());
 		if (node.fact().equals(fieldRead.getStoredVar())) {
-//			backwardSolve(backwardQuery);
 			fieldRead.addFlowAllocation(sourceQuery);
 		}
 	}
@@ -508,7 +479,6 @@ public abstract class Boomerang<W extends Weight> {
 	
 
 	protected void backwardSolve(BackwardQuery query) {
-		backwardQueries.add(query);
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
 		AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
 		if (unit.isPresent()) {
@@ -521,7 +491,6 @@ public abstract class Boomerang<W extends Weight> {
 
 	private void forwardSolve(ForwardQuery query) {
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
-		forwardQueries.add(query);
 		AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
 		if (unit.isPresent()) {
 			for (Unit succ : icfg().getSuccsOf(unit.get())) {
@@ -619,26 +588,16 @@ public abstract class Boomerang<W extends Weight> {
 			}
 		}
 
+		
 		private void eachPair(final ForwardQuery byPassing, final Query flowQuery, final Node<Statement,Val> returnedNode){
 			if(byPassing.equals(flowQuery)) 
 				return;
-			queryToSolvers.getOrCreate(flowQuery).registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(unwrapUnbalanced(byPassing).stmt().getMethod()) {
-				private boolean triggered = false;
+			queryToSolvers.getOrCreate(byPassing).registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
+
 				@Override
-				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-					if(!triggered && isAllocationNode(t.getStart().fact(),byPassing)){
-						triggered = true;
-
-//						System.out.println("Before IMport " + callSite + flowQuery + byPassing + returnedNode);
-						queryToSolvers.getOrCreate(byPassing).registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
-
-							@Override
-							public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
-								if(reachableNode.asNode().equals(returnedNode)){
-									importFlowsAtReturnSite(byPassing, flowQuery, returnedNode);
-								}
-							}
-						});
+				public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+					if(reachableNode.asNode().equals(returnedNode)){
+						queryToSolvers.getOrCreate(byPassing).getFieldAutomaton().registerListener(new IntersectOutTransition(byPassing,flowQuery,returnedNode));
 					}
 				}
 			});
@@ -647,18 +606,11 @@ public abstract class Boomerang<W extends Weight> {
 			final AbstractBoomerangSolver<W> byPassingSolver = queryToSolvers.get(byPassingAllocation);
 		    final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> byPassingFieldAutomaton = byPassingSolver.getFieldAutomaton();
 		    final AbstractBoomerangSolver<W> flowSolver = queryToSolvers.getOrCreate(flowQuery);
-//		    System.out.println(flowQuery + " " + callSite + " -> "+ returnedNode.stmt() + byPassingAllocation);
 		    byPassingSolver.registerStatementFieldTransitionListener(new StatementBasedFieldTransitionListener<W>(returnedNode.stmt()) {
 		    	@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					if(!(t.getStart() instanceof GeneratedState)){
 						Val byPassing = t.getStart().fact().fact();
-//						if(byPassing.equals(returnedNode.fact()))
-//							return;
-//						if(flowSolver.getFieldAutomaton().containsTransitions(t.getStart()))
-//							return;
-
-//						System.out.println("IMport " + callSite + flowQuery + byPassing);
 						byPassingFieldAutomaton.registerListener(new ImportToSolver(t.getStart(), byPassingSolver, flowSolver));
 						flowSolver.setFieldContextReachable(new Node<Statement,Val>(returnedNode.stmt(),byPassing));
 						flowSolver.addNormalCallFlow(returnedNode,  new Node<Statement,Val>(returnedNode.stmt(),byPassing));
@@ -672,6 +624,139 @@ public abstract class Boomerang<W extends Weight> {
 				for(QueryWithVal e : Lists.newArrayList(returnsFromCall)){
 					eachPair(byPassingAllocation, e.flowSourceQuery,e.returningFact);
 				}
+			}
+		}
+		
+		private class IntersectOutTransition extends WPAStateListener<Field, INode<Node<Statement,Val>>, W>{
+
+			private ForwardQuery byPassing;
+			private Query flowQuery;
+			private Node<Statement, Val> returnedNode;
+
+			public IntersectOutTransition(ForwardQuery byPassing, Query flowQuery, Node<Statement, Val> returnedNode) {
+				super(new SingleNode<Node<Statement,Val>>(returnedNode));
+				this.byPassing = byPassing;
+				this.flowQuery = flowQuery;
+				this.returnedNode = returnedNode;
+			}
+
+			@Override
+			public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> outerT, W w) {
+				if(!outerT.getLabel().equals(Field.epsilon()))
+					queryToSolvers.getOrCreate(flowQuery).getFieldAutomaton().registerListener(new HasOutTransition(byPassing, flowQuery, returnedNode, outerT));
+			}
+
+			@Override
+			public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+			}
+
+			@Override
+			public int hashCode() {
+				final int prime = 31;
+				int result = super.hashCode();
+				result = prime * result + ((byPassing == null) ? 0 : byPassing.hashCode());
+				result = prime * result + ((flowQuery == null) ? 0 : flowQuery.hashCode());
+				result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
+				return result;
+			}
+
+			@Override
+			public boolean equals(Object obj) {
+				if (this == obj)
+					return true;
+				if (!super.equals(obj))
+					return false;
+				if (getClass() != obj.getClass())
+					return false;
+				IntersectOutTransition other = (IntersectOutTransition) obj;
+				if (byPassing == null) {
+					if (other.byPassing != null)
+						return false;
+				} else if (!byPassing.equals(other.byPassing))
+					return false;
+				if (flowQuery == null) {
+					if (other.flowQuery != null)
+						return false;
+				} else if (!flowQuery.equals(other.flowQuery))
+					return false;
+				if (returnedNode == null) {
+					if (other.returnedNode != null)
+						return false;
+				} else if (!returnedNode.equals(other.returnedNode))
+					return false;
+				return true;
+			}
+
+			
+			
+		}
+		private class HasOutTransition extends WPAStateListener<Field, INode<Node<Statement,Val>>, W>{
+
+			private final ForwardQuery byPassing;
+			private final Query flowQuery;
+			private final Node<Statement, Val> returnedNode;
+			private final Transition<Field, INode<Node<Statement, Val>>> outerT;
+
+			public HasOutTransition(ForwardQuery byPassing, Query flowQuery, Node<Statement, Val> returnedNode, Transition<Field,INode<Node<Statement,Val>>> outerT) {
+				super(new SingleNode<Node<Statement,Val>>(returnedNode));
+				this.byPassing = byPassing;
+				this.flowQuery = flowQuery;
+				this.returnedNode = returnedNode;
+				this.outerT = outerT;
+			}
+
+			@Override
+			public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+				if(t.equals(outerT) ){
+					importFlowsAtReturnSite(byPassing, flowQuery, returnedNode);
+				}
+			}
+
+			@Override
+			public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+			}
+
+			@Override
+			public int hashCode() {
+				final int prime = 31;
+				int result = super.hashCode();
+				result = prime * result + ((byPassing == null) ? 0 : byPassing.hashCode());
+				result = prime * result + ((flowQuery == null) ? 0 : flowQuery.hashCode());
+				result = prime * result + ((outerT == null) ? 0 : outerT.hashCode());
+				result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
+				return result;
+			}
+
+			@Override
+			public boolean equals(Object obj) {
+				if (this == obj)
+					return true;
+				if (!super.equals(obj))
+					return false;
+				if (getClass() != obj.getClass())
+					return false;
+				HasOutTransition other = (HasOutTransition) obj;
+				if (byPassing == null) {
+					if (other.byPassing != null)
+						return false;
+				} else if (!byPassing.equals(other.byPassing))
+					return false;
+				if (flowQuery == null) {
+					if (other.flowQuery != null)
+						return false;
+				} else if (!flowQuery.equals(other.flowQuery))
+					return false;
+				if (outerT == null) {
+					if (other.outerT != null)
+						return false;
+				} else if (!outerT.equals(other.outerT))
+					return false;
+				if (returnedNode == null) {
+					if (other.returnedNode != null)
+						return false;
+				} else if (!returnedNode.equals(other.returnedNode))
+					return false;
+				return true;
 			}
 		}
 		@Override
@@ -707,6 +792,8 @@ public abstract class Boomerang<W extends Weight> {
 		}
 		
 	}
+	
+	
 	private class FieldReadPOI extends FieldStmtPOI {
 		public FieldReadPOI(Statement statement, Val base, Field field, Val stored) {
 			super(statement,base,field,stored);
@@ -867,67 +954,39 @@ public abstract class Boomerang<W extends Weight> {
 
 
 	public void debugOutput() {
-		for (Query q : queryToSolvers.keySet()) {
-			System.out.println(q +" Nodes: " + queryToSolvers.getOrCreate(q).getReachedStates().size());
-			System.out.println(q +" Field Aut: " + queryToSolvers.getOrCreate(q).getFieldAutomaton().getTransitions().size());
-			System.out.println(q +" Field Aut (failed Additions): " + queryToSolvers.getOrCreate(q).getFieldAutomaton().failedAdditions);
-			System.out.println(q +" Field Aut (failed Direct Additions): " + queryToSolvers.getOrCreate(q).getFieldAutomaton().failedDirectAdditions);
-			System.out.println(q +" Call Aut: " + queryToSolvers.getOrCreate(q).getCallAutomaton().getTransitions().size());
-			System.out.println(q +" Call Aut (failed Additions): " + queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
-		}
+//		for (Query q : queryToSolvers.keySet()) {
+//			System.out.println(q +" Nodes: " + queryToSolvers.getOrCreate(q).getReachedStates().size());
+//			System.out.println(q +" Field Aut: " + queryToSolvers.getOrCreate(q).getFieldAutomaton().getTransitions().size());
+//			System.out.println(q +" Field Aut (failed Additions): " + queryToSolvers.getOrCreate(q).getFieldAutomaton().failedAdditions);
+//			System.out.println(q +" Field Aut (failed Direct Additions): " + queryToSolvers.getOrCreate(q).getFieldAutomaton().failedDirectAdditions);
+//			System.out.println(q +" Call Aut: " + queryToSolvers.getOrCreate(q).getCallAutomaton().getTransitions().size());
+//			System.out.println(q +" Call Aut (failed Additions): " + queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
+//		}
 		if(!DEBUG)
 			return;
 		Debugger<W> debugger = createDebugger();
 		for (Query q : queryToSolvers.keySet()) {
-			debugger.reachableNodes(q,queryToSolvers.getOrCreate(q).getTransitionsToFinalWeights());
-			debugger.reachableCallNodes(q,queryToSolvers.getOrCreate(q).getReachedStates());
-			debugger.reachableFieldNodes(q,queryToSolvers.getOrCreate(q).getReachedStates());
-			
-//			if (q instanceof ForwardQuery) {
-				System.out.println("========================");
-				System.out.println(q);
-				System.out.println("========================");
-				 queryToSolvers.getOrCreate(q).debugOutput();
-				 for(FieldReadPOI  p : fieldReads.values()){
-					 queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
-					 for(Statement succ :  queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())){
-						 queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
-					 }
-				 }
-				 for(FieldWritePOI  p : fieldWrites.values()){
-					 queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
-					 for(Statement succ :  queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())){
-						 queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
-					 }
-				 }
-//			}
-		}
-		// backwardSolver.debugOutput();
-		// forwardSolver.debugOutput();
-		// for(ForwardQuery fq : forwardQueries){
-		// for(Node<Statement, Val> bq : forwardSolver.getReachedStates()){
-		// IRegEx<Field> extractLanguage =
-		// forwardSolver.getFieldAutomaton().extractLanguage(new
-		// SingleNode<Node<Statement,Val>>(bq),new
-		// SingleNode<Node<Statement,Val>>(fq.asNode()));
-		// System.out.println(bq + " "+ fq +" "+ extractLanguage);
-		// }
-		// }
-		// for(final BackwardQuery bq : backwardQueries){
-		// forwardSolver.synchedEmptyStackReachable(bq.asNode(), new
-		// WitnessListener<Statement, Val>() {
-		//
-		// @Override
-		// public void witnessFound(Node<Statement, Val> targetFact) {
-		// System.out.println(bq + " is allocated at " +targetFact);
-		// }
-		// });
-		// }
+			debugger.reachableNodes(q, queryToSolvers.getOrCreate(q).getTransitionsToFinalWeights());
+			debugger.reachableCallNodes(q, queryToSolvers.getOrCreate(q).getReachedStates());
+			debugger.reachableFieldNodes(q, queryToSolvers.getOrCreate(q).getReachedStates());
 
-		// for(ForwardQuery fq : forwardQueries){
-		// System.out.println(fq);
-		// System.out.println(Joiner.on("\n\t").join(forwardSolver.getFieldAutomaton().dfs(new
-		// SingleNode<Node<Statement,Val>>(fq.asNode()))));
-		// }
+			System.out.println("========================");
+			System.out.println(q);
+			System.out.println("========================");
+			queryToSolvers.getOrCreate(q).debugOutput();
+			for (FieldReadPOI p : fieldReads.values()) {
+				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
+				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {
+					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
+				}
+			}
+			for (FieldWritePOI p : fieldWrites.values()) {
+				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
+				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {
+					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
+				}
+			}
+		}
+		
 	}
 }
