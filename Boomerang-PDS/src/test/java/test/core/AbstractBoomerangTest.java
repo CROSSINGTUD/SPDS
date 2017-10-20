@@ -67,9 +67,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	
 	protected AnalysisMode[] getAnalyses(){
 		return new AnalysisMode[]{
-			AnalysisMode.WholeProgram,
+//			AnalysisMode.WholeProgram,
 //			AnalysisMode.DemandDrivenForward, 
-//			AnalysisMode.DemandDrivenBackward
+			AnalysisMode.DemandDrivenBackward
 		};
 	}
 	

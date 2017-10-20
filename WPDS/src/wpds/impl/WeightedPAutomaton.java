@@ -50,6 +50,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private Map<D, ReachabilityListener<N, D>> stateToReachabilityListener = Maps.newHashMap();
 	private Set<ReturnSiteWithWeights> connectedPushes = Sets.newHashSet();
 	private Set<ConnectPushListener<N,D,W>> conntectedPushListeners = Sets.newHashSet();
+	private Set<UnbalancedPopListener<N,D,W>> unbalancedPopListeners = Sets.newHashSet();
+	private Set<Transition<N,D>> unbalancedPops = Sets.newHashSet();
 	private Map<Transition<N, D>, W> transitionsToFinalWeights = Maps.newHashMap();
 	private ForwardDFSVisitor<N, D, W> dfsVisitor;
 	private ForwardDFSVisitor<N, D, W> dfsEpsVisitor;
@@ -355,6 +357,21 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		if(conntectedPushListeners.add(l)){
 			for(WeightedPAutomaton<N, D, W>.ReturnSiteWithWeights e : Lists.newArrayList(connectedPushes)){
 				l.connect(e.callSite, e.returnSite, e.returnedFact,e.returnedWeight);
+			}
+		}
+	}
+	public void registerUnbalancedPopListener(UnbalancedPopListener<N, D, W> l){
+		if(unbalancedPopListeners.add(l)){
+			for(Transition<N, D> e : Lists.newArrayList(unbalancedPops)){
+				l.unbalancedPop(e.getStart(), e.getLabel(), e.getTarget());
+			}
+		}
+	}
+
+	public void unbalancedPop(D targetState, N popLabel, D target) {
+		if(unbalancedPops.add(new Transition<N,D>(targetState,popLabel,target))){
+			for(UnbalancedPopListener<N, D, W> l : Lists.newArrayList(unbalancedPopListeners)){
+				l.unbalancedPop(targetState,popLabel,target);
 			}
 		}
 	}

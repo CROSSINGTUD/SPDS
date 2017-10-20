@@ -55,6 +55,7 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.ConnectPushListener;
 import wpds.impl.Transition;
+import wpds.impl.UnbalancedPopListener;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.ReachabilityListener;
@@ -63,7 +64,7 @@ import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang<W extends Weight> {
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	private Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
 		@Override
@@ -244,39 +245,6 @@ public abstract class Boomerang<W extends Weight> {
 				return Boomerang.this.getForwardFieldWeights();
 			}
 			
-			@Override
-			public void addUnbalancedFlow(SootMethod m, Collection<? extends State> outFlow) {
-				
-				for(Unit callSite : icfg.getCallersOf(m)){
-					for(Unit returnSite : icfg.getSuccsOf(callSite)){
-						final ForwardQuery forwardQuery = new UnbalancedForwardQuery(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), (query instanceof UnbalancedForwardQuery ? ((UnbalancedForwardQuery)query).sourceQuery():query));
-						final AbstractBoomerangSolver<W> unbalancedSolver = queryToSolvers.getOrCreate(forwardQuery);
-						
-						for(State s : outFlow){
-							if(s instanceof CallPopNode){
-								CallPopNode<Val,Statement> callPopNode = (CallPopNode<Val,Statement>) s;
-								Node<Statement, Val> returnedVal = new Node<Statement,Val>(new Statement((Stmt) returnSite, icfg.getMethodOf(returnSite)), callPopNode.location());
-								unbalancedSolver.solve(forwardQuery.asNode(), returnedVal);
-//								unbalancedSolver.setCallingContextReachable(returnedVal);
-								queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerDFSListener(new SingleNode<Node<Statement,Val>>(returnedVal), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
-						
-									@Override
-									public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
-										if(t.getTarget().equals(new AllocNode<Node<Statement,Val>>(sourceQuery.asNode()))){
-											unbalancedSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(t.getStart(),t.getString(),new AllocNode<Node<Statement,Val>>(forwardQuery.asNode())));
-										}
-
-											unbalancedSolver.getFieldAutomaton().addTransition(t);
-										
-									}
-								});
-								final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(new Statement((Stmt) callSite, icfg.getMethodOf(callSite))));
-								callSitePoi.returnsFromCall(forwardQuery, returnedVal);
-							}
-						}
-					}
-				}
-			}
 		};
 		
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
@@ -300,6 +268,39 @@ public abstract class Boomerang<W extends Weight> {
 			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W returnedWeight) {
 				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
 				callSitePoi.returnsFromCall(sourceQuery, new Node<Statement,Val>(returnSite, returnedFact.fact()));
+			}
+		});
+		
+		solver.getCallAutomaton().registerUnbalancedPopListener(new UnbalancedPopListener<Statement, INode<Val>, W>() {
+
+			@Override
+			public void unbalancedPop(INode<Val> returningFact, Statement exitStmt, INode<Val> targetFact) {
+				if(!Boomerang.this.icfg().getEndPointsOf(sourceQuery.asNode().stmt().getMethod()).contains(exitStmt.getUnit().get())){
+					return;
+				}
+				for(Unit callSite : Boomerang.this.icfg().getCallersOf(exitStmt.getMethod())){
+					for(Unit returnSite : Boomerang.this.icfg().getSuccsOf(callSite)){
+						final ForwardQuery forwardQuery = new UnbalancedForwardQuery(new Statement((Stmt) callSite, Boomerang.this.icfg().getMethodOf(callSite)), (sourceQuery instanceof UnbalancedForwardQuery ? ((UnbalancedForwardQuery)sourceQuery).sourceQuery():sourceQuery));
+						final AbstractBoomerangSolver<W> unbalancedSolver = queryToSolvers.getOrCreate(forwardQuery);
+						
+							Node<Statement, Val> returnedVal = new Node<Statement,Val>(new Statement((Stmt) returnSite, Boomerang.this.icfg().getMethodOf(returnSite)), returningFact.fact());
+							unbalancedSolver.solve(forwardQuery.asNode(), returnedVal);
+//								unbalancedSolver.setCallingContextReachable(returnedVal);
+							queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerDFSListener(new SingleNode<Node<Statement,Val>>(returnedVal), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
+					
+								@Override
+								public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
+									if(t.getTarget().equals(new AllocNode<Node<Statement,Val>>(sourceQuery.asNode()))){
+										unbalancedSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(t.getStart(),t.getString(),new AllocNode<Node<Statement,Val>>(forwardQuery.asNode())));
+									} else {
+										unbalancedSolver.getFieldAutomaton().addTransition(t);
+									}
+								}
+							});
+							final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(new Statement((Stmt) callSite, Boomerang.this.icfg().getMethodOf(callSite))));
+							callSitePoi.returnsFromCall(forwardQuery, returnedVal);
+					}
+				}
 			}
 		});
 //		if(sourceQuery.toString().contains("dQuery: (ReadTwiceSameFieldTest.readFieldTwice $r0.<init>(this),$r0)")){
@@ -419,7 +420,7 @@ public abstract class Boomerang<W extends Weight> {
 
 		@Override
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
-			if(t.getTarget().fact().equals(unwrapUnbalanced(sourceQuery))){
+			if(isAllocationNode(t.getTarget().fact(), sourceQuery)){
 				fieldWritePoi.addBaseAllocation(sourceQuery);
 			}
 		}
@@ -473,7 +474,7 @@ public abstract class Boomerang<W extends Weight> {
 			queryToSolvers.getOrCreate(sourceQuery).registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(node.stmt().getMethod()) {
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-					if(t.getStart().fact().equals(node.asNode()) && t.getTarget().fact().equals(unwrapUnbalanced(sourceQuery))){
+					if(t.getStart().fact().equals(node.asNode()) && isAllocationNode(t.getTarget().fact(),sourceQuery)){
 						fieldReadPoi.addBaseAllocation(sourceQuery);
 					}
 				}
@@ -482,7 +483,11 @@ public abstract class Boomerang<W extends Weight> {
 	}
 
 
-	public Node<Statement,Val> unwrapUnbalanced(ForwardQuery sourceQuery) {
+	private boolean isAllocationNode(Node<Statement, Val> fact, ForwardQuery sourceQuery) {
+		return fact.equals(unwrapUnbalanced(sourceQuery)) ||  fact.equals(sourceQuery.asNode());
+	}
+
+	private Node<Statement,Val> unwrapUnbalanced(ForwardQuery sourceQuery) {
 		return (sourceQuery instanceof UnbalancedForwardQuery ? ((UnbalancedForwardQuery)sourceQuery).sourceQuery().asNode() : sourceQuery.asNode());
 	}
 
@@ -621,7 +626,7 @@ public abstract class Boomerang<W extends Weight> {
 				private boolean triggered = false;
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-					if(!triggered && t.getStart().fact().equals(unwrapUnbalanced(byPassing))){
+					if(!triggered && isAllocationNode(t.getStart().fact(),byPassing)){
 						triggered = true;
 
 //						System.out.println("Before IMport " + callSite + flowQuery + byPassing + returnedNode);
@@ -755,7 +760,7 @@ public abstract class Boomerang<W extends Weight> {
 						
 						for(final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())){
 							Node<Statement, Val> aliasedVarAtSucc = new Node<Statement,Val>(succOfWrite,alias);
-							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(unwrapUnbalanced(baseAllocation)), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
+							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
 							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new SingleNode<Node<Statement,Val>>(aliasedVarAtSucc), t.getLabel(),t.getTarget()));
 							Node<Statement, Val> rightOpNode = new Node<Statement, Val>(getStmt(),getStoredVar());
 							flowSolver.setFieldContextReachable(aliasedVarAtSucc);
