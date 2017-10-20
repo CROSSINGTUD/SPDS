@@ -7,7 +7,6 @@ import com.google.common.collect.Maps;
 import wpds.interfaces.Empty;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
-import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
@@ -371,8 +370,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 		public void onInTransitionAdded(Transition<N, D> t, W weight) {
 			if (t.getString().equals(fa.epsilon())) {
 				W newWeight = fa.getWeightFor(transition);
-				update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
-						(W) newWeight.extendWith(weight));
+//				update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
+//						(W) newWeight.extendWith(weight));
 				fa.reconnectPush(callSite, transition.getLabel(),t.getStart(), newWeight, weight);
 			}	
 		}

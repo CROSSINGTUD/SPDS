@@ -15,12 +15,15 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
 import boomerang.Boomerang;
+import boomerang.MethodReachableQueue;
 import boomerang.Query;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
 import soot.RefType;
+import soot.Scene;
+import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
@@ -52,7 +55,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<Node<Statement, Val>> fieldFlows = Sets.newHashSet();
 	private Collection<RefType> allocationTypes = Sets.newHashSet();
 	private Collection<AllocationTypeListener> allocationTypeListeners = Sets.newHashSet();
-	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
+	
 	private Collection<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
 	private Collection<SootMethod> unbalancedMethod = Sets.newHashSet();
 	private final Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> generatedFieldState;
@@ -60,10 +63,12 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Multimap<SootMethod, MethodBasedFieldTransitionListener<W>> perMethodFieldTransitionsListener = HashMultimap.create();
 	private Multimap<Statement,Transition<Field,INode<Node<Statement,Val>>>> perStatementFieldTransitions = HashMultimap.create();
 	private Multimap<Statement, StatementBasedFieldTransitionListener<W>> perStatementFieldTransitionsListener = HashMultimap.create();
+	private final MethodReachableQueue reachableQueue;
 	
 	
-	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, W>> callSummaries, Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> fieldSummaries){
+	public AbstractBoomerangSolver(MethodReachableQueue reachableQueue, InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, W>> callSummaries, Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> fieldSummaries){
 		super(callSummaries, fieldSummaries);
+		this.reachableQueue = reachableQueue;
 
 		this.icfg = icfg;
 		this.query = query;
@@ -337,61 +342,25 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	
 	@Override
 	protected void processNode(final WitnessNode<Statement, Val, Field> witnessNode) {
-//		if(reachableMethods.contains(witnessNode.stmt().getMethod()) || witnessNode.stmt().getMethod().isStatic()){
-			AbstractBoomerangSolver.super.processNode(witnessNode);
-//		}
-//		else{
-//			registerAllocationTypeListener(new AllocationTypeListener() {
-//				@Override
-//				public void allocationType(RefType type) {
-//					for(SootClass c:Scene.v().getActiveHierarchy().getSuperclassesOfIncluding(type.getSootClass())){
-//						if(c.getMethods().contains(witnessNode.stmt().getMethod())){
-//							AbstractBoomerangSolver.super.processNode(witnessNode);
-//						}
-//					}
-//					
-//				}
-//			});
-//		}
+		reachableQueue.submit(witnessNode.stmt().getMethod(), new Runnable(){
+			@Override
+			public void run(){
+				AbstractBoomerangSolver.super.processNode(witnessNode);
+			}
+		});
+		
 	}
 	
-	public void registerAllocationTypeListener(AllocationTypeListener listener){
-		if(allocationTypeListeners.add(listener)){
-			for(RefType type : Lists.newArrayList(allocationTypes)){
-				listener.allocationType(type);
-			}
-		}
-	}
-	
-	public void addAllocatedType(RefType type){
-		if(allocationTypes.add(type)){
-			for(AllocationTypeListener listener : Lists.newArrayList(allocationTypeListeners)){
-				listener.allocationType(type);
-			}
-		}
-	}
 	
 	protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
 		if(!res.isEmpty()){
-			addReachableMethod(callee);
+			if(callee.isStatic()){
+//				addReachableMethod(callee);
+			}
 		}
 	}
 
 	
-	protected void addReachableMethod(SootMethod m){
-		if(reachableMethods.add(m)){
-			for(ReachableMethodListener<W> l : Lists.newArrayList(reachableMethodListeners)){
-				l.reachable(this, m);
-			}
-		}
-	}
-	public void registerReachableMethodListener(ReachableMethodListener<W> listener){
-		if(reachableMethodListeners.add(listener)){
-			for(SootMethod m : Lists.newArrayList(reachableMethods)){
-				listener.reachable(this, m);
-			}
-		}
-	}
 	public Set<Statement> getSuccsOf(Statement stmt) {
 		Set<Statement> res = Sets.newHashSet();
 		if(!stmt.getUnit().isPresent())
