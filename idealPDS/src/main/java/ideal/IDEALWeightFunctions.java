@@ -52,9 +52,6 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		
 		W weight = delegate.normal(curr, succ);
 		
-//		if (isObjectFlowPhase() && !weight.equals(getOne())){
-//			addOtherThanOneWeight(curr, weight);
-//		}
 		if(isValueFlowPhase() && IDEALAnalysis.ENABLE_STRONG_UPDATES){
 			if(potentialStrongUpdates.containsKey(curr.stmt())){
 				W w = potentialStrongUpdates.get(curr.stmt());

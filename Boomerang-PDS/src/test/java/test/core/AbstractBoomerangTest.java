@@ -19,7 +19,7 @@ import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.ForwardQuery;
 import boomerang.Query;
-import boomerang.UnbalancedForwardQuery;
+import boomerang.UnbalancedQuery;
 import boomerang.WholeProgramBoomerang;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
@@ -67,9 +67,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	
 	protected AnalysisMode[] getAnalyses(){
 		return new AnalysisMode[]{
-			AnalysisMode.WholeProgram,
+//			AnalysisMode.WholeProgram,
 //			AnalysisMode.DemandDrivenForward, 
-//			AnalysisMode.DemandDrivenBackward
+			AnalysisMode.DemandDrivenBackward
 		};
 	}
 	
@@ -132,7 +132,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						Statement statement = new Statement(unit, icfg.getMethodOf(unit));
 						ForwardQuery forwardQuery = new ForwardQuery(statement, new Val(local,icfg.getMethodOf(unit)));
 						if(callSite != null){
-							return Optional.<Query>of(new UnbalancedForwardQuery(new Statement(callSite, icfg.getMethodOf(callSite)), forwardQuery));
+							return Optional.<Query>of(new UnbalancedQuery(new Statement(callSite, icfg.getMethodOf(callSite)), forwardQuery));
 						}
 						return Optional.<Query>of(forwardQuery);
 					}

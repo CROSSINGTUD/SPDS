@@ -8,7 +8,7 @@ import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.ForwardQuery;
 import boomerang.Query;
-import boomerang.UnbalancedForwardQuery;
+import boomerang.UnbalancedQuery;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -123,15 +123,15 @@ public class PerSeedAnalysisContext<W extends Weight> {
 			}
 		});
 		System.out.println("");
+		boomerang.debugOutput();
 		if(phase.equals(Phases.ValueFlow)){
 			for(Query q : boomerang.getSolvers().keySet()){
-				if(q instanceof ForwardQuery && q.equals(seed) ||  (q instanceof UnbalancedForwardQuery && ((UnbalancedForwardQuery) q).sourceQuery().equals(seed))){
+				if(q instanceof ForwardQuery && q.equals(seed) ||  (q instanceof UnbalancedQuery && ((UnbalancedQuery) q).sourceQuery().equals(seed))){
 
-					System.out.println(boomerang.getSolvers().get(q).getCallAutomaton().toDotString());
+//					System.out.println(boomerang.getSolvers().get(q).getCallAutomaton().toDotString());
 					analysisDefinition.resultReporter().onSeedFinished((ForwardQuery)q, boomerang.getSolvers().getOrCreate(q));
 				}
 			}
-//			boomerang.debugOutput();
 		}
 	}
 

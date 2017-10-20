@@ -2,11 +2,11 @@ package boomerang;
 
 import boomerang.jimple.Statement;
 
-public class UnbalancedForwardQuery extends ForwardQuery {
+public class UnbalancedQuery extends ForwardQuery {
 
 	private Query original;
 
-	public UnbalancedForwardQuery(Statement stmt, Query delegate) {
+	public UnbalancedQuery(Statement stmt, Query delegate) {
 		super(stmt, delegate.asNode().fact());
 		this.original = delegate;
 	}
@@ -31,7 +31,7 @@ public class UnbalancedForwardQuery extends ForwardQuery {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		UnbalancedForwardQuery other = (UnbalancedForwardQuery) obj;
+		UnbalancedQuery other = (UnbalancedQuery) obj;
 		if (original == null) {
 			if (other.original != null)
 				return false;

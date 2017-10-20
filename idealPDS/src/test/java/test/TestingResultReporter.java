@@ -3,11 +3,9 @@ package test;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
-import boomerang.Boomerang;
 import boomerang.ForwardQuery;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -16,13 +14,9 @@ import ideal.ResultReporter;
 import soot.Unit;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
-import sync.pds.solver.nodes.Node;
 import typestate.TransitionFunction;
-import typestate.finiteautomata.State;
 import wpds.impl.Transition;
 import wpds.impl.WeightedPAutomaton;
-import wpds.interfaces.WPAStateListener;
-import wpds.interfaces.WPAUpdateListener;
 
 public class TestingResultReporter implements ResultReporter<TransitionFunction>{
 	private Multimap<Unit, Assertion> stmtToResults = HashMultimap.create();
