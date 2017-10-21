@@ -67,7 +67,7 @@ import wpds.interfaces.WPAStateListener;
 
 public abstract class Boomerang<W extends Weight> implements MethodReachableQueue{
 	public static final boolean DEBUG = false;
-	public static final boolean ON_THE_FLY_CG = true;
+	public static final boolean ON_THE_FLY_CG = false;
 	public static final boolean TYPE_CHECK = true;
 	private Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private boolean first;
@@ -104,7 +104,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 								@Override 
 								public void run(){
 									for(Statement returnSite : solver.getSuccsOf(callStatement)){
-											final ForwardQuery forwardQuery = new UnbalancedQuery(callStatement, (key instanceof UnbalancedQuery ? ((UnbalancedQuery)key).sourceQuery():key));
+											final Query forwardQuery = createUnbalancedQuery(callStatement,key);
 											final AbstractBoomerangSolver<W> unbalancedSolver = queryToSolvers.getOrCreate(forwardQuery);
 											
 											Node<Statement, Val> returnedVal = new Node<Statement,Val>(returnSite, returningFact.fact());
@@ -124,6 +124,14 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 											callSitePoi.returnsFromCall(forwardQuery, returnedVal);
 										}
 									}
+
+								private Query createUnbalancedQuery(Statement callStatement, Query key) {
+									if(key instanceof ForwardQuery){
+										return new UnbalancedForwardQuery(callStatement, (key instanceof UnbalancedForwardQuery ? ((UnbalancedForwardQuery)key).sourceQuery():(ForwardQuery)key));	
+									} else{
+										return new UnbalancedBackwardQuery(callStatement, (key instanceof UnbalancedBackwardQuery ? ((UnbalancedBackwardQuery)key).sourceQuery():(BackwardQuery)key));
+									}
+								}
 							});
 						}
 					
@@ -494,7 +502,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	}
 
 	private Node<Statement,Val> unwrapUnbalanced(ForwardQuery sourceQuery) {
-		return (sourceQuery instanceof UnbalancedQuery ? ((UnbalancedQuery)sourceQuery).sourceQuery().asNode() : sourceQuery.asNode());
+		return (sourceQuery instanceof UnbalancedForwardQuery ? ((UnbalancedForwardQuery)sourceQuery).sourceQuery().asNode() : sourceQuery.asNode());
 	}
 
 	private BiDiInterproceduralCFG<Unit, SootMethod> bwicfg() {

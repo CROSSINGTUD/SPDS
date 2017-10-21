@@ -94,22 +94,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		return false;
 	}
 	
-	@Override
-	protected boolean preventFieldTransitionAdd(Transition<Field, INode<Node<Statement, Val>>> t, W weight) {
-		if(!t.getLabel().equals(Field.empty())){
-			return false;
-		}
-		if(t.getTarget() instanceof GeneratedState || t.getStart() instanceof GeneratedState){
-			return false;
-		}
-		Val allocVal = t.getTarget().fact().fact();
-		Val varVal = t.getStart().fact().fact();
-		if(allocVal.equals(Val.statics()) || varVal.equals(Val.statics())){
-			return false;
-		}
-		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(allocVal.value().getType(),varVal.value().getType());
-		return !castFails;
-	}
 	
 	private void addTransitionToMethod(SootMethod method, Transition<Field, INode<Node<Statement, Val>>> t) {
 		if(perMethodFieldTransitions.put(method, t)){

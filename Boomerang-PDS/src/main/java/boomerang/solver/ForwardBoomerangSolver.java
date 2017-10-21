@@ -9,6 +9,7 @@ import java.util.Set;
 
 import com.beust.jcommander.internal.Sets;
 
+import boomerang.Boomerang;
 import boomerang.ForwardQuery;
 import boomerang.MethodReachableQueue;
 import boomerang.jimple.Field;
@@ -35,6 +36,7 @@ import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.CastNode;
 import sync.pds.solver.nodes.ExclusionNode;
+import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
@@ -211,6 +213,22 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		return Collections.emptySet();
 	}
 
+	@Override
+	protected boolean preventFieldTransitionAdd(Transition<Field, INode<Node<Statement, Val>>> t, W weight) {
+		if(!t.getLabel().equals(Field.empty()) || !Boomerang.TYPE_CHECK){
+			return false;
+		}
+		if(t.getTarget() instanceof GeneratedState || t.getStart() instanceof GeneratedState){
+			return false;
+		}
+		Val allocVal = t.getTarget().fact().fact();
+		Val varVal = t.getStart().fact().fact();
+		if(allocVal.equals(Val.statics()) || varVal.equals(Val.statics())){
+			return false;
+		}
+		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(allocVal.value().getType(),varVal.value().getType());
+		return !castFails;
+	}
 //	@Override
 //	protected boolean canCastBeApplied(Node<Statement, Val> curr, Transition<Field, INode<Node<Statement, Val>>> t,
 //			CastNode<Statement, Val, ?> succ, W weight) {
