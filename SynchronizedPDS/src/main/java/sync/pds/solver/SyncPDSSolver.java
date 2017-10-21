@@ -48,7 +48,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	protected final WeightedPushdownSystem<Stmt, INode<Fact>, W> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, W>();
 	protected final WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W> fieldPDS = new WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W>();
 	protected final Map<Transition<Stmt, INode<Fact>>, W> nodesToWeights = Maps.newHashMap(); 
-	
+	private final Set<WitnessNode<Stmt,Fact,Field>> reachedStates = Sets.newHashSet();
+	private final Set<Node<Stmt, Fact>> callingContextReachable = Sets.newHashSet();
+	private final Set<Node<Stmt, Fact>> fieldContextReachable = Sets.newHashSet();
+	private final Set<SyncPDSUpdateListener<Stmt, Fact, Field>> updateListeners = Sets.newHashSet();
+	private final Multimap<WitnessNode<Stmt,Fact,Field>, SyncStatePDSUpdateListener<Stmt, Fact, Field>> reachedStateUpdateListeners = HashMultimap.create();
+
 	protected final WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W>() {
 		@Override
 		public INode<Node<Stmt,Fact>> createState(INode<Node<Stmt,Fact>> d, Field loc) {
@@ -114,11 +119,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			return d instanceof GeneratedState;
 		}
 	};
-
-	private final Set<WitnessNode<Stmt,Fact,Field>> reachedStates = Sets.newHashSet();
-	private final Set<Node<Stmt, Fact>> callingContextReachable = Sets.newHashSet();
-	private final Set<Node<Stmt, Fact>> fieldContextReachable = Sets.newHashSet();
-	private final Set<SyncPDSUpdateListener<Stmt, Fact, Field>> updateListeners = Sets.newHashSet();
 
 
 	public SyncPDSSolver(){
@@ -222,6 +222,9 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		reachedStates.add(curr);
 		for (SyncPDSUpdateListener<Stmt, Fact, Field> l : Lists.newLinkedList(updateListeners)) {
 			l.onReachableNodeAdded(curr);
+		}
+		for(SyncStatePDSUpdateListener<Stmt, Fact, Field> l : Lists.newLinkedList(reachedStateUpdateListeners.get(curr))){
+			l.reachable();
 		}
 		return true;
 	}
@@ -423,6 +426,14 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 		for (WitnessNode<Stmt, Fact, Field> reachableNode : Lists.newArrayList(reachedStates)) {
 			listener.onReachableNodeAdded(reachableNode);
+		}
+	}
+	public void registerListener(SyncStatePDSUpdateListener<Stmt, Fact, Field> listener) {
+		if (!reachedStateUpdateListeners.put(listener.getNode(), listener)){
+			return;
+		}
+		if(reachedStates.contains(listener.getNode())){
+			listener.reachable();
 		}
 	}
 

@@ -35,6 +35,7 @@ import soot.RefType;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
+import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.ArrayRef;
@@ -49,6 +50,7 @@ import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.SyncPDSUpdateListener;
+import sync.pds.solver.SyncStatePDSUpdateListener;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.AllocNode;
@@ -67,8 +69,10 @@ import wpds.interfaces.WPAStateListener;
 
 public abstract class Boomerang<W extends Weight> implements MethodReachableQueue{
 	public static final boolean DEBUG = false;
-	public static final boolean ON_THE_FLY_CG = false;
+	public static final boolean ON_THE_FLY_CG = true;
 	public static final boolean TYPE_CHECK = true;
+	public static final boolean NULL_ALLOCATIONS = false;
+	public static final boolean TRACK_STRING = false;
 	private Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private boolean first;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
@@ -93,6 +97,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 					addAllocationType((RefType) key.getType());
 				}
 			}
+			if(key instanceof ForwardQuery)
 			solver.getCallAutomaton().registerUnbalancedPopListener(new UnbalancedPopListener<Statement, INode<Val>, W>() {
 
 				@Override
@@ -406,7 +411,13 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	}
 
 	public static boolean isAllocationVal(Value val) {
-		return val instanceof NullConstant || val instanceof NewExpr || val instanceof NewArrayExpr || val instanceof NewMultiArrayExpr;
+		if(!TRACK_STRING){
+			Type type = val.getType();
+			if(type.toString().equals("java.lang.String") || type.toString().equals("java.lang.StringBuilder") || type.toString().equals("java.lang.StringBuffer")){
+				return false;
+			}
+		}
+		return (NULL_ALLOCATIONS && val instanceof NullConstant) || val instanceof NewExpr || val instanceof NewArrayExpr || val instanceof NewMultiArrayExpr;
 	}
 
 	protected void forwardHandleFieldWrite(final WitnessNode<Statement, Val, Field> node, final FieldWritePOI fieldWritePoi, final ForwardQuery sourceQuery) {
@@ -619,7 +630,6 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		private Statement callSite;
 		private Set<QueryWithVal> returnsFromCall = Sets.newHashSet();
 		private Set<ForwardQuery> byPassingAllocations = Sets.newHashSet();
-		
 		public ForwardCallSitePOI(Statement callSite){
 			this.callSite = callSite;
 		}
@@ -635,20 +645,15 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		private void eachPair(final ForwardQuery byPassing, final Query flowQuery, final Node<Statement,Val> returnedNode){
 			if(byPassing.equals(flowQuery)) 
 				return;
-			queryToSolvers.getOrCreate(byPassing).registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
-				private boolean triggered; 
+			queryToSolvers.getOrCreate(byPassing).registerListener(new SyncStatePDSUpdateListener<Statement, Val, Field>(new WitnessNode<Statement,Val,Field>(returnedNode.stmt(),returnedNode.fact())) {
 				@Override
-				public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
-					if(triggered)
-						return;
-					if(reachableNode.asNode().equals(returnedNode)){
-						triggered = true;
-						queryToSolvers.getOrCreate(byPassing).getFieldAutomaton().registerListener(new IntersectOutTransition(byPassing,flowQuery,returnedNode));
-					}
+				public void reachable() {
+					queryToSolvers.getOrCreate(byPassing).getFieldAutomaton().registerListener(new IntersectOutTransition(byPassing,flowQuery,returnedNode));
 				}
 			});
 		}
 		protected void importFlowsAtReturnSite(final ForwardQuery byPassingAllocation, final Query flowQuery, final Node<Statement, Val> returnedNode) {
+			
 			final AbstractBoomerangSolver<W> byPassingSolver = queryToSolvers.get(byPassingAllocation);
 		    final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> byPassingFieldAutomaton = byPassingSolver.getFieldAutomaton();
 		    final AbstractBoomerangSolver<W> flowSolver = queryToSolvers.getOrCreate(flowQuery);

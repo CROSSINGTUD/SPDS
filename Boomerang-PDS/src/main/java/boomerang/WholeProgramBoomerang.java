@@ -1,13 +1,9 @@
 package boomerang;
 
 import java.util.List;
-import java.util.Set;
-
-import com.beust.jcommander.internal.Sets;
 
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.ReachableMethodListener;
 import soot.Scene;
 import soot.SootMethod;
@@ -23,7 +19,6 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends Boomerang<
 		List<SootMethod> reachableMethods = Scene.v().getEntryPoints();
 		
 		for(SootMethod m : reachableMethods){
-			System.out.println(m);
 			analyzeMethod(m);
 		}
 		registerReachableMethodListener(new ReachableMethodListener<W>() {
@@ -42,8 +37,6 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends Boomerang<
 			if(u instanceof AssignStmt){
 				AssignStmt assignStmt = (AssignStmt) u;
 				if(isAllocationVal(assignStmt.getRightOp())){
-					if(assignStmt.getRightOp() instanceof NullConstant)
-						continue;
 					ForwardQuery q = new ForwardQuery(new Statement((Stmt) u, method), new Val(assignStmt.getLeftOp(),method));
 					solve(q);
 				}
