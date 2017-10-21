@@ -237,6 +237,9 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 					if(l2.equals(fa.epsilon()))
 						return;
 				}
+				if(!rule.canBeApplied(t,weight)){
+					return;
+				}
 				
 				update(new Transition<N, D>(p, l2, t.getTarget()), newWeight);
 			}

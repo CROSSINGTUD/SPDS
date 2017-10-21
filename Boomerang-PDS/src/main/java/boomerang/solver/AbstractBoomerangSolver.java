@@ -21,9 +21,7 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
-import soot.RefType;
 import soot.Scene;
-import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
@@ -53,10 +51,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
 	private Collection<Node<Statement, Val>> fieldFlows = Sets.newHashSet();
-	private Collection<RefType> allocationTypes = Sets.newHashSet();
-	private Collection<AllocationTypeListener> allocationTypeListeners = Sets.newHashSet();
-	
-	private Collection<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
 	private Collection<SootMethod> unbalancedMethod = Sets.newHashSet();
 	private final Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> generatedFieldState;
 	private Multimap<SootMethod,Transition<Field,INode<Node<Statement,Val>>>> perMethodFieldTransitions = HashMultimap.create();
@@ -98,6 +92,23 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		if(!m.equals(method))
 			return true;
 		return false;
+	}
+	
+	@Override
+	protected boolean preventFieldTransitionAdd(Transition<Field, INode<Node<Statement, Val>>> t, W weight) {
+		if(!t.getLabel().equals(Field.empty())){
+			return false;
+		}
+		if(t.getTarget() instanceof GeneratedState || t.getStart() instanceof GeneratedState){
+			return false;
+		}
+		Val allocVal = t.getTarget().fact().fact();
+		Val varVal = t.getStart().fact().fact();
+		if(allocVal.equals(Val.statics()) || varVal.equals(Val.statics())){
+			return false;
+		}
+		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(allocVal.value().getType(),varVal.value().getType());
+		return !castFails;
 	}
 	
 	private void addTransitionToMethod(SootMethod method, Transition<Field, INode<Node<Statement, Val>>> t) {

@@ -25,6 +25,18 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 	}	
 	
 	@Test
+	public void failedCast() {
+		Object o = new Object();
+		Object returned = flow(o);
+		AllocatedObject t = (AllocatedObject) returned;
+		queryFor(t);
+	}	
+	
+	private Object flow(Object o) {
+		return o;
+	}
+
+	@Test
 	public void summaryReuseTest4() {
 		Alloc alias2;
 //		if(staticallyUnknown()){

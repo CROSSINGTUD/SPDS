@@ -15,4 +15,8 @@ public class NormalRule<N extends Location, D extends State, W extends Weight> e
     return "<" + s1 + ";" + l1 + ">-><" + s2 + ";" + l2 + ">"
         + ((w instanceof Weight.NoWeight) ? "" : "(" + w + ")");
   }
+
+	public boolean canBeApplied(Transition<N, D> t, W weight) {
+		return true;
+	}
 }

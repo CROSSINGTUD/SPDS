@@ -17,7 +17,9 @@ import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
 import soot.Body;
 import soot.Local;
+import soot.Scene;
 import soot.SootMethod;
+import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.ArrayRef;
@@ -31,6 +33,7 @@ import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.CallPopNode;
+import sync.pds.solver.nodes.CastNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -161,7 +164,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			} else if(rightOp instanceof CastExpr){
 				CastExpr castExpr = (CastExpr) rightOp;
 				if (castExpr.getOp().equals(fact.value())) {
-					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
+					out.add(new CastNode<Statement,Val, Type>(new Statement(succ, method), new Val(leftOp,method),castExpr.getCastType()));
 				}
 				
 			}
@@ -207,6 +210,16 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		}
 		return Collections.emptySet();
 	}
-	
+
+//	@Override
+//	protected boolean canCastBeApplied(Node<Statement, Val> curr, Transition<Field, INode<Node<Statement, Val>>> t,
+//			CastNode<Statement, Val, ?> succ, W weight) {
+//		if(!t.getLabel().equals(Field.empty())){
+//			return true;
+//		}
+//		Type type = t.getTarget().fact().fact().value().getType();
+//		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(type, (Type)succ.getType());
+//		return castFails;
+//	}
 	
 }

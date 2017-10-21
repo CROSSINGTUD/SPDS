@@ -67,6 +67,8 @@ import wpds.interfaces.WPAStateListener;
 
 public abstract class Boomerang<W extends Weight> implements MethodReachableQueue{
 	public static final boolean DEBUG = false;
+	public static final boolean ON_THE_FLY_CG = true;
+	public static final boolean TYPE_CHECK = true;
 	private Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private boolean first;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
@@ -81,7 +83,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 				if(!first){
 					first = true;
 					SootMethod method = key.asNode().stmt().getMethod();
-//					addReachable(method);
+					addReachable(method);
 					addAllocationType(method.getDeclaringClass().getType());
 				}
 			} else {
@@ -375,7 +377,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 	@Override
 	public void submit(SootMethod method, Runnable runnable) {
-		if(reachableMethods.contains(method)){
+		if(reachableMethods.contains(method) || !ON_THE_FLY_CG){
 			runnable.run();
 		} else{
 			queuedReachableMethod.put(method, runnable);
@@ -626,10 +628,13 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			if(byPassing.equals(flowQuery)) 
 				return;
 			queryToSolvers.getOrCreate(byPassing).registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
-
+				private boolean triggered; 
 				@Override
 				public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+					if(triggered)
+						return;
 					if(reachableNode.asNode().equals(returnedNode)){
+						triggered = true;
 						queryToSolvers.getOrCreate(byPassing).getFieldAutomaton().registerListener(new IntersectOutTransition(byPassing,flowQuery,returnedNode));
 					}
 				}
