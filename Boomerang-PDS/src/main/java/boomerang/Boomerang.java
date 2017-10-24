@@ -68,7 +68,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 
 public abstract class Boomerang<W extends Weight> implements MethodReachableQueue{
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	public static final boolean ON_THE_FLY_CG = true;
 	public static final boolean TYPE_CHECK = true;
 	public static final boolean NULL_ALLOCATIONS = false;
@@ -151,10 +151,10 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	private Collection<RefType> allocatedTypes = Sets.newHashSet();
 	private Multimap<SootMethod, Runnable> queuedReachableMethod = HashMultimap.create();
 	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
-	private Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, W>> backwardCallSummaries = Maps.newHashMap();
-	private Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> backwardFieldSummaries = Maps.newHashMap();
-	private Map<Transition<Statement, INode<Val>>, WeightedPAutomaton<Statement, INode<Val>, W>> forwardCallSummaries = Maps.newHashMap();
-	private Map<Transition<Field, INode<Node<Statement, Val>>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> forwardFieldSummaries = Maps.newHashMap();
+	private Map<INode<Val>, WeightedPAutomaton<Statement, INode<Val>, W>> backwardCallSummaries = Maps.newHashMap();
+	private Map< INode<Node<Statement, Val>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> backwardFieldSummaries = Maps.newHashMap();
+	private Map< INode<Val>, WeightedPAutomaton<Statement, INode<Val>, W>> forwardCallSummaries = Maps.newHashMap();
+	private Map<INode<Node<Statement, Val>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> forwardFieldSummaries = Maps.newHashMap();
 	private DefaultValueMap<FieldWritePOI, FieldWritePOI> fieldWrites = new DefaultValueMap<FieldWritePOI, FieldWritePOI>() {
 		@Override
 		protected FieldWritePOI createItem(FieldWritePOI key) {

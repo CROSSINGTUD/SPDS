@@ -68,6 +68,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 
 		@Override
+		public boolean nested() {
+			return false;
+		};
+		
+		@Override
 		public W getZero() {
 			return getFieldWeights().getZero();
 		}
@@ -104,6 +109,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 
 		@Override
+		public boolean nested() {
+			return true;
+		};
+		@Override
 		public W getOne() {
 			return getCallWeights().getOne();
 		}
@@ -122,7 +131,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 
 	public SyncPDSSolver(){
-		this(Maps.<Transition<Stmt, INode<Fact>>, WeightedPAutomaton<Stmt, INode<Fact>, W>>newHashMap(),Maps.<Transition<Field, INode<Node<Stmt, Fact>>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>>newHashMap());
+		this(Maps.<INode<Fact>, WeightedPAutomaton<Stmt, INode<Fact>, W>>newHashMap(),Maps.<INode<Node<Stmt, Fact>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>>newHashMap());
 	}
 	
 	protected boolean preventFieldTransitionAdd(Transition<Field, INode<Node<Stmt, Fact>>> trans, W weight) {
@@ -132,7 +141,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	protected boolean preventCallTransitionAdd(Transition<Stmt, INode<Fact>> trans, W weight) {
 		return false;
 	}
-	public SyncPDSSolver(Map<Transition<Stmt, INode<Fact>>, WeightedPAutomaton<Stmt, INode<Fact>, W>> callSummaries,Map<Transition<Field, INode<Node<Stmt, Fact>>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>> fieldSummaries){
+	public SyncPDSSolver(Map<INode<Fact>, WeightedPAutomaton<Stmt, INode<Fact>, W>> callSummaries,Map<INode<Node<Stmt, Fact>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>> fieldSummaries){
 		callAutomaton.registerListener(new CallAutomatonListener());
 		fieldAutomaton.registerListener(new FieldUpdateListener());
 		callingPDS.poststar(callAutomaton,callSummaries);

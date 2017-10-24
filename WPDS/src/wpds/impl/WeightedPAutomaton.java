@@ -351,14 +351,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			}
 		};
 		nestedAutomatons.add(nested);
-		
-		for(WPAStateListener<N, D, W> e : Lists.newArrayList(stateListeners.values())){
-			nested.registerListener(e);
-		}
-		for(WPAUpdateListener<N, D, W> e : Lists.newArrayList(listeners)){
-			nested.registerListener(e);
-		}
-		
+		registerNestedListeners(nested);
 		return nested;
 	}
 
@@ -538,6 +531,38 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 
 		private WeightedPAutomaton getOuterType() {
 			return WeightedPAutomaton.this;
+		}
+
+	}
+	public boolean nested() {
+		return false;
+	}
+
+	public void addNestedAutomaton(D target, WeightedPAutomaton<N, D, W> aut) {
+		nestedAutomatons.add(aut);
+		registerNestedListeners(aut);
+	}
+
+	private void registerNestedListeners(WeightedPAutomaton<N, D, W> nested) {
+		for(WPAStateListener<N, D, W> e : Lists.newArrayList(stateListeners.values())){
+			nested.registerListener(e);
+		}
+		for(WPAUpdateListener<N, D, W> e : Lists.newArrayList(listeners)){
+			nested.registerListener(e);
+		}
+		for(ConnectPushListener<N, D, W> e : Lists.newArrayList(conntectedPushListeners)){
+			nested.registerConnectPushListener(e);
+		}
+
+		for(UnbalancedPopListener<N, D, W> e : Lists.newArrayList(unbalancedPopListeners)){
+			nested.registerUnbalancedPopListener(e);
+		}
+
+		for(Entry<D, ReachabilityListener<N, D>> e : Lists.newArrayList(stateToEpsilonReachabilityListener.entrySet())){
+			nested.registerDFSEpsilonListener(e.getKey(), e.getValue());
+		}
+		for(Entry<D, ReachabilityListener<N, D>> e : Lists.newArrayList(stateToReachabilityListener.entrySet())){
+			nested.registerDFSListener(e.getKey(), e.getValue());
 		}
 
 	}

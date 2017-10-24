@@ -130,9 +130,9 @@ public class WeightedPushdownSystem<N extends Location, D extends State, W exten
 
 	@Override
 	public void poststar(WeightedPAutomaton<N, D, W> initialAutomaton,
-			final Map<Transition<N, D>, WeightedPAutomaton<N, D, W>> summaries) {
+			final Map<D, WeightedPAutomaton<N, D, W>> summaries) {
 		new PostStar<N, D, W>() {
-			protected Map<Transition<N, D>, WeightedPAutomaton<N, D, W>> getSummaries() {
+			protected Map<D, WeightedPAutomaton<N, D, W>> getSummaries() {
 				return summaries;
 			};
 		}.poststar(this, initialAutomaton);
