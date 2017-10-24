@@ -23,6 +23,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 	public void poststar(IPushdownSystem<N, D, W> pds, WeightedPAutomaton<N, D, W> initialAutomaton) {
 		this.pds = pds;
 		this.fa = initialAutomaton;
+		fa.setInitialAutomaton(fa);
 		getSummaries().put(fa.getInitialState(), initialAutomaton);
 		this.pds.registerUpdateListener(new PostStarUpdateListener(fa));
 	}
@@ -289,7 +290,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 
 
 		@Override
-		public void onOutTransitionAdded(final Transition<N, D> t, W weight, WeightedPAutomaton<N, D, W> aut) {
+		public void onOutTransitionAdded(final Transition<N, D> t, W weight,final WeightedPAutomaton<N, D, W> aut) {
 			if(t.getLabel().equals(rule.getL1()) || rule.getL1() instanceof Wildcard){
 				if(rule.getCallSite() instanceof Wildcard){
 					if(t.getLabel().equals(fa.epsilon()))
@@ -298,6 +299,8 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 				final D p = rule.getS2();
 				final N gammaPrime = rule.getL2();
 				final D irState = fa.createState(p, gammaPrime);
+				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
+				final Transition<N, D> transition = new Transition<N, D>(irState, transitionLabel, t.getTarget());
 				if(!fa.nested()){
 					update(new Transition<N, D>(p, gammaPrime, irState),fa.getOne());
 				} else{
@@ -307,17 +310,20 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 					summary.registerListener(new WPAUpdateListener<N, D, W>() {
 
 						@Override
-						public void onWeightAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> aut) {
+						public void onWeightAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> innerAut) {
 							if((t.getLabel().equals(fa.epsilon()) && t.getTarget().equals(irState))){
 								update(t, (W) w);
+
+								W newWeight = fa.getWeightFor(transition);
+								update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
+									(W) newWeight.extendWith(w));
 							}
 						}
 					});
 				}
 				
-				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
 				update(new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W)weight.extendWith(rule.getWeight()));
-				fa.registerListener(new UpdateEpsilonOnPushListener(new Transition<N, D>(irState, transitionLabel, t.getTarget()), rule.getL1()));
+				fa.registerListener(new UpdateEpsilonOnPushListener(transition, rule.getL1()));
 			}
 		}
 
@@ -423,7 +429,11 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 	}
 	
 	private void update(Transition<N, D> trans, W weight) {
-		getSummaries().get(trans.getTarget()).addWeightForTransition(trans, weight);
+		if(!fa.nested()){
+			fa.addWeightForTransition(trans, weight);
+		}else{
+			 getSummaries().get(trans.getTarget()).addWeightForTransition(trans, weight);	
+		}
 	}
 
 
@@ -432,8 +442,9 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 		if(aut == null){
 			aut = aut2.createNestedAutomaton(target);
 			getSummaries().put(target, aut);
+			aut.setInitialAutomaton(fa);
 		} else{
-			fa.addNestedAutomaton(aut);
+			aut2.addNestedAutomaton(aut);
 		}
 //		new PostStar<N, D, W>(){
 //			protected Map<D,WeightedPAutomaton<N,D,W>> getSummaries() {

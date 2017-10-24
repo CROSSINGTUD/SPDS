@@ -50,6 +50,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	protected final Map<Transition<Stmt, INode<Fact>>, W> nodesToWeights = Maps.newHashMap(); 
 	private final Set<WitnessNode<Stmt,Fact,Field>> reachedStates = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> callingContextReachable = Sets.newHashSet();
+	private final Set<Node<Stmt, Fact>> callingContextSilentReachable = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> fieldContextReachable = Sets.newHashSet();
 	private final Set<SyncPDSUpdateListener<Stmt, Fact, Field>> updateListeners = Sets.newHashSet();
 	private final Multimap<WitnessNode<Stmt,Fact,Field>, SyncStatePDSUpdateListener<Stmt, Fact, Field>> reachedStateUpdateListeners = HashMultimap.create();
@@ -157,7 +158,27 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		public void onWeightAdded(Transition<Stmt, INode<Fact>> t, W w, WeightedPAutomaton<Stmt, INode<Fact>,W> aut) {
 			if(!(t.getStart() instanceof GeneratedState)){
 				Node<Stmt, Fact> node = new Node<Stmt,Fact>(t.getString(),t.getStart().fact());
-				setCallingContextReachable(node);
+				if(callAutomaton.nested() && !aut.isInitialAutomaton(callAutomaton)){
+					callingContextSilentReachable.add(node);
+					Collection<? extends State> successors = computeSuccessor(node);
+					for (State s : successors) {
+						if (s instanceof PopNode) {
+							PopNode<Fact> popNode = (PopNode<Fact>) s;
+							processPop(node, popNode);
+//							PDSSystem system = popNode.system();
+//							Object location = popNode.location();
+//							if (system.equals(PDSSystem.FIELDS)) {
+//								NodeWithLocation<Stmt, Fact, Field> succ = (NodeWithLocation) location;
+//								if(FieldSensitive){
+//									fieldPDS.addRule(new PopRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(node), succ.location(),
+//											asFieldFact(succ.fact()), getFieldWeights().pop(node, succ.location())));
+//								}
+//							}
+						}
+					}
+				}else{
+					setCallingContextReachable(node);
+				}
 			}
 		}
 	}
@@ -249,6 +270,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 	public boolean addNormalCallFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
+
+		if(callingContextSilentReachable.contains(curr)){
+			System.out.println("Not adding "+  	new NormalRule<Stmt, INode<Fact>,W>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt(),getCallWeights().normal(curr,succ)));
+			return false;
+		}
 		return callingPDS.addRule(
 				new NormalRule<Stmt, INode<Fact>,W>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt(),getCallWeights().normal(curr,succ)));
 	}

@@ -156,8 +156,9 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 		Allocation b = a;
 		Allocation c = b;
 		Allocation d = c;
+		
 		Allocation e = d;
-		Allocation f = e;
+		Allocation f = evenFurtherNested(e);
 		Allocation g = alias1;
 		if(staticallyUnknown()){
 			g = f;
@@ -166,6 +167,10 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 		return f;
 	}
 	
+	private Allocation evenFurtherNested(Allocation e) {
+		return e;
+	}
+
 	@Test
 	public void summry() {
 		Allocation alias1 = new Allocation();
@@ -183,5 +188,24 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 	private Object summary(Allocation inner) {
 		System.out.println(1);
 		return inner;
+	}
+	
+	@Test
+	public void doubleNestedSummary() {
+		Allocation alias1 = new Allocation();
+		Object q;
+		if(staticallyUnknown()){
+			q = nestedSummary(alias1);
+		}else{
+			Allocation alias2 = new Allocation();
+			q = nestedSummary(alias2);
+		}
+		
+		queryFor(q);
+	}
+
+	private Object nestedSummary(Allocation inner) {
+		System.out.println(1);
+		return summary(inner);
 	}
 }

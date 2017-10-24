@@ -58,6 +58,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private ForwardDFSVisitor<N, D, W> dfsEpsVisitor;
 	public int failedAdditions;
 	public int failedDirectAdditions;
+	private WeightedPAutomaton<N, D, W> initialAutomaton;
 	
 
 	public WeightedPAutomaton(D initialState) {
@@ -566,6 +567,14 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			nested.registerDFSListener(e.getKey(), e.getValue());
 		}
 
+	}
+
+	public void setInitialAutomaton(WeightedPAutomaton<N, D, W> aut) {
+		initialAutomaton = aut;
+	}
+	
+	public boolean isInitialAutomaton(WeightedPAutomaton<N,D,W> aut){
+		return initialAutomaton.equals(aut);
 	}
 
 
