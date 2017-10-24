@@ -44,12 +44,12 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 			this.listener = l;
 		}
 		@Override
-		public void onOutTransitionAdded(Transition<N, D> t, W w) {
+		public void onOutTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> aut) {
 			listener.reachable(t);
 		}
 
 		@Override
-		public void onInTransitionAdded(Transition<N, D> t, W w) {
+		public void onInTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> aut) {
 		}
 
 
@@ -99,7 +99,7 @@ public class ForwardDFSVisitor<N extends Location,D extends State, W extends Wei
 		return true;
 	}
 	@Override
-	public void onWeightAdded(Transition<N, D> t, W w) {
+	public void onWeightAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> aut) {
 
 		D a = t.getStart();
 		D b = t.getTarget();

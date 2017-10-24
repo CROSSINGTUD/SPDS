@@ -34,10 +34,12 @@ import soot.jimple.Stmt;
 import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;
+import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -61,7 +63,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	
 	
 	public AbstractBoomerangSolver(MethodReachableQueue reachableQueue, InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, Map<INode<Val>, WeightedPAutomaton<Statement, INode<Val>, W>> callSummaries, Map<INode<Node<Statement, Val>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> fieldSummaries){
-		super(callSummaries, fieldSummaries);
+		super(new SingleNode<Val>(query.asNode().fact()) , new AllocNode<Node<Statement,Val>>(query.asNode()), callSummaries, fieldSummaries);
 		this.reachableQueue = reachableQueue;
 
 		this.icfg = icfg;
@@ -70,7 +72,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		this.fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 
 			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w, WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W> aut) {
 				addTransitionToMethod(t.getStart().fact().stmt().getMethod(), t);
 				addTransitionToMethod(t.getTarget().fact().stmt().getMethod(), t);
 				addTransitionToStatement(t.getStart().fact().stmt(), t);
@@ -403,7 +405,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	public void debugFieldAutomaton(final Statement statement) {
 		if(!Boomerang.DEBUG)
 			return;
-		final WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight>(){
+		final WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight>(new AllocNode<Node<Statement,Val>>(query.asNode())){
 
 			@Override
 			public Field epsilon() {
@@ -433,7 +435,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 			
 			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w, WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W> aut) {
 				if(t.getStart().fact().stmt().equals(statement) && !(t.getStart() instanceof GeneratedState)){
 					fieldAutomaton.registerDFSListener(t.getStart(),new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 						@Override

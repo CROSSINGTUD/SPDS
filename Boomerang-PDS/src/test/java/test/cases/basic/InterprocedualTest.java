@@ -165,5 +165,23 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 		Allocation h = g;
 		return f;
 	}
+	
+	@Test
+	public void summry() {
+		Allocation alias1 = new Allocation();
+		Object q;
+		if(staticallyUnknown()){
+			q = summary(alias1);
+		}else{
+			Allocation alias2 = new Allocation();
+			q = summary(alias2);
+		}
+		
+		queryFor(q);
+	}
 
+	private Object summary(Allocation inner) {
+		System.out.println(1);
+		return inner;
+	}
 }

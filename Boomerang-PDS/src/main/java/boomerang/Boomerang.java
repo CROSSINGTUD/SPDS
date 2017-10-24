@@ -68,7 +68,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 
 public abstract class Boomerang<W extends Weight> implements MethodReachableQueue{
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	public static final boolean ON_THE_FLY_CG = true;
 	public static final boolean TYPE_CHECK = true;
 	public static final boolean NULL_ALLOCATIONS = false;
@@ -444,14 +444,14 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		}
 
 		@Override
-		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 			if(isAllocationNode(t.getTarget().fact(), sourceQuery)){
 				fieldWritePoi.addBaseAllocation(sourceQuery);
 			}
 		}
 
 		@Override
-		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 		}
 
 		@Override
@@ -693,7 +693,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			}
 
 			@Override
-			public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> outerT, W w) {
+			public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> outerT, W w, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 				if(triggered)
 					return;
 				if(!outerT.getLabel().equals(Field.epsilon()))
@@ -701,7 +701,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			}
 
 			@Override
-			public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+			public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 			}
 
 			@Override
@@ -762,7 +762,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			}
 
 			@Override
-			public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+			public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 				if(intersectOutTransition.triggered)
 					return;
 				if(t.equals(outerT) ){
@@ -772,7 +772,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			}
 
 			@Override
-			public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+			public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 			}
 
 			@Override
@@ -957,14 +957,14 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		}
 		
 		@Override
-		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 			if(flowSolver.getFieldAutomaton().addTransition(t)){
 				baseSolver.getFieldAutomaton().registerListener(new ImportToSolver(t.getTarget(), baseSolver, flowSolver));
 			}
 		}
 
 		@Override
-		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w) {
+		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 		}
 
 

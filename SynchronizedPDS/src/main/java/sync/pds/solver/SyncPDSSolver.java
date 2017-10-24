@@ -53,85 +53,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private final Set<Node<Stmt, Fact>> fieldContextReachable = Sets.newHashSet();
 	private final Set<SyncPDSUpdateListener<Stmt, Fact, Field>> updateListeners = Sets.newHashSet();
 	private final Multimap<WitnessNode<Stmt,Fact,Field>, SyncStatePDSUpdateListener<Stmt, Fact, Field>> reachedStateUpdateListeners = HashMultimap.create();
+	protected final WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> fieldAutomaton;
+	protected final WeightedPAutomaton<Stmt, INode<Fact>,W> callAutomaton;
 
-	protected final WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W>() {
-		@Override
-		public INode<Node<Stmt,Fact>> createState(INode<Node<Stmt,Fact>> d, Field loc) {
-			if (loc.equals(emptyField()))
-				return d;
-			return generateFieldState(d, loc);
-		}
-
-		@Override
-		public Field epsilon() {
-			return epsilonField();
-		}
-
-		@Override
-		public boolean nested() {
-			return true;
-		};
-		
-		@Override
-		public W getZero() {
-			return getFieldWeights().getZero();
-		}
-
-		@Override
-		public W getOne() {
-			return getFieldWeights().getOne();
-		}
-		public boolean addWeightForTransition(Transition<Field,INode<Node<Stmt,Fact>>> trans, W weight) {
-			if(preventFieldTransitionAdd(trans,weight))
-				return false;
-			return super.addWeightForTransition(trans, weight);
-		};
-		@Override
-		public boolean isGeneratedState(INode<Node<Stmt, Fact>> d) {
-			return d instanceof GeneratedState;
-		}
-	};
-
-	protected final WeightedPAutomaton<Stmt, INode<Fact>,W> callAutomaton = new WeightedPAutomaton<Stmt, INode<Fact>,W>() {
-		@Override
-		public INode<Fact> createState(INode<Fact> d, Stmt loc) {
-			return generateCallState(d, loc);
-		}
-
-		@Override
-		public Stmt epsilon() {
-			return epsilonStmt();
-		}
-
-		@Override
-		public W getZero() {
-			return getCallWeights().getZero();
-		}
-
-		@Override
-		public boolean nested() {
-			return true;
-		};
-		@Override
-		public W getOne() {
-			return getCallWeights().getOne();
-		}
-		
-		public boolean addWeightForTransition(Transition<Stmt,INode<Fact>> trans, W weight) {
-			if(preventCallTransitionAdd(trans,weight))
-				return false;
-			return super.addWeightForTransition(trans, weight);
-		};
-
-		@Override
-		public boolean isGeneratedState(INode<Fact> d) {
-			return d instanceof GeneratedState;
-		}
-	};
-
-
-	public SyncPDSSolver(){
-		this(Maps.<INode<Fact>, WeightedPAutomaton<Stmt, INode<Fact>, W>>newHashMap(),Maps.<INode<Node<Stmt, Fact>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>>newHashMap());
+	public SyncPDSSolver(INode<Fact> initialCallNode, INode<Node<Stmt,Fact>> initialFieldNode){
+		this(initialCallNode, initialFieldNode, Maps.<INode<Fact>, WeightedPAutomaton<Stmt, INode<Fact>, W>>newHashMap(),Maps.<INode<Node<Stmt, Fact>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>>newHashMap());
 	}
 	
 	protected boolean preventFieldTransitionAdd(Transition<Field, INode<Node<Stmt, Fact>>> trans, W weight) {
@@ -141,7 +67,82 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	protected boolean preventCallTransitionAdd(Transition<Stmt, INode<Fact>> trans, W weight) {
 		return false;
 	}
-	public SyncPDSSolver(Map<INode<Fact>, WeightedPAutomaton<Stmt, INode<Fact>, W>> callSummaries,Map<INode<Node<Stmt, Fact>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>> fieldSummaries){
+	public SyncPDSSolver(INode<Fact> initialCallNode, INode<Node<Stmt,Fact>> initialFieldNode, Map<INode<Fact>, WeightedPAutomaton<Stmt, INode<Fact>, W>> callSummaries,Map<INode<Node<Stmt, Fact>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>> fieldSummaries){
+		fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W>(initialFieldNode) {
+			@Override
+			public INode<Node<Stmt,Fact>> createState(INode<Node<Stmt,Fact>> d, Field loc) {
+				if (loc.equals(emptyField()))
+					return d;
+				return generateFieldState(d, loc);
+			}
+
+			@Override
+			public Field epsilon() {
+				return epsilonField();
+			}
+
+			@Override
+			public boolean nested() {
+				return false;
+			};
+			
+			@Override
+			public W getZero() {
+				return getFieldWeights().getZero();
+			}
+
+			@Override
+			public W getOne() {
+				return getFieldWeights().getOne();
+			}
+			public boolean addWeightForTransition(Transition<Field,INode<Node<Stmt,Fact>>> trans, W weight) {
+				if(preventFieldTransitionAdd(trans,weight))
+					return false;
+				return super.addWeightForTransition(trans, weight);
+			};
+			@Override
+			public boolean isGeneratedState(INode<Node<Stmt, Fact>> d) {
+				return d instanceof GeneratedState;
+			}
+		};
+
+		callAutomaton = new WeightedPAutomaton<Stmt, INode<Fact>,W>(initialCallNode) {
+			@Override
+			public INode<Fact> createState(INode<Fact> d, Stmt loc) {
+				return generateCallState(d, loc);
+			}
+
+			@Override
+			public Stmt epsilon() {
+				return epsilonStmt();
+			}
+
+			@Override
+			public W getZero() {
+				return getCallWeights().getZero();
+			}
+
+			@Override
+			public boolean nested() {
+				return true;
+			};
+			@Override
+			public W getOne() {
+				return getCallWeights().getOne();
+			}
+			
+			public boolean addWeightForTransition(Transition<Stmt,INode<Fact>> trans, W weight) {
+				if(preventCallTransitionAdd(trans,weight))
+					return false;
+				return super.addWeightForTransition(trans, weight);
+			};
+
+			@Override
+			public boolean isGeneratedState(INode<Fact> d) {
+				return d instanceof GeneratedState;
+			}
+		};
+		
 		callAutomaton.registerListener(new CallAutomatonListener());
 		fieldAutomaton.registerListener(new FieldUpdateListener());
 		callingPDS.poststar(callAutomaton,callSummaries);
@@ -153,9 +154,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private class CallAutomatonListener implements WPAUpdateListener<Stmt, INode<Fact>,W>{
 
 		@Override
-		public void onWeightAdded(Transition<Stmt, INode<Fact>> t, W w) {
+		public void onWeightAdded(Transition<Stmt, INode<Fact>> t, W w, WeightedPAutomaton<Stmt, INode<Fact>,W> aut) {
 			if(!(t.getStart() instanceof GeneratedState)){
-				setCallingContextReachable(new Node<Stmt,Fact>(t.getString(),t.getStart().fact()));
+				Node<Stmt, Fact> node = new Node<Stmt,Fact>(t.getString(),t.getStart().fact());
+				setCallingContextReachable(node);
 			}
 		}
 	}
@@ -174,6 +176,8 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		Transition<Stmt, INode<Fact>> callTrans = new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(source.fact()));
 		callAutomaton
 				.addTransition(callTrans);
+		callAutomaton.setInitialState(wrap(source.fact()));
+		fieldAutomaton.setInitialState(asFieldFactSource(source));
 		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
 		computeValues(callTrans, weight);
 		processNode(startNode);
@@ -289,7 +293,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 					return;
 				fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, W>() {
 					@Override
-					public void onWeightAdded(Transition<Field, INode<Node<Stmt, Fact>>> t, W w) {
+					public void onWeightAdded(Transition<Field, INode<Node<Stmt, Fact>>> t, W w, WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> aut) {
 						if(t.getStart() instanceof GeneratedState)
 							return;
 						if(!t.getStart().fact().equals(sourceNode))
@@ -299,7 +303,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				});
 				callAutomaton.registerListener(new WPAUpdateListener<Stmt, INode<Fact>, W>() {
 					@Override
-					public void onWeightAdded(Transition<Stmt, INode<Fact>> t, W w) {
+					public void onWeightAdded(Transition<Stmt, INode<Fact>> t, W w, WeightedPAutomaton<Stmt, INode<Fact>,W> aut) {
 						if(t.getStart() instanceof GeneratedState)
 							return;
 						if(!t.getStart().fact().equals(sourceNode.fact()))
@@ -397,11 +401,16 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 		@Override
 		public void onWeightAdded(Transition<Field, INode<Node<Stmt,Fact>>> t,
-				W w) {
+				W w, WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> aut) {
 			INode<Node<Stmt,Fact>> n = t.getStart();
 			if(!(n instanceof GeneratedState)){
 				Node<Stmt,Fact> fact = n.fact();
-				setFieldContextReachable(new Node<Stmt,Fact>(fact.stmt(), fact.fact()));
+				Node<Stmt, Fact> node = new Node<Stmt,Fact>(fact.stmt(), fact.fact());
+//				if(aut.equals(fieldAutomaton) && fieldAutomaton.nested()){
+//					fieldContextReachable.add(node);
+//				} else {
+					setFieldContextReachable(node);
+//				}
 			}
 		}
 	}

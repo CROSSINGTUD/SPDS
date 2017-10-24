@@ -46,7 +46,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private Multimap<D, WPAStateListener<N, D, W>> stateListeners = HashMultimap.create();
 	private Map<D, ForwardDFSVisitor<N, D, W>> stateToDFS = Maps.newHashMap();
 	private Map<D, ForwardDFSVisitor<N, D, W>> stateToEpsilonDFS = Maps.newHashMap();
-	private List<WeightedPAutomaton<N, D, W>> nestedAutomatons = Lists.newArrayList();
+	private Set<WeightedPAutomaton<N, D, W>> nestedAutomatons = Sets.newHashSet();
 	private Map<D, ReachabilityListener<N, D>> stateToEpsilonReachabilityListener = Maps.newHashMap();
 	private Map<D, ReachabilityListener<N, D>> stateToReachabilityListener = Maps.newHashMap();
 	private Set<ReturnSiteWithWeights> connectedPushes = Sets.newHashSet();
@@ -58,6 +58,11 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private ForwardDFSVisitor<N, D, W> dfsEpsVisitor;
 	public int failedAdditions;
 	public int failedDirectAdditions;
+	
+
+	public WeightedPAutomaton(D initialState) {
+		this.initialState = initialState;
+	}
 
 	public abstract D createState(D d, N loc);
 
@@ -78,6 +83,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	public D getInitialState() {
 		return initialState;
 	}
+	
 
 	public Set<D> getFinalState() {
 		return finalState;
@@ -129,6 +135,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			s += "NESTED -> \n";
 			s += nested.toDotString();
 		}
+		s += "End nesting\n";
 		return s;
 	}
 	public String toLabelGroupedDotString() {
@@ -217,13 +224,13 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		if (!newWeight.equals(oldWeight)) {
 			transitionToWeights.put(trans, newWeight);
 			for (WPAUpdateListener<N, D, W> l : Lists.newArrayList(listeners)) {
-				l.onWeightAdded(trans, newWeight);
+				l.onWeightAdded(trans, newWeight, this);
 			}
 			for (WPAStateListener<N, D, W> l : Lists.newArrayList(stateListeners.get(trans.getStart()))) {
-				l.onOutTransitionAdded(trans, newWeight);
+				l.onOutTransitionAdded(trans, newWeight, this);
 			}
 			for (WPAStateListener<N, D, W> l : Lists.newArrayList(stateListeners.get(trans.getTarget()))) {
-				l.onInTransitionAdded(trans, newWeight);
+				l.onInTransitionAdded(trans, newWeight, this);
 			}
 			return true;
 		}
@@ -233,14 +240,14 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public W getWeightFor(Transition<N, D> trans) {
-		return transitionToWeights.get(trans);
+		return getOne();//transitionToWeights.get(trans);
 	}
 
 	public void registerListener(WPAUpdateListener<N, D, W> listener) {
 		if (!listeners.add(listener))
 			return;
 		for (Entry<Transition<N, D>, W> transAndWeight : Lists.newArrayList(transitionToWeights.entrySet())) {
-			listener.onWeightAdded(transAndWeight.getKey(), transAndWeight.getValue());
+			listener.onWeightAdded(transAndWeight.getKey(), transAndWeight.getValue(), this);
 		}
 		for(WeightedPAutomaton<N, D, W> nested : Lists.newArrayList(nestedAutomatons)){
 			nested.registerListener(listener);
@@ -252,10 +259,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			return;
 		}
 		for (Transition<N, D> t : Lists.newArrayList(transitionsOutOf.get(l.getState()))) {
-			l.onOutTransitionAdded(t,transitionToWeights.get(t));
+			l.onOutTransitionAdded(t,transitionToWeights.get(t), this);
 		}
 		for (Transition<N, D> t : Lists.newArrayList(transitionsInto.get(l.getState()))) {
-			l.onInTransitionAdded(t,transitionToWeights.get(t));
+			l.onInTransitionAdded(t,transitionToWeights.get(t), this);
 		}
 
 		for(WeightedPAutomaton<N, D, W> nested : Lists.newArrayList(nestedAutomatons)){
@@ -309,8 +316,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 
 	public abstract W getOne();
 
-	public WeightedPAutomaton<N, D, W> createNestedAutomaton() {
-		WeightedPAutomaton<N, D, W> nested = new WeightedPAutomaton<N, D, W>() {
+	public WeightedPAutomaton<N, D, W> createNestedAutomaton(D initialState) {
+		WeightedPAutomaton<N, D, W> nested = new WeightedPAutomaton<N, D, W>(initialState) {
 
 			@Override
 			public D createState(D d, N loc) {
@@ -483,17 +490,15 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		}
 
 		@Override
-		public void onOutTransitionAdded(Transition<N,D> t, W w) {
+		public void onOutTransitionAdded(Transition<N,D> t, W w, WeightedPAutomaton<N, D, W> aut) {
 		}
 
 		@Override
-		public void onInTransitionAdded(Transition<N,D> t, W w) {
+		public void onInTransitionAdded(Transition<N,D> t, W w, WeightedPAutomaton<N, D, W> aut) {
 			W weightAtTarget = transitionsToFinalWeights.get(trans);
 			W extendWith = (W) weightAtTarget.extendWith(w);
 			W weightAtSource = transitionsToFinalWeights.get(t);
 			W newVal = (weightAtSource == null ? extendWith : (W) weightAtSource.combineWith(extendWith));
-			if(t.toString().contains("FileMustBeClosedTest.escape return") && t.toString().contains("variable IDEALTestingFramework.mustBeInErrorState i"))
-				System.err.println(t + "  " + newVal + " was "+ weightAtSource +"   " + weightAtTarget + w);
 			if(!newVal.equals(weightAtSource)){
 				transitionsToFinalWeights.put(t, newVal);
 				registerListener(new ValueComputationListener(t));
@@ -562,6 +567,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		}
 
 	}
+
 
 	
 }

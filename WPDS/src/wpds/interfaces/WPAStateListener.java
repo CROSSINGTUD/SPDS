@@ -2,6 +2,7 @@ package wpds.interfaces;
 
 import wpds.impl.Transition;
 import wpds.impl.Weight;
+import wpds.impl.WeightedPAutomaton;
 
 public abstract class WPAStateListener<N extends Location, D extends State, W extends Weight>{
 	
@@ -11,8 +12,8 @@ public abstract class WPAStateListener<N extends Location, D extends State, W ex
 		this.state = state;
 	}
 
-	public abstract void onOutTransitionAdded(Transition<N, D> t, W w);
-	public abstract void onInTransitionAdded(Transition<N, D> t, W w);
+	public abstract void onOutTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton);
+	public abstract void onInTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton);
 	
 	public D getState(){
 		return state;
@@ -41,5 +42,6 @@ public abstract class WPAStateListener<N extends Location, D extends State, W ex
 			return false;
 		return true;
 	}
+
 
 }
