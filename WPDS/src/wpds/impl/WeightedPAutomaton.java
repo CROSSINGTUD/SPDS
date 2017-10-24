@@ -357,7 +357,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 				return "NESTED: \n" + super.toString();
 			}
 		};
-		addNestedAutomaton(null, nested);
+		addNestedAutomaton(nested);
 		return nested;
 	}
 
@@ -542,7 +542,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		return false;
 	}
 
-	public void addNestedAutomaton(D target, WeightedPAutomaton<N, D, W> nested) {
+	public void addNestedAutomaton(WeightedPAutomaton<N, D, W> nested) {
 		if(!nestedAutomatons.add(nested))
 			return;
 		for(WPAStateListener<N, D, W> e : Lists.newArrayList(stateListeners.values())){

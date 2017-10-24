@@ -433,7 +433,7 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 			aut = aut2.createNestedAutomaton(target);
 			getSummaries().put(target, aut);
 		} else{
-			fa.addNestedAutomaton(target, aut);
+			fa.addNestedAutomaton(aut);
 		}
 //		new PostStar<N, D, W>(){
 //			protected Map<D,WeightedPAutomaton<N,D,W>> getSummaries() {
