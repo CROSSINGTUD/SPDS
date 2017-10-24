@@ -434,11 +434,11 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 		} else{
 			fa.addNestedAutomaton(target, aut);
 		}
-		new PostStar<N, D, W>(){
-			protected Map<D,WeightedPAutomaton<N,D,W>> getSummaries() {
-				return PostStar.this.getSummaries();
-			};
-		}.poststar(pds, aut);
+//		new PostStar<N, D, W>(){
+//			protected Map<D,WeightedPAutomaton<N,D,W>> getSummaries() {
+//				return PostStar.this.getSummaries();
+//			};
+//		}.poststar(pds, aut);
 		aut.addWeightForTransition(transition, weight);
 		return aut;
 	}

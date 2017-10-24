@@ -68,7 +68,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 
 public abstract class Boomerang<W extends Weight> implements MethodReachableQueue{
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	public static final boolean ON_THE_FLY_CG = true;
 	public static final boolean TYPE_CHECK = true;
 	public static final boolean NULL_ALLOCATIONS = false;

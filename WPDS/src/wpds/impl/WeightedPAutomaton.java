@@ -350,8 +350,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 				return "NESTED: \n" + super.toString();
 			}
 		};
-		nestedAutomatons.add(nested);
-		registerNestedListeners(nested);
+		addNestedAutomaton(null, nested);
 		return nested;
 	}
 
@@ -538,12 +537,9 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		return false;
 	}
 
-	public void addNestedAutomaton(D target, WeightedPAutomaton<N, D, W> aut) {
-		nestedAutomatons.add(aut);
-		registerNestedListeners(aut);
-	}
-
-	private void registerNestedListeners(WeightedPAutomaton<N, D, W> nested) {
+	public void addNestedAutomaton(D target, WeightedPAutomaton<N, D, W> nested) {
+		if(!nestedAutomatons.add(nested))
+			return;
 		for(WPAStateListener<N, D, W> e : Lists.newArrayList(stateListeners.values())){
 			nested.registerListener(e);
 		}
@@ -566,5 +562,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		}
 
 	}
+
 	
 }

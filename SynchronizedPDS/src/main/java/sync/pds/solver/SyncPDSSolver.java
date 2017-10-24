@@ -69,7 +69,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 		@Override
 		public boolean nested() {
-			return false;
+			return true;
 		};
 		
 		@Override

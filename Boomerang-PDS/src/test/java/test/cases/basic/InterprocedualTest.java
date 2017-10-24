@@ -135,4 +135,35 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 		AllocatedObject mapped = param;
 		return mapped;
 	}
+	@Test
+	public void heavySumary() {
+		Allocation alias1 = new Allocation();
+		Object q;
+		if(staticallyUnknown()){
+			q = doSummarize(alias1);
+		}else if(staticallyUnknown()){
+			Allocation alias2 = new Allocation();
+			q = doSummarize(alias2);
+		} else{
+			Allocation alias3 = new Allocation();
+			q = doSummarize(alias3);
+		}
+		
+		queryFor(q);
+	}
+	private Allocation doSummarize(Allocation alias1) {
+		Allocation a = alias1;
+		Allocation b = a;
+		Allocation c = b;
+		Allocation d = c;
+		Allocation e = d;
+		Allocation f = e;
+		Allocation g = alias1;
+		if(staticallyUnknown()){
+			g = f;
+		}
+		Allocation h = g;
+		return f;
+	}
+
 }
