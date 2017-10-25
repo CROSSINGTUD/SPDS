@@ -164,16 +164,15 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 					for (State s : successors) {
 						if (s instanceof PopNode) {
 							PopNode<Fact> popNode = (PopNode<Fact>) s;
-							processPop(node, popNode);
-//							PDSSystem system = popNode.system();
-//							Object location = popNode.location();
-//							if (system.equals(PDSSystem.FIELDS)) {
-//								NodeWithLocation<Stmt, Fact, Field> succ = (NodeWithLocation) location;
-//								if(FieldSensitive){
-//									fieldPDS.addRule(new PopRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(node), succ.location(),
-//											asFieldFact(succ.fact()), getFieldWeights().pop(node, succ.location())));
-//								}
-//							}
+							processPop(node,popNode);
+							PDSSystem system = popNode.system();
+							Object location = popNode.location();
+							if (system.equals(PDSSystem.CALLS)) {
+								CallPopNode<Fact, Stmt> callPopNode = (CallPopNode) popNode;
+								Stmt returnSite = callPopNode.getReturnSite();
+								
+								callingContextReachable.add(new Node<Stmt, Fact>(returnSite,(Fact)location));
+							}
 						}
 					}
 				}else{
@@ -449,7 +448,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			processNode(createWitness(node));
 		}
 	}
-
+	
 
 	private WitnessNode<Stmt, Fact, Field> createWitness(Node<Stmt, Fact> node) {
 		WitnessNode<Stmt, Fact, Field> witnessNode = new WitnessNode<Stmt,Fact,Field>(node.stmt(),node.fact());
@@ -460,7 +459,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			return;
 		}
 		if (callingContextReachable.contains(node)) {
-			processNode(createWitness(node));
+			processNode(createWitness(node));		
 		}
 	}
 
