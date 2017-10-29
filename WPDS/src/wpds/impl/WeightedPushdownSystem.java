@@ -149,7 +149,7 @@ public class WeightedPushdownSystem<N extends Location, D extends State, W exten
 	}
 
 	public String toString() {
-		String s = "WPDS\n";
+		String s = "WPDS (#Rules: "+ getAllRules().size() +")\n";
 		s += "\tNormalRules:\n\t\t";
 		s += Joiner.on("\n\t\t").join(normalRules);
 		s += "\n";
