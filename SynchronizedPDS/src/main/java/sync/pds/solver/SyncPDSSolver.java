@@ -287,10 +287,8 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				Node<Stmt, Fact> node = new Node<Stmt,Fact>(t.getString(),t.getStart().fact());
 				if(callAutomaton.nested() && !aut.isInitialAutomaton(callAutomaton)){
 					callingContextSilentReachable.add(node);
-					
-				}else{
-					setCallingContextReachable(node);
 				}
+				setCallingContextReachable(node);
 			}
 		}
 	}
