@@ -47,6 +47,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private Map<D, ForwardDFSVisitor<N, D, W>> stateToDFS = Maps.newHashMap();
 	private Map<D, ForwardDFSVisitor<N, D, W>> stateToEpsilonDFS = Maps.newHashMap();
 	private Set<WeightedPAutomaton<N, D, W>> nestedAutomatons = Sets.newHashSet();
+	private Set<NestedAutomatonListener<N, D, W>> nestedAutomataListeners = Sets.newHashSet();
 	private Map<D, ReachabilityListener<N, D>> stateToEpsilonReachabilityListener = Maps.newHashMap();
 	private Map<D, ReachabilityListener<N, D>> stateToReachabilityListener = Maps.newHashMap();
 	private Set<ReturnSiteWithWeights> connectedPushes = Sets.newHashSet();
@@ -566,9 +567,26 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		for(Entry<D, ReachabilityListener<N, D>> e : Lists.newArrayList(stateToReachabilityListener.entrySet())){
 			nested.registerDFSListener(e.getKey(), e.getValue());
 		}
+		for(Entry<D, ReachabilityListener<N, D>> e : Lists.newArrayList(stateToReachabilityListener.entrySet())){
+			nested.registerDFSListener(e.getKey(), e.getValue());
+		}
+		
 
+		for(NestedAutomatonListener<N, D, W> e : Lists.newArrayList(nestedAutomataListeners)){
+			e.nestedAutomaton(this, nested);
+			nested.registerNestedAutomatonListener(e);
+		}
 	}
 
+	public void registerNestedAutomatonListener(NestedAutomatonListener<N, D, W> l){
+		if(!nestedAutomataListeners.add(l)){
+			return;
+		}
+		for(WeightedPAutomaton<N, D, W> nested : Lists.newArrayList(nestedAutomatons)){
+			l.nestedAutomaton(this, nested);
+		}
+	}
+	
 	public void setInitialAutomaton(WeightedPAutomaton<N, D, W> aut) {
 		initialAutomaton = aut;
 	}

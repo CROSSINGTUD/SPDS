@@ -25,6 +25,7 @@ import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
+import wpds.impl.NestedAutomatonListener;
 import wpds.impl.NormalRule;
 import wpds.impl.PopRule;
 import wpds.impl.PushRule;
@@ -34,6 +35,7 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
+import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends Location, W extends Weight> {
@@ -160,21 +162,43 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				Node<Stmt, Fact> node = new Node<Stmt,Fact>(t.getString(),t.getStart().fact());
 				if(callAutomaton.nested() && !aut.isInitialAutomaton(callAutomaton)){
 					callingContextSilentReachable.add(node);
-					Collection<? extends State> successors = computeSuccessor(node);
-					for (State s : successors) {
-						if (s instanceof PopNode) {
-							PopNode<Fact> popNode = (PopNode<Fact>) s;
-							processPop(node,popNode);
-							PDSSystem system = popNode.system();
-							Object location = popNode.location();
-							if (system.equals(PDSSystem.CALLS)) {
-								CallPopNode<Fact, Stmt> callPopNode = (CallPopNode) popNode;
-								Stmt returnSite = callPopNode.getReturnSite();
-								
-								callingContextReachable.add(new Node<Stmt, Fact>(returnSite,(Fact)location));
-							}
+					callAutomaton.registerNestedAutomatonListener(new NestedAutomatonListener<Stmt, INode<Fact>, W>() {
+
+						@Override
+						public void nestedAutomaton(final WeightedPAutomaton<Stmt, INode<Fact>, W> parent,
+								final WeightedPAutomaton<Stmt, INode<Fact>, W> child) {
+							child.registerListener(new WPAStateListener<Stmt, INode<Fact>, W>(child.getInitialState()) {
+								@Override
+								public void onOutTransitionAdded(Transition<Stmt, INode<Fact>> t, W w,
+										WeightedPAutomaton<Stmt, INode<Fact>, W> weightedPAutomaton) {
+									
+								}
+
+								@Override
+								public void onInTransitionAdded(final Transition<Stmt, INode<Fact>> nestedT, W w,
+										WeightedPAutomaton<Stmt, INode<Fact>, W> weightedPAutomaton) {
+									if(nestedT.getLabel().equals(callAutomaton.epsilon())){
+										parent.registerListener(new WPAStateListener<Stmt, INode<Fact>, W>(child.getInitialState()) {
+
+											@Override
+											public void onOutTransitionAdded(Transition<Stmt, INode<Fact>> t, W w,
+													WeightedPAutomaton<Stmt, INode<Fact>, W> weightedPAutomaton) {
+												Node<Stmt, Fact> returningNode = new Node<Stmt,Fact>(t.getLabel(),nestedT.getStart().fact());
+//												callingContextSilentReachable.add(returningNode);
+												setCallingContextReachable(returningNode);
+											}
+
+											@Override
+											public void onInTransitionAdded(Transition<Stmt, INode<Fact>> t, W w,
+													WeightedPAutomaton<Stmt, INode<Fact>, W> weightedPAutomaton) {
+												
+											}
+										});
+									}
+								}
+							});
 						}
-					}
+					});
 				}else{
 					setCallingContextReachable(node);
 				}

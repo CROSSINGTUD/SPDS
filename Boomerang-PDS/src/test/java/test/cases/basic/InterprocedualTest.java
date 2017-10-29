@@ -172,7 +172,7 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 	}
 
 	@Test
-	public void summry() {
+	public void summaryTest() {
 		Allocation alias1 = new Allocation();
 		Object q;
 		if(staticallyUnknown()){
