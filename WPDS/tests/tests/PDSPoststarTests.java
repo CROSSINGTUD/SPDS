@@ -17,10 +17,13 @@ import org.junit.Test;
 
 import tests.TestHelper.Abstraction;
 import tests.TestHelper.StackSymbol;
+import wpds.impl.NestedWeightedPAutomatons;
 import wpds.impl.PAutomaton;
 import wpds.impl.PostStar;
 import wpds.impl.PushdownSystem;
 import wpds.impl.Transition;
+import wpds.impl.Weight.NoWeight;
+import wpds.impl.WeightedPAutomaton;
 
 public class PDSPoststarTests {
 
@@ -35,6 +38,7 @@ public class PDSPoststarTests {
   public void popEpsilonTest1() {
     pds.addRule(push(2, "b", 2, "c", "d"));
     pds.addRule(pop(3, "c", 3));
+
     PAutomaton<StackSymbol, Abstraction> fa = accepts(2, "b");
     fa.addTransition(new Transition<StackSymbol, Abstraction>(a(3), fa.epsilon(), a(2)));
     pds.poststar(fa);

@@ -16,10 +16,13 @@ import sync.pds.solver.SyncPDSSolver.PDSSystem;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
+import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
+import sync.pds.solver.nodes.SingleNode;
+import wpds.impl.SummaryNestedWeightedPAutomatons;
 import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
@@ -58,7 +61,7 @@ public class DoublePDSTest {
 	private FieldRef epsilonField = new FieldRef("eps_f");
 	private Statement epsilonCallSite = new Statement(-1);
 	
-	private SyncPDSSolver<Statement, Variable, FieldRef, NoWeight> solver = new SyncPDSSolver<Statement, Variable, FieldRef, NoWeight>() {
+	private SyncPDSSolver<Statement, Variable, FieldRef, NoWeight> solver = new SyncPDSSolver<Statement, Variable, FieldRef, NoWeight>(new SingleNode<Variable>(new Variable("u")), new SingleNode<Node<Statement,Variable>>(node(1,"u")), new SummaryNestedWeightedPAutomatons<Statement,INode<Variable>,NoWeight>(),new SummaryNestedWeightedPAutomatons<FieldRef,INode<Node<Statement,Variable>>,NoWeight>()) {
 
 		@Override
 		public Collection<State> computeSuccessor(Node<Statement, Variable> node) {
