@@ -92,8 +92,9 @@ public class Statement implements Location {
 		if (delegate == null) {
 			return rep;
 		}
-		if(DEBUG)
+		if(DEBUG){
 			return method.getDeclaringClass().getShortName()+"."+method.getName() +" " + shortName(delegate);
+		}
 		return "[" + Integer.toString(methodToInt(method)) + "]" + Integer.toString(stmtToInt(delegate));
 	}
 

@@ -21,6 +21,7 @@ import boomerang.customize.ForwardEmptyCalleeFlow;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
+import boomerang.jimple.StatementWithAlloc;
 import boomerang.jimple.Val;
 import boomerang.poi.AbstractPOI;
 import boomerang.poi.PointOfIndirection;
@@ -118,12 +119,8 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 									
 												@Override
 												public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
-													if(t.getTarget().equals(new AllocNode<Node<Statement,Val>>(key.asNode()))){
-														unbalancedSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(t.getStart(),t.getString(),new AllocNode<Node<Statement,Val>>(forwardQuery.asNode())));
-													} else {
 														unbalancedSolver.getFieldAutomaton().addTransition(t);
 													}
-												}
 											});
 											final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callStatement));
 											callSitePoi.returnsFromCall(forwardQuery, returnedVal);
@@ -132,7 +129,8 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 								private Query createUnbalancedQuery(Statement callStatement, Query key) {
 									if(key instanceof ForwardQuery){
-										return new UnbalancedForwardQuery(callStatement, (ForwardQuery)key);	
+										Statement alloc = (key.stmt() instanceof StatementWithAlloc ? ((StatementWithAlloc)key.stmt()).getAlloc() : key.stmt());
+										return new UnbalancedForwardQuery(new StatementWithAlloc(callStatement, alloc),key.var());	
 									} else{
 										return new UnbalancedBackwardQuery(callStatement, (BackwardQuery)key);
 									}
@@ -445,7 +443,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 		@Override
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-			if(isAllocationNode(t.getTarget().fact(), sourceQuery)){
+			if(isAllocationNode(t.getTarget().fact().fact(), sourceQuery)){
 				fieldWritePoi.addBaseAllocation(sourceQuery);
 			}
 		}
@@ -499,7 +497,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			queryToSolvers.getOrCreate(sourceQuery).registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(node.stmt().getMethod()) {
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-					if(t.getStart().fact().equals(node.asNode()) && isAllocationNode(t.getTarget().fact(),sourceQuery)){
+					if(t.getStart().fact().equals(node.asNode()) && isAllocationNode(t.getTarget().fact().fact(),sourceQuery)){
 						fieldReadPoi.addBaseAllocation(sourceQuery);
 					}
 				}
@@ -508,8 +506,8 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	}
 
 
-	private boolean isAllocationNode(Node<Statement, Val> fact, ForwardQuery sourceQuery) {
-		return fact.equals(sourceQuery.asNode());
+	private boolean isAllocationNode(Val fact, ForwardQuery sourceQuery) {
+		return fact.equals(sourceQuery.var());
 	}
 
 	private BiDiInterproceduralCFG<Unit, SootMethod> bwicfg() {
@@ -902,7 +900,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 						
 						for(final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())){
 							Node<Statement, Val> aliasedVarAtSucc = new Node<Statement,Val>(succOfWrite,alias);
-							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(baseAllocation.asNode()), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
+							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new AllocNode<Node<Statement,Val>>(new Node<Statement,Val>((baseAllocation.stmt() instanceof StatementWithAlloc ? ((StatementWithAlloc)baseAllocation.stmt()).getAlloc() : baseAllocation.stmt()),baseAllocation.var())), Field.epsilon(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succOfWrite,getBaseVar()))));
 							flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement,Val>>>(new SingleNode<Node<Statement,Val>>(aliasedVarAtSucc), t.getLabel(),t.getTarget()));
 							Node<Statement, Val> rightOpNode = new Node<Statement, Val>(getStmt(),getStoredVar());
 							flowSolver.setFieldContextReachable(aliasedVarAtSucc);

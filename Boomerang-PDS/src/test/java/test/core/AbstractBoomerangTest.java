@@ -24,6 +24,7 @@ import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
+import boomerang.jimple.StatementWithAlloc;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import heros.utilities.DefaultValueMap;
@@ -131,7 +132,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						Statement statement = new Statement(unit, icfg.getMethodOf(unit));
 						ForwardQuery forwardQuery = new ForwardQuery(statement, new Val(local,icfg.getMethodOf(unit)));
 						if(callSite != null){
-							return Optional.<Query>of(new UnbalancedForwardQuery(new Statement(callSite, icfg.getMethodOf(callSite)), forwardQuery));
+							return Optional.<Query>of(new UnbalancedForwardQuery(new StatementWithAlloc(new Statement(callSite, icfg.getMethodOf(callSite)), statement), new Val(local,icfg.getMethodOf(unit))));
 						}
 						return Optional.<Query>of(forwardQuery);
 					}
@@ -325,15 +326,15 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private Collection<? extends Query> extractQuery(ValueOfInterestInUnit predicate) {
 		Set<Query> queries = Sets.newHashSet();
-		extractQuery(sootTestMethod, predicate, queries, null, new HashSet<SootMethod>());
+		extractQuery(sootTestMethod, predicate, queries, null, new HashSet<Node<SootMethod,Stmt>>());
 		return queries;
 	}
 
 	private void extractQuery(SootMethod m, ValueOfInterestInUnit predicate, Collection<Query> queries, Stmt callSite,
-			Set<SootMethod> visited) {
-		if (!m.hasActiveBody() || visited.contains(m))
+			Set<Node<SootMethod,Stmt>> visited) {
+		if (!m.hasActiveBody() || visited.contains(new Node<SootMethod,Stmt>(m,callSite)))
 			return;
-		visited.add(m);
+		visited.add(new Node<SootMethod,Stmt>(m,callSite));
 		Body activeBody = m.getActiveBody();
 		for (Unit cs : icfg.getCallsFromWithin(m)) {
 			for (SootMethod callee : icfg.getCalleesOfCallAt(cs))
