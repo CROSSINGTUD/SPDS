@@ -174,7 +174,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	};
 	private Set<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
 	protected AbstractBoomerangSolver<W> createBackwardSolver(final BackwardQuery backwardQuery) {
-		final BackwardBoomerangSolver<W> solver = new BackwardBoomerangSolver<W>(Boomerang.this, bwicfg(), backwardQuery, genField, backwardCallSummaries, backwardFieldSummaries){
+		final BackwardBoomerangSolver<W> solver = new BackwardBoomerangSolver<W>(Boomerang.this, bwicfg(), backwardQuery, genField, createSummaries(backwardQuery,backwardCallSummaries), backwardFieldSummaries){
 
 			@Override
 			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
@@ -266,7 +266,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	}
 
 	protected AbstractBoomerangSolver<W> createForwardSolver(final ForwardQuery sourceQuery) {
-		final ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(Boomerang.this, icfg(), sourceQuery,genField, createSummaries(sourceQuery), forwardFieldSummaries){
+		final ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(Boomerang.this, icfg(), sourceQuery,genField, createSummaries(sourceQuery, forwardCallSummaries), forwardFieldSummaries){
 			@Override
 			protected void onReturnFromCall(Statement callSite, Statement returnSite, final Node<Statement, Val> returnedNode, final boolean unbalanced) {
 			}
@@ -323,12 +323,12 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		return solver;
 	}
 	
-	private NestedWeightedPAutomatons<Statement, INode<Val>, W> createSummaries(final ForwardQuery sourceQuery) {
+	private NestedWeightedPAutomatons<Statement, INode<Val>, W> createSummaries(final Query sourceQuery, final NestedWeightedPAutomatons<Statement, INode<Val>, W> summaries) {
 		return new NestedWeightedPAutomatons<Statement, INode<Val>, W>() {
 
 			@Override
 			public void putSummaryAutomaton(INode<Val> target, WeightedPAutomaton<Statement, INode<Val>, W> aut) {
-				 forwardCallSummaries.putSummaryAutomaton(target, aut);
+				summaries.putSummaryAutomaton(target, aut);
 			}
 
 			@Override
@@ -336,7 +336,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 				if(target.fact().equals(sourceQuery.var())){
 					return queryToSolvers.getOrCreate(sourceQuery).getCallAutomaton();
 				}
-				return forwardCallSummaries.getSummaryAutomaton(target);
+				return summaries.getSummaryAutomaton(target);
 			}
 		};
 	}
