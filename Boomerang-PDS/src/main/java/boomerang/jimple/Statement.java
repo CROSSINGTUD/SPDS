@@ -28,7 +28,7 @@ public class Statement implements Location {
 		this.method = m;
 		this.rep = null;
 	}
-
+	
 	private Statement(String rep) {
 		this.rep = rep;
 		this.delegate = null;
@@ -71,7 +71,7 @@ public class Statement implements Location {
 			return false;
 		return true;
 	}
-	
+
 	public static Statement epsilon() {
 		if (epsilon == null) {
 			epsilon = new EpsStatement();

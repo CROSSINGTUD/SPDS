@@ -437,20 +437,15 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 	}
 
 
-	private WeightedPAutomaton<N, D, W> getOrCreateSummaryAutomaton(D target, Transition<N, D> transition, W weight, WeightedPAutomaton<N, D, W> aut2) {
+	private WeightedPAutomaton<N, D, W> getOrCreateSummaryAutomaton(D target, Transition<N, D> transition, W weight, WeightedPAutomaton<N, D, W> context) {
 		WeightedPAutomaton<N, D, W> aut = getSummaries().get(target);
 		if(aut == null){
-			aut = aut2.createNestedAutomaton(target);
+			aut = context.createNestedAutomaton(target);
 			getSummaries().put(target, aut);
 			aut.setInitialAutomaton(fa);
 		} else{
-			aut2.addNestedAutomaton(aut);
+			context.addNestedAutomaton(aut);
 		}
-//		new PostStar<N, D, W>(){
-//			protected Map<D,WeightedPAutomaton<N,D,W>> getSummaries() {
-//				return PostStar.this.getSummaries();
-//			};
-//		}.poststar(pds, aut);
 		aut.addWeightForTransition(transition, weight);
 		return aut;
 	}

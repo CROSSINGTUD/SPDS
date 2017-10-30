@@ -119,8 +119,8 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 									
 												@Override
 												public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
-														unbalancedSolver.getFieldAutomaton().addTransition(t);
-													}
+													unbalancedSolver.getFieldAutomaton().addTransition(t);
+												}
 											});
 											final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callStatement));
 											callSitePoi.returnsFromCall(forwardQuery, returnedVal);
