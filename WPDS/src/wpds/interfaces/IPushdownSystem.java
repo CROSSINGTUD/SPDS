@@ -1,13 +1,12 @@
 package wpds.interfaces;
 
-import java.util.Map;
 import java.util.Set;
 
+import wpds.impl.NestedWeightedPAutomatons;
 import wpds.impl.NormalRule;
 import wpds.impl.PopRule;
 import wpds.impl.PushRule;
 import wpds.impl.Rule;
-import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 
@@ -35,7 +34,7 @@ public interface IPushdownSystem<N extends Location, D extends State, W extends 
 
   public void poststar(WeightedPAutomaton<N, D, W> initialAutomaton);
   
-  public void poststar(WeightedPAutomaton<N, D, W> initialAutomaton, Map<D,WeightedPAutomaton<N, D, W>> summaries);
+  public void poststar(WeightedPAutomaton<N, D, W> initialAutomaton, NestedWeightedPAutomatons<N,D,W> summaries);
   
   public void registerUpdateListener(WPDSUpdateListener<N, D, W> listener);
 

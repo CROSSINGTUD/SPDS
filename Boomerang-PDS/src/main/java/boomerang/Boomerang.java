@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import com.beust.jcommander.internal.Maps;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
@@ -60,6 +59,8 @@ import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.ConnectPushListener;
+import wpds.impl.NestedWeightedPAutomatons;
+import wpds.impl.SummaryNestedWeightedPAutomatons;
 import wpds.impl.Transition;
 import wpds.impl.UnbalancedPopListener;
 import wpds.impl.Weight;
@@ -69,7 +70,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 
 public abstract class Boomerang<W extends Weight> implements MethodReachableQueue{
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	public static final boolean ON_THE_FLY_CG = true;
 	public static final boolean TYPE_CHECK = true;
 	public static final boolean NULL_ALLOCATIONS = false;
@@ -114,7 +115,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 											final AbstractBoomerangSolver<W> unbalancedSolver = queryToSolvers.getOrCreate(forwardQuery);
 											
 											Node<Statement, Val> returnedVal = new Node<Statement,Val>(returnSite, returningFact.fact());
-											unbalancedSolver.solve(forwardQuery.asNode(), returnedVal, weight);
+											unbalancedSolver.solve(returnedVal, weight);
 											queryToSolvers.getOrCreate(key).getFieldAutomaton().registerDFSListener(new SingleNode<Node<Statement,Val>>(returnedVal), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 									
 												@Override
@@ -149,10 +150,10 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	private Collection<RefType> allocatedTypes = Sets.newHashSet();
 	private Multimap<SootMethod, Runnable> queuedReachableMethod = HashMultimap.create();
 	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
-	private Map<INode<Val>, WeightedPAutomaton<Statement, INode<Val>, W>> backwardCallSummaries = Maps.newHashMap();
-	private Map< INode<Node<Statement, Val>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> backwardFieldSummaries = Maps.newHashMap();
-	private Map< INode<Val>, WeightedPAutomaton<Statement, INode<Val>, W>> forwardCallSummaries = Maps.newHashMap();
-	private Map<INode<Node<Statement, Val>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> forwardFieldSummaries = Maps.newHashMap();
+	private NestedWeightedPAutomatons<Statement, INode<Val>, W> backwardCallSummaries = new SummaryNestedWeightedPAutomatons<>();
+	private NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> backwardFieldSummaries = new SummaryNestedWeightedPAutomatons<>();
+	private NestedWeightedPAutomatons<Statement, INode<Val>, W> forwardCallSummaries = new SummaryNestedWeightedPAutomatons<>();
+	private NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> forwardFieldSummaries = new SummaryNestedWeightedPAutomatons<>();
 	private DefaultValueMap<FieldWritePOI, FieldWritePOI> fieldWrites = new DefaultValueMap<FieldWritePOI, FieldWritePOI>() {
 		@Override
 		protected FieldWritePOI createItem(FieldWritePOI key) {
@@ -265,7 +266,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	}
 
 	protected AbstractBoomerangSolver<W> createForwardSolver(final ForwardQuery sourceQuery) {
-		final ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(Boomerang.this, icfg(), sourceQuery,genField, forwardCallSummaries, forwardFieldSummaries){
+		final ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(Boomerang.this, icfg(), sourceQuery,genField, createSummaries(sourceQuery), forwardFieldSummaries){
 			@Override
 			protected void onReturnFromCall(Statement callSite, Statement returnSite, final Node<Statement, Val> returnedNode, final boolean unbalanced) {
 			}
@@ -322,6 +323,24 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		return solver;
 	}
 	
+	private NestedWeightedPAutomatons<Statement, INode<Val>, W> createSummaries(final ForwardQuery sourceQuery) {
+		return new NestedWeightedPAutomatons<Statement, INode<Val>, W>() {
+
+			@Override
+			public void putSummaryAutomaton(INode<Val> target, WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+				 forwardCallSummaries.putSummaryAutomaton(target, aut);
+			}
+
+			@Override
+			public WeightedPAutomaton<Statement, INode<Val>, W> getSummaryAutomaton(INode<Val> target) {
+				if(target.fact().equals(sourceQuery.var())){
+					return queryToSolvers.getOrCreate(sourceQuery).getCallAutomaton();
+				}
+				return forwardCallSummaries.getSummaryAutomaton(target);
+			}
+		};
+	}
+
 	protected FieldReadPOI createFieldLoad(Statement s) {	
 		Stmt stmt = s.getUnit().get();
 		AssignStmt as = (AssignStmt) stmt;
@@ -531,7 +550,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
 		if (unit.isPresent()) {
 			for (Unit succ : new BackwardsInterproceduralCFG(icfg()).getSuccsOf(unit.get())) {
-				solver.solve(query.asNode(), new Node<Statement, Val>(
+				solver.solve(new Node<Statement, Val>(
 						new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact()));
 			}
 		}
@@ -548,7 +567,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 					solver.getFieldAutomaton().addTransition(new Transition<Field,INode<Node<Statement,Val>>>(new SingleNode<Node<Statement,Val>>(source),Field.array(),new AllocNode<Node<Statement,Val>>(query.asNode())));
 					solver.getFieldAutomaton().addTransition(new Transition<Field,INode<Node<Statement,Val>>>(new SingleNode<Node<Statement,Val>>(source),Field.array(),new SingleNode<Node<Statement,Val>>(source)));
 				}
-				solver.solve(query.asNode(), source);
+				solver.solve(source);
 			}
 		}
 	}

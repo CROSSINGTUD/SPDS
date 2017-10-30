@@ -25,11 +25,13 @@ import tests.TestHelper.StackSymbol;
 import wpds.impl.PAutomaton;
 import wpds.impl.PostStar;
 import wpds.impl.PushdownSystem;
+import wpds.impl.SummaryNestedWeightedPAutomatons;
 import wpds.impl.Transition;
+import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.ReachabilityListener;
 
 public class ForwardDFSVisitorTest {
-	PAutomaton<StackSymbol, Abstraction> fa = new PAutomaton<StackSymbol, Abstraction>() {
+	PAutomaton<StackSymbol, Abstraction> fa = new PAutomaton<StackSymbol, Abstraction>(a(0)) {
 		@Override
 		public Abstraction createState(Abstraction d, StackSymbol loc) {
 			return new Abstraction(d, loc);
@@ -122,12 +124,10 @@ public class ForwardDFSVisitorTest {
 		pds.addRule(pop(1, "d", 1));
 		pds.addRule(normal(1, "e", 1, "k"));
 		PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "a");
-		PostStar.SUMMARIES = false;
 		pds.poststar(fa);
 		System.out.println(fa.toDotString());
-		PostStar.SUMMARIES = true;
 		PAutomaton<StackSymbol, Abstraction> faSummaries = accepts(1, "a");
-		pds.poststar(faSummaries);
+		pds.poststar(faSummaries, new SummaryNestedWeightedPAutomatons<StackSymbol, Abstraction,NoWeight>());
 		System.out.println(faSummaries.toDotString());
 		assertSetEquals(reachableFrom(fa,a(2)), reachableFrom(faSummaries,a(2)));
 		assertSetEquals(reachableFrom(fa,a(1)), reachableFrom(faSummaries,a(1)));
@@ -140,11 +140,9 @@ public class ForwardDFSVisitorTest {
 		pds.addRule(pop(3, "f", 2));
 		pds.addRule(normal(2, "e", 3, "k"));
 		PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "a");
-		PostStar.SUMMARIES = false;
 		pds.poststar(fa);
-		PostStar.SUMMARIES = true;
 		PAutomaton<StackSymbol, Abstraction> faSummaries = accepts(1, "a");
-		pds.poststar(faSummaries);
+		pds.poststar(faSummaries, new SummaryNestedWeightedPAutomatons<StackSymbol, Abstraction,NoWeight>());
 		assertSetEquals(reachableFrom(fa,a(1)), reachableFrom(faSummaries,a(1)));
 	}
 	@Test
@@ -158,12 +156,10 @@ public class ForwardDFSVisitorTest {
 		pds.addRule(push(4, "k", 3, "d", "i"));
 		pds.addRule(normal(2, "i", 5, "m"));
 		PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "a");
-		PostStar.SUMMARIES = false;
 		pds.poststar(fa);
 		System.out.println(fa.toDotString());
-		PostStar.SUMMARIES = true;
 		PAutomaton<StackSymbol, Abstraction> faSummaries = accepts(1, "a");
-		pds.poststar(faSummaries);
+		pds.poststar(faSummaries, new SummaryNestedWeightedPAutomatons<StackSymbol, Abstraction,NoWeight>());
 		System.out.println(faSummaries.toDotString());
 		assertSetEquals(reachableFrom(fa,a(1)), reachableFrom(faSummaries,a(1)));
 	}
@@ -180,12 +176,10 @@ public class ForwardDFSVisitorTest {
 		pds.addRule(pop(3, "z", 2));
 		pds.addRule(normal(2, "e", 6, "i"));
 		PAutomaton<StackSymbol, Abstraction> fa = accepts(1, "a");
-		PostStar.SUMMARIES = false;
 		pds.poststar(fa);
 		System.out.println(fa.toDotString());
-		PostStar.SUMMARIES = true;
 		PAutomaton<StackSymbol, Abstraction> faSummaries = accepts(1, "a");
-		pds.poststar(faSummaries);
+		pds.poststar(faSummaries, new SummaryNestedWeightedPAutomatons<StackSymbol, Abstraction,NoWeight>());
 		System.out.println(faSummaries.toDotString());
 		assertSetEquals(reachableFrom(fa,a(1)), reachableFrom(faSummaries,a(1)));
 	}

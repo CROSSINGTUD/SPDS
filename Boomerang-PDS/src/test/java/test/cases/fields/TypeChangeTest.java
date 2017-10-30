@@ -9,8 +9,9 @@ public class TypeChangeTest extends AbstractBoomerangTest {
 	@Test
 	public void returnValue() {
 		D f = new D();
-		Object t = f.getField();
-		queryFor(t);
+		Object amIThere = f.getField();
+		System.err.println(2);
+		queryFor(amIThere);
 	}
 	@Test
 	public void doubleReturnValue() {
@@ -25,12 +26,13 @@ public class TypeChangeTest extends AbstractBoomerangTest {
 		AllocatedObject u = (AllocatedObject) t;
 		queryFor(u);
 	}
-	public class D {
-		AllocatedObject f = new AllocatedObject(){};
+	public static class D {
+		Alloc f = new Alloc();
 		D d = new D();
 
 		public Object getField() {
-			return f;
+			Alloc varShouldBeThere = this.f;
+			return varShouldBeThere;
 		}
 
 		public Object getDoubleField() {

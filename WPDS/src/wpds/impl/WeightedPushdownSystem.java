@@ -130,17 +130,34 @@ public class WeightedPushdownSystem<N extends Location, D extends State, W exten
 
 	@Override
 	public void poststar(WeightedPAutomaton<N, D, W> initialAutomaton,
-			final Map<D, WeightedPAutomaton<N, D, W>> summaries) {
+			final NestedWeightedPAutomatons<N,D,W> summaries) {
 		new PostStar<N, D, W>() {
-			protected Map<D, WeightedPAutomaton<N, D, W>> getSummaries() {
-				return summaries;
+
+			@Override
+			public void putSummaryAutomaton(D target, WeightedPAutomaton<N, D, W> aut) {
+				summaries.putSummaryAutomaton(target,aut);
+			}
+
+			@Override
+			public WeightedPAutomaton<N, D, W> getSummaryAutomaton(D target) {
+				return summaries.getSummaryAutomaton(target);
 			};
 		}.poststar(this, initialAutomaton);
 	}
 
 	@Override
-	public void poststar(WeightedPAutomaton<N, D, W> initialAutomaton) {
-		new PostStar<N, D, W>().poststar(this, initialAutomaton);
+	public void poststar(final WeightedPAutomaton<N, D, W> initialAutomaton) {
+		new PostStar<N, D, W>(){
+
+			@Override
+			public void putSummaryAutomaton(D target, WeightedPAutomaton<N, D, W> aut) {
+				
+			}
+
+			@Override
+			public WeightedPAutomaton<N, D, W> getSummaryAutomaton(D target) {
+				return initialAutomaton;
+			}}.poststar(this, initialAutomaton);
 	}
 
 	@Override

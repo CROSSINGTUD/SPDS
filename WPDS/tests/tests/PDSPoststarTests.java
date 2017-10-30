@@ -28,7 +28,6 @@ public class PDSPoststarTests {
 
   @Before
   public void init() {
-	PostStar.SUMMARIES = false;
     pds = new PushdownSystem<StackSymbol, Abstraction>() {};
   }
 

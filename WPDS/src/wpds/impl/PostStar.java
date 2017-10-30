@@ -1,10 +1,5 @@
 package wpds.impl;
 
-import java.util.Map;
-import java.util.concurrent.SynchronousQueue;
-
-import com.google.common.collect.Maps;
-
 import wpds.interfaces.Empty;
 import wpds.interfaces.IPushdownSystem;
 import wpds.interfaces.Location;
@@ -15,16 +10,14 @@ import wpds.interfaces.WPDSUpdateListener;
 import wpds.wildcard.ExclusionWildcard;
 import wpds.wildcard.Wildcard;
 
-public class PostStar<N extends Location, D extends State, W extends Weight> {
+public abstract class PostStar<N extends Location, D extends State, W extends Weight> {
 	private IPushdownSystem<N, D, W> pds;
 	private WeightedPAutomaton<N, D, W> fa;
-	private Map<D, WeightedPAutomaton<N, D, W>> summaries = Maps.newHashMap();
 
 	public void poststar(IPushdownSystem<N, D, W> pds, WeightedPAutomaton<N, D, W> initialAutomaton) {
 		this.pds = pds;
 		this.fa = initialAutomaton;
 		fa.setInitialAutomaton(fa);
-		getSummaries().put(fa.getInitialState(), initialAutomaton);
 		this.pds.registerUpdateListener(new PostStarUpdateListener(fa));
 	}
 	
@@ -379,9 +372,6 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 		public void onInTransitionAdded(Transition<N, D> t, W weight, WeightedPAutomaton<N, D, W> aut) {
 			if (t.getString().equals(fa.epsilon())) {
 				W newWeight = fa.getWeightFor(transition);
-				if(fa.nested())
-					update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
-						(W) newWeight.extendWith(weight));
 				fa.reconnectPush(callSite, transition.getLabel(),t.getStart(), newWeight, weight);
 			}	
 		}
@@ -432,16 +422,16 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 		if(!fa.nested()){
 			fa.addWeightForTransition(trans, weight);
 		}else{
-			 getSummaries().get(trans.getTarget()).addWeightForTransition(trans, weight);	
+			getSummaryAutomaton(trans.getTarget()).addWeightForTransition(trans, weight);	
 		}
 	}
 
 
 	private WeightedPAutomaton<N, D, W> getOrCreateSummaryAutomaton(D target, Transition<N, D> transition, W weight, WeightedPAutomaton<N, D, W> context) {
-		WeightedPAutomaton<N, D, W> aut = getSummaries().get(target);
+		WeightedPAutomaton<N, D, W> aut = getSummaryAutomaton(target);
 		if(aut == null){
 			aut = context.createNestedAutomaton(target);
-			getSummaries().put(target, aut);
+			putSummaryAutomaton(target, aut);
 			aut.setInitialAutomaton(fa);
 		} else{
 			context.addNestedAutomaton(aut);
@@ -449,9 +439,10 @@ public class PostStar<N extends Location, D extends State, W extends Weight> {
 		aut.addWeightForTransition(transition, weight);
 		return aut;
 	}
+
+
+	public abstract void putSummaryAutomaton(D target, WeightedPAutomaton<N, D, W> aut);
+	public abstract WeightedPAutomaton<N, D, W> getSummaryAutomaton(D target);
 	
 
-	protected Map<D, WeightedPAutomaton<N, D, W>> getSummaries(){
-		return summaries;
-	}
 }

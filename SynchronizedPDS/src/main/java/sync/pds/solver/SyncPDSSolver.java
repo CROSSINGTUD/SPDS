@@ -26,6 +26,7 @@ import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.NestedAutomatonListener;
+import wpds.impl.NestedWeightedPAutomatons;
 import wpds.impl.NormalRule;
 import wpds.impl.PopRule;
 import wpds.impl.PushRule;
@@ -60,17 +61,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	protected final Map<Transition<Stmt, INode<Fact>>, W> nodesToWeights = Maps.newHashMap(); 
 	private final Set<WitnessNode<Stmt,Fact,Field>> reachedStates = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> callingContextReachable = Sets.newHashSet();
-	private final Set<Node<Stmt, Fact>> callingContextSilentReachable = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> fieldContextReachable = Sets.newHashSet();
 	private final Set<SyncPDSUpdateListener<Stmt, Fact, Field>> updateListeners = Sets.newHashSet();
 	private final Multimap<WitnessNode<Stmt,Fact,Field>, SyncStatePDSUpdateListener<Stmt, Fact, Field>> reachedStateUpdateListeners = HashMultimap.create();
 	protected final WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> fieldAutomaton;
 	protected final WeightedPAutomaton<Stmt, INode<Fact>,W> callAutomaton;
 
-	public SyncPDSSolver(INode<Fact> initialCallNode, INode<Node<Stmt,Fact>> initialFieldNode){
-		this(initialCallNode, initialFieldNode, Maps.<INode<Fact>, WeightedPAutomaton<Stmt, INode<Fact>, W>>newHashMap(),Maps.<INode<Node<Stmt, Fact>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>>newHashMap());
-	}
-	
 	protected boolean preventFieldTransitionAdd(Transition<Field, INode<Node<Stmt, Fact>>> trans, W weight) {
 		return false;
 	}
@@ -78,7 +74,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	protected boolean preventCallTransitionAdd(Transition<Stmt, INode<Fact>> trans, W weight) {
 		return false;
 	}
-	public SyncPDSSolver(INode<Fact> initialCallNode, INode<Node<Stmt,Fact>> initialFieldNode, Map<INode<Fact>, WeightedPAutomaton<Stmt, INode<Fact>, W>> callSummaries,Map<INode<Node<Stmt, Fact>>, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W>> fieldSummaries){
+	public SyncPDSSolver(INode<Fact> initialCallNode, INode<Node<Stmt,Fact>> initialFieldNode, NestedWeightedPAutomatons<Stmt, INode<Fact>, W> callSummaries,NestedWeightedPAutomatons<Field, INode<Node<Stmt, Fact>>, W> fieldSummaries){
 		fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W>(initialFieldNode) {
 			@Override
 			public INode<Node<Stmt,Fact>> createState(INode<Node<Stmt,Fact>> d, Field loc) {
@@ -285,30 +281,21 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		public void onWeightAdded(Transition<Stmt, INode<Fact>> t, W w, WeightedPAutomaton<Stmt, INode<Fact>,W> aut) {
 			if(!(t.getStart() instanceof GeneratedState)){
 				Node<Stmt, Fact> node = new Node<Stmt,Fact>(t.getString(),t.getStart().fact());
-				if(callAutomaton.nested() && !aut.isInitialAutomaton(callAutomaton)){
-					callingContextSilentReachable.add(node);
-				}
 				setCallingContextReachable(node);
 			}
 		}
 	}
 
-	public void solve(Node<Stmt,Fact> source) {
-		solve(source,source);
+	public void solve(Node<Stmt, Fact> curr) {
+		solve(curr,callAutomaton.getOne());
 	}
 	
-	public void solve(Node<Stmt,Fact> source, Node<Stmt, Fact> curr) {
-		solve(source,curr,callAutomaton.getOne());
-	}
-	
-	public void solve(Node<Stmt,Fact> source, Node<Stmt, Fact> curr,  W weight) {
-		Transition<Field, INode<Node<Stmt,Fact>>> fieldTrans = new Transition<Field, INode<Node<Stmt,Fact>>>(asFieldFact(curr), emptyField(), asFieldFactSource(source));
+	public void solve(Node<Stmt, Fact> curr,  W weight) {
+		Transition<Field, INode<Node<Stmt,Fact>>> fieldTrans = new Transition<Field, INode<Node<Stmt,Fact>>>(asFieldFact(curr), emptyField(), fieldAutomaton.getInitialState());
 		fieldAutomaton.addTransition(fieldTrans);
-		Transition<Stmt, INode<Fact>> callTrans = new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), wrap(source.fact()));
+		Transition<Stmt, INode<Fact>> callTrans = new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), callAutomaton.getInitialState());
 		callAutomaton
 				.addTransition(callTrans);
-		callAutomaton.setInitialState(wrap(source.fact()));
-		fieldAutomaton.setInitialState(asFieldFactSource(source));
 		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
 		computeValues(callTrans, weight);
 		processNode(startNode);
@@ -380,11 +367,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 	public boolean addNormalCallFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
-
-		if(callingContextSilentReachable.contains(curr)){
-			System.out.println("Not adding "+  	new NormalRule<Stmt, INode<Fact>,W>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt(),getCallWeights().normal(curr,succ)));
-			return false;
-		}
 		return callingPDS.addRule(
 				new NormalRule<Stmt, INode<Fact>,W>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt(),getCallWeights().normal(curr,succ)));
 	}

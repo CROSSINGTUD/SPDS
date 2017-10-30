@@ -8,6 +8,10 @@ import wpds.interfaces.State;
 public abstract class PAutomaton<N extends Location, D extends State> extends WeightedPAutomaton<N, D, NoWeight>
 		implements LabeledGraph<D, N> {
 	
+	public PAutomaton(D initialState) {
+		super(initialState);
+	}
+
 	@Override
 	public NoWeight getOne() {
 		return NoWeight.NO_WEIGHT_ONE;

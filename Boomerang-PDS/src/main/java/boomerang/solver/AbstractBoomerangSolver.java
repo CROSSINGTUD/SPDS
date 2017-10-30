@@ -40,6 +40,7 @@ import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
+import wpds.impl.NestedWeightedPAutomatons;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -62,7 +63,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private final MethodReachableQueue reachableQueue;
 	
 	
-	public AbstractBoomerangSolver(MethodReachableQueue reachableQueue, InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, Map<INode<Val>, WeightedPAutomaton<Statement, INode<Val>, W>> callSummaries, Map<INode<Node<Statement, Val>>, WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W>> fieldSummaries){
+	public AbstractBoomerangSolver(MethodReachableQueue reachableQueue, InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,  NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries){
 		super(new SingleNode<Val>(query.asNode().fact()) , new AllocNode<Node<Statement,Val>>(query.asNode()), callSummaries, fieldSummaries);
 		this.reachableQueue = reachableQueue;
 
