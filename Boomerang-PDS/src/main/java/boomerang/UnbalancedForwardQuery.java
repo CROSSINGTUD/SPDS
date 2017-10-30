@@ -4,24 +4,28 @@ import boomerang.jimple.Statement;
 
 public class UnbalancedForwardQuery extends ForwardQuery {
 
-	private ForwardQuery original;
+	private Statement unbalancedCallSite;
 
 	public UnbalancedForwardQuery(Statement stmt, ForwardQuery delegate) {
-		super(stmt, delegate.asNode().fact());
-		this.original = delegate;
+		super(delegate.asNode().stmt(), delegate.asNode().fact());
+		this.unbalancedCallSite = stmt;
 	}
+
 	
-	public ForwardQuery sourceQuery(){
-		return original;
+	@Override
+	public String toString() {
+		return super.toString() + " returns via " + unbalancedCallSite;
 	}
-	
+
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = super.hashCode();
-		result = prime * result + ((original == null) ? 0 : original.hashCode());
+		result = prime * result + ((unbalancedCallSite == null) ? 0 : unbalancedCallSite.hashCode());
 		return result;
 	}
+
 
 	@Override
 	public boolean equals(Object obj) {
@@ -32,17 +36,11 @@ public class UnbalancedForwardQuery extends ForwardQuery {
 		if (getClass() != obj.getClass())
 			return false;
 		UnbalancedForwardQuery other = (UnbalancedForwardQuery) obj;
-		if (original == null) {
-			if (other.original != null)
+		if (unbalancedCallSite == null) {
+			if (other.unbalancedCallSite != null)
 				return false;
-		} else if (!original.equals(other.original))
+		} else if (!unbalancedCallSite.equals(other.unbalancedCallSite))
 			return false;
 		return true;
-	}
-
-	
-	@Override
-	public String toString() {
-		return super.toString() + " allocated at " + original.asNode().stmt();
 	}
 }

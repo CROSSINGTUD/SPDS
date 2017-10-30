@@ -132,9 +132,9 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 								private Query createUnbalancedQuery(Statement callStatement, Query key) {
 									if(key instanceof ForwardQuery){
-										return new UnbalancedForwardQuery(callStatement, (key instanceof UnbalancedForwardQuery ? ((UnbalancedForwardQuery)key).sourceQuery():(ForwardQuery)key));	
+										return new UnbalancedForwardQuery(callStatement, (ForwardQuery)key);	
 									} else{
-										return new UnbalancedBackwardQuery(callStatement, (key instanceof UnbalancedBackwardQuery ? ((UnbalancedBackwardQuery)key).sourceQuery():(BackwardQuery)key));
+										return new UnbalancedBackwardQuery(callStatement, (BackwardQuery)key);
 									}
 								}
 							});
@@ -509,11 +509,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 
 	private boolean isAllocationNode(Node<Statement, Val> fact, ForwardQuery sourceQuery) {
-		return fact.equals(unwrapUnbalanced(sourceQuery)) ||  fact.equals(sourceQuery.asNode());
-	}
-
-	private Node<Statement,Val> unwrapUnbalanced(ForwardQuery sourceQuery) {
-		return (sourceQuery instanceof UnbalancedForwardQuery ? ((UnbalancedForwardQuery)sourceQuery).sourceQuery().asNode() : sourceQuery.asNode());
+		return fact.equals(sourceQuery.asNode());
 	}
 
 	private BiDiInterproceduralCFG<Unit, SootMethod> bwicfg() {
