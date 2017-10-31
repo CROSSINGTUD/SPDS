@@ -293,6 +293,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	public void solve(Node<Stmt, Fact> curr,  W weight) {
 		Transition<Field, INode<Node<Stmt,Fact>>> fieldTrans = new Transition<Field, INode<Node<Stmt,Fact>>>(asFieldFact(curr), emptyField(), fieldAutomaton.getInitialState());
 		fieldAutomaton.addTransition(fieldTrans);
+		unbalancedSolve(curr,weight);
+	}
+	
+	public void unbalancedSolve(Node<Stmt, Fact> curr,  W weight) {
 		Transition<Stmt, INode<Fact>> callTrans = new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), callAutomaton.getInitialState());
 		callAutomaton
 				.addTransition(callTrans);

@@ -21,6 +21,18 @@ public class StaticFieldFlows extends AbstractBoomerangTest {
 		queryFor(alias);
 	}
 	
+
+	@Test
+	public void doubleUnbalancedSingleton(){
+		Alloc singleton = returns();
+		Object alias = singleton;
+		queryFor(alias);
+	}
+	
+	private static Alloc returns() {
+		return StaticFieldFlows.v();
+	}
+	
 	private static Alloc v() {
 		if(instance == null)
 			instance = new Alloc();

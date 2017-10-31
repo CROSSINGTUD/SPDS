@@ -116,7 +116,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 											final AbstractBoomerangSolver<W> unbalancedSolver = queryToSolvers.getOrCreate(forwardQuery);
 											
 											Node<Statement, Val> returnedVal = new Node<Statement,Val>(returnSite, returningFact.fact());
-											unbalancedSolver.solve(returnedVal, weight);
+											unbalancedSolver.unbalancedSolve(returnedVal, weight);
 											queryToSolvers.getOrCreate(key).getFieldAutomaton().registerDFSListener(new SingleNode<Node<Statement,Val>>(returnedVal), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 									
 												@Override
