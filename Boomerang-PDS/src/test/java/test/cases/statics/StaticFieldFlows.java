@@ -7,13 +7,25 @@ import test.core.AbstractBoomerangTest;
 
 public class StaticFieldFlows extends AbstractBoomerangTest {
 	private static Object alloc;
+	private static Alloc instance;
 	@Test
 	public void simple(){
 		alloc = new Alloc();
 		Object alias = alloc;
 		queryFor(alias);
 	}
+	@Test
+	public void singleton(){
+		Alloc singleton = StaticFieldFlows.v();
+		Object alias = singleton;
+		queryFor(alias);
+	}
 	
+	private static Alloc v() {
+		if(instance == null)
+			instance = new Alloc();
+		return instance;
+	}
 	@Test
 	public void overwriteStatic(){
 		alloc = new Object();
