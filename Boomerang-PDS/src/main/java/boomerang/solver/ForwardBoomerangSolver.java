@@ -224,7 +224,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		}
 		return Collections.emptySet();
 	}
-
+	
 	@Override
 	protected boolean preventFieldTransitionAdd(Transition<Field, INode<Node<Statement, Val>>> t, W weight) {
 		if(!t.getLabel().equals(Field.empty()) || !Boomerang.TYPE_CHECK){
@@ -241,15 +241,4 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(allocVal.value().getType(),varVal.value().getType());
 		return !castFails;
 	}
-//	@Override
-//	protected boolean canCastBeApplied(Node<Statement, Val> curr, Transition<Field, INode<Node<Statement, Val>>> t,
-//			CastNode<Statement, Val, ?> succ, W weight) {
-//		if(!t.getLabel().equals(Field.empty())){
-//			return true;
-//		}
-//		Type type = t.getTarget().fact().fact().value().getType();
-//		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(type, (Type)succ.getType());
-//		return castFails;
-//	}
-	
 }

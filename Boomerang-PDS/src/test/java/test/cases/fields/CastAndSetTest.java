@@ -19,7 +19,8 @@ public class CastAndSetTest extends AbstractBoomerangTest{
 	private static class Container{
 		AllocatedObject o;
 		public void set(Object o1) {
-			this.o = (AllocatedObject) o1;
+			AllocatedObject var = (AllocatedObject) o1;
+			this.o = var;
 		}
 
 		public AllocatedObject get() {
