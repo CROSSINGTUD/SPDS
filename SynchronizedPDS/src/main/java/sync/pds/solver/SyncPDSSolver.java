@@ -130,7 +130,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 			@Override
 			public boolean nested() {
-				return true;
+				return false;
 			};
 			@Override
 			public W getOne() {
@@ -462,7 +462,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private boolean addReachableState(WitnessNode<Stmt,Fact,Field> curr) {
 		if (reachedStates.contains(curr))
 			return false;
-//		System.out.println(this.getClass() + " " + curr);
 		reachedStates.add(curr);
 		for (SyncPDSUpdateListener<Stmt, Fact, Field> l : Lists.newLinkedList(updateListeners)) {
 			l.onReachableNodeAdded(curr);

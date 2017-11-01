@@ -35,6 +35,16 @@ public class HiddenFieldLoadTest extends AbstractBoomerangTest{
 		queryFor(alias);
 	}
 	@Test
+	public void run6(){
+		A b = new A();
+		A a = b;
+		Alloc alloc = new Alloc();
+		b.setF(alloc);
+		int x =1;
+		Object alias = a.f;
+		queryFor(alias);
+	}
+	@Test
 	public void run2(){
 		A b = new A();
 		A a = b;
