@@ -74,9 +74,9 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	public static final boolean ON_THE_FLY_CG = true;
 	public static final boolean TYPE_CHECK = true;
 	public static final boolean NULL_ALLOCATIONS = false;
-	public static final boolean TRACK_STRING = false;
+	public static final boolean TRACK_STRING = true;
 	public static final boolean TRACK_STATIC = true;
-	public static final boolean TRACK_ARRAYS = false;
+	public static final boolean TRACK_ARRAYS = true;
 	private Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private boolean first;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
@@ -1040,7 +1040,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 	private void addTypeReachable(SootMethod m) {
 		if(typeReachable.add(m)){
-			if(flowReachable.contains(m)){
+			if(flowReachable.contains(m) || m.isStaticInitializer()){
 				addReachable(m);
 			}
 		}
