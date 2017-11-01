@@ -1,7 +1,6 @@
 package sync.pds.solver;
 
 import wpds.impl.NormalRule;
-import wpds.impl.Rule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.interfaces.Location;

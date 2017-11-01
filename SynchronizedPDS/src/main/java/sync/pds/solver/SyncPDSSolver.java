@@ -44,7 +44,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		FIELDS, CALLS
 	}
 
-	private LinkedList<WitnessNode<Stmt,Fact,Field>> worklist = Lists.newLinkedList();
 	private static final boolean FieldSensitive = true;
 	private static final boolean ContextSensitive = true;
 	protected final WeightedPushdownSystem<Stmt, INode<Fact>, W> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, W>(){
@@ -421,14 +420,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		callAutomaton.computeValues(callTrans,weight);
 	}
 
-	
-	private void await() {
-		while(!worklist.isEmpty()){
-			WitnessNode<Stmt, Fact, Field> pop = worklist.pop();
-			processNode(pop);
-		}
-	}
-
 	protected void processNode(WitnessNode<Stmt, Fact,Field> witnessNode) {
 		if(!addReachableState(witnessNode))
 			return;
@@ -437,25 +428,19 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		for (State s : successors) {
 			if (s instanceof Node) {
 				Node<Stmt, Fact> succ = (Node<Stmt, Fact>) s;
-				boolean added = false;
 				if (succ instanceof PushNode) {
 					PushNode<Stmt, Fact, Location> pushNode = (PushNode<Stmt, Fact, Location>) succ;
 					PDSSystem system = pushNode.system();
 					Location location = pushNode.location();
-					added = processPush(curr, location, pushNode, system);
+					processPush(curr, location, pushNode, system);
 				} else {
-					added = processNormal(curr, succ);
-				}
-				if (added){
-					if(!reachedStates.contains(new WitnessNode<Stmt,Fact,Field>(succ.stmt(),succ.fact())))
-						worklist.add(new WitnessNode<Stmt,Fact,Field>(succ.stmt(),succ.fact()));
+					processNormal(curr, succ);
 				}
 			} else if (s instanceof PopNode) {
 				PopNode<Fact> popNode = (PopNode<Fact>) s;
 				processPop(curr, popNode);
 			}
 		}
-		await();
 	}
 
 
