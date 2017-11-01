@@ -37,5 +37,8 @@ public class StatementWithAlloc extends Statement {
 			return false;
 		return true;
 	}
-
+	@Override
+	public String toString() {
+		return super.toString() + " allocted at " + alloc;
+	}
 }

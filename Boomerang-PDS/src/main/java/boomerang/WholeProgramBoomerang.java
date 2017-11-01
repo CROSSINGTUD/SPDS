@@ -19,12 +19,13 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends Boomerang<
 		List<SootMethod> reachableMethods = Scene.v().getEntryPoints();
 		
 		for(SootMethod m : reachableMethods){
-			analyzeMethod(m);
+			addReachable(m);
 		}
 		registerReachableMethodListener(new ReachableMethodListener<W>() {
 			@Override
 			public void reachable(SootMethod m) {
 				analyzeMethod(m);
+				
 			}
 		});
 	}

@@ -74,7 +74,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	public static final boolean ON_THE_FLY_CG = true;
 	public static final boolean TYPE_CHECK = true;
 	public static final boolean NULL_ALLOCATIONS = false;
-	public static final boolean TRACK_STRING = false;
+	public static final boolean TRACK_STRING = true;
 	public static final boolean TRACK_STATIC = true;
 	private Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private boolean first;
@@ -105,10 +105,41 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 				@Override
 				public void unbalancedPop(final INode<Val> returningFact, final Statement exitStmt, INode<Val> targetFact, final W weight) {
-					for(Unit callSite : Boomerang.this.icfg().getCallersOf(exitStmt.getMethod())){
+					SootMethod callee = exitStmt.getMethod();
+					if(!callee.isStaticInitializer()){
+						for(Unit callSite : Boomerang.this.icfg().getCallersOf(callee)){
 						final Statement callStatement = new Statement((Stmt) callSite, Boomerang.this.icfg().getMethodOf(callSite));
+							unbalancedReturnFlow(callStatement, weight, returningFact);
+						}
+					} else{
+						for(SootMethod entryPoint : Scene.v().getEntryPoints()){
+							for(Unit ep : Boomerang.this.icfg().getStartPointsOf(entryPoint)){
+								final Statement callStatement = new Statement((Stmt) ep, Boomerang.this.icfg().getMethodOf(ep));
+								Boomerang.this.submit(callStatement.getMethod(), new Runnable(){
+									@Override 
+									public void run(){
+											final Query forwardQuery = createUnbalancedQuery(callStatement,key);
+											final AbstractBoomerangSolver<W> unbalancedSolver = queryToSolvers.getOrCreate(forwardQuery);
+											Node<Statement, Val> returnedVal = new Node<Statement,Val>(callStatement, returningFact.fact());
+											unbalancedSolver.unbalancedSolve(returnedVal, weight);
+											queryToSolvers.getOrCreate(key).getFieldAutomaton().registerDFSListener(new SingleNode<Node<Statement,Val>>(returnedVal), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 						
-							Boomerang.this.submit(Boomerang.this.icfg().getMethodOf(callSite), new Runnable(){
+												@Override
+												public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
+													unbalancedSolver.getFieldAutomaton().addTransition(t);
+												}
+											});
+											final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callStatement));
+											callSitePoi.returnsFromCall(forwardQuery, returnedVal);
+									}
+								});
+							}
+						}
+					}
+				}
+
+				private void unbalancedReturnFlow(final Statement callStatement, final W weight, final INode<Val> returningFact) {
+					Boomerang.this.submit(callStatement.getMethod(), new Runnable(){
 								@Override 
 								public void run(){
 									for(Statement returnSite : solver.getSuccsOf(callStatement)){
@@ -116,7 +147,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 											final AbstractBoomerangSolver<W> unbalancedSolver = queryToSolvers.getOrCreate(forwardQuery);
 											
 											Node<Statement, Val> returnedVal = new Node<Statement,Val>(returnSite, returningFact.fact());
-											unbalancedSolver.solve(returnedVal, weight);
+											unbalancedSolver.unbalancedSolve(returnedVal, weight);
 											queryToSolvers.getOrCreate(key).getFieldAutomaton().registerDFSListener(new SingleNode<Node<Statement,Val>>(returnedVal), new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
 									
 												@Override
@@ -129,6 +160,12 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 										}
 									}
 
+						});
+				}
+			});
+			return solver;
+		}
+	};
 								private Query createUnbalancedQuery(Statement callStatement, Query key) {
 									if(key instanceof ForwardQuery){
 										Statement alloc = (key.stmt() instanceof StatementWithAlloc ? ((StatementWithAlloc)key.stmt()).getAlloc() : key.stmt());
@@ -137,14 +174,6 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 										return new UnbalancedBackwardQuery(callStatement, (BackwardQuery)key);
 									}
 								}
-							});
-						}
-					
-				}
-			});
-			return solver;
-		}
-	};
 	private BackwardsInterproceduralCFG bwicfg;
 	private EmptyCalleeFlow forwardEmptyCalleeFlow = new ForwardEmptyCalleeFlow(); 
 	private EmptyCalleeFlow backwardEmptyCalleeFlow = new BackwardEmptyCalleeFlow(); 
@@ -1000,7 +1029,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		return false;
 	}
 
-	private void addReachable(SootMethod m) {
+	protected void addReachable(SootMethod m) {
 		if(reachableMethods.add(m)){
 			Collection<Runnable> collection = queuedReachableMethod.get(m);
 			for(Runnable runnable : collection){
