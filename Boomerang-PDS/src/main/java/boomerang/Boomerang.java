@@ -8,11 +8,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 
 import boomerang.customize.BackwardEmptyCalleeFlow;
 import boomerang.customize.EmptyCalleeFlow;
@@ -74,8 +74,9 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	public static final boolean ON_THE_FLY_CG = true;
 	public static final boolean TYPE_CHECK = true;
 	public static final boolean NULL_ALLOCATIONS = false;
-	public static final boolean TRACK_STRING = true;
+	public static final boolean TRACK_STRING = false;
 	public static final boolean TRACK_STATIC = true;
+	public static final boolean TRACK_ARRAYS = false;
 	private Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField = new HashMap<>();
 	private boolean first;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
@@ -331,7 +332,9 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 				if(isFieldStore(node.stmt())){
 					forwardHandleFieldWrite(node, createFieldStore(node.stmt()), sourceQuery);
 				} else if(isArrayStore(node.stmt())){
-					forwardHandleFieldWrite(node, createArrayFieldStore(node.stmt()), sourceQuery);
+					if(TRACK_ARRAYS){
+						forwardHandleFieldWrite(node, createArrayFieldStore(node.stmt()), sourceQuery);
+					}
 				} else if(isFieldLoad(node.stmt())){
 					forwardHandleFieldLoad(node, createFieldLoad(node.stmt()), sourceQuery);
 				}
@@ -464,7 +467,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 				return false;
 			}
 		}
-		return (NULL_ALLOCATIONS && val instanceof NullConstant) || val instanceof NewExpr || val instanceof NewArrayExpr || val instanceof NewMultiArrayExpr;
+		return (NULL_ALLOCATIONS && val instanceof NullConstant) || val instanceof NewExpr || (TRACK_ARRAYS && (val instanceof NewArrayExpr || val instanceof NewMultiArrayExpr));
 	}
 
 	protected void forwardHandleFieldWrite(final WitnessNode<Statement, Val, Field> node, final FieldWritePOI fieldWritePoi, final ForwardQuery sourceQuery) {
@@ -593,7 +596,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			for (Unit succ : icfg().getSuccsOf(unit.get())) {
 				Node<Statement, Val> source = new Node<Statement, Val>(
 						new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact());
-				if(isMultiArrayAllocation(unit.get())){
+				if(isMultiArrayAllocation(unit.get()) && TRACK_ARRAYS){
 					solver.getFieldAutomaton().addTransition(new Transition<Field,INode<Node<Statement,Val>>>(new SingleNode<Node<Statement,Val>>(source),Field.array(),new AllocNode<Node<Statement,Val>>(query.asNode())));
 					solver.getFieldAutomaton().addTransition(new Transition<Field,INode<Node<Statement,Val>>>(new SingleNode<Node<Statement,Val>>(source),Field.array(),new SingleNode<Node<Statement,Val>>(source)));
 				}

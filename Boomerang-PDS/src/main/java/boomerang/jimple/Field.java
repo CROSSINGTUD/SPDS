@@ -2,7 +2,7 @@ package boomerang.jimple;
 
 import java.util.Map;
 
-import com.beust.jcommander.internal.Maps;
+import com.google.common.collect.Maps;
 
 import soot.SootField;
 import wpds.interfaces.Empty;
