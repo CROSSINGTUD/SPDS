@@ -5,8 +5,10 @@ import java.io.IOException;
 
 public class Main {
 	// jython and haqldb fail on WALA (no callgraph can be computed)
-	static String[] dacapo = new String[] { "antlr", "chart", "eclipse",
-			 "jython","hsqldb", /*"luindex", "lusearch",*/ "pmd", /* "xalan", */ "bloat" };
+//	static String[] dacapo = new String[] {  "lusearch"};
+	static String[] dacapo = new String[] {  "luindex" };
+//	static String[] dacapo = new String[] { "antlr", "chart", "eclipse",
+//			 "jython","hsqldb", "luindex", "lusearch", "pmd", "xalan",  "bloat" };
 
 	static String benchmarkFolder = "/Users/johannesspath/Documents/dacapo/";
 

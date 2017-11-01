@@ -93,7 +93,7 @@ public class Statement implements Location {
 			return rep;
 		}
 		if(DEBUG){
-			return method.getDeclaringClass().getShortName()+"."+method.getName() +" " + shortName(delegate);
+			return method.getDeclaringClass().getName()+"."+method.getName() +" " + shortName(delegate);
 		}
 		return "[" + Integer.toString(methodToInt(method)) + "]" + Integer.toString(stmtToInt(delegate));
 	}
