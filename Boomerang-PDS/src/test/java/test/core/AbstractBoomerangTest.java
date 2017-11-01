@@ -46,9 +46,14 @@ import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
+import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.SingleNode;
 import test.core.selfrunning.AbstractTestingFramework;
+import wpds.impl.Transition;
+import wpds.impl.WeightedPAutomaton;
 import wpds.impl.Weight.NoWeight;
+import wpds.interfaces.WPAStateListener;
 
 public class AbstractBoomerangTest extends AbstractTestingFramework {
 
@@ -296,10 +301,20 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			if(!(q instanceof ForwardQuery))
 				throw new RuntimeException("Unexpected solver found, whole program analysis should only trigger forward queries");
 			for(final Query queryForCallSite : queryForCallSites){
-				solvers.get(q).synchedEmptyStackReachable(queryForCallSite.asNode(), new EmptyStackWitnessListener<Statement, Val>() {
+				solvers.get(q).getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, NoWeight>(new SingleNode<Node<Statement,Val>>(queryForCallSite.asNode())) {
+					
 					@Override
-					public void witnessFound(Node<Statement, Val> targetFact) {
-						results.add(q.asNode());
+					public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, NoWeight w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, NoWeight> weightedPAutomaton) {
+						if(t.getLabel().equals(Field.empty()) && t.getTarget().fact().equals(q.unwrap().asNode())){
+							results.add(q.asNode());
+						}
+					}
+					
+					@Override
+					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, NoWeight w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, NoWeight> weightedPAutomaton) {
+						
 					}
 				});
 			}

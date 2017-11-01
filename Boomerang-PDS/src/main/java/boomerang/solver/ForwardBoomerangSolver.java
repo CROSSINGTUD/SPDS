@@ -57,7 +57,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	@Override
 	public Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite, Statement callSite, InvokeExpr invokeExpr,
 			Val fact, SootMethod callee, Stmt calleeSp) {
-		if (!callee.hasActiveBody()){
+		if (!callee.hasActiveBody() || callee.isStaticInitializer()){
 			return Collections.emptySet();
 		}
 		Body calleeBody = callee.getActiveBody();
@@ -211,6 +211,16 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			index++;
 		}
 		if(value.equals(Val.statics())){
+			if(method.isStaticInitializer()){
+				Set<State> out = Sets.newHashSet();
+				for(SootMethod entryPoint : Scene.v().getEntryPoints()){
+					for(Unit sp : icfg.getStartPointsOf(entryPoint)){
+						out.add(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS, new Statement((Stmt) sp, entryPoint)));
+					}
+				}
+				
+				return out;
+			}
 			return Collections.singleton(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS,returnSiteStatement));
 		}
 		return Collections.emptySet();

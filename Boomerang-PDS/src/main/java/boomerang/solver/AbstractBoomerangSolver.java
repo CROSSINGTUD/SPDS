@@ -48,251 +48,272 @@ import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
-public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W>{
+public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {
 
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
 	private Collection<Node<Statement, Val>> fieldFlows = Sets.newHashSet();
 	private Collection<SootMethod> unbalancedMethod = Sets.newHashSet();
-	private final Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> generatedFieldState;
-	private Multimap<SootMethod,Transition<Field,INode<Node<Statement,Val>>>> perMethodFieldTransitions = HashMultimap.create();
-	private Multimap<SootMethod, MethodBasedFieldTransitionListener<W>> perMethodFieldTransitionsListener = HashMultimap.create();
-	private Multimap<Statement,Transition<Field,INode<Node<Statement,Val>>>> perStatementFieldTransitions = HashMultimap.create();
-	private Multimap<Statement, StatementBasedFieldTransitionListener<W>> perStatementFieldTransitionsListener = HashMultimap.create();
+	private final Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> generatedFieldState;
+	private Multimap<SootMethod, Transition<Field, INode<Node<Statement, Val>>>> perMethodFieldTransitions = HashMultimap
+			.create();
+	private Multimap<SootMethod, MethodBasedFieldTransitionListener<W>> perMethodFieldTransitionsListener = HashMultimap
+			.create();
+	private Multimap<Statement, Transition<Field, INode<Node<Statement, Val>>>> perStatementFieldTransitions = HashMultimap
+			.create();
+	private Multimap<Statement, StatementBasedFieldTransitionListener<W>> perStatementFieldTransitionsListener = HashMultimap
+			.create();
 	private final MethodReachableQueue reachableQueue;
-	
-	
-	public AbstractBoomerangSolver(MethodReachableQueue reachableQueue, InterproceduralCFG<Unit, SootMethod> icfg, Query query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,  NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries){
-		super(new SingleNode<Val>(query.asNode().fact()) , new AllocNode<Node<Statement,Val>>(query.asNode()), callSummaries, fieldSummaries);
+
+	public AbstractBoomerangSolver(MethodReachableQueue reachableQueue, InterproceduralCFG<Unit, SootMethod> icfg,
+			Query query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
+			NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
+			NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries) {
+		super(new SingleNode<Val>(query.asNode().fact()), new AllocNode<Node<Statement, Val>>(query.asNode()),
+				callSummaries, fieldSummaries);
 		this.reachableQueue = reachableQueue;
 
 		this.icfg = icfg;
 		this.query = query;
 		this.unbalancedMethod.add(query.asNode().stmt().getMethod());
-		this.fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
+		this.fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 
 			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w, WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W> aut) {
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 				addTransitionToMethod(t.getStart().fact().stmt().getMethod(), t);
 				addTransitionToMethod(t.getTarget().fact().stmt().getMethod(), t);
 				addTransitionToStatement(t.getStart().fact().stmt(), t);
 			}
 		});
-		
-		//TODO recap, I assume we can implement this more easily.
+
+		// TODO recap, I assume we can implement this more easily.
 		this.generatedFieldState = genField;
 	}
-	
+
 	@Override
 	protected boolean preventCallTransitionAdd(Transition<Statement, INode<Val>> t, W weight) {
-		if(t.getStart() instanceof GeneratedState)
-			return  false;
+		if (t.getStart() instanceof GeneratedState)
+			return false;
 		SootMethod m = t.getStart().fact().m();
 		SootMethod method = t.getLabel().getMethod();
-		if(m == null || method == null)
+		if (m == null || method == null)
 			return false;
-		if(!m.equals(method))
+		if (!m.equals(method))
 			return true;
 		return false;
 	}
-	
-	
+
 	private void addTransitionToMethod(SootMethod method, Transition<Field, INode<Node<Statement, Val>>> t) {
-		if(perMethodFieldTransitions.put(method, t)){
-			for(MethodBasedFieldTransitionListener<W> l : Lists.newArrayList(perMethodFieldTransitionsListener.get(method))){
+		if (perMethodFieldTransitions.put(method, t)) {
+			for (MethodBasedFieldTransitionListener<W> l : Lists
+					.newArrayList(perMethodFieldTransitionsListener.get(method))) {
 				l.onAddedTransition(t);
 			}
 		}
 	}
+
 	public void registerFieldTransitionListener(MethodBasedFieldTransitionListener<W> l) {
-		if(perMethodFieldTransitionsListener.put(l.getMethod(),l)){
-			for(Transition<Field, INode<Node<Statement, Val>>> t : Lists.newArrayList(perMethodFieldTransitions.get(l.getMethod()))){
+		if (perMethodFieldTransitionsListener.put(l.getMethod(), l)) {
+			for (Transition<Field, INode<Node<Statement, Val>>> t : Lists
+					.newArrayList(perMethodFieldTransitions.get(l.getMethod()))) {
 				l.onAddedTransition(t);
 			}
 		}
 	}
-	
+
 	private void addTransitionToStatement(Statement s, Transition<Field, INode<Node<Statement, Val>>> t) {
-		if(perStatementFieldTransitions.put(s, t)){
-			for(StatementBasedFieldTransitionListener<W> l : Lists.newArrayList(perStatementFieldTransitionsListener.get(s))){
+		if (perStatementFieldTransitions.put(s, t)) {
+			for (StatementBasedFieldTransitionListener<W> l : Lists
+					.newArrayList(perStatementFieldTransitionsListener.get(s))) {
 				l.onAddedTransition(t);
 			}
 		}
 	}
-	public void registerStatementFieldTransitionListener(
-			StatementBasedFieldTransitionListener<W> l) {
-		if(perStatementFieldTransitionsListener.put(l.getStmt(),l)){
-			for(Transition<Field, INode<Node<Statement, Val>>> t : Lists.newArrayList(perStatementFieldTransitions.get(l.getStmt()))){
+
+	public void registerStatementFieldTransitionListener(StatementBasedFieldTransitionListener<W> l) {
+		if (perStatementFieldTransitionsListener.put(l.getStmt(), l)) {
+			for (Transition<Field, INode<Node<Statement, Val>>> t : Lists
+					.newArrayList(perStatementFieldTransitions.get(l.getStmt()))) {
 				l.onAddedTransition(t);
 			}
-		}	
+		}
 	}
-	public INode<Node<Statement,Val>> generateFieldState(final INode<Node<Statement,Val>> d, final Field loc) {
-		Entry<INode<Node<Statement,Val>>, Field> e = new AbstractMap.SimpleEntry<>(d, loc);
+
+	public INode<Node<Statement, Val>> generateFieldState(final INode<Node<Statement, Val>> d, final Field loc) {
+		Entry<INode<Node<Statement, Val>>, Field> e = new AbstractMap.SimpleEntry<>(d, loc);
 		if (!generatedFieldState.containsKey(e)) {
-			generatedFieldState.put(e, new GeneratedState<Node<Statement,Val>,Field>(d,loc));
+			generatedFieldState.put(e, new GeneratedState<Node<Statement, Val>, Field>(d, loc));
 		}
 		return generatedFieldState.get(e);
 	}
+
 	@Override
 	public Collection<? extends State> computeSuccessor(Node<Statement, Val> node) {
 		Statement stmt = node.stmt();
 		Optional<Stmt> unit = stmt.getUnit();
-		if(unit.isPresent()){
+		if (unit.isPresent()) {
 			Stmt curr = unit.get();
 			Val value = node.fact();
 			SootMethod method = icfg.getMethodOf(curr);
-			if(killFlow(method, curr, value)){
+			if (killFlow(method, curr, value)) {
 				return Collections.emptySet();
 			}
-			if(curr.containsInvokeExpr() && valueUsedInStatement(curr, value) && INTERPROCEDURAL){
+			if (curr.containsInvokeExpr() && valueUsedInStatement(curr, value) && INTERPROCEDURAL) {
 				return callFlow(method, curr, curr.getInvokeExpr(), value);
-			} else if(icfg.isExitStmt(curr)){
-				return returnFlow(method,curr, value);
-			} else{
+			} else if (icfg.isExitStmt(curr)) {
+				return returnFlow(method, curr, value);
+			} else {
 				return normalFlow(method, curr, value);
 			}
 		}
 		return Collections.emptySet();
 	}
 
-	protected abstract void callBypass(Statement callSite, Statement returnSite,  Val value);
+	protected abstract void callBypass(Statement callSite, Statement returnSite, Val value);
 
 	private Collection<State> normalFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
-		for(Unit succ : icfg.getSuccsOf(curr)){
-			if(curr.containsInvokeExpr()){
-				callBypass(new Statement(curr,method), new Statement((Stmt) succ,method), value);
+		for (Unit succ : icfg.getSuccsOf(curr)) {
+			if (curr.containsInvokeExpr()) {
+				callBypass(new Statement(curr, method), new Statement((Stmt) succ, method), value);
 			}
-			out.addAll(computeNormalFlow(method,curr, value, (Stmt) succ));
+			out.addAll(computeNormalFlow(method, curr, value, (Stmt) succ));
 		}
 		List<Unit> succsOf = icfg.getSuccsOf(curr);
-		while(out.size() == 1 && succsOf.size() == 1){
+		while (out.size() == 1 && succsOf.size() == 1) {
 			List<State> l = Lists.newArrayList(out);
 			State state = l.get(0);
 			Unit succ = succsOf.get(0);
-			if(!state.equals(new Node<Statement,Val>(new Statement((Stmt)succ,method),value)))
+			if (!state.equals(new Node<Statement, Val>(new Statement((Stmt) succ, method), value)))
 				break;
 			out.clear();
-			out.addAll(computeNormalFlow(method,curr, value, (Stmt) succ));
+			out.addAll(computeNormalFlow(method, curr, value, (Stmt) succ));
 			succsOf = icfg.getSuccsOf(succ);
 			curr = (Stmt) succ;
 		}
 		return out;
 	}
+
 	protected Field getWrittenField(Stmt curr) {
 		AssignStmt as = (AssignStmt) curr;
-		if(as.getLeftOp() instanceof StaticFieldRef){
+		if (as.getLeftOp() instanceof StaticFieldRef) {
 			StaticFieldRef staticFieldRef = (StaticFieldRef) as.getLeftOp();
 			return new Field(staticFieldRef.getField());
 		}
 		InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
 		return new Field(ifr.getField());
 	}
+
 	protected boolean isFieldWriteWithBase(Stmt curr, Val base) {
-		if(curr instanceof AssignStmt){
+		if (curr instanceof AssignStmt) {
 			AssignStmt as = (AssignStmt) curr;
-			if(base.equals(Val.statics())){
-				if(as.getLeftOp() instanceof StaticFieldRef){
+			if (base.equals(Val.statics())) {
+				if (as.getLeftOp() instanceof StaticFieldRef) {
 					return true;
 				}
 				return false;
 			}
-			if(as.getLeftOp() instanceof InstanceFieldRef){
+			if (as.getLeftOp() instanceof InstanceFieldRef) {
 				InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
 				return ifr.getBase().equals(base);
 			}
 		}
 		return false;
 	}
-	
+
 	protected Field getLoadedField(Stmt curr) {
 		AssignStmt as = (AssignStmt) curr;
 		InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
 		return new Field(ifr.getField());
 	}
+
 	protected boolean isFieldLoadWithBase(Stmt curr, Value base) {
-		if(curr instanceof AssignStmt){
+		if (curr instanceof AssignStmt) {
 			AssignStmt as = (AssignStmt) curr;
-			if(as.getRightOp() instanceof InstanceFieldRef){
+			if (as.getRightOp() instanceof InstanceFieldRef) {
 				InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
 				return ifr.getBase().equals(base);
 			}
 		}
 		return false;
 	}
+
 	protected abstract boolean killFlow(SootMethod method, Stmt curr, Val value);
-	
+
 	public boolean valueUsedInStatement(Stmt u, Val value) {
-		if(value.equals(Val.statics()))
+		if (value.equals(Val.statics()))
 			return true;
-		if(u instanceof AssignStmt && isBackward()){
+		if (u instanceof AssignStmt && isBackward()) {
 			AssignStmt assignStmt = (AssignStmt) u;
-			if(assignStmt.getLeftOp().equals(value.value()))
+			if (assignStmt.getLeftOp().equals(value.value()))
 				return true;
 		}
-		if(u.containsInvokeExpr()){
+		if (u.containsInvokeExpr()) {
 			InvokeExpr invokeExpr = u.getInvokeExpr();
-			if(invokeExpr instanceof InstanceInvokeExpr){
+			if (invokeExpr instanceof InstanceInvokeExpr) {
 				InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
-				if(iie.getBase().equals(value.value()))
+				if (iie.getBase().equals(value.value()))
 					return true;
 			}
-			for(Value arg : invokeExpr.getArgs()){
-				if(arg.equals(value.value())){
+			for (Value arg : invokeExpr.getArgs()) {
+				if (arg.equals(value.value())) {
 					return true;
 				}
 			}
 		}
 		return false;
 	}
-	
-	private boolean isBackward(){
+
+	private boolean isBackward() {
 		return this instanceof BackwardBoomerangSolver;
 	}
-	
-	protected abstract Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite, Stmt returnSite);
+
+	protected abstract Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value,
+			Stmt callSite, Stmt returnSite);
 
 	private Collection<? extends State> returnFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
-		for(Unit callSite : icfg.getCallersOf(method)){
-			for(Unit returnSite : icfg.getSuccsOf(callSite)){
-				Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) callSite, (Stmt) returnSite);
+		for (Unit callSite : icfg.getCallersOf(method)) {
+			for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+				Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) callSite,
+						(Stmt) returnSite);
 				onReturnFlow(callSite, returnSite, method, curr, value, outFlow);
 				out.addAll(outFlow);
 			}
 		}
 		return out;
 	}
-	
+
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
-		for(SootMethod callee : icfg.getCalleesOfCallAt(callSite)){
-			for(Unit calleeSp : icfg.getStartPointsOf(callee)){
-				for(Unit returnSite : icfg.getSuccsOf(callSite)){
-					Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt)returnSite, caller), new Statement((Stmt)callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
+		for (SootMethod callee : icfg.getCalleesOfCallAt(callSite)) {
+			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
+				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+					Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
+							new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
 					onCallFlow(callee, callSite, value, res);
 					out.addAll(res);
 				}
 			}
 		}
-		for(Unit returnSite : icfg.getSuccsOf(callSite)){
-			if(icfg.getCalleesOfCallAt(callSite).isEmpty()){
-				out.addAll(computeNormalFlow(caller, (Stmt)callSite, value,(Stmt) returnSite));
+		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+			if (icfg.getCalleesOfCallAt(callSite).isEmpty()) {
+				out.addAll(computeNormalFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
 			}
-			out.addAll(getEmptyCalleeFlow(caller, (Stmt)callSite, value,(Stmt) returnSite));
+			out.addAll(getEmptyCalleeFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
 		}
 		return out;
 	}
 
-
 	protected abstract Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,
 			Stmt returnSite);
 
-	protected abstract Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite, Statement callSite, InvokeExpr invokeExpr,
-			Val value, SootMethod callee, Stmt calleeSp);
+	protected abstract Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite,
+			Statement callSite, InvokeExpr invokeExpr, Val value, SootMethod callee, Stmt calleeSp);
+
 	protected abstract Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Val value, Stmt succ);
 
 	@Override
@@ -309,7 +330,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	public Statement epsilonStmt() {
 		return Statement.epsilon();
 	}
-	
+
 	@Override
 	public Field fieldWildCard() {
 		return Field.wildcard();
@@ -319,78 +340,80 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	public Field exclusionFieldWildCard(Field exclusion) {
 		return Field.exclusionWildcard(exclusion);
 	}
-	
-	public WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W> getFieldAutomaton(){
+
+	public WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> getFieldAutomaton() {
 		return fieldAutomaton;
 	}
 
-	public WeightedPAutomaton<Statement, INode<Val>, W> getCallAutomaton(){
+	public WeightedPAutomaton<Statement, INode<Val>, W> getCallAutomaton() {
 		return callAutomaton;
 	}
 
 	public void addFieldAutomatonListener(WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> listener) {
 		fieldAutomaton.registerListener(listener);
 	}
+
 	public void addCallAutomatonListener(WPAUpdateListener<Statement, INode<Val>, W> listener) {
 		callAutomaton.registerListener(listener);
 	}
+
 	public boolean addFieldFlow(Node<Statement, Val> fieldFlow) {
 		return fieldFlows.add(fieldFlow);
 	}
-	
+
 	@Override
 	protected void processNode(final WitnessNode<Statement, Val, Field> witnessNode) {
-		reachableQueue.submit(witnessNode.stmt().getMethod(), new Runnable(){
+		reachableQueue.submit(witnessNode.stmt().getMethod(), new Runnable() {
 			@Override
-			public void run(){
+			public void run() {
 				AbstractBoomerangSolver.super.processNode(witnessNode);
 			}
 		});
-		
+
 	}
-	
-	
+
 	protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
-		if(!res.isEmpty()){
-			if(callee.isStatic()){
-//				addReachableMethod(callee);
+		if (!res.isEmpty()) {
+			if (callee.isStatic()) {
+				// addReachableMethod(callee);
 			}
 		}
 	}
 
-	
 	public Set<Statement> getSuccsOf(Statement stmt) {
 		Set<Statement> res = Sets.newHashSet();
-		if(!stmt.getUnit().isPresent())
+		if (!stmt.getUnit().isPresent())
 			return res;
 		Stmt curr = stmt.getUnit().get();
-		for(Unit succ : icfg.getSuccsOf(curr)){
+		for (Unit succ : icfg.getSuccsOf(curr)) {
 			res.add(new Statement((Stmt) succ, icfg.getMethodOf(succ)));
 		}
-		return res;	
+		return res;
 	}
-	
+
 	@Override
 	public String toString() {
 		return "Solver for: " + query.toString();
 	}
-	
 
-	protected void onReturnFlow(final Unit callSite, Unit returnSite, final SootMethod method, final Stmt returnStmt, final Val value,
-			Collection<? extends State> outFlow) {
-		for(State r : outFlow){
-			if(r instanceof CallPopNode){
-				final CallPopNode<Val,Statement> callPopNode = (CallPopNode) r;
+	protected void onReturnFlow(final Unit callSite, Unit returnSite, final SootMethod method, final Stmt returnStmt,
+			final Val value, Collection<? extends State> outFlow) {
+		for (State r : outFlow) {
+			if (r instanceof CallPopNode) {
+				final CallPopNode<Val, Statement> callPopNode = (CallPopNode) r;
 				this.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
-					
+
 					@Override
 					public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
-						if(reachableNode.asNode().equals(new Node<Statement,Val>(callPopNode.getReturnSite(),callPopNode.location()))){
-							if(!valueUsedInStatement((Stmt)callSite,  callPopNode.location())){
-								//TODO why do we need this?
+						if (reachableNode.asNode().equals(
+								new Node<Statement, Val>(callPopNode.getReturnSite(), callPopNode.location()))) {
+							if (!valueUsedInStatement((Stmt) callSite, callPopNode.location())) {
+								// TODO why do we need this?
 								return;
 							}
-							onReturnFromCall(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)), callPopNode.getReturnSite(), reachableNode.asNode(),unbalancedMethod.contains(method));
+							onReturnFromCall(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)),
+									callPopNode.getReturnSite(), reachableNode.asNode(),
+									unbalancedMethod.contains(method));
 						}
 					}
 				});
@@ -398,15 +421,14 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		}
 	}
 
-	protected abstract void onReturnFromCall(Statement statement, Statement returnSite,  Node<Statement, Val> node, boolean unbalanced);
-	
-	
-	
+	protected abstract void onReturnFromCall(Statement statement, Statement returnSite, Node<Statement, Val> node,
+			boolean unbalanced);
 
 	public void debugFieldAutomaton(final Statement statement) {
-		if(!Boomerang.DEBUG)
+		if (!Boomerang.DEBUG)
 			return;
-		final WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement,Val>>, Weight>(new AllocNode<Node<Statement,Val>>(query.asNode())){
+		final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight>(
+				new AllocNode<Node<Statement, Val>>(query.asNode())) {
 
 			@Override
 			public Field epsilon() {
@@ -415,7 +437,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 			@Override
 			public INode<Node<Statement, Val>> createState(INode<Node<Statement, Val>> d, Field loc) {
-				// TODO Auto-generated method stub
 				return null;
 			}
 
@@ -432,31 +453,33 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			@Override
 			public boolean isGeneratedState(INode<Node<Statement, Val>> d) {
 				return d instanceof GeneratedState;
-			}};
-		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
-			
+			}
+		};
+		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
+
 			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w, WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W> aut) {
-				if(t.getStart().fact().stmt().equals(statement) && !(t.getStart() instanceof GeneratedState)){
-					fieldAutomaton.registerDFSListener(t.getStart(),new ReachabilityListener<Field, INode<Node<Statement,Val>>>() {
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+				if (t.getStart().fact().stmt().equals(statement) && !(t.getStart() instanceof GeneratedState)) {
+					fieldAutomaton.registerDFSListener(t.getStart(),
+							new ReachabilityListener<Field, INode<Node<Statement, Val>>>() {
 						@Override
-						public void reachable(Transition<Field, INode<Node<Statement,Val>>> t) {
+						public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
 							weightedPAutomaton.addTransition(t);
 						}
 					});
 				}
 			}
-			
+
 		});
-		if(!weightedPAutomaton.getTransitions().isEmpty()){
+		if (!weightedPAutomaton.getTransitions().isEmpty()) {
 			System.out.println(statement);
 			System.out.println(weightedPAutomaton.toDotString());
-			}
 		}
+	}
 
 	public Map<Transition<Statement, INode<Val>>, W> getTransitionsToFinalWeights() {
 		return callAutomaton.getTransitionsToFinalWeights();
 	}
-
 
 }
