@@ -153,11 +153,125 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		fieldAutomaton.registerListener(new FieldUpdateListener());
 		if(callAutomaton.nested())
 			callAutomaton.registerNestedAutomatonListener(new CallSummaryListener());
+//		if(fieldAutomaton.nested())
+//			fieldAutomaton.registerNestedAutomatonListener(new FieldSummaryListener());
 		callingPDS.poststar(callAutomaton,callSummaries);
 		fieldPDS.poststar(fieldAutomaton,fieldSummaries);
 
 	}
+
+	private class FieldSummaryListener implements  NestedAutomatonListener<Field, INode<Node<Stmt, Fact>>, W>{
+		@Override
+		public void nestedAutomaton(final WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W> parent,
+				final WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W> child) {
+			child.registerListener(new FieldAddEpsilonToInitialStateListener(child.getInitialState(), parent));
+		}
+	}
 	
+	private class FieldAddEpsilonToInitialStateListener extends WPAStateListener<Field, INode<Node<Stmt, Fact>>, W>{
+
+		private WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W> parent;
+
+		public FieldAddEpsilonToInitialStateListener(INode<Node<Stmt,Fact>> state, WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W> parent) {
+			super(state);
+			this.parent = parent;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Stmt, Fact>>>t, W w,
+				WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W> weightedPAutomaton) {
+		}
+
+		@Override
+		public void onInTransitionAdded(final Transition<Field, INode<Node<Stmt,Fact>>> nestedT, W w,
+				WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W> weightedPAutomaton) {
+			if (nestedT.getLabel().equals(fieldAutomaton.epsilon())) {
+				parent.registerListener(new FieldOnOutTransitionAddToStateListener(this.getState(), nestedT));
+			}
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((parent == null) ? 0 : parent.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			FieldAddEpsilonToInitialStateListener other = (FieldAddEpsilonToInitialStateListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (parent == null) {
+				if (other.parent != null)
+					return false;
+			} else if (!parent.equals(other.parent))
+				return false;
+			return true;
+		}
+
+		private SyncPDSSolver getOuterType() {
+			return SyncPDSSolver.this;
+		}
+	}
+	private class FieldOnOutTransitionAddToStateListener extends WPAStateListener<Field, INode<Node<Stmt,Fact>>, W> {
+		private Transition<Field, INode<Node<Stmt,Fact>>> nestedT;
+		public FieldOnOutTransitionAddToStateListener(INode<Node<Stmt,Fact>> state, Transition<Field, INode<Node<Stmt,Fact>>> nestedT) {
+			super(state);
+			this.nestedT = nestedT;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Stmt,Fact>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> weightedPAutomaton) {
+			setFieldContextReachable(nestedT.getStart().fact());
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<Field, INode<Node<Stmt,Fact>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> weightedPAutomaton) {
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((nestedT == null) ? 0 : nestedT.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			FieldOnOutTransitionAddToStateListener other = (FieldOnOutTransitionAddToStateListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (nestedT == null) {
+				if (other.nestedT != null)
+					return false;
+			} else if (!nestedT.equals(other.nestedT))
+				return false;
+			return true;
+		}
+
+		private SyncPDSSolver getOuterType() {
+			return SyncPDSSolver.this;
+		}
+	}
 	private class CallSummaryListener implements NestedAutomatonListener<Stmt, INode<Fact>, W>{
 		@Override
 		public void nestedAutomaton(final WeightedPAutomaton<Stmt, INode<Fact>, W> parent,
@@ -523,11 +637,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			if(!(n instanceof GeneratedState)){
 				Node<Stmt,Fact> fact = n.fact();
 				Node<Stmt, Fact> node = new Node<Stmt,Fact>(fact.stmt(), fact.fact());
-//				if(aut.equals(fieldAutomaton) && fieldAutomaton.nested()){
-//					fieldContextReachable.add(node);
-//				} else {
-					setFieldContextReachable(node);
-//				}
+				setFieldContextReachable(node);
 			}
 		}
 	}
