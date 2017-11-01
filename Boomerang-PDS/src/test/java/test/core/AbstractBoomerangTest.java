@@ -10,9 +10,9 @@ import java.util.Set;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
-import com.beust.jcommander.internal.Sets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
@@ -51,8 +51,8 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import test.core.selfrunning.AbstractTestingFramework;
 import wpds.impl.Transition;
-import wpds.impl.WeightedPAutomaton;
 import wpds.impl.Weight.NoWeight;
+import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
 
 public class AbstractBoomerangTest extends AbstractTestingFramework {

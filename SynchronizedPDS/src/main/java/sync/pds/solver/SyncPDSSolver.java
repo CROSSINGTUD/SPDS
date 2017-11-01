@@ -14,7 +14,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
-import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.CastNode;
 import sync.pds.solver.nodes.ExclusionNode;
@@ -314,10 +313,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			WitnessNode<Stmt, Fact, Field> pop = worklist.pop();
 			processNode(pop);
 		}
-	}
-
-	private INode<Node<Stmt, Fact>> asFieldFactSource(Node<Stmt, Fact> source) {
-		return new AllocNode<Node<Stmt,Fact>>(source);
 	}
 
 	protected void processNode(WitnessNode<Stmt, Fact,Field> witnessNode) {

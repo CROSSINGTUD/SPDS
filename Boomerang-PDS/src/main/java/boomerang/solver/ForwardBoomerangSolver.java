@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import com.beust.jcommander.internal.Sets;
+import com.google.common.collect.Sets;
 
 import boomerang.Boomerang;
 import boomerang.ForwardQuery;
@@ -32,7 +32,6 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
-import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.CastNode;
 import sync.pds.solver.nodes.ExclusionNode;
@@ -42,11 +41,9 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
-import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.NestedWeightedPAutomatons;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
-import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.State;
 
 public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractBoomerangSolver<W> {
@@ -137,8 +134,10 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 					}
 				} else if(leftOp instanceof ArrayRef){
 					ArrayRef arrayRef = (ArrayRef) leftOp;
-					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(arrayRef.getBase(),method),
-							Field.array(), PDSSystem.FIELDS));
+					if(Boomerang.TRACK_ARRAYS){
+						out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(arrayRef.getBase(),method),
+								Field.array(), PDSSystem.FIELDS));
+					}
 				} else{
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
 				}
