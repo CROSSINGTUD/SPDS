@@ -204,6 +204,8 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		}
 	};
 	private Set<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
+	private Set<SootMethod> typeReachable = Sets.newHashSet();
+	private Set<SootMethod> flowReachable = Sets.newHashSet();
 	protected AbstractBoomerangSolver<W> createBackwardSolver(final BackwardQuery backwardQuery) {
 		final BackwardBoomerangSolver<W> solver = new BackwardBoomerangSolver<W>(Boomerang.this, bwicfg(), backwardQuery, genField, createSummaries(backwardQuery,backwardCallSummaries), backwardFieldSummaries){
 
@@ -246,7 +248,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
 				if(isAllocationNode(node.stmt(), node.fact())){
 					forwardSolve(new ForwardQuery(node.stmt(),
-							getAllocatedVal(node.stmt())),backwardQuery);
+							getAllocatedVal(node.stmt())));
 				}
 				if(isFieldStore(node.stmt())){
 				} else if(isArrayStore(node.stmt())){
@@ -271,10 +273,6 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 	protected boolean isBackwardEnterCall(Statement stmt) {
 		return icfg().isExitStmt(stmt.getUnit().get());
-	}
-
-	private void forwardSolve(final ForwardQuery forwardQuery, BackwardQuery backwardQuery) {
-		forwardSolve(forwardQuery);
 	}
 
 	protected static Val getAllocatedVal(Statement s) {
@@ -306,6 +304,14 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
 				ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
 				callSitePoi.addByPassingAllocation(sourceQuery);
+			}
+			
+			@Override
+			protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
+				if(!res.isEmpty()){
+					addFlowReachable(callee);
+				}
+				super.onCallFlow(callee, callSite, value, res);
 			}
 
 			@Override
@@ -1024,7 +1030,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			List<SootClass> classes = Scene.v().getActiveHierarchy().getSuperclassesOfIncluding(type.getSootClass());
 			for(SootClass c : classes){
 				for(SootMethod m : c.getMethods()){
-					addReachable(m);
+					addTypeReachable(m);
 				}
 			}
 			return true;
@@ -1032,6 +1038,20 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		return false;
 	}
 
+	private void addTypeReachable(SootMethod m) {
+		if(typeReachable.add(m)){
+			if(flowReachable.contains(m)){
+				addReachable(m);
+			}
+		}
+	}
+	private void addFlowReachable(SootMethod m) {
+		if(flowReachable.add(m)){
+			if(typeReachable.contains(m)){
+				addReachable(m);
+			}
+		}
+	}
 	protected void addReachable(SootMethod m) {
 		if(reachableMethods.add(m)){
 			Collection<Runnable> collection = queuedReachableMethod.get(m);

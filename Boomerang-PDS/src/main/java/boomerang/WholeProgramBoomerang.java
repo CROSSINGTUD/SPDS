@@ -16,9 +16,9 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends Boomerang<
 	private int reachableMethodCount;
 	private int allocationSites;
 	public void wholeProgramAnalysis(){
-		List<SootMethod> reachableMethods = Scene.v().getEntryPoints();
+		List<SootMethod> entryPoints = Scene.v().getEntryPoints();
 		long before = System.currentTimeMillis();
-		for(SootMethod m : reachableMethods){
+		for(SootMethod m : entryPoints){
 			addReachable(m);
 		}
 		
