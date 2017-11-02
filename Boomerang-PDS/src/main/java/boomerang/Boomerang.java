@@ -31,6 +31,7 @@ import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import boomerang.solver.StatementBasedFieldTransitionListener;
 import heros.utilities.DefaultValueMap;
+import soot.Local;
 import soot.RefType;
 import soot.Scene;
 import soot.SootClass;
@@ -113,7 +114,10 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 							for (Unit callSite : Boomerang.this.icfg().getCallersOf(callee)) {
 								final Statement callStatement = new Statement((Stmt) callSite,
 										Boomerang.this.icfg().getMethodOf(callSite));
-								unbalancedReturnFlow(callStatement, weight, returningFact);
+								boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) callSite, returningFact.fact());
+								if(valueUsedInStatement && !returningFact.equals(Val.statics())){
+									unbalancedReturnFlow(callStatement, weight, returningFact);
+								}
 							}
 						} else {
 							for (SootMethod entryPoint : Scene.v().getEntryPoints()) {
