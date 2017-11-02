@@ -36,7 +36,8 @@ public class StaticFieldFlows extends AbstractBoomerangTest {
 	private static Alloc v() {
 		if(instance == null)
 			instance = new Alloc();
-		return instance;
+		Alloc loaded = instance;
+		return loaded;
 	}
 	@Test
 	public void overwriteStatic(){

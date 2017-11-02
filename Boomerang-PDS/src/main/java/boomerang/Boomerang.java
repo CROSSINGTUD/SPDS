@@ -111,11 +111,13 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 							INode<Val> targetFact, final W weight) {
 						SootMethod callee = exitStmt.getMethod();
 						if (!callee.isStaticInitializer()) {
+							if(Val.statics().equals(returningFact.fact()))
+								return;
 							for (Unit callSite : Boomerang.this.icfg().getCallersOf(callee)) {
 								final Statement callStatement = new Statement((Stmt) callSite,
 										Boomerang.this.icfg().getMethodOf(callSite));
 								boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) callSite, returningFact.fact());
-								if(valueUsedInStatement && !returningFact.equals(Val.statics())){
+								if(valueUsedInStatement || AbstractBoomerangSolver.assignsValue((Stmt)callSite,returningFact.fact())){
 									unbalancedReturnFlow(callStatement, weight, returningFact);
 								}
 							}
@@ -335,6 +337,10 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 			@Override
 			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
+				SootMethod calledMethod = callSite.getUnit().get().getInvokeExpr().getMethod();
+				if(calledMethod.isStatic()){
+					addFlowReachable(calledMethod);
+				}
 				ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
 				callSitePoi.addByPassingAllocation(sourceQuery);
 			}
@@ -1196,8 +1202,8 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	}
 
 	private void addFlowReachable(SootMethod m) {
-		if (flowReachable.add(m)) {
-			if (typeReachable.contains(m)) {
+		if(flowReachable.add(m)){
+			if(typeReachable.contains(m) || m.isStatic()){
 				addReachable(m);
 			}
 		}
