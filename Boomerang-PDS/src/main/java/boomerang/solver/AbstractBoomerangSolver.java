@@ -244,7 +244,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	public boolean valueUsedInStatement(Stmt u, Val value) {
 		if (value.equals(Val.statics()))
 			return true;
-		if (u instanceof AssignStmt && isBackward()) {
+		if (isBackward()) {
 			if (assignsValue(u, value))
 				return true;
 		}
@@ -264,9 +264,11 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		return false;
 	}
 	public static boolean assignsValue(Stmt u, Val value){
-		AssignStmt assignStmt = (AssignStmt) u;
-		if (assignStmt.getLeftOp().equals(value.value()))
-			return true;
+		if(u instanceof AssignStmt){
+			AssignStmt assignStmt = (AssignStmt) u;
+			if (assignStmt.getLeftOp().equals(value.value()))
+				return true;
+		}
 		return false;
 	}
 	private boolean isBackward() {

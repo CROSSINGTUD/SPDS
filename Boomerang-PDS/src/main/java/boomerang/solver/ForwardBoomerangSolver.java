@@ -32,6 +32,7 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
+import soot.jimple.ThrowStmt;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.CastNode;
 import sync.pds.solver.nodes.ExclusionNode;
@@ -180,7 +181,9 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	public Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite,
 			Stmt returnSite) {
 		Statement returnSiteStatement = new Statement(returnSite,icfg.getMethodOf(returnSite));
-
+		if(curr instanceof ThrowStmt && !Boomerang.THROW){
+			return Collections.emptySet();
+		}
 		if (curr instanceof ReturnStmt) {
 			Value op = ((ReturnStmt) curr).getOp();
 			if (op.equals(value.value())) {

@@ -72,13 +72,14 @@ import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class Boomerang<W extends Weight> implements MethodReachableQueue {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	public static final boolean ON_THE_FLY_CG = true;
 	public static final boolean TYPE_CHECK = true;
 	public static final boolean NULL_ALLOCATIONS = false;
 	public static final boolean TRACK_STRING = true;
 	public static final boolean TRACK_STATIC = true;
 	public static final boolean TRACK_ARRAYS = true;
+	public static final boolean THROW = false;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private boolean first;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
@@ -540,7 +541,18 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			}
 		}
 		return (NULL_ALLOCATIONS && val instanceof NullConstant) || val instanceof NewExpr
-				|| (TRACK_ARRAYS && (val instanceof NewArrayExpr || val instanceof NewMultiArrayExpr));
+				|| (TRACK_ARRAYS && isArrayAllocationVal(val));
+	}
+
+	private static boolean isArrayAllocationVal(Value val) {
+		if(val instanceof NewArrayExpr){
+			NewArrayExpr expr = (NewArrayExpr) val;
+			return expr.getBaseType() instanceof RefType;
+		} else if(val instanceof NewMultiArrayExpr){
+			NewMultiArrayExpr expr = (NewMultiArrayExpr) val;
+			return expr.getBaseType().getArrayElementType() instanceof RefType;
+		}
+		return false;
 	}
 
 	protected void forwardHandleFieldWrite(final WitnessNode<Statement, Val, Field> node,

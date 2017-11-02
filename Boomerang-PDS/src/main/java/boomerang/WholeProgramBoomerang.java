@@ -16,6 +16,9 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends Boomerang<
 	private int reachableMethodCount;
 	private int allocationSites;
 	public void wholeProgramAnalysis(){
+		System.out.println("Tracking Strings: " + Boomerang.TRACK_STRING);
+		System.out.println("Tracking Arrays: " + Boomerang.TRACK_ARRAYS);
+		System.out.println("Tracking Static: " + Boomerang.TRACK_STATIC);
 		List<SootMethod> entryPoints = Scene.v().getEntryPoints();
 		long before = System.currentTimeMillis();
 		for(SootMethod m : entryPoints){
