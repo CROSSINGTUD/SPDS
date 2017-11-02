@@ -3,7 +3,6 @@ import java.util.Map;
 
 import boomerang.WholeProgramBoomerang;
 import boomerang.debugger.Debugger;
-import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -19,13 +18,17 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
-import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
 
-public class IDEALRunner  extends ResearchQuestion  {
+public class DacapoRunner  extends ResearchQuestion  {
 
   protected long analysisTime;
+public static void main(String...args) {
+	System.setProperty("benchmarkFolder", args[0]);
+	System.setProperty("benchmark", args[1]);
 
+	  new DacapoRunner().run();
+  }
   public void run() {
     G.v().reset();
 
@@ -36,7 +39,7 @@ public class IDEALRunner  extends ResearchQuestion  {
         if (Scene.v().getMainMethod() == null)
           throw new RuntimeException("No main class existing.");
         for(SootClass c : Scene.v().getClasses()){
-        	for(String app : IDEALRunner.this.getApplicationClasses()){
+        	for(String app : DacapoRunner.this.getApplicationClasses()){
         		if(c.isApplicationClass())
         			continue;
         		if(c.toString().startsWith(app.replace("<",""))){
