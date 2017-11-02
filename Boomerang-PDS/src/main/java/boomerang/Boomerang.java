@@ -1298,6 +1298,27 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 				}
 			}
 		}
-
 	}
+	
+	public void computeMetrics(){
+		int min = Integer.MAX_VALUE;
+		int totalReached = 0;
+		int max = 0;
+		Query maxQuery = null;
+		for (Query q : queryToSolvers.keySet()) {
+			int size = queryToSolvers.getOrCreate(q).getReachedStates().size();
+			totalReached += size;
+			min = Math.min(size, min);
+			if(size > max){
+				maxQuery = q;
+			}
+			max = Math.max(size, max);
+			
+		}
+		float average = ((float) totalReached )/ queryToSolvers.keySet().size();
+		System.out.println("Reachable nodes (Min/Avg/Max): " +min +"/"+ average+"/"+max); 
+		System.out.println("Maximal Query: " +maxQuery); 
+	}
+	
+	
 }

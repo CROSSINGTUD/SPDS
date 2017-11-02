@@ -37,6 +37,7 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends Boomerang<
 		System.out.println("Analyzed methods:\t" + reachableMethodCount);
 		System.out.println("Total solvers:\t" + this.getSolvers().size());
 		System.out.println("Allocation Sites:\t" + allocationSites);
+		this.computeMetrics();
 	}
 	
 
