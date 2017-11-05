@@ -81,8 +81,8 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 		@Override
 		public void onOutTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> aut) {
 			W newWeight = fa.getWeightFor(transition);
-			update(new Transition<N, D>(transition.getStart(), t.getLabel(), t.getTarget()),
-					(W) newWeight.extendWith(w));
+				update(new Transition<N, D>(transition.getStart(), t.getLabel(), t.getTarget()),
+						(W) newWeight.extendWith(w));
 		}
 
 		@Override
@@ -310,8 +310,8 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 								W newWeight = fa.getWeightFor(transition);
 								update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
 									(W) newWeight.extendWith(w));
+								}
 							}
-						}
 					});
 				}
 				

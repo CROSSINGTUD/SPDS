@@ -28,5 +28,27 @@ public abstract class StatementBasedFieldTransitionListener<W extends Weight> im
 	}
 
 	public abstract void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t);
-
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
+		return result;
+	}
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		StatementBasedFieldTransitionListener other = (StatementBasedFieldTransitionListener) obj;
+		if (stmt == null) {
+			if (other.stmt != null)
+				return false;
+		} else if (!stmt.equals(other.stmt))
+			return false;
+		return true;
+	}
 }

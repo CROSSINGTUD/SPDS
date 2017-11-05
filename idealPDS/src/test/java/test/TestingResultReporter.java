@@ -33,7 +33,7 @@ public class TestingResultReporter implements ResultReporter<TransitionFunction>
 			if(e.getValue() instanceof ComparableResult){
 				final ComparableResult<TransitionFunction> expectedResults = (ComparableResult) e.getValue();
 //				System.out.println(Joiner.on("\n").join(seedSolver.getNodesToWeights().entrySet()));
-				WeightedPAutomaton<Statement, INode<Val>, TransitionFunction> aut = new WeightedPAutomaton<Statement, INode<Val>, TransitionFunction>() {
+				WeightedPAutomaton<Statement, INode<Val>, TransitionFunction> aut = new WeightedPAutomaton<Statement, INode<Val>, TransitionFunction>(null) {
 					@Override
 					public INode<Val> createState(INode<Val> d, Statement loc) {
 						return null;

@@ -79,7 +79,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	public static final boolean TRACK_STRING = true;
 	public static final boolean TRACK_STATIC = true;
 	public static final boolean TRACK_ARRAYS = true;
-	public static final boolean THROW = false;
+	public static final boolean THROW = true;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private boolean first;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
@@ -845,24 +845,9 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 				final Node<Statement, Val> returnedNode) {
 
 			final AbstractBoomerangSolver<W> byPassingSolver = queryToSolvers.get(byPassingAllocation);
-			final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> byPassingFieldAutomaton = byPassingSolver
-					.getFieldAutomaton();
 			final AbstractBoomerangSolver<W> flowSolver = queryToSolvers.getOrCreate(flowQuery);
 			byPassingSolver.registerStatementFieldTransitionListener(
-					new StatementBasedFieldTransitionListener<W>(returnedNode.stmt()) {
-						@Override
-						public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-							if (!(t.getStart() instanceof GeneratedState)) {
-								Val byPassing = t.getStart().fact().fact();
-								byPassingFieldAutomaton.registerListener(
-										new ImportToSolver(t.getStart(), byPassingSolver, flowSolver));
-								flowSolver.setFieldContextReachable(
-										new Node<Statement, Val>(returnedNode.stmt(), byPassing));
-								flowSolver.addNormalCallFlow(returnedNode,
-										new Node<Statement, Val>(returnedNode.stmt(), byPassing));
-							}
-						}
-					});
+					new ImportFlowAtReturn(returnedNode, byPassingSolver,flowSolver));
 		}
 
 		public void addByPassingAllocation(ForwardQuery byPassingAllocation) {
@@ -1052,6 +1037,77 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			return Boomerang.this;
 		}
 
+	}
+	private class ImportFlowAtReturn extends StatementBasedFieldTransitionListener<W> {
+		private Node<Statement, Val> returnedNode;
+		private AbstractBoomerangSolver<W> byPassingSolver;
+		private AbstractBoomerangSolver<W> flowSolver;
+
+		public ImportFlowAtReturn(Node<Statement, Val> returnedNode,
+				AbstractBoomerangSolver<W> byPassingSolver,
+				AbstractBoomerangSolver<W> flowSolver) {
+			super(returnedNode.stmt());
+			this.returnedNode = returnedNode;
+			this.byPassingSolver = byPassingSolver;
+			this.flowSolver = flowSolver;
+		}
+
+		@Override
+		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+			if (!(t.getStart() instanceof GeneratedState)) {
+				Val byPassing = t.getStart().fact().fact();
+				byPassingSolver.getFieldAutomaton().registerListener(
+						new ImportToSolver(t.getStart(), byPassingSolver, flowSolver));
+				flowSolver.setFieldContextReachable(
+						new Node<Statement, Val>(returnedNode.stmt(), byPassing));
+				flowSolver.addNormalCallFlow(returnedNode,
+						new Node<Statement, Val>(returnedNode.stmt(), byPassing));
+			}
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((byPassingSolver == null) ? 0 : byPassingSolver.hashCode());
+			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
+			result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ImportFlowAtReturn other = (ImportFlowAtReturn) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (byPassingSolver == null) {
+				if (other.byPassingSolver != null)
+					return false;
+			} else if (!byPassingSolver.equals(other.byPassingSolver))
+				return false;
+			if (flowSolver == null) {
+				if (other.flowSolver != null)
+					return false;
+			} else if (!flowSolver.equals(other.flowSolver))
+				return false;
+			if (returnedNode == null) {
+				if (other.returnedNode != null)
+					return false;
+			} else if (!returnedNode.equals(other.returnedNode))
+				return false;
+			return true;
+		}
+
+		private Boomerang getOuterType() {
+			return Boomerang.this;
+		}
 	}
 
 	private class FieldReadPOI extends FieldStmtPOI {

@@ -2,13 +2,10 @@ package ideal;
 
 import java.util.Map.Entry;
 
-import com.google.common.base.Joiner;
-
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.ForwardQuery;
 import boomerang.Query;
-import boomerang.UnbalancedQuery;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -22,13 +19,9 @@ import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.ConnectPushListener;
-import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
-import wpds.interfaces.WPAStateListener;
-import wpds.interfaces.WPAUpdateListener;
 
 public class PerSeedAnalysisContext<W extends Weight> {
 
@@ -126,8 +119,7 @@ public class PerSeedAnalysisContext<W extends Weight> {
 		boomerang.debugOutput();
 		if(phase.equals(Phases.ValueFlow)){
 			for(Query q : boomerang.getSolvers().keySet()){
-				if(q instanceof ForwardQuery && q.equals(seed) ||  (q instanceof UnbalancedQuery && ((UnbalancedQuery) q).sourceQuery().equals(seed))){
-
+				if(q.unwrap().equals(seed.unwrap())){
 //					System.out.println(boomerang.getSolvers().get(q).getCallAutomaton().toDotString());
 					analysisDefinition.resultReporter().onSeedFinished((ForwardQuery)q, boomerang.getSolvers().getOrCreate(q));
 				}

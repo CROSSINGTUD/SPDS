@@ -114,6 +114,13 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public String toDotString() {
+		return toDotString(Sets.<WeightedPAutomaton<N, D, W>>newHashSet());
+	}
+	
+	private String toDotString(Set<WeightedPAutomaton<N, D, W>> visited){
+		if(!visited.add(this)){
+			return  "NESTED loop: " + getInitialState();
+		}
 		String s = "digraph {\n";
 		for (D source : states) {
 			Collection<Transition<N, D>> collection = transitionsOutOf.get(source);
@@ -135,7 +142,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		s += "Transitions: " + transitions.size() +" Nested: "+nestedAutomatons.size()+"\n";
 		for(WeightedPAutomaton<N, D, W> nested : nestedAutomatons){
 			s += "NESTED -> \n";
-			s += nested.toDotString();
+			s += nested.toDotString(visited);
 		}
 		s += "End nesting\n";
 		return s;
@@ -278,11 +285,9 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public void registerDFSListener(D state, ReachabilityListener<N, D> l) {
-//		ForwardDFSVisitor<N, D, W> dfsVisitor = getStateToDFS().get(state);
 		stateToReachabilityListener.put(state,l);
 		if (dfsVisitor == null) {
 			dfsVisitor = new ForwardDFSVisitor<N, D, W>(this);
-//			getStateToDFS().put(state, dfsVisitor);
 			this.registerListener(dfsVisitor);
 		}
 		dfsVisitor.registerListener(state, l);
@@ -293,11 +298,9 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public void registerDFSEpsilonListener(D state, ReachabilityListener<N, D> l) {
-//		ForwardDFSVisitor<N, D, W> dfsVisitor = getStateToEpsilonDFS().get(state);
 		stateToEpsilonReachabilityListener.put(state,l);
 		if (dfsEpsVisitor == null) {
 			dfsEpsVisitor = new ForwardDFSEpsilonVisitor<N, D, W>(this);
-//			getStateToEpsilonDFS().put(state, dfsVisitor);
 			this.registerListener(dfsEpsVisitor);
 		}
 		for(WeightedPAutomaton<N, D, W> nested : Lists.newLinkedList(nestedAutomatons)){
@@ -355,7 +358,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 				return "NESTED: \n" + super.toString();
 			}
 		};
-			addNestedAutomaton(nested);
+		addNestedAutomaton(nested);
 		return nested;
 	}
 
