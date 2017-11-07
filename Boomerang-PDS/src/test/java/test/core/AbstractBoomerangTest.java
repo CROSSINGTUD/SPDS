@@ -136,9 +136,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						Local local = (Local) as.getLeftOp();
 						Statement statement = new Statement(unit, icfg.getMethodOf(unit));
 						ForwardQuery forwardQuery = new ForwardQuery(statement, new Val(local,icfg.getMethodOf(unit)));
-						if(callSite != null){
-							return Optional.<Query>of(new UnbalancedForwardQuery(new StatementWithAlloc(new Statement(callSite, icfg.getMethodOf(callSite)), statement), new Val(local,icfg.getMethodOf(unit))));
-						}
+//						if(callSite != null){
+//							return Optional.<Query>of(new UnbalancedForwardQuery(new StatementWithAlloc(new Statement(callSite, icfg.getMethodOf(callSite)), statement), new Val(local,icfg.getMethodOf(unit))));
+//						}
 						return Optional.<Query>of(forwardQuery);
 					}
 				}

@@ -31,7 +31,6 @@ import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import boomerang.solver.StatementBasedFieldTransitionListener;
 import heros.utilities.DefaultValueMap;
-import soot.Local;
 import soot.RefType;
 import soot.Scene;
 import soot.SootClass;
@@ -108,8 +107,9 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 						.registerUnbalancedPopListener(new UnbalancedPopListener<Statement, INode<Val>, W>() {
 
 					@Override
-					public void unbalancedPop(final INode<Val> returningFact, final Statement exitStmt,
-							INode<Val> targetFact, final W weight) {
+					public void unbalancedPop(final INode<Val> returningFact, final Transition<Statement,INode<Val>> trans,
+							final W weight) {
+						Statement exitStmt = trans.getLabel();
 						SootMethod callee = exitStmt.getMethod();
 						if (!callee.isStaticInitializer()) {
 							if(Val.statics().equals(returningFact.fact()))
@@ -119,7 +119,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 										Boomerang.this.icfg().getMethodOf(callSite));
 								boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) callSite, returningFact.fact());
 								if(valueUsedInStatement || AbstractBoomerangSolver.assignsValue((Stmt)callSite,returningFact.fact())){
-									unbalancedReturnFlow(callStatement, weight, returningFact);
+									unbalancedReturnFlow(callStatement, weight, returningFact, trans);
 								}
 							}
 						} else {
@@ -158,27 +158,20 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 					}
 
 					private void unbalancedReturnFlow(final Statement callStatement, final W weight,
-							final INode<Val> returningFact) {
+							final INode<Val> returningFact, final Transition<Statement, INode<Val>> trans) {
 						Boomerang.this.submit(callStatement.getMethod(), new Runnable() {
 							@Override
 							public void run() {
 								for (Statement returnSite : solver.getSuccsOf(callStatement)) {
 									final Query forwardQuery = createUnbalancedQuery(callStatement, key);
-									final AbstractBoomerangSolver<W> unbalancedSolver = queryToSolvers
-											.getOrCreate(forwardQuery);
 
+									Node<Statement, Val> exitNode = new Node<Statement, Val>(trans.getLabel(),
+											trans.getStart().fact());
 									Node<Statement, Val> returnedVal = new Node<Statement, Val>(returnSite,
 											returningFact.fact());
-									unbalancedSolver.unbalancedSolve(returnedVal, weight);
-									queryToSolvers.getOrCreate(key).getFieldAutomaton().registerDFSListener(
-											new SingleNode<Node<Statement, Val>>(returnedVal),
-											new ReachabilityListener<Field, INode<Node<Statement, Val>>>() {
-
-										@Override
-										public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
-											insertTransition(unbalancedSolver.getFieldAutomaton(), t);
-										}
-									});
+									solver.setCallingContextReachable(returnedVal);
+									solver.getCallAutomaton().addTransition(new Transition<Statement,INode<Val>>(returningFact,returnSite,solver.getCallAutomaton().getInitialState()));
+//									solver.processPop(exitNode, new CallPopNode<Val,Statement>(returningFact.fact(), PDSSystem.CALLS,returnSite));
 
 									final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
 											.getOrCreate(new ForwardCallSitePOI(callStatement));
@@ -188,7 +181,9 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 						});
 					}
+
 				});
+			
 			return solver;
 		}
 	};
@@ -197,7 +192,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		if (key instanceof ForwardQuery) {
 			Statement alloc = (key.stmt() instanceof StatementWithAlloc ? ((StatementWithAlloc) key.stmt()).getAlloc()
 					: key.stmt());
-			return new UnbalancedForwardQuery(new StatementWithAlloc(callStatement, alloc), key.var());
+			return key;
 		} else {
 			return new UnbalancedBackwardQuery(callStatement, (BackwardQuery) key);
 		}
@@ -295,7 +290,6 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			}
 
 		});
-
 		return solver;
 	}
 

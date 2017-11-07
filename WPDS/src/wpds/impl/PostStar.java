@@ -149,10 +149,9 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 					}
 					final W newWeight = (W) weight.extendWith(ruleWeight);
 					update(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget()), newWeight);
-					
 					fa.registerListener(new UpdateTransitivePopListener(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget())));
 				} else{
-					fa.unbalancedPop(targetState,popLabel,t.getTarget(), weight);
+					fa.unbalancedPop(targetState,t,weight);
 				}
 			}
 			if(t.getLabel() instanceof Empty){

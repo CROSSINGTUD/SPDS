@@ -5,6 +5,6 @@ import wpds.interfaces.State;
 
 public interface UnbalancedPopListener<N extends Location, D extends State, W extends Weight> {
 
-	void unbalancedPop(D returningFact, N popLabel,D targetFact, W weight);
+	void unbalancedPop(D returningFact, Transition<N,D> trans, W weight);
 
 }

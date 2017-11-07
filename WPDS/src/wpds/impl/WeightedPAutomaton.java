@@ -53,7 +53,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private Set<ReturnSiteWithWeights> connectedPushes = Sets.newHashSet();
 	private Set<ConnectPushListener<N,D,W>> conntectedPushListeners = Sets.newHashSet();
 	private Set<UnbalancedPopListener<N,D,W>> unbalancedPopListeners = Sets.newHashSet();
-	private Map<Transition<N,D>,W> unbalancedPops = Maps.newHashMap();
+	private Map<UnbalancedPopEntry,W> unbalancedPops = Maps.newHashMap();
 	private Map<Transition<N, D>, W> transitionsToFinalWeights = Maps.newHashMap();
 	private ForwardDFSVisitor<N, D, W> dfsVisitor;
 	private ForwardDFSVisitor<N, D, W> dfsEpsVisitor;
@@ -380,24 +380,74 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 	public void registerUnbalancedPopListener(UnbalancedPopListener<N, D, W> l){
 		if(unbalancedPopListeners.add(l)){
-			for(Entry<Transition<N, D>, W> e : Lists.newArrayList(unbalancedPops.entrySet())){
-				Transition<N, D> t = e.getKey();
-				l.unbalancedPop(t.getStart(), t.getLabel(), t.getTarget(), e.getValue());
+			for(Entry<UnbalancedPopEntry, W> e : Lists.newArrayList(unbalancedPops.entrySet())){
+				UnbalancedPopEntry t = e.getKey();
+				l.unbalancedPop(t.targetState,t.trans, e.getValue());
 			}
 		}
 	}
 
-	public void unbalancedPop(D targetState, N popLabel, D target, W weight) {
-		Transition<N, D> t = new Transition<N,D>(targetState,popLabel,target);
+	public void unbalancedPop(D targetState, Transition<N,D> trans, W weight) {
+		UnbalancedPopEntry t = new UnbalancedPopEntry(targetState,trans);
 		W oldVal = unbalancedPops.get(t);
 		W newVal = (oldVal == null ? weight : (W) oldVal.combineWith(weight));
 		if(!newVal.equals(oldVal)){
 			unbalancedPops.put(t, newVal);
 			for(UnbalancedPopListener<N, D, W> l : Lists.newArrayList(unbalancedPopListeners)){
-				l.unbalancedPop(targetState,popLabel,target, newVal);
+				l.unbalancedPop(targetState,trans, newVal);
 			}
 		}
 	}
+	
+	private class UnbalancedPopEntry{
+
+		private final Transition<N, D> trans;
+		private final D targetState;
+
+		public UnbalancedPopEntry(D targetState, Transition<N, D> trans) {
+			this.targetState = targetState;
+			this.trans = trans;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((targetState == null) ? 0 : targetState.hashCode());
+			result = prime * result + ((trans == null) ? 0 : trans.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			UnbalancedPopEntry other = (UnbalancedPopEntry) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (targetState == null) {
+				if (other.targetState != null)
+					return false;
+			} else if (!targetState.equals(other.targetState))
+				return false;
+			if (trans == null) {
+				if (other.trans != null)
+					return false;
+			} else if (!trans.equals(other.trans))
+				return false;
+			return true;
+		}
+
+		private WeightedPAutomaton getOuterType() {
+			return WeightedPAutomaton.this;
+		}
+	}
+	
 	private class ReturnSiteWithWeights{
 
 		private final N returnSite;
