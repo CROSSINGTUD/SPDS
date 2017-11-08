@@ -288,6 +288,7 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
 				final Transition<N, D> transition = new Transition<N, D>(irState, transitionLabel, t.getTarget());
 
+				update(transition, (W)weight.extendWith(rule.getWeight()));
 				
 				if(!fa.nested()){
 					update(new Transition<N, D>(p, gammaPrime, irState),fa.getOne());
@@ -309,7 +310,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 							}
 					});
 				}
-				update(transition, (W)weight.extendWith(rule.getWeight()));
 				
 				fa.registerListener(new UpdateEpsilonOnPushListener(transition, rule.getL1()));
 			}

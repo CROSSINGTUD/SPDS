@@ -249,7 +249,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public W getWeightFor(Transition<N, D> trans) {
-		return (transitionToWeights.get(trans) != null ? transitionToWeights.get(trans) : getOne());
+		return transitionToWeights.get(trans);
 	}
 
 	public void registerListener(WPAUpdateListener<N, D, W> listener) {
@@ -524,8 +524,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		
 	}
 	public void computeValues(Transition<N, D> callTrans, W weight) {
-		transitionsToFinalWeights.put(callTrans, weight);
-		registerListener(new ValueComputationListener(callTrans));
+//		transitionsToFinalWeights.put(callTrans, weight);
+//		registerListener(new ValueComputationListener(callTrans));
 	}
 
 	public Map<Transition<N,D>, W> getTransitionsToFinalWeights() {

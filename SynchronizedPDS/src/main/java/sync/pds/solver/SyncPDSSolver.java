@@ -72,7 +72,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	protected boolean preventCallTransitionAdd(Transition<Stmt, INode<Fact>> trans, W weight) {
 		return false;
 	}
-	public SyncPDSSolver(INode<Fact> initialCallNode, INode<Node<Stmt,Fact>> initialFieldNode, NestedWeightedPAutomatons<Stmt, INode<Fact>, W> callSummaries,NestedWeightedPAutomatons<Field, INode<Node<Stmt, Fact>>, W> fieldSummaries){
+	public SyncPDSSolver(INode<Fact> initialCallNode, INode<Node<Stmt,Fact>> initialFieldNode, final boolean useCallSummaries, NestedWeightedPAutomatons<Stmt, INode<Fact>, W> callSummaries,final boolean useFieldSummaries, NestedWeightedPAutomatons<Field, INode<Node<Stmt, Fact>>, W> fieldSummaries){
 		fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W>(initialFieldNode) {
 			@Override
 			public INode<Node<Stmt,Fact>> createState(INode<Node<Stmt,Fact>> d, Field loc) {
@@ -88,7 +88,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 			@Override
 			public boolean nested() {
-				return false;
+				return useFieldSummaries;
 			};
 			
 			@Override
@@ -129,7 +129,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 			@Override
 			public boolean nested() {
-				return false;
+				return useCallSummaries;
 			};
 			@Override
 			public W getOne() {

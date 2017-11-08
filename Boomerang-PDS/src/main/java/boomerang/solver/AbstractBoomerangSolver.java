@@ -67,10 +67,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	public AbstractBoomerangSolver(MethodReachableQueue reachableQueue, InterproceduralCFG<Unit, SootMethod> icfg,
 			Query query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
-			NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
-			NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries) {
+			boolean useCallSummaries, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
+			boolean useFieldSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries) {
 		super(new SingleNode<Val>(query.asNode().fact()), new AllocNode<Node<Statement, Val>>(query.asNode()),
-				callSummaries, fieldSummaries);
+				useCallSummaries, callSummaries, useFieldSummaries, fieldSummaries);
 		this.reachableQueue = reachableQueue;
 
 		this.icfg = icfg;

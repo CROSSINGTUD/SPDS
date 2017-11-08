@@ -78,6 +78,8 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	public static final boolean TRACK_STRING = false;
 	public static final boolean TRACK_STATIC = true;
 	public static final boolean TRACK_ARRAYS = true;
+	public static final boolean CALL_SUMMARIES = true;
+	public static final boolean FIELD_SUMMARIES = false;
 	public static final boolean THROW = false;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private boolean first;
@@ -130,22 +132,12 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 									Boomerang.this.submit(callStatement.getMethod(), new Runnable() {
 										@Override
 										public void run() {
-											final AbstractBoomerangSolver<W> unbalancedSolver = queryToSolvers
-													.getOrCreate(key);
+
 											Node<Statement, Val> returnedVal = new Node<Statement, Val>(callStatement,
 													returningFact.fact());
-											unbalancedSolver.unbalancedSolve(returnedVal, weight);
-											queryToSolvers.getOrCreate(key).getFieldAutomaton()
-													.registerDFSListener(new SingleNode<Node<Statement, Val>>(
-															returnedVal),
-													new ReachabilityListener<Field, INode<Node<Statement, Val>>>() {
+											solver.setCallingContextReachable(returnedVal);
+											solver.getCallAutomaton().addTransition(new Transition<Statement,INode<Val>>(returningFact,callStatement,solver.getCallAutomaton().getInitialState()));
 
-												@Override
-												public void reachable(
-														Transition<Field, INode<Node<Statement, Val>>> t) {
-													insertTransition(unbalancedSolver.getFieldAutomaton(), t);
-												}
-											});
 											final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
 													.getOrCreate(new ForwardCallSitePOI(callStatement));
 											callSitePoi.returnsFromCall(key, returnedVal);
@@ -166,7 +158,6 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 											returningFact.fact());
 									solver.setCallingContextReachable(returnedVal);
 									solver.getCallAutomaton().addTransition(new Transition<Statement,INode<Val>>(returningFact,returnSite,solver.getCallAutomaton().getInitialState()));
-//									solver.processPop(exitNode, new CallPopNode<Val,Statement>(returningFact.fact(), PDSSystem.CALLS,returnSite));
 
 									final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
 											.getOrCreate(new ForwardCallSitePOI(callStatement));
@@ -225,7 +216,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 	protected AbstractBoomerangSolver<W> createBackwardSolver(final BackwardQuery backwardQuery) {
 		final BackwardBoomerangSolver<W> solver = new BackwardBoomerangSolver<W>(Boomerang.this, bwicfg(),
-				backwardQuery, genField, createCallSummaries(backwardQuery, backwardCallSummaries),
+				backwardQuery, genField, CALL_SUMMARIES, createCallSummaries(backwardQuery, backwardCallSummaries),FIELD_SUMMARIES,
 				createFieldSummaries(backwardQuery, backwardFieldSummaries)) {
 
 			@Override
@@ -316,8 +307,8 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 	protected AbstractBoomerangSolver<W> createForwardSolver(final ForwardQuery sourceQuery) {
 		final ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(Boomerang.this, icfg(), sourceQuery,
-				genField, createCallSummaries(sourceQuery, forwardCallSummaries),
-				createFieldSummaries(sourceQuery, forwardFieldSummaries)) {
+				genField, CALL_SUMMARIES, createCallSummaries(sourceQuery, forwardCallSummaries),
+				FIELD_SUMMARIES, createFieldSummaries(sourceQuery, forwardFieldSummaries)) {
 			@Override
 			protected void onReturnFromCall(Statement callSite, Statement returnSite,
 					final Node<Statement, Val> returnedNode, final boolean unbalanced) {
