@@ -75,10 +75,10 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	public static final boolean ON_THE_FLY_CG = true;
 	public static final boolean TYPE_CHECK = true;
 	public static final boolean NULL_ALLOCATIONS = false;
-	public static final boolean TRACK_STRING = true;
+	public static final boolean TRACK_STRING = false;
 	public static final boolean TRACK_STATIC = true;
 	public static final boolean TRACK_ARRAYS = true;
-	public static final boolean THROW = true;
+	public static final boolean THROW = false;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private boolean first;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
@@ -130,9 +130,8 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 									Boomerang.this.submit(callStatement.getMethod(), new Runnable() {
 										@Override
 										public void run() {
-											final Query forwardQuery = createUnbalancedQuery(callStatement, key);
 											final AbstractBoomerangSolver<W> unbalancedSolver = queryToSolvers
-													.getOrCreate(forwardQuery);
+													.getOrCreate(key);
 											Node<Statement, Val> returnedVal = new Node<Statement, Val>(callStatement,
 													returningFact.fact());
 											unbalancedSolver.unbalancedSolve(returnedVal, weight);
@@ -149,7 +148,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 											});
 											final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
 													.getOrCreate(new ForwardCallSitePOI(callStatement));
-											callSitePoi.returnsFromCall(forwardQuery, returnedVal);
+											callSitePoi.returnsFromCall(key, returnedVal);
 										}
 									});
 								}
@@ -163,10 +162,6 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 							@Override
 							public void run() {
 								for (Statement returnSite : solver.getSuccsOf(callStatement)) {
-									final Query forwardQuery = createUnbalancedQuery(callStatement, key);
-
-									Node<Statement, Val> exitNode = new Node<Statement, Val>(trans.getLabel(),
-											trans.getStart().fact());
 									Node<Statement, Val> returnedVal = new Node<Statement, Val>(returnSite,
 											returningFact.fact());
 									solver.setCallingContextReachable(returnedVal);
@@ -175,7 +170,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 									final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
 											.getOrCreate(new ForwardCallSitePOI(callStatement));
-									callSitePoi.returnsFromCall(forwardQuery, returnedVal);
+									callSitePoi.returnsFromCall(key, returnedVal);
 								}
 							}
 
@@ -190,8 +185,6 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 	private Query createUnbalancedQuery(Statement callStatement, Query key) {
 		if (key instanceof ForwardQuery) {
-			Statement alloc = (key.stmt() instanceof StatementWithAlloc ? ((StatementWithAlloc) key.stmt()).getAlloc()
-					: key.stmt());
 			return key;
 		} else {
 			return new UnbalancedBackwardQuery(callStatement, (BackwardQuery) key);
