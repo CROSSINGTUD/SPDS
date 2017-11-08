@@ -464,6 +464,8 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 	public boolean addNormalCallFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
+		if(callingContextReachable.contains(succ))
+			return false;
 		return callingPDS.addRule(
 				new NormalRule<Stmt, INode<Fact>,W>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt(),getCallWeights().normal(curr,succ)));
 	}
@@ -532,6 +534,9 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		});
 	}
 	public boolean addNormalFieldFlow(final Node<Stmt,Fact> curr, final Node<Stmt, Fact> succ) {
+		if(fieldContextReachable.contains(succ)){
+			return false;
+		}
 		if(succ instanceof CastNode){
 			return fieldPDS.addRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
 					fieldWildCard(), asFieldFact(succ), fieldWildCard(), getFieldWeights().normal(curr,succ)){
@@ -586,9 +591,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	public boolean processPush(Node<Stmt,Fact> curr, Location location, Node<Stmt, Fact> succ, PDSSystem system) {
 		boolean added = false;
 		if (system.equals(PDSSystem.FIELDS)) {
+			
 			if(FieldSensitive){
-			added |= fieldPDS.addRule(new PushRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
-					fieldWildCard(), asFieldFact(succ),  (Field) location,fieldWildCard(), getFieldWeights().push(curr,succ,(Field)location)));
+				if(!fieldContextReachable.contains(succ)){
+					added |= fieldPDS.addRule(new PushRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
+							fieldWildCard(), asFieldFact(succ),  (Field) location,fieldWildCard(), getFieldWeights().push(curr,succ,(Field)location)));
+				}
 			} else{
 				added |= addNormalFieldFlow(curr, succ);
 			}
@@ -597,8 +605,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		} else if (system.equals(PDSSystem.CALLS)) {
 			added |= addNormalFieldFlow(curr, succ);
 			if(ContextSensitive){
-				added |= callingPDS.addRule(new PushRule<Stmt, INode<Fact>, W>(wrap(curr.fact()), curr.stmt(),
-						wrap(succ.fact()), succ.stmt(), (Stmt) location, getCallWeights().push(curr, succ, (Stmt) location)));
+				if(!callingContextReachable.contains(succ)){
+					added |= callingPDS.addRule(new PushRule<Stmt, INode<Fact>, W>(wrap(curr.fact()), curr.stmt(),
+							wrap(succ.fact()), succ.stmt(), (Stmt) location, getCallWeights().push(curr, succ, (Stmt) location)));
+				}
 			} else{
 				added |= addNormalCallFlow(curr, succ);
 			}

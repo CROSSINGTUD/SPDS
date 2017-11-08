@@ -1055,11 +1055,10 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		@Override
 		public int hashCode() {
 			final int prime = 31;
-			int result = 1;
+			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((byPassingSolver == null) ? 0 : byPassingSolver.hashCode());
 			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
-			result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
 			return result;
 		}
 
@@ -1067,7 +1066,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		public boolean equals(Object obj) {
 			if (this == obj)
 				return true;
-			if (obj == null)
+			if (!super.equals(obj))
 				return false;
 			if (getClass() != obj.getClass())
 				return false;
@@ -1084,17 +1083,13 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 					return false;
 			} else if (!flowSolver.equals(other.flowSolver))
 				return false;
-			if (returnedNode == null) {
-				if (other.returnedNode != null)
-					return false;
-			} else if (!returnedNode.equals(other.returnedNode))
-				return false;
 			return true;
 		}
 
 		private Boomerang getOuterType() {
 			return Boomerang.this;
 		}
+
 	}
 
 	private class FieldReadPOI extends FieldStmtPOI {

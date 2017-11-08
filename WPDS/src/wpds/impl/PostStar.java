@@ -80,7 +80,7 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 
 		@Override
 		public void onOutTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> aut) {
-			W newWeight = fa.getWeightFor(transition);
+			W newWeight = getWeightFor(transition);
 				update(new Transition<N, D>(transition.getStart(), t.getLabel(), t.getTarget()),
 						(W) newWeight.extendWith(w));
 		}
@@ -93,7 +93,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((targetState == null) ? 0 : targetState.hashCode());
 			result = prime * result + ((transition == null) ? 0 : transition.hashCode());
 			return result;
@@ -108,8 +107,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 			if (getClass() != obj.getClass())
 				return false;
 			UpdateTransitivePopListener other = (UpdateTransitivePopListener) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
 			if (targetState == null) {
 				if (other.targetState != null)
 					return false;
@@ -123,9 +120,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 			return true;
 		}
 
-		private PostStar getOuterType() {
-			return PostStar.this;
-		}
 	}
 	
 	private class HandlePopListener extends WPAStateListener<N, D, W> {
@@ -293,6 +287,8 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 				final D irState = fa.createState(p, gammaPrime);
 				final N transitionLabel = (rule.getCallSite() instanceof Wildcard ? t.getLabel() : rule.getCallSite());
 				final Transition<N, D> transition = new Transition<N, D>(irState, transitionLabel, t.getTarget());
+
+				
 				if(!fa.nested()){
 					update(new Transition<N, D>(p, gammaPrime, irState),fa.getOne());
 				} else{
@@ -306,15 +302,15 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 							if((t.getLabel().equals(fa.epsilon()) && t.getTarget().equals(irState))){
 								update(t, (W) w);
 
-								W newWeight = fa.getWeightFor(transition);
+								W newWeight = getWeightFor(transition);
 								update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
 									(W) newWeight.extendWith(w));
 								}
 							}
 					});
 				}
+				update(transition, (W)weight.extendWith(rule.getWeight()));
 				
-				update(new Transition<N, D>(irState, transitionLabel, t.getTarget()), (W)weight.extendWith(rule.getWeight()));
 				fa.registerListener(new UpdateEpsilonOnPushListener(transition, rule.getL1()));
 			}
 		}
@@ -370,7 +366,7 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 		@Override
 		public void onInTransitionAdded(Transition<N, D> t, W weight, WeightedPAutomaton<N, D, W> aut) {
 			if (t.getString().equals(fa.epsilon())) {
-				W newWeight = fa.getWeightFor(transition);
+				W newWeight = getWeightFor(transition);
 				fa.reconnectPush(callSite, transition.getLabel(),t.getStart(), newWeight, weight);
 			}	
 		}
@@ -379,7 +375,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
 			result = prime * result + ((transition == null) ? 0 : transition.hashCode());
 			return result;
@@ -394,8 +389,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 			if (getClass() != obj.getClass())
 				return false;
 			UpdateEpsilonOnPushListener other = (UpdateEpsilonOnPushListener) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
 			if (callSite == null) {
 				if (other.callSite != null)
 					return false;
@@ -409,10 +402,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 			return true;
 		}
 
-		private PostStar getOuterType() {
-			return PostStar.this;
-		};
-
 
 		
 	}
@@ -422,6 +411,14 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 			fa.addWeightForTransition(trans, weight);
 		}else{
 			getSummaryAutomaton(trans.getTarget()).addWeightForTransition(trans, weight);	
+		}
+	}
+	
+	private W getWeightFor(Transition<N,D> trans){
+		if(!fa.nested()){
+			return fa.getWeightFor(trans);
+		}else{
+			return getSummaryAutomaton(trans.getTarget()).getWeightFor(trans);	
 		}
 	}
 
