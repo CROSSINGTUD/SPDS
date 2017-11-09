@@ -787,6 +787,161 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 	}
 
+	protected void importFlowsAtReturnSite(final ForwardQuery byPassingAllocation, final Query flowQuery,
+			final Node<Statement, Val> returnedNode) {
+
+		final AbstractBoomerangSolver<W> byPassingSolver = queryToSolvers.get(byPassingAllocation);
+		final AbstractBoomerangSolver<W> flowSolver = queryToSolvers.getOrCreate(flowQuery);
+		byPassingSolver.registerStatementFieldTransitionListener(
+				new ImportFlowAtReturn(returnedNode, byPassingSolver,flowSolver));
+	}
+	
+	private class IntersectOutTransition extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+
+		private ForwardQuery byPassing;
+		private Query flowQuery;
+		private Node<Statement, Val> returnedNode;
+		public boolean triggered;
+
+		public IntersectOutTransition(ForwardQuery byPassing, Query flowQuery, Node<Statement, Val> returnedNode) {
+			super(new SingleNode<Node<Statement, Val>>(returnedNode));
+			this.byPassing = byPassing;
+			this.flowQuery = flowQuery;
+			this.returnedNode = returnedNode;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> outerT, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+			if (triggered)
+				return;
+			if (!outerT.getLabel().equals(Field.epsilon()))
+				queryToSolvers.getOrCreate(flowQuery).getFieldAutomaton()
+						.registerListener(new HasOutTransition(this, byPassing, flowQuery, returnedNode, outerT));
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + ((byPassing == null) ? 0 : byPassing.hashCode());
+			result = prime * result + ((flowQuery == null) ? 0 : flowQuery.hashCode());
+			result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			IntersectOutTransition other = (IntersectOutTransition) obj;
+			if (byPassing == null) {
+				if (other.byPassing != null)
+					return false;
+			} else if (!byPassing.equals(other.byPassing))
+				return false;
+			if (flowQuery == null) {
+				if (other.flowQuery != null)
+					return false;
+			} else if (!flowQuery.equals(other.flowQuery))
+				return false;
+			if (returnedNode == null) {
+				if (other.returnedNode != null)
+					return false;
+			} else if (!returnedNode.equals(other.returnedNode))
+				return false;
+			return true;
+		}
+
+	}
+
+	private class HasOutTransition extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+
+		private final ForwardQuery byPassing;
+		private final Query flowQuery;
+		private final Node<Statement, Val> returnedNode;
+		private final Transition<Field, INode<Node<Statement, Val>>> outerT;
+		private IntersectOutTransition intersectOutTransition;
+
+		public HasOutTransition(IntersectOutTransition intersectOutTransition,
+				ForwardQuery byPassing, Query flowQuery, Node<Statement, Val> returnedNode,
+				Transition<Field, INode<Node<Statement, Val>>> outerT) {
+			super(new SingleNode<Node<Statement, Val>>(returnedNode));
+			this.intersectOutTransition = intersectOutTransition;
+			this.byPassing = byPassing;
+			this.flowQuery = flowQuery;
+			this.returnedNode = returnedNode;
+			this.outerT = outerT;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+			if (intersectOutTransition.triggered)
+				return;
+			if (t.equals(outerT)) {
+				intersectOutTransition.triggered = true;
+				importFlowsAtReturnSite(byPassing, flowQuery, returnedNode);
+			}
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + ((byPassing == null) ? 0 : byPassing.hashCode());
+			result = prime * result + ((flowQuery == null) ? 0 : flowQuery.hashCode());
+			result = prime * result + ((outerT == null) ? 0 : outerT.hashCode());
+			result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			HasOutTransition other = (HasOutTransition) obj;
+			if (byPassing == null) {
+				if (other.byPassing != null)
+					return false;
+			} else if (!byPassing.equals(other.byPassing))
+				return false;
+			if (flowQuery == null) {
+				if (other.flowQuery != null)
+					return false;
+			} else if (!flowQuery.equals(other.flowQuery))
+				return false;
+			if (outerT == null) {
+				if (other.outerT != null)
+					return false;
+			} else if (!outerT.equals(other.outerT))
+				return false;
+			if (returnedNode == null) {
+				if (other.returnedNode != null)
+					return false;
+			} else if (!returnedNode.equals(other.returnedNode))
+				return false;
+			return true;
+		}
+	}
 	private class ForwardCallSitePOI {
 		private Statement callSite;
 		private Set<QueryWithVal> returnsFromCall = Sets.newHashSet();
@@ -819,14 +974,6 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 					});
 		}
 
-		protected void importFlowsAtReturnSite(final ForwardQuery byPassingAllocation, final Query flowQuery,
-				final Node<Statement, Val> returnedNode) {
-
-			final AbstractBoomerangSolver<W> byPassingSolver = queryToSolvers.get(byPassingAllocation);
-			final AbstractBoomerangSolver<W> flowSolver = queryToSolvers.getOrCreate(flowQuery);
-			byPassingSolver.registerStatementFieldTransitionListener(
-					new ImportFlowAtReturn(returnedNode, byPassingSolver,flowSolver));
-		}
 
 		public void addByPassingAllocation(ForwardQuery byPassingAllocation) {
 			if (byPassingAllocations.add(byPassingAllocation)) {
@@ -836,152 +983,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			}
 		}
 
-		private class IntersectOutTransition extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
-
-			private ForwardQuery byPassing;
-			private Query flowQuery;
-			private Node<Statement, Val> returnedNode;
-			public boolean triggered;
-
-			public IntersectOutTransition(ForwardQuery byPassing, Query flowQuery, Node<Statement, Val> returnedNode) {
-				super(new SingleNode<Node<Statement, Val>>(returnedNode));
-				this.byPassing = byPassing;
-				this.flowQuery = flowQuery;
-				this.returnedNode = returnedNode;
-			}
-
-			@Override
-			public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> outerT, W w,
-					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-				if (triggered)
-					return;
-				if (!outerT.getLabel().equals(Field.epsilon()))
-					queryToSolvers.getOrCreate(flowQuery).getFieldAutomaton()
-							.registerListener(new HasOutTransition(this, byPassing, flowQuery, returnedNode, outerT));
-			}
-
-			@Override
-			public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-			}
-
-			@Override
-			public int hashCode() {
-				final int prime = 31;
-				int result = super.hashCode();
-				result = prime * result + ((byPassing == null) ? 0 : byPassing.hashCode());
-				result = prime * result + ((flowQuery == null) ? 0 : flowQuery.hashCode());
-				result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
-				return result;
-			}
-
-			@Override
-			public boolean equals(Object obj) {
-				if (this == obj)
-					return true;
-				if (!super.equals(obj))
-					return false;
-				if (getClass() != obj.getClass())
-					return false;
-				IntersectOutTransition other = (IntersectOutTransition) obj;
-				if (byPassing == null) {
-					if (other.byPassing != null)
-						return false;
-				} else if (!byPassing.equals(other.byPassing))
-					return false;
-				if (flowQuery == null) {
-					if (other.flowQuery != null)
-						return false;
-				} else if (!flowQuery.equals(other.flowQuery))
-					return false;
-				if (returnedNode == null) {
-					if (other.returnedNode != null)
-						return false;
-				} else if (!returnedNode.equals(other.returnedNode))
-					return false;
-				return true;
-			}
-
-		}
-
-		private class HasOutTransition extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
-
-			private final ForwardQuery byPassing;
-			private final Query flowQuery;
-			private final Node<Statement, Val> returnedNode;
-			private final Transition<Field, INode<Node<Statement, Val>>> outerT;
-			private Boomerang<W>.ForwardCallSitePOI.IntersectOutTransition intersectOutTransition;
-
-			public HasOutTransition(Boomerang<W>.ForwardCallSitePOI.IntersectOutTransition intersectOutTransition,
-					ForwardQuery byPassing, Query flowQuery, Node<Statement, Val> returnedNode,
-					Transition<Field, INode<Node<Statement, Val>>> outerT) {
-				super(new SingleNode<Node<Statement, Val>>(returnedNode));
-				this.intersectOutTransition = intersectOutTransition;
-				this.byPassing = byPassing;
-				this.flowQuery = flowQuery;
-				this.returnedNode = returnedNode;
-				this.outerT = outerT;
-			}
-
-			@Override
-			public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-				if (intersectOutTransition.triggered)
-					return;
-				if (t.equals(outerT)) {
-					intersectOutTransition.triggered = true;
-					importFlowsAtReturnSite(byPassing, flowQuery, returnedNode);
-				}
-			}
-
-			@Override
-			public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-			}
-
-			@Override
-			public int hashCode() {
-				final int prime = 31;
-				int result = super.hashCode();
-				result = prime * result + ((byPassing == null) ? 0 : byPassing.hashCode());
-				result = prime * result + ((flowQuery == null) ? 0 : flowQuery.hashCode());
-				result = prime * result + ((outerT == null) ? 0 : outerT.hashCode());
-				result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
-				return result;
-			}
-
-			@Override
-			public boolean equals(Object obj) {
-				if (this == obj)
-					return true;
-				if (!super.equals(obj))
-					return false;
-				if (getClass() != obj.getClass())
-					return false;
-				HasOutTransition other = (HasOutTransition) obj;
-				if (byPassing == null) {
-					if (other.byPassing != null)
-						return false;
-				} else if (!byPassing.equals(other.byPassing))
-					return false;
-				if (flowQuery == null) {
-					if (other.flowQuery != null)
-						return false;
-				} else if (!flowQuery.equals(other.flowQuery))
-					return false;
-				if (outerT == null) {
-					if (other.outerT != null)
-						return false;
-				} else if (!outerT.equals(other.outerT))
-					return false;
-				if (returnedNode == null) {
-					if (other.returnedNode != null)
-						return false;
-				} else if (!returnedNode.equals(other.returnedNode))
-					return false;
-				return true;
-			}
-		}
+		
 
 		@Override
 		public int hashCode() {
