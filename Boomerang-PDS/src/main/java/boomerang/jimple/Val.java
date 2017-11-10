@@ -1,15 +1,16 @@
 package boomerang.jimple;
 
 import soot.Local;
+import soot.SootFieldRef;
 import soot.SootMethod;
 import soot.Value;
+import soot.jimple.StaticFieldRef;
 
 public class Val {
 	private final SootMethod m;
 	private final Value v;
 	private final String rep; 
 
-	private static Val staticInstance;
 	private static Val zeroInstance;
 	
 	public Val(Value v, SootMethod m){
@@ -17,12 +18,18 @@ public class Val {
 			throw new RuntimeException("Value must not be null!");
 		this.v = v;
 		this.m = m;
+		this.rep = null;
+		if(!isStatic()){
 		if(!m.hasActiveBody())
 			throw new RuntimeException("No active body for method");
 		if(v instanceof Local && !m.getActiveBody().getLocals().contains(v)){
 			throw new RuntimeException("Creating a Local with wrong method." +v + " "+  m);
 		}
-		this.rep = null;
+		} else{
+			if(!(v instanceof StaticFieldRef)){
+				throw new RuntimeException("Creating a static value with a strong type!");
+			}
+		}
 	}
 	
 	private Val(String rep){
@@ -80,13 +87,7 @@ public class Val {
 	public String toString() {
 		if(rep != null)
 			return rep;
-		return v.toString();//+ " (" + m.getDeclaringClass().getShortName() +"." + m.getName() +")";
-	}
-
-	public static Val statics() {
-		if(staticInstance == null)
-			staticInstance = new Val("STATIC");
-		return staticInstance;
+		return v.toString()+ " (" + m.getDeclaringClass().getShortName() +"." + m.getName() +")";
 	}
 
 	public static Val zero() {
@@ -95,4 +96,11 @@ public class Val {
 		return zeroInstance;
 	}
 
+	public boolean isStatic(){
+		return v != null && v instanceof StaticFieldRef;
+	}
+
+	public boolean staticEquals(SootFieldRef fieldRef) {
+		return isStatic() && ((StaticFieldRef) v).getFieldRef().equals(fieldRef);
+	}
 }

@@ -208,12 +208,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	protected boolean isFieldWriteWithBase(Stmt curr, Val base) {
 		if (curr instanceof AssignStmt) {
 			AssignStmt as = (AssignStmt) curr;
-			if (base.equals(Val.statics())) {
-				if (as.getLeftOp() instanceof StaticFieldRef) {
-					return true;
-				}
-				return false;
-			}
 			if (as.getLeftOp() instanceof InstanceFieldRef) {
 				InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
 				return ifr.getBase().equals(base);
@@ -242,7 +236,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	protected abstract boolean killFlow(SootMethod method, Stmt curr, Val value);
 
 	public boolean valueUsedInStatement(Stmt u, Val value) {
-		if (value.equals(Val.statics()))
+		if (value.isStatic())
 			return true;
 		if (isBackward()) {
 			if (assignsValue(u, value))
@@ -281,6 +275,9 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<? extends State> returnFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
 		for (Unit callSite : icfg.getCallersOf(method)) {
+			if(!((Stmt)callSite).containsInvokeExpr()){
+				continue;
+			}
 			for (Unit returnSite : icfg.getSuccsOf(callSite)) {
 				Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) callSite,
 						(Stmt) returnSite);
@@ -403,6 +400,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	protected void onReturnFlow(final Unit callSite, Unit returnSite, final SootMethod method, final Stmt returnStmt,
 			final Val value, Collection<? extends State> outFlow) {
+		if(this instanceof ForwardBoomerangSolver){
+			//TODO Backward?
+			return;
+		}
 		for (State r : outFlow) {
 			if (r instanceof CallPopNode) {
 				final CallPopNode<Val, Statement> callPopNode = (CallPopNode) r;

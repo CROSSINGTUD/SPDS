@@ -50,7 +50,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 
 	@Override
 	protected boolean killFlow(SootMethod m, Stmt curr, Val value) {	
-		if(value.equals(Val.statics()))
+		if(value.isStatic())
 			return false;
 		if (!m.getActiveBody().getLocals().contains(value.value()))
 			return true;
@@ -80,7 +80,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 			}
 			index++;
 		}
-		if(value.equals(Val.statics())){
+		if(value.isStatic()){
 			return Collections.singleton(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS,returnSiteStatement));
 		}
 		return Collections.emptySet();
@@ -119,7 +119,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 						new Val(retStmt.getOp(),callee), returnSite, PDSSystem.CALLS));
 			}
 		}
-		if(fact.equals(Val.statics())){
+		if(fact.isStatic()){
 			return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
 					fact, returnSite, PDSSystem.CALLS));
 		}
@@ -154,10 +154,8 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
 							new Field(ifr.getField()), PDSSystem.FIELDS));
 				} else if(rightOp instanceof StaticFieldRef){
-					StaticFieldRef ifr = (StaticFieldRef) rightOp;
 					if(Boomerang.TRACK_STATIC){
-						out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), Val.statics(),
-								new Field(ifr.getField()), PDSSystem.FIELDS));
+						out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(rightOp,method)));
 					}
 				} else if(rightOp instanceof ArrayRef){
 					ArrayRef ifr = (ArrayRef) rightOp;
@@ -188,10 +186,8 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 				}
 			} else if(leftOp instanceof StaticFieldRef){
 				StaticFieldRef ifr = (StaticFieldRef) leftOp;
-				if (fact.equals(Val.statics())) {
-					NodeWithLocation<Statement, Val, Field> succNode = new NodeWithLocation<>(
-							new Statement(succ, method), new Val(rightOp,method), new Field(ifr.getField()));
-					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
+				if (fact.isStatic() && fact.staticEquals(ifr.getFieldRef())) {
+					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(rightOp,method)));
 				}
 			} else if (leftOp instanceof ArrayRef) {
 				ArrayRef ifr = (ArrayRef) leftOp;

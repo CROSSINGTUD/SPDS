@@ -76,7 +76,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			}
 			i++;
 		}
-		if(fact.equals(Val.statics()))
+		if(fact.isStatic())
 			return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
 					fact, returnSite, PDSSystem.CALLS));
 		return Collections.emptySet();
@@ -86,9 +86,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 
 	@Override
 	protected boolean killFlow(SootMethod m, Stmt curr, Val value) {
-		if(value.equals(Val.statics()))
-			return false;
-		if (!m.getActiveBody().getLocals().contains(value.value()))
+		if (!m.getActiveBody().getLocals().contains(value.value()) && !value.isStatic())
 			return true;
 		if (curr instanceof AssignStmt) {
 			AssignStmt as = (AssignStmt) curr;
@@ -102,6 +100,12 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 					}
 				}
 				return true;
+			}
+			if(as.getLeftOp() instanceof StaticFieldRef){
+				StaticFieldRef sfr = (StaticFieldRef) as.getLeftOp();
+				if(value.isStatic() && value.staticEquals(sfr.getFieldRef())){
+					return true;
+				}
 			}
 		}
 		return false;
@@ -128,10 +132,8 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
 							new Field(ifr.getField()), PDSSystem.FIELDS));
 				} else if(leftOp instanceof StaticFieldRef){
-					StaticFieldRef ifr = (StaticFieldRef) leftOp;
 					if(Boomerang.TRACK_STATIC){
-						out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), Val.statics(),
-								new Field(ifr.getField()), PDSSystem.FIELDS));
+						out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
 					}
 				} else if(leftOp instanceof ArrayRef){
 					ArrayRef arrayRef = (ArrayRef) leftOp;
@@ -152,11 +154,8 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
 				}
 			} else if(rightOp instanceof StaticFieldRef){
-				StaticFieldRef ifr = (StaticFieldRef) rightOp;
-				if (Val.statics().equals(fact)) {
-					NodeWithLocation<Statement, Val, Field> succNode = new NodeWithLocation<>(
-							new Statement(succ, method), new Val(leftOp,method), new Field(ifr.getField()));
-					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
+				if (fact.isStatic() && fact.staticEquals(((StaticFieldRef)rightOp).getFieldRef())) {
+					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
 				}
 			} else if(rightOp instanceof ArrayRef){
 				ArrayRef arrayRef = (ArrayRef) rightOp;
@@ -212,7 +211,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			}
 			index++;
 		}
-		if(value.equals(Val.statics())){
+		if(value.isStatic()){
 			if(method.isStaticInitializer()){
 				Set<State> out = Sets.newHashSet();
 				for(SootMethod entryPoint : Scene.v().getEntryPoints()){
@@ -238,7 +237,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		}
 		Val allocVal = t.getTarget().fact().fact();
 		Val varVal = t.getStart().fact().fact();
-		if(allocVal.equals(Val.statics()) || varVal.equals(Val.statics())){
+		if(allocVal.isStatic() || varVal.isStatic()){
 			return false;
 		}
 		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(allocVal.value().getType(),varVal.value().getType());

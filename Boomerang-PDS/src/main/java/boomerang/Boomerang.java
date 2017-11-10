@@ -75,7 +75,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	public static final boolean ON_THE_FLY_CG = true;
 	public static final boolean TYPE_CHECK = true;
 	public static final boolean NULL_ALLOCATIONS = false;
-	public static final boolean TRACK_STRING = false;
+	public static final boolean TRACK_STRING = true;
 	public static final boolean TRACK_STATIC = true;
 	public static final boolean TRACK_ARRAYS = true;
 	public static final boolean CALL_SUMMARIES = true;
@@ -114,11 +114,12 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 						Statement exitStmt = trans.getLabel();
 						SootMethod callee = exitStmt.getMethod();
 						if (!callee.isStaticInitializer()) {
-							if(Val.statics().equals(returningFact.fact()))
-								return;
 							for (Unit callSite : Boomerang.this.icfg().getCallersOf(callee)) {
+								if(!((Stmt) callSite).containsInvokeExpr())
+									continue;
 								final Statement callStatement = new Statement((Stmt) callSite,
 										Boomerang.this.icfg().getMethodOf(callSite));
+								
 								boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) callSite, returningFact.fact());
 								if(valueUsedInStatement || AbstractBoomerangSolver.assignsValue((Stmt)callSite,returningFact.fact())){
 									unbalancedReturnFlow(callStatement, weight, returningFact, trans);
@@ -173,14 +174,6 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			return solver;
 		}
 	};
-
-	private Query createUnbalancedQuery(Statement callStatement, Query key) {
-		if (key instanceof ForwardQuery) {
-			return key;
-		} else {
-			return new UnbalancedBackwardQuery(callStatement, (BackwardQuery) key);
-		}
-	}
 
 	private BackwardsInterproceduralCFG bwicfg;
 	private EmptyCalleeFlow forwardEmptyCalleeFlow = new ForwardEmptyCalleeFlow();
@@ -374,6 +367,8 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 
 			@Override
 			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W returnedWeight) {
+				if(!returnedFact.fact().isStatic() && !returnedFact.fact().m().equals(callSite.getMethod()))
+					return;
 				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
 				callSitePoi.returnsFromCall(sourceQuery, new Node<Statement, Val>(returnSite, returnedFact.fact()));
 			}
@@ -781,6 +776,11 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			return true;
 		}
 
+		
+		@Override
+		public String toString() {
+			return returningFact.toString() + " " + flowSourceQuery;
+		}
 		private Boomerang<W> getOuterType() {
 			return Boomerang.this;
 		}
@@ -802,12 +802,14 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		private Query flowQuery;
 		private Node<Statement, Val> returnedNode;
 		public boolean triggered;
+		private final Statement returnStmt;
 
 		public IntersectOutTransition(ForwardQuery byPassing, Query flowQuery, Node<Statement, Val> returnedNode) {
 			super(new SingleNode<Node<Statement, Val>>(returnedNode));
 			this.byPassing = byPassing;
 			this.flowQuery = flowQuery;
 			this.returnedNode = returnedNode;
+			this.returnStmt = returnedNode.stmt();
 		}
 
 		@Override
@@ -815,9 +817,10 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 			if (triggered)
 				return;
-			if (!outerT.getLabel().equals(Field.epsilon()))
+			if (!outerT.getLabel().equals(Field.epsilon()) && !(outerT.getStart() instanceof GeneratedState)){
 				queryToSolvers.getOrCreate(flowQuery).getFieldAutomaton()
 						.registerListener(new HasOutTransition(this, byPassing, flowQuery, returnedNode, outerT));
+			}
 		}
 
 		@Override
@@ -831,7 +834,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			int result = super.hashCode();
 			result = prime * result + ((byPassing == null) ? 0 : byPassing.hashCode());
 			result = prime * result + ((flowQuery == null) ? 0 : flowQuery.hashCode());
-			result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
+			result = prime * result + ((returnStmt == null) ? 0 : returnStmt.hashCode());
 			return result;
 		}
 
@@ -854,14 +857,72 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 					return false;
 			} else if (!flowQuery.equals(other.flowQuery))
 				return false;
-			if (returnedNode == null) {
-				if (other.returnedNode != null)
+			if (returnStmt == null) {
+				if (other.returnStmt != null)
 					return false;
-			} else if (!returnedNode.equals(other.returnedNode))
+			} else if (!returnStmt.equals(other.returnStmt))
 				return false;
 			return true;
 		}
 
+	}
+	
+	private class OnReturnNodeReachle extends SyncStatePDSUpdateListener<Statement, Val, Field> {
+		private final ForwardQuery byPassing;
+		private final Query flowQuery;
+		private final Node<Statement, Val> returnedNode;
+
+		public OnReturnNodeReachle(WitnessNode<Statement, Val, Field> node, ForwardQuery byPassing,Query flowQuery) {
+			super(node);
+			this.byPassing = byPassing;
+			this.flowQuery = flowQuery;
+			this.returnedNode = node.asNode();
+		}
+
+		@Override
+		public void reachable() {
+			queryToSolvers.getOrCreate(byPassing).getFieldAutomaton()
+					.registerListener(new IntersectOutTransition(byPassing, flowQuery, returnedNode));
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((byPassing == null) ? 0 : byPassing.hashCode());
+			result = prime * result + ((flowQuery == null) ? 0 : flowQuery.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			OnReturnNodeReachle other = (OnReturnNodeReachle) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (byPassing == null) {
+				if (other.byPassing != null)
+					return false;
+			} else if (!byPassing.equals(other.byPassing))
+				return false;
+			if (flowQuery == null) {
+				if (other.flowQuery != null)
+					return false;
+			} else if (!flowQuery.equals(other.flowQuery))
+				return false;
+			return true;
+		}
+
+		private Boomerang getOuterType() {
+			return Boomerang.this;
+		}
+		
 	}
 
 	private class HasOutTransition extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
@@ -869,6 +930,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		private final ForwardQuery byPassing;
 		private final Query flowQuery;
 		private final Node<Statement, Val> returnedNode;
+		private final Statement returnStmt;
 		private final Transition<Field, INode<Node<Statement, Val>>> outerT;
 		private IntersectOutTransition intersectOutTransition;
 
@@ -880,6 +942,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			this.byPassing = byPassing;
 			this.flowQuery = flowQuery;
 			this.returnedNode = returnedNode;
+			this.returnStmt = returnedNode.stmt();
 			this.outerT = outerT;
 		}
 
@@ -906,7 +969,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			result = prime * result + ((byPassing == null) ? 0 : byPassing.hashCode());
 			result = prime * result + ((flowQuery == null) ? 0 : flowQuery.hashCode());
 			result = prime * result + ((outerT == null) ? 0 : outerT.hashCode());
-			result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
+			result = prime * result + ((returnStmt == null) ? 0 : returnStmt.hashCode());
 			return result;
 		}
 
@@ -934,10 +997,10 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 					return false;
 			} else if (!outerT.equals(other.outerT))
 				return false;
-			if (returnedNode == null) {
-				if (other.returnedNode != null)
+			if (returnStmt == null) {
+				if (other.returnStmt != null)
 					return false;
-			} else if (!returnedNode.equals(other.returnedNode))
+			} else if (!returnStmt.equals(other.returnStmt))
 				return false;
 			return true;
 		}
@@ -956,6 +1019,20 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 				for (final ForwardQuery byPassing : Lists.newArrayList(byPassingAllocations)) {
 					eachPair(byPassing, flowQuery, returnedNode);
 				}
+//				if(returnsFromCall.size() % 100 == 0){
+//					System.out.println(callSite + "  " + returnsFromCall.size());
+//				}
+//				if(returnsFromCall.size() % 100 == 0){
+//					int i = 0;
+//					for(Boomerang<W>.QueryWithVal el : returnsFromCall){
+//						if(i++ < 30){
+//							System.err.println(el);
+//							System.out.println(el.returningFact.fact().value().getType());
+//						}
+//					}
+//					
+//				}
+				
 			}
 		}
 
@@ -964,14 +1041,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			if (byPassing.equals(flowQuery))
 				return;
 			queryToSolvers.getOrCreate(byPassing)
-					.registerListener(new SyncStatePDSUpdateListener<Statement, Val, Field>(
-							new WitnessNode<Statement, Val, Field>(returnedNode.stmt(), returnedNode.fact())) {
-						@Override
-						public void reachable() {
-							queryToSolvers.getOrCreate(byPassing).getFieldAutomaton()
-									.registerListener(new IntersectOutTransition(byPassing, flowQuery, returnedNode));
-						}
-					});
+					.registerListener(new OnReturnNodeReachle(new WitnessNode<Statement, Val, Field>(returnedNode.stmt(), returnedNode.fact()), byPassing, flowQuery));
 		}
 
 

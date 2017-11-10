@@ -353,6 +353,11 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			protected Map<D, ForwardDFSVisitor<N, D, W>> getStateToEpsilonDFS() {
 				return WeightedPAutomaton.this.stateToEpsilonDFS;
 			}
+			
+			@Override
+			public boolean nested() {
+				return true;
+			}
 			@Override
 			public String toString() {
 				return "NESTED: \n" + super.toString();
