@@ -76,9 +76,10 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			}
 			i++;
 		}
-		if(fact.isStatic())
+		if(fact.isStatic()){
 			return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
 					fact, returnSite, PDSSystem.CALLS));
+		}
 		return Collections.emptySet();
 	}
 	
@@ -213,14 +214,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		}
 		if(value.isStatic()){
 			if(method.isStaticInitializer()){
-				Set<State> out = Sets.newHashSet();
-				for(SootMethod entryPoint : Scene.v().getEntryPoints()){
-					for(Unit sp : icfg.getStartPointsOf(entryPoint)){
-						out.add(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS, new Statement((Stmt) sp, entryPoint)));
-					}
-				}
-				
-				return out;
+				return Collections.singleton(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS, returnSiteStatement));
 			}
 			return Collections.singleton(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS,returnSiteStatement));
 		}

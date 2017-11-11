@@ -20,7 +20,6 @@ import boomerang.customize.ForwardEmptyCalleeFlow;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
-import boomerang.jimple.StatementWithAlloc;
 import boomerang.jimple.Val;
 import boomerang.poi.AbstractPOI;
 import boomerang.poi.PointOfIndirection;
@@ -65,7 +64,6 @@ import wpds.impl.Transition;
 import wpds.impl.UnbalancedPopListener;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
-import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
@@ -1015,6 +1013,8 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		}
 
 		public void returnsFromCall(final Query flowQuery, Node<Statement, Val> returnedNode) {
+			if(returnedNode.fact().isStatic())
+				return;
 			if (returnsFromCall.add(new QueryWithVal(flowQuery, returnedNode))) {
 				for (final ForwardQuery byPassing : Lists.newArrayList(byPassingAllocations)) {
 					eachPair(byPassing, flowQuery, returnedNode);

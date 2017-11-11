@@ -21,6 +21,7 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
+import soot.Scene;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
@@ -95,7 +96,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	protected boolean preventCallTransitionAdd(Transition<Statement, INode<Val>> t, W weight) {
 		if (t.getStart() instanceof GeneratedState)
 			return false;
-		SootMethod m = t.getStart().fact().m();
+		Val fact = t.getStart().fact();
+		if(fact.isStatic())
+			return false;
+		SootMethod m = fact.m();
 		SootMethod method = t.getLabel().getMethod();
 		if (m == null || method == null)
 			return false;
@@ -275,6 +279,16 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<? extends State> returnFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
 		for (Unit callSite : icfg.getCallersOf(method)) {
+			if(method.isStaticInitializer() && value.isStatic()){
+				for(SootMethod entryPoint : Scene.v().getEntryPoints()){
+					for(Unit sp : icfg.getStartPointsOf(entryPoint)){
+						Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) callSite,
+								(Stmt) sp);
+						onReturnFlow(callSite, sp, method, curr, value, outFlow);
+						out.addAll(outFlow);
+					}
+				}
+			}
 			if(!((Stmt)callSite).containsInvokeExpr()){
 				continue;
 			}
@@ -377,7 +391,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
 		if (!res.isEmpty()) {
 			if (callee.isStatic()) {
-				// addReachableMethod(callee);
+//				 addReachableMethod(callee);
 			}
 		}
 	}

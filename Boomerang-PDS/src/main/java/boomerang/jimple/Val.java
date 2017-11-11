@@ -87,7 +87,7 @@ public class Val {
 	public String toString() {
 		if(rep != null)
 			return rep;
-		return v.toString()+ " (" + m.getDeclaringClass().getShortName() +"." + m.getName() +")";
+		return (isStatic() ? "Static: " : "") + v.toString()+ " (" + m.getDeclaringClass().getShortName() +"." + m.getName() +")";
 	}
 
 	public static Val zero() {
