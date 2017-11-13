@@ -17,6 +17,15 @@ public class TreeSetsLongTest extends AbstractBoomerangTest{
 		Set<Object> set = new TreeSet<Object>();
 		Alloc alias = new Alloc();
 		set.add(alias);
+//		alias = new Alloc();
+//		set.add(alias);
+//		alias = new Alloc();
+//		set.add(alias);
+//		alias = new Alloc();
+//		set.add(alias);
+//		alias = new Alloc();
+//		set.add(alias);
+		
 		Object alias2 = null;
 		for(Object o : set)
 			alias2 = o;

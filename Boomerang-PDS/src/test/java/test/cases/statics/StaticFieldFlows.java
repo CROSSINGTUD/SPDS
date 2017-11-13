@@ -47,6 +47,16 @@ public class StaticFieldFlows extends AbstractBoomerangTest {
 		queryFor(alias);
 	}
 	@Test
+	public void overwriteStaticInter(){
+		alloc = new Object();
+		update();
+		Object alias = alloc;
+		queryFor(alias);
+	}
+	private void update() {
+		alloc = new Alloc();
+	}
+	@Test
 	public void intraprocedural(){
 		setStaticField();
 		Object alias = alloc;

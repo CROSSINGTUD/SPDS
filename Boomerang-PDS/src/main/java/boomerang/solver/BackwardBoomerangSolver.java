@@ -16,6 +16,7 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import soot.Body;
+import soot.EquivalentValue;
 import soot.Local;
 import soot.SootMethod;
 import soot.Unit;
@@ -155,7 +156,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 							new Field(ifr.getField()), PDSSystem.FIELDS));
 				} else if(rightOp instanceof StaticFieldRef){
 					if(Boomerang.TRACK_STATIC){
-						out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(rightOp,method)));
+						out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(new EquivalentValue(rightOp),method)));
 					}
 				} else if(rightOp instanceof ArrayRef){
 					ArrayRef ifr = (ArrayRef) rightOp;
@@ -185,8 +186,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
 				}
 			} else if(leftOp instanceof StaticFieldRef){
-				StaticFieldRef ifr = (StaticFieldRef) leftOp;
-				if (fact.isStatic() && fact.staticEquals(ifr.getFieldRef())) {
+				if (fact.isStatic() && fact.value().equals(new EquivalentValue(leftOp))) {
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(rightOp,method)));
 				}
 			} else if (leftOp instanceof ArrayRef) {

@@ -278,25 +278,27 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	private Collection<? extends State> returnFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
-		for (Unit callSite : icfg.getCallersOf(method)) {
-			if(method.isStaticInitializer() && value.isStatic()){
-				for(SootMethod entryPoint : Scene.v().getEntryPoints()){
-					for(Unit sp : icfg.getStartPointsOf(entryPoint)){
-						Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) callSite,
-								(Stmt) sp);
-						onReturnFlow(callSite, sp, method, curr, value, outFlow);
-						out.addAll(outFlow);
-					}
+
+		if(method.isStaticInitializer() && value.isStatic()){
+			for(SootMethod entryPoint : Scene.v().getEntryPoints()){
+				for(Unit sp : icfg.getStartPointsOf(entryPoint)){
+					Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) sp,
+							(Stmt) sp);
+					onReturnFlow(sp, sp, method, curr, value, outFlow);
+					out.addAll(outFlow);
 				}
 			}
-			if(!((Stmt)callSite).containsInvokeExpr()){
-				continue;
-			}
-			for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-				Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) callSite,
-						(Stmt) returnSite);
-				onReturnFlow(callSite, returnSite, method, curr, value, outFlow);
-				out.addAll(outFlow);
+		} else{
+			for (Unit callSite : icfg.getCallersOf(method)) {
+				if(!((Stmt)callSite).containsInvokeExpr()){
+					continue;
+				}
+				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+					Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) callSite,
+							(Stmt) returnSite);
+					onReturnFlow(callSite, returnSite, method, curr, value, outFlow);
+					out.addAll(outFlow);
+				}
 			}
 		}
 		return out;

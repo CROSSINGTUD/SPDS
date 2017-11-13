@@ -1,5 +1,6 @@
 package boomerang.jimple;
 
+import soot.EquivalentValue;
 import soot.Local;
 import soot.SootFieldRef;
 import soot.SootMethod;
@@ -20,14 +21,10 @@ public class Val {
 		this.m = m;
 		this.rep = null;
 		if(!isStatic()){
-		if(!m.hasActiveBody())
-			throw new RuntimeException("No active body for method");
-		if(v instanceof Local && !m.getActiveBody().getLocals().contains(v)){
-			throw new RuntimeException("Creating a Local with wrong method." +v + " "+  m);
-		}
-		} else{
-			if(!(v instanceof StaticFieldRef)){
-				throw new RuntimeException("Creating a static value with a strong type!");
+			if(!m.hasActiveBody())
+				throw new RuntimeException("No active body for method");
+			if(v instanceof Local && !m.getActiveBody().getLocals().contains(v)){
+				throw new RuntimeException("Creating a Local with wrong method." +v + " "+  m);
 			}
 		}
 	}
@@ -97,10 +94,7 @@ public class Val {
 	}
 
 	public boolean isStatic(){
-		return v != null && v instanceof StaticFieldRef;
+		return v != null && v instanceof EquivalentValue;
 	}
 
-	public boolean staticEquals(SootFieldRef fieldRef) {
-		return isStatic() && ((StaticFieldRef) v).getFieldRef().equals(fieldRef);
-	}
 }

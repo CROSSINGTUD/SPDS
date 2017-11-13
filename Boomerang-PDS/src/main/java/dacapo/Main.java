@@ -20,7 +20,7 @@ public class Main {
 		for (String bench : dacapo) {
 			String javaHome = System.getProperty("java.home");
 			String javaBin = javaHome + File.separator + "bin" + File.separator + "java";
-			ProcessBuilder builder = new ProcessBuilder(new String[] { javaBin, "-Xmx10g","-Xss64m", "-cp",
+			ProcessBuilder builder = new ProcessBuilder(new String[] { javaBin, "-Xmx14g", "-Xms14g","-Xss64m", "-cp",
 					System.getProperty("java.class.path"), DacapoRunner.class.getName(),
 					benchmarkFolder, bench});
 			builder.inheritIO();

@@ -17,6 +17,7 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
 import soot.Body;
+import soot.EquivalentValue;
 import soot.Local;
 import soot.Scene;
 import soot.SootMethod;
@@ -104,7 +105,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			}
 			if(as.getLeftOp() instanceof StaticFieldRef){
 				StaticFieldRef sfr = (StaticFieldRef) as.getLeftOp();
-				if(value.isStatic() && value.staticEquals(sfr.getFieldRef())){
+				if(value.isStatic() && value.equals(new Val(new EquivalentValue(as.getLeftOp()), m))){
 					return true;
 				}
 			}
@@ -134,7 +135,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 							new Field(ifr.getField()), PDSSystem.FIELDS));
 				} else if(leftOp instanceof StaticFieldRef){
 					if(Boomerang.TRACK_STATIC){
-						out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
+						out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(new EquivalentValue(leftOp),method)));
 					}
 				} else if(leftOp instanceof ArrayRef){
 					ArrayRef arrayRef = (ArrayRef) leftOp;
@@ -155,7 +156,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
 				}
 			} else if(rightOp instanceof StaticFieldRef){
-				if (fact.isStatic() && fact.staticEquals(((StaticFieldRef)rightOp).getFieldRef())) {
+				if (fact.isStatic() && fact.value().equals(new EquivalentValue(rightOp))) {
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
 				}
 			} else if(rightOp instanceof ArrayRef){
@@ -213,9 +214,6 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			index++;
 		}
 		if(value.isStatic()){
-			if(method.isStaticInitializer()){
-				return Collections.singleton(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS, returnSiteStatement));
-			}
 			return Collections.singleton(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS,returnSiteStatement));
 		}
 		return Collections.emptySet();
