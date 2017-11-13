@@ -80,7 +80,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		}
 		if(fact.isStatic()){
 			return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
-					fact, returnSite, PDSSystem.CALLS));
+					new StaticFieldVal(fact.value(),((StaticFieldVal) fact).field(), callee), returnSite, PDSSystem.CALLS));
 		}
 		return Collections.emptySet();
 	}
@@ -217,7 +217,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			index++;
 		}
 		if(value.isStatic()){
-			return Collections.singleton(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS,returnSiteStatement));
+			return Collections.singleton(new CallPopNode<Val,Statement>(new StaticFieldVal(value.value(),((StaticFieldVal) value).field(), icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 		}
 		return Collections.emptySet();
 	}

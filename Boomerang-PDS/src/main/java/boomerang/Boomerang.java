@@ -1375,6 +1375,12 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		// System.out.println(q +" Call Aut (failed Additions): " +
 		// queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
 		// }
+
+		int totalRules = 0;
+		for (Query q : queryToSolvers.keySet()) {
+			totalRules += queryToSolvers.getOrCreate(q).getNumberOfRules();
+		}
+		System.out.println("Total number of rules: " + totalRules);
 		if (!DEBUG)
 			return;
 		Debugger<W> debugger = createDebugger();

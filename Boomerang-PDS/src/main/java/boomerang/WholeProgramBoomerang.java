@@ -9,6 +9,7 @@ import soot.Scene;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
+import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import wpds.impl.Weight;
 
@@ -51,6 +52,12 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends Boomerang<
 					ForwardQuery q = new ForwardQuery(new Statement((Stmt) u, method), new Val(assignStmt.getLeftOp(),method));
 					solve(q);
 					allocationSites++;
+				}
+			}
+			if(((Stmt) u).containsInvokeExpr()){
+				InvokeExpr invokeExpr = ((Stmt) u).getInvokeExpr();
+				if(invokeExpr.getMethod().isStatic()){
+					addReachable(invokeExpr.getMethod());
 				}
 			}
 		}

@@ -14,6 +14,7 @@ import boomerang.Boomerang;
 import boomerang.MethodReachableQueue;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
+import boomerang.jimple.StaticFieldVal;
 import boomerang.jimple.Val;
 import soot.Body;
 import soot.EquivalentValue;
@@ -82,7 +83,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 			index++;
 		}
 		if(value.isStatic()){
-			return Collections.singleton(new CallPopNode<Val,Statement>(value, PDSSystem.CALLS,returnSiteStatement));
+			return Collections.singleton(new CallPopNode<Val,Statement>(new StaticFieldVal(value.value(),((StaticFieldVal) value).field(), icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 		}
 		return Collections.emptySet();
 	}
@@ -122,7 +123,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 		}
 		if(fact.isStatic()){
 			return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
-					fact, returnSite, PDSSystem.CALLS));
+					new StaticFieldVal(fact.value(),((StaticFieldVal) fact).field(), callee), returnSite, PDSSystem.CALLS));
 		}
 		return Collections.emptySet();
 	}
@@ -169,7 +170,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 					CastExpr castExpr = (CastExpr) rightOp;
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(castExpr.getOp(),method)));
 				} else {	
-					if(isFieldLoadWithBase(curr, fact.value())){
+					if(isFieldLoadWithBase(curr, fact)){
 						out.add(new ExclusionNode<Statement, Val, Field>(new Statement(succ, method), fact,
 							getLoadedField(curr)));
 					} else{

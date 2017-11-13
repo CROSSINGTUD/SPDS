@@ -6,7 +6,7 @@ import soot.Value;
 
 public class StaticFieldVal extends Val {
 
-	private SootField field;
+	private final SootField field;
 
 	public StaticFieldVal(Value v, SootField field, SootMethod m) {
 		super(v, m);
@@ -39,5 +39,9 @@ public class StaticFieldVal extends Val {
 	} 
 	public String toString() {
 		return "StaticField: " + field;
+	}
+
+	public SootField field() {
+		return field;
 	};
 }
