@@ -146,11 +146,20 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		mayBeInErrorState(file);
 	}
 
-	private static void flows(File file, boolean b) {
+	private static void flows(File other, boolean b) {
 		if (b)
-			file.close();
+			other.close();
 	}
-
+	@Test
+	public void intraprocedural() {
+		File file = new File();
+		file.open();
+		if(staticallyUnknown())
+			file.close();
+		
+		mayBeInAcceptingState(file);
+		mayBeInErrorState(file);
+	}
 	@Test
 	public void flowViaField() {
 		ObjectWithField container = new ObjectWithField();
@@ -375,15 +384,30 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		wrappedParamClose(file);
 		mustBeInAcceptingState(file);
 	}
-
+	@Test
+	public void wrappedClose1() {
+		File file = new File();
+		file.open();
+//		mustBeInErrorState(file);
+		cls(file);
+		mustBeInAcceptingState(file);
+	}
 	private void wrappedParamClose(File o1) {
-		close(o1);
+		cls(o1);
 	}
 
-	private void close(File o2) {
+	private void cls(File o2) {
 		o2.close();
 	}
-
+	@Test
+	public void wrappedOpen() {
+		File file = new File();
+		change(file);
+		mustBeInErrorState(file);
+	}
+	private void change(File other) {
+		other.open();		
+	}
 	@Test
 	public void multipleStates() {
 		File file = new File();

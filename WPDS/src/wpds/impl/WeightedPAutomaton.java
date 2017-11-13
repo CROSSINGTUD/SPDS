@@ -559,8 +559,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			W newVal = (weightAtSource == null ? extendWith : (W) weightAtSource.combineWith(extendWith));
 			if(!newVal.equals(weightAtSource)){
 				transitionsToFinalWeights.put(t, newVal);
-				if(!isGeneratedState(t.getStart()))
-					return;
 				registerListener(new ValueComputationListener(t));
 			}
 		}

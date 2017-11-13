@@ -464,11 +464,13 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 	public boolean addNormalCallFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
-		if(callingContextReachable.contains(succ))
+		if(callingContextReachable.contains(succ) && !weights())
 			return false;
 		return callingPDS.addRule(
 				new NormalRule<Stmt, INode<Fact>,W>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt(),getCallWeights().normal(curr,succ)));
 	}
+
+	protected abstract boolean weights();
 
 	public void synchedEmptyStackReachable(final Node<Stmt,Fact> sourceNode, final EmptyStackWitnessListener<Stmt,Fact> listener){
 		synchedReachable(sourceNode,new WitnessListener<Stmt, Fact, Field>() {
@@ -605,7 +607,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		} else if (system.equals(PDSSystem.CALLS)) {
 			added |= addNormalFieldFlow(curr, succ);
 			if(ContextSensitive){
-				if(!callingContextReachable.contains(succ)){
+				if(!callingContextReachable.contains(succ) || weights()){
 					added |= callingPDS.addRule(new PushRule<Stmt, INode<Fact>, W>(wrap(curr.fact()), curr.stmt(),
 							wrap(succ.fact()), succ.stmt(), (Stmt) location, getCallWeights().push(curr, succ, (Stmt) location)));
 				}

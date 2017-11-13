@@ -56,6 +56,10 @@ public class PerSeedAnalysisContext<W extends Weight> {
 			}
 
 			@Override
+			public boolean weights() {
+				return true;
+			}
+			@Override
 			public Debugger<W> createDebugger() {
 				return analysisDefinition.debugger();
 			}
