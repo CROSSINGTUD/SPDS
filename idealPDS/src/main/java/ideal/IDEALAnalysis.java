@@ -3,10 +3,6 @@ package ideal;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.Sets;
 
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -23,12 +19,9 @@ import wpds.impl.Weight;
 
 public class IDEALAnalysis<W extends Weight> {
 
-	public static boolean ENABLE_STATIC_FIELDS = true;
 	public static boolean ENABLE_STRONG_UPDATES = true;
-	public static boolean ALIASING_FOR_STATIC_FIELDS = false;
 	public static boolean SEED_IN_APPLICATION_CLASS_METHOD = false;
 	public static boolean PRINT_OPTIONS = false;
-	public static Set<SootMethod> VISITED_METHODS = Sets.newHashSet();
 
 	private final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final IDEALAnalysisDefinition<W> analysisDefinition;

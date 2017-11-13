@@ -34,7 +34,7 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends Boomerang<
 			}
 		});
 		long after = System.currentTimeMillis();
-		System.out.println("Analysis Time (in ms): \t" + (after-before));
+		System.out.println("Analysis Time (in ms):\t" + (after-before));
 		System.out.println("Analyzed methods:\t" + reachableMethodCount);
 		System.out.println("Total solvers:\t" + this.getSolvers().size());
 		System.out.println("Allocation Sites:\t" + allocationSites);
