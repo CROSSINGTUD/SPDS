@@ -3,6 +3,7 @@ package boomerang.solver;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -182,23 +183,43 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			if (curr.containsInvokeExpr()) {
 				callBypass(new Statement(curr, method), new Statement((Stmt) succ, method), value);
 			}
-			out.addAll(computeNormalFlow(method, curr, value, (Stmt) succ));
-		}
-		List<Unit> succsOf = icfg.getSuccsOf(curr);
-		while (out.size() == 1 && succsOf.size() == 1) {
-			List<State> l = Lists.newArrayList(out);
-			State state = l.get(0);
-			Unit succ = succsOf.get(0);
-			if (!state.equals(new Node<Statement, Val>(new Statement((Stmt) succ, method), value)))
-				break;
-			out.clear();
-			out.addAll(computeNormalFlow(method, curr, value, (Stmt) succ));
-			succsOf = icfg.getSuccsOf(succ);
-			curr = (Stmt) succ;
+			Collection<State> flow = computeNormalFlow(method, curr, value, (Stmt) succ);
+			if(Boomerang.FAST_FORWARD_FLOW && isIdentityFlow(value,  (Stmt) succ,method, flow)){
+				flow = dfs( value,  (Stmt) succ,method);
+			}
+			out.addAll(flow);
 		}
 		return out;
 	}
 
+	private Collection<State> dfs(Val value, Stmt succ, SootMethod method) {
+		LinkedList<Unit> worklist = Lists.newLinkedList();
+		worklist.add(succ);
+		Set<Unit> visited = Sets.newHashSet();
+		Collection<State> out = Sets.newHashSet(); 
+		while(!worklist.isEmpty()){
+			Unit curr = worklist.poll();
+			if(!visited.add(curr))
+				continue;
+			for(Unit s : icfg.getSuccsOf(curr)){
+				Collection<State> flow = computeNormalFlow(method, (Stmt) curr, value, (Stmt) s);
+				if(!isIdentityFlow( value,  (Stmt) s,method, flow)){
+					out.add(new Node<Statement, Val>(new Statement((Stmt) curr, method), value));
+				} else{
+					worklist.add(s);
+				}
+			}
+		}
+		return out;
+	}
+
+	private boolean isIdentityFlow(Val value, Stmt succ, SootMethod method, Collection<State> out){
+		if(out.size() != 1 || succ.containsInvokeExpr() || icfg.isExitStmt(succ)  || succ.containsFieldRef())
+			return false;
+		List<State> l = Lists.newArrayList(out);
+		State state = l.get(0);
+		return state.equals(new Node<Statement, Val>(new Statement((Stmt) succ, method), value));
+	}
 	protected Field getWrittenField(Stmt curr) {
 		AssignStmt as = (AssignStmt) curr;
 		if (as.getLeftOp() instanceof StaticFieldRef) {

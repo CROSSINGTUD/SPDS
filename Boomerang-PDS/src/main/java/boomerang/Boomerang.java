@@ -79,6 +79,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	public static final boolean CALL_SUMMARIES = true;
 	public static final boolean FIELD_SUMMARIES = false;
 	public static final boolean THROW = false;
+	public static final boolean FAST_FORWARD_FLOW = true;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private boolean first;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
