@@ -14,6 +14,7 @@ import boomerang.ForwardQuery;
 import boomerang.MethodReachableQueue;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
+import boomerang.jimple.StaticFieldVal;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
 import soot.Body;
@@ -105,7 +106,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			}
 			if(as.getLeftOp() instanceof StaticFieldRef){
 				StaticFieldRef sfr = (StaticFieldRef) as.getLeftOp();
-				if(value.isStatic() && value.equals(new Val(new EquivalentValue(as.getLeftOp()), m))){
+				if(value.isStatic() && value.equals(new StaticFieldVal(as.getLeftOp(), sfr.getField(), m))){
 					return true;
 				}
 			}
@@ -134,8 +135,9 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
 							new Field(ifr.getField()), PDSSystem.FIELDS));
 				} else if(leftOp instanceof StaticFieldRef){
+					StaticFieldRef sfr = (StaticFieldRef) leftOp;
 					if(Boomerang.TRACK_STATIC){
-						out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(new EquivalentValue(leftOp),method)));
+						out.add(new Node<Statement, Val>(new Statement(succ, method), new StaticFieldVal(leftOp,sfr.getField(),method)));
 					}
 				} else if(leftOp instanceof ArrayRef){
 					ArrayRef arrayRef = (ArrayRef) leftOp;
@@ -156,7 +158,8 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
 				}
 			} else if(rightOp instanceof StaticFieldRef){
-				if (fact.isStatic() && fact.value().equals(new EquivalentValue(rightOp))) {
+				StaticFieldRef sfr = (StaticFieldRef) rightOp;
+				if (fact.isStatic() && fact.equals( new StaticFieldVal(rightOp,sfr.getField(),method))) {
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
 				}
 			} else if(rightOp instanceof ArrayRef){

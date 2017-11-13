@@ -3,6 +3,7 @@ package sync.pds.solver.nodes;
 
 public class SingleNode<Fact> implements INode<Fact>{
 	private Fact fact;
+	private int hashCode = 0;
 
 	public SingleNode(Fact fact){
 		this.fact = fact;
@@ -10,9 +11,12 @@ public class SingleNode<Fact> implements INode<Fact>{
 
 	@Override
 	public int hashCode() {
+		if(hashCode != 0)
+			return hashCode;
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((fact == null) ? 0 : fact.hashCode());
+		hashCode = result;
 		return result;
 	}
 

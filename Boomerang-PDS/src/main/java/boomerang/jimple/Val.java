@@ -1,11 +1,8 @@
 package boomerang.jimple;
 
-import soot.EquivalentValue;
 import soot.Local;
-import soot.SootFieldRef;
 import soot.SootMethod;
 import soot.Value;
-import soot.jimple.StaticFieldRef;
 
 public class Val {
 	private final SootMethod m;
@@ -84,7 +81,7 @@ public class Val {
 	public String toString() {
 		if(rep != null)
 			return rep;
-		return (isStatic() ? "Static: " : "") + v.toString()+ " (" + m.getDeclaringClass().getShortName() +"." + m.getName() +")";
+		return v.toString()+ " (" + m.getDeclaringClass().getShortName() +"." + m.getName() +")";
 	}
 
 	public static Val zero() {
@@ -94,7 +91,7 @@ public class Val {
 	}
 
 	public boolean isStatic(){
-		return v != null && v instanceof EquivalentValue;
+		return false; 
 	}
 
 }
