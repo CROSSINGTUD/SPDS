@@ -50,8 +50,16 @@ public class StaticFieldFlows extends AbstractBoomerangTest {
 	public void overwriteStaticInter(){
 		alloc = new Object();
 		update();
+		irrelevantFlow();
 		Object alias = alloc;
 		queryFor(alias);
+	}
+	private int irrelevantFlow() {
+		int x=1;
+		x = 2;
+		x = 3;
+		x = 4;
+		return x;
 	}
 	private void update() {
 		alloc = new Alloc();

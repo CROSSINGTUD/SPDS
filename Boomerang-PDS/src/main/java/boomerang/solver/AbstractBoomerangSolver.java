@@ -214,12 +214,27 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	}
 
 	private boolean isIdentityFlow(Val value, Stmt succ, SootMethod method, Collection<State> out){
-		if(out.size() != 1 || succ.containsInvokeExpr() || icfg.isExitStmt(succ)  || succ.containsFieldRef())
+		if(out.size() != 1 || succ.containsInvokeExpr() || icfg.isExitStmt(succ))
 			return false;
+		if(value.isStatic()){
+			if(containsStaticFieldAccess(succ)){
+				return false;
+			}
+		} else if(succ.containsFieldRef()){
+			return false;
+		}
 		List<State> l = Lists.newArrayList(out);
 		State state = l.get(0);
 		return state.equals(new Node<Statement, Val>(new Statement((Stmt) succ, method), value));
 	}
+	private boolean containsStaticFieldAccess(Stmt succ) {
+		if(succ instanceof AssignStmt){
+			AssignStmt assignStmt = (AssignStmt) succ;
+			return assignStmt.getLeftOp() instanceof StaticFieldRef || assignStmt.getRightOp() instanceof StaticFieldRef;
+		}
+		return false;
+	}
+
 	protected Field getWrittenField(Stmt curr) {
 		AssignStmt as = (AssignStmt) curr;
 		if (as.getLeftOp() instanceof StaticFieldRef) {
@@ -247,7 +262,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		return new Field(ifr.getField());
 	}
 
-	protected boolean isFieldLoadWithBase(Stmt curr, Value base) {
+	protected boolean isFieldLoadWithBase(Stmt curr, Val base) {
 		if (curr instanceof AssignStmt) {
 			AssignStmt as = (AssignStmt) curr;
 			if (as.getRightOp() instanceof InstanceFieldRef) {
