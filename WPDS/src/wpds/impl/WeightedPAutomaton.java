@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeSet;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.HashBasedTable;
@@ -122,8 +123,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			return  "NESTED loop: " + getInitialState();
 		}
 		String s = "digraph {\n";
+		TreeSet<String> trans = new TreeSet<String>();
 		for (D source : states) {
 			Collection<Transition<N, D>> collection = transitionsOutOf.get(source);
+			
 			for (D target : states) {
 				List<String> labels = Lists.newLinkedList();
 				for (Transition<N, D> t : collection) {
@@ -132,12 +135,15 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 					}
 				}
 				if (!labels.isEmpty()) {
-					s += "\t\"" + wrapIfInitialOrFinalState(source) + "\"";
-					s += " -> \"" + wrapIfInitialOrFinalState(target) + "\"";
-					s += "[label=\"" + Joiner.on("\\n").join(labels) + "\"];\n";
+					String v = "\t\"" + wrapIfInitialOrFinalState(source) + "\"";
+					v += " -> \"" + wrapIfInitialOrFinalState(target) + "\"";
+					v += "[label=\"" + Joiner.on("\\n").join(labels) + "\"];\n";
+					trans.add(v);
 				}
 			}
+			
 		}
+		s += Joiner.on("").join(trans);
 		s += "}\n";
 		s += "Transitions: " + transitions.size() +" Nested: "+nestedAutomatons.size()+"\n";
 		for(WeightedPAutomaton<N, D, W> nested : nestedAutomatons){
