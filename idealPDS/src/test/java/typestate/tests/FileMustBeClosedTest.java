@@ -151,6 +151,17 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 			other.close();
 	}
 	@Test
+	public void interprocedural2() {
+		File file = new File();
+		file.open();
+		flows2(file, true);
+		mustBeInAcceptingState(file);
+	}
+
+	private static void flows2(File other, boolean b) {
+		other.close();
+	}
+	@Test
 	public void intraprocedural() {
 		File file = new File();
 		file.open();
@@ -260,7 +271,7 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 	}
 
 	@Test
-	public void test() {
+	public void aliasInInnerScope() {
 		ObjectWithField a = new ObjectWithField();
 		ObjectWithField b = a;
 		File file = new File();
@@ -271,6 +282,18 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		mustBeInAcceptingState(a.field);
 	}
 
+	@Test
+	public void aliasSensitive() {
+		ObjectWithField a = new ObjectWithField();
+		ObjectWithField b = a;
+		File file = new File();
+		file.open();
+		a.field = file;
+		File loadedFromAlias = b.field;
+		loadedFromAlias.close();
+		mustBeInAcceptingState(file);
+		mustBeInAcceptingState(a.field);
+	}
 	@Test
 	public void noStrongUpdate() {
 		ObjectWithField a = new ObjectWithField();

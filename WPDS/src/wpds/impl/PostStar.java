@@ -72,15 +72,16 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 
 		private D targetState;
 		private Transition<N, D> transition;
+		private W newWeight;
 
-		public UpdateTransitivePopListener(Transition<N, D> transition) {
+		public UpdateTransitivePopListener(Transition<N, D> transition, W newWeight) {
 			super(transition.getTarget());
 			this.transition = transition;
+			this.newWeight = newWeight;
 		}
 
 		@Override
 		public void onOutTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> aut) {
-			W newWeight = getWeightFor(transition);
 			update(new Transition<N, D>(transition.getStart(), t.getLabel(), t.getTarget()),
 						(W) w.extendWith(newWeight));
 		}
@@ -95,6 +96,7 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 			int result = super.hashCode();
 			result = prime * result + ((targetState == null) ? 0 : targetState.hashCode());
 			result = prime * result + ((transition == null) ? 0 : transition.hashCode());
+			result = prime * result + ((newWeight == null) ? 0 : newWeight.hashCode());
 			return result;
 		}
 
@@ -116,6 +118,11 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 				if (other.transition != null)
 					return false;
 			} else if (!transition.equals(other.transition))
+				return false;
+			if (newWeight == null) {
+				if (other.newWeight != null)
+					return false;
+			} else if (!newWeight.equals(other.newWeight))
 				return false;
 			return true;
 		}
@@ -143,7 +150,7 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 					}
 					final W newWeight = (W) weight.extendWith(ruleWeight);
 					update(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget()), newWeight);
-					fa.registerListener(new UpdateTransitivePopListener(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget())));
+					fa.registerListener(new UpdateTransitivePopListener(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget()),newWeight));
 				} else{
 					fa.unbalancedPop(targetState,t,weight);
 				}
@@ -306,8 +313,8 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 								W newWeight = getWeightFor(transition);
 								update(new Transition<N, D>(t.getStart(), transition.getLabel(), transition.getTarget()),
 									(W) newWeight.extendWith(w));
-								}
 							}
+						}
 					});
 				}
 				
@@ -349,58 +356,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 
 	}
 	
-	private class PushDownAfterCallListener extends WPAStateListener<N, D, W>{
-
-		private W weight;
-
-		public PushDownAfterCallListener(D target, W newWeight) {
-			super(target);
-			this.weight = newWeight;
-		}
-
-		@Override
-		public void onOutTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton) {
-			update(t, (W)w.extendWith(weight));
-		}
-
-		@Override
-		public void onInTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton) {
-			
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((weight == null) ? 0 : weight.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			PushDownAfterCallListener other = (PushDownAfterCallListener) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (weight == null) {
-				if (other.weight != null)
-					return false;
-			} else if (!weight.equals(other.weight))
-				return false;
-			return true;
-		}
-
-		private PostStar getOuterType() {
-			return PostStar.this;
-		}
-		
-	}
 	private class UpdateEpsilonOnPushListener extends WPAStateListener<N, D, W>{
 		private Transition<N, D> transition;
 		private N callSite;
@@ -420,8 +375,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 			if (t.getString().equals(fa.epsilon())) {
 				W newWeight = getWeightFor(transition);
 				fa.reconnectPush(callSite, transition.getLabel(),t.getStart(), newWeight, weight);
-				if(!weight.equals(fa.getOne()))
-					aut.registerListener(new PushDownAfterCallListener(t.getTarget(),weight));
 			}	
 		}
 
