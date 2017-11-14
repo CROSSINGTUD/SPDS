@@ -214,11 +214,6 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			@Override
 			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
 			}
-
-			@Override
-			protected boolean weights() {
-				return Boomerang.this.weights();
-			}
 			@Override
 			protected Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite,
 					Statement callSite, InvokeExpr invokeExpr, Val fact, SootMethod callee, Stmt calleeSp) {
@@ -310,10 +305,6 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 					final Node<Statement, Val> returnedNode, final boolean unbalanced) {
 			}
 
-			@Override
-			protected boolean weights() {
-				return Boomerang.this.weights();
-			}
 			@Override
 			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
 				SootMethod calledMethod = callSite.getUnit().get().getInvokeExpr().getMethod();
@@ -1434,10 +1425,6 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 		float average = ((float) totalReached )/ queryToSolvers.keySet().size();
 		System.out.println("Reachable nodes (Min/Avg/Max): " +min +"/"+ average+"/"+max); 
 		System.out.println("Maximal Query: " +maxQuery); 
-	}
-	
-	public boolean weights(){
-		return false;
 	}
 	
 }
