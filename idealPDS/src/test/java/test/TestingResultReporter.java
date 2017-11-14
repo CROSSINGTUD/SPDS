@@ -60,14 +60,23 @@ public class TestingResultReporter implements ResultReporter<TransitionFunction>
 					}
 				};
 				
-				for(Entry<Transition<Statement, INode<Val>>, TransitionFunction> s : seedSolver.getTransitionsToFinalWeights().entrySet()){
-					aut.addWeightForTransition(s.getKey(), s.getValue());
-					Transition<Statement, INode<Val>> node = s.getKey();
+//				for(Entry<Transition<Statement, INode<Val>>, TransitionFunction> s : seedSolver.getTransitionsToFinalWeights().entrySet()){
+//					aut.addWeightForTransition(s.getKey(), s.getValue());
+//					Transition<Statement, INode<Val>> node = s.getKey();
+//					if((node.getStart() instanceof GeneratedState)  || !node.getStart().fact().equals(expectedResults.getVal()))
+//						continue;
+//					if(node.getLabel().getUnit().isPresent()){
+//						if(node.getLabel().getUnit().get().equals(e.getKey())){
+//							expectedResults.computedResults(s.getValue());
+//						}
+//					}
+//				}
+				for(Transition<Statement, INode<Val>> node : seedSolver.getCallAutomaton().getTransitions()){
 					if((node.getStart() instanceof GeneratedState)  || !node.getStart().fact().equals(expectedResults.getVal()))
 						continue;
 					if(node.getLabel().getUnit().isPresent()){
 						if(node.getLabel().getUnit().get().equals(e.getKey())){
-							expectedResults.computedResults(s.getValue());
+							expectedResults.computedResults(seedSolver.getCallAutomaton().getWeightFor(node));
 						}
 					}
 				}

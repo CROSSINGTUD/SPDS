@@ -121,7 +121,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 								
 								boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) callSite, returningFact.fact());
 								if(valueUsedInStatement || AbstractBoomerangSolver.assignsValue((Stmt)callSite,returningFact.fact())){
-									unbalancedReturnFlow(callStatement, weight, returningFact, trans);
+									unbalancedReturnFlow(callStatement, returningFact, trans, weight);
 								}
 							}
 						} else {
@@ -136,7 +136,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 											Node<Statement, Val> returnedVal = new Node<Statement, Val>(callStatement,
 													returningFact.fact());
 											solver.setCallingContextReachable(returnedVal);
-											solver.getCallAutomaton().addTransition(new Transition<Statement,INode<Val>>(returningFact,callStatement,solver.getCallAutomaton().getInitialState()));
+											solver.getCallAutomaton().addWeightForTransition(new Transition<Statement,INode<Val>>(returningFact,callStatement,solver.getCallAutomaton().getInitialState()),weight);
 
 											final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
 													.getOrCreate(new ForwardCallSitePOI(callStatement));
@@ -148,8 +148,8 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 						}
 					}
 
-					private void unbalancedReturnFlow(final Statement callStatement, final W weight,
-							final INode<Val> returningFact, final Transition<Statement, INode<Val>> trans) {
+					private void unbalancedReturnFlow(final Statement callStatement,
+							final INode<Val> returningFact, final Transition<Statement, INode<Val>> trans, final W weight) {
 						Boomerang.this.submit(callStatement.getMethod(), new Runnable() {
 							@Override
 							public void run() {
@@ -157,7 +157,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 									Node<Statement, Val> returnedVal = new Node<Statement, Val>(returnSite,
 											returningFact.fact());
 									solver.setCallingContextReachable(returnedVal);
-									solver.getCallAutomaton().addTransition(new Transition<Statement,INode<Val>>(returningFact,returnSite,solver.getCallAutomaton().getInitialState()));
+									solver.getCallAutomaton().addWeightForTransition(new Transition<Statement,INode<Val>>(returningFact,returnSite,solver.getCallAutomaton().getInitialState()), weight);
 
 									final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
 											.getOrCreate(new ForwardCallSitePOI(callStatement));
