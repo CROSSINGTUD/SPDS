@@ -76,7 +76,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 	public static final boolean TRACK_STRING = true;
 	public static final boolean TRACK_STATIC = true;
 	public static final boolean TRACK_ARRAYS = true;
-	public static final boolean CALL_SUMMARIES = false;
+	public static final boolean CALL_SUMMARIES = true;
 	public static final boolean FIELD_SUMMARIES = false;
 	public static final boolean THROW = false;
 	public static final boolean FAST_FORWARD_FLOW = true;
