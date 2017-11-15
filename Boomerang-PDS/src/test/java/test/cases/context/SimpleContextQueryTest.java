@@ -2,13 +2,14 @@ package test.cases.context;
 
 import org.junit.Test;
 
+import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
 public class SimpleContextQueryTest extends AbstractBoomerangTest {
 	@Test
 	public void outerAllocation(){
-		AllocatedObject alloc = new AllocatedObject(){};
+		AllocatedObject alloc = new Alloc();
 		methodOfQuery(alloc);
 	}
 

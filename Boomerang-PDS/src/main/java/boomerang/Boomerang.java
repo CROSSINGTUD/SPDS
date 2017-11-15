@@ -103,7 +103,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 					addAllocationType((RefType) key.getType());
 				}
 			}
-			if (key instanceof ForwardQuery)
+			
 				solver.getCallAutomaton()
 						.registerUnbalancedPopListener(new UnbalancedPopListener<Statement, INode<Val>, W>() {
 
@@ -417,7 +417,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 			@Override
 			public WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> getSummaryAutomaton(
 					INode<Node<Statement, Val>> target) {
-				if (target.fact().equals(query.unwrap().asNode())) {
+				if (target.fact().equals(query.asNode())) {
 					return queryToSolvers.getOrCreate(query).getFieldAutomaton();
 				}
 				return summaries.getSummaryAutomaton(target);
@@ -1226,7 +1226,7 @@ public abstract class Boomerang<W extends Weight> implements MethodReachableQueu
 									insertTransition(flowSolver.getFieldAutomaton(),
 											new Transition<Field, INode<Node<Statement, Val>>>(
 													new AllocNode<Node<Statement, Val>>(
-																	baseAllocation.unwrap().asNode()),
+																	baseAllocation.asNode()),
 													Field.epsilon(), new SingleNode<Node<Statement, Val>>(
 															new Node<Statement, Val>(succOfWrite, getBaseVar()))));
 									insertTransition(flowSolver.getFieldAutomaton(),
