@@ -15,10 +15,6 @@ public abstract class Query{
 		this.variable = variable;
 	}
 	
-	public Query unwrap(){
-		return this;
-	}
-
 	public Node<Statement,Val> asNode(){
 		return new Node<Statement,Val>(stmt,variable);
 	}

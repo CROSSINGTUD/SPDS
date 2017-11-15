@@ -44,6 +44,7 @@ import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
+import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
@@ -70,9 +71,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	
 	protected AnalysisMode[] getAnalyses(){
 		return new AnalysisMode[]{
-			AnalysisMode.WholeProgram,
+//			AnalysisMode.WholeProgram,
 //			AnalysisMode.DemandDrivenForward, 
-//			AnalysisMode.DemandDrivenBackward
+			AnalysisMode.DemandDrivenBackward
 		};
 	}
 	
@@ -194,7 +195,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private Set<Node<Statement, Val>> runQuery(Collection<? extends Query> queries) {
 		final Set<Node<Statement, Val>> results = Sets.newHashSet();
-		for (Query query : queries) {
+		for (final Query query : queries) {
 			Boomerang<NoWeight> solver = new Boomerang<NoWeight>() {
 				@Override
 				public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
@@ -230,10 +231,19 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				solver.solve(query);
 				for (final Entry<Query, AbstractBoomerangSolver<NoWeight>> fw : solver.getSolvers().entrySet()) {
 					if(fw.getKey() instanceof ForwardQuery){
-						fw.getValue().synchedEmptyStackReachable(query.asNode(),new EmptyStackWitnessListener<Statement, Val>() {
+						fw.getValue().getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, NoWeight>(fw.getValue().getFieldAutomaton().getInitialState()) {
+							
 							@Override
-							public void witnessFound(Node<Statement, Val> allocation) {
-								results.add(fw.getKey().asNode());	
+							public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, NoWeight w,
+									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, NoWeight> weightedPAutomaton) {
+							}
+							
+							@Override
+							public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, NoWeight w,
+									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, NoWeight> weightedPAutomaton) {
+								if(t.getLabel().equals(Field.empty())){
+									results.add(fw.getKey().asNode());
+								}
 							}
 						});
 					}
@@ -304,7 +314,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					@Override
 					public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, NoWeight w,
 							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, NoWeight> weightedPAutomaton) {
-						if(t.getLabel().equals(Field.empty()) && t.getTarget().fact().equals(q.unwrap().asNode())){
+						if(t.getLabel().equals(Field.empty()) && t.getTarget().fact().equals(q.asNode())){
 							results.add(q.asNode());
 						}
 					}
