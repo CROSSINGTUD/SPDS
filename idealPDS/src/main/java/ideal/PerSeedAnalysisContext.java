@@ -119,7 +119,7 @@ public class PerSeedAnalysisContext<W extends Weight> {
 		boomerang.debugOutput();
 		if(phase.equals(Phases.ValueFlow)){
 			for(Query q : boomerang.getSolvers().keySet()){
-				if(q.unwrap().equals(seed.unwrap())){
+				if(q.equals(seed)){
 //					System.out.println(boomerang.getSolvers().get(q).getCallAutomaton().toDotString());
 					analysisDefinition.resultReporter().onSeedFinished((ForwardQuery)q, boomerang.getSolvers().getOrCreate(q));
 				}

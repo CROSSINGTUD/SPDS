@@ -17,6 +17,7 @@ import sync.pds.solver.nodes.INode;
 import typestate.TransitionFunction;
 import wpds.impl.Transition;
 import wpds.impl.WeightedPAutomaton;
+import wpds.interfaces.WPAUpdateListener;
 
 public class TestingResultReporter implements ResultReporter<TransitionFunction>{
 	private Multimap<Unit, Assertion> stmtToResults = HashMultimap.create();
@@ -71,15 +72,20 @@ public class TestingResultReporter implements ResultReporter<TransitionFunction>
 //						}
 //					}
 //				}
-				for(Transition<Statement, INode<Val>> node : seedSolver.getCallAutomaton().getTransitions()){
-					if((node.getStart() instanceof GeneratedState)  || !node.getStart().fact().equals(expectedResults.getVal()))
-						continue;
-					if(node.getLabel().getUnit().isPresent()){
-						if(node.getLabel().getUnit().get().equals(e.getKey())){
-							expectedResults.computedResults(seedSolver.getCallAutomaton().getWeightFor(node));
+				seedSolver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, TransitionFunction>() {
+					
+					@Override
+					public void onWeightAdded(Transition<Statement, INode<Val>> t, TransitionFunction w,
+							WeightedPAutomaton<Statement, INode<Val>, TransitionFunction> aut) {
+						if((t.getStart() instanceof GeneratedState)  || !t.getStart().fact().equals(expectedResults.getVal()))
+							return;
+						if(t.getLabel().getUnit().isPresent()){
+							if(t.getLabel().getUnit().get().equals(e.getKey())){
+								expectedResults.computedResults(w);
+							}
 						}
 					}
-				}
+				});
 				System.out.println("FINAL WEIGHT AUTOMATON");
 				System.out.println(aut.toDotString());
 			}
