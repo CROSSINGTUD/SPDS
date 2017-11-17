@@ -28,7 +28,7 @@ import typestate.TransitionFunction;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
 
-public abstract class MatcherStateMachine implements  WeightFunctions<Statement, Val, Statement, TransitionFunction> {
+public abstract class TypeStateMachineWeightFunctions implements  WeightFunctions<Statement, Val, Statement, TransitionFunction> {
 	public Set<MatcherTransition> transition = new HashSet<>();
 
 	public void addTransition(MatcherTransition trans) {

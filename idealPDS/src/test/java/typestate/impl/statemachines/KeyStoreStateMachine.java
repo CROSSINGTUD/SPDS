@@ -11,13 +11,13 @@ import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
-import typestate.finiteautomata.MatcherStateMachine;
+import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
 import typestate.finiteautomata.State;
 
-public class KeyStoreStateMachine extends MatcherStateMachine{
+public class KeyStoreStateMachine extends TypeStateMachineWeightFunctions{
 
 	public static enum States implements State {
 		NONE, INIT, LOADED, ERROR;

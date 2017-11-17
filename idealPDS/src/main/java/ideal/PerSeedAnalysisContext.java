@@ -3,7 +3,7 @@ package ideal;
 import java.util.Map.Entry;
 
 import boomerang.BackwardQuery;
-import boomerang.Boomerang;
+import boomerang.WeightedBoomerang;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.debugger.Debugger;
@@ -49,7 +49,7 @@ public class PerSeedAnalysisContext<W extends Weight> {
 
 	private void runPhase(final Phases phase) {
 		System.out.println("STARTING PHASE " + phase);
-		final Boomerang<W> boomerang = new Boomerang<W>() {
+		final WeightedBoomerang<W> boomerang = new WeightedBoomerang<W>() {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 				return analysisDefinition.icfg();

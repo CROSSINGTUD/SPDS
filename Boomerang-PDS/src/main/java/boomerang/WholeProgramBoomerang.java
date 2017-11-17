@@ -13,13 +13,13 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import wpds.impl.Weight;
 
-public abstract class WholeProgramBoomerang<W extends Weight> extends Boomerang<W>{
+public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBoomerang<W>{
 	private int reachableMethodCount;
 	private int allocationSites;
 	public void wholeProgramAnalysis(){
-		System.out.println("Tracking Strings: " + Boomerang.TRACK_STRING);
-		System.out.println("Tracking Arrays: " + Boomerang.TRACK_ARRAYS);
-		System.out.println("Tracking Static: " + Boomerang.TRACK_STATIC);
+//		System.out.println("Tracking Strings: " + Boomerang.TRACK_STRING);
+//		System.out.println("Tracking Arrays: " + Boomerang.TRACK_ARRAYS);
+//		System.out.println("Tracking Static: " + Boomerang.TRACK_STATIC);
 		List<SootMethod> entryPoints = Scene.v().getEntryPoints();
 		long before = System.currentTimeMillis();
 		for(SootMethod m : entryPoints){
@@ -48,7 +48,7 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends Boomerang<
 		for(Unit u : method.getActiveBody().getUnits()){
 			if(u instanceof AssignStmt){
 				AssignStmt assignStmt = (AssignStmt) u;
-				if(isAllocationVal(assignStmt.getRightOp())){
+				if(options.isAllocationVal(assignStmt.getRightOp())){
 					ForwardQuery q = new ForwardQuery(new Statement((Stmt) u, method), new Val(assignStmt.getLeftOp(),method));
 					solve(q);
 					allocationSites++;

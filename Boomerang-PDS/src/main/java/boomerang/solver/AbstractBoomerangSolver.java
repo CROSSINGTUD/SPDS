@@ -15,7 +15,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
-import boomerang.Boomerang;
+import boomerang.WeightedBoomerang;
+import boomerang.BoomerangOptions;
 import boomerang.MethodReachableQueue;
 import boomerang.Query;
 import boomerang.jimple.Field;
@@ -66,15 +67,15 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Multimap<Statement, StatementBasedFieldTransitionListener<W>> perStatementFieldTransitionsListener = HashMultimap
 			.create();
 	private final MethodReachableQueue reachableQueue;
-
+	protected final BoomerangOptions options;
 	public AbstractBoomerangSolver(MethodReachableQueue reachableQueue, InterproceduralCFG<Unit, SootMethod> icfg,
 			Query query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
-			boolean useCallSummaries, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
-			boolean useFieldSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries) {
+			BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
+			 NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries) {
 		super(new SingleNode<Val>(query.asNode().fact()), new AllocNode<Node<Statement, Val>>(query.asNode()),
-				useCallSummaries, callSummaries, useFieldSummaries, fieldSummaries);
+				options.callSummaries(), callSummaries, options.fieldSummaries(), fieldSummaries);
 		this.reachableQueue = reachableQueue;
-
+		this.options = options;
 		this.icfg = icfg;
 		this.query = query;
 		this.unbalancedMethod.add(query.asNode().stmt().getMethod());
@@ -182,7 +183,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				callBypass(new Statement(curr, method), new Statement((Stmt) succ, method), value);
 			}
 			Collection<State> flow = computeNormalFlow(method, curr, value, (Stmt) succ);
-			if(Boomerang.FAST_FORWARD_FLOW && isIdentityFlow(value,  (Stmt) succ,method, flow)){
+			if(options.fastForwardFlows() && isIdentityFlow(value,  (Stmt) succ,method, flow)){
 				flow = dfs( value,  (Stmt) succ,method);
 			}
 			out.addAll(flow);
@@ -481,7 +482,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			boolean unbalanced);
 
 	public void debugFieldAutomaton(final Statement statement) {
-		if (!Boomerang.DEBUG)
+		if (!WeightedBoomerang.DEBUG)
 			return;
 		final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight>(
 				new AllocNode<Node<Statement, Val>>(query.asNode())) {

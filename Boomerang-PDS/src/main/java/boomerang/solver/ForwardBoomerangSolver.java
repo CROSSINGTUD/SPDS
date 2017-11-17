@@ -9,7 +9,8 @@ import java.util.Set;
 
 import com.google.common.collect.Sets;
 
-import boomerang.Boomerang;
+import boomerang.WeightedBoomerang;
+import boomerang.BoomerangOptions;
 import boomerang.ForwardQuery;
 import boomerang.MethodReachableQueue;
 import boomerang.jimple.Field;
@@ -50,8 +51,8 @@ import wpds.impl.Weight;
 import wpds.interfaces.State;
 
 public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractBoomerangSolver<W> {
-	public ForwardBoomerangSolver(MethodReachableQueue queue, InterproceduralCFG<Unit, SootMethod> icfg, ForwardQuery query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField, boolean useCallSummaries, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, boolean useFieldSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>,W> fieldSummaries) {
-		super(queue, icfg, query, genField, useCallSummaries, callSummaries, useFieldSummaries, fieldSummaries);
+	public ForwardBoomerangSolver(MethodReachableQueue queue, InterproceduralCFG<Unit, SootMethod> icfg, ForwardQuery query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>,W> fieldSummaries) {
+		super(queue, icfg, query, genField, options, callSummaries, fieldSummaries);
 	}
 	
 	@Override
@@ -136,12 +137,12 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 							new Field(ifr.getField()), PDSSystem.FIELDS));
 				} else if(leftOp instanceof StaticFieldRef){
 					StaticFieldRef sfr = (StaticFieldRef) leftOp;
-					if(Boomerang.TRACK_STATIC){
+					if(options.staticFlows()){
 						out.add(new Node<Statement, Val>(new Statement(succ, method), new StaticFieldVal(leftOp,sfr.getField(),method)));
 					}
 				} else if(leftOp instanceof ArrayRef){
 					ArrayRef arrayRef = (ArrayRef) leftOp;
-					if(Boomerang.TRACK_ARRAYS){
+					if(options.arrayFlows()){
 						out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(arrayRef.getBase(),method),
 								Field.array(), PDSSystem.FIELDS));
 					}
@@ -185,7 +186,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	public Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite,
 			Stmt returnSite) {
 		Statement returnSiteStatement = new Statement(returnSite,icfg.getMethodOf(returnSite));
-		if(curr instanceof ThrowStmt && !Boomerang.THROW){
+		if(curr instanceof ThrowStmt && !options.throwFlows()){
 			return Collections.emptySet();
 		}
 		if (curr instanceof ReturnStmt) {
@@ -224,7 +225,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	
 	@Override
 	protected boolean preventFieldTransitionAdd(Transition<Field, INode<Node<Statement, Val>>> t, W weight) {
-		if(!t.getLabel().equals(Field.empty()) || !Boomerang.TYPE_CHECK){
+		if(!t.getLabel().equals(Field.empty()) || !options.typeCheck()){
 			return false;
 		}
 		if(t.getTarget() instanceof GeneratedState || t.getStart() instanceof GeneratedState){

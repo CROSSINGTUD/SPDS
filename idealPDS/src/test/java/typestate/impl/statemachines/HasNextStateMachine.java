@@ -14,13 +14,13 @@ import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
-import typestate.finiteautomata.MatcherStateMachine;
+import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
 import typestate.finiteautomata.State;
 
-public class HasNextStateMachine extends MatcherStateMachine {
+public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
 
 	private Set<SootMethod> hasNextMethods;
 

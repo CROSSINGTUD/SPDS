@@ -11,13 +11,13 @@ import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
-import typestate.finiteautomata.MatcherStateMachine;
+import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
 import typestate.finiteautomata.State;
 
-public class InputStreamStateMachine extends MatcherStateMachine{
+public class InputStreamStateMachine extends TypeStateMachineWeightFunctions{
 
 	public static enum States implements State {
 		 OPEN, CLOSED, ERROR;

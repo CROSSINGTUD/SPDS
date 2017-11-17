@@ -6,7 +6,7 @@ import java.io.PrintWriter;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
-import typestate.finiteautomata.MatcherStateMachine;
+import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.impl.statemachines.PrintWriterStateMachine;
 
 public class PrintWriterTest extends IDEALTestingFramework {
@@ -20,7 +20,7 @@ public class PrintWriterTest extends IDEALTestingFramework {
 	}
 
 	@Override
-	protected MatcherStateMachine getStateMachine() {
+	protected TypeStateMachineWeightFunctions getStateMachine() {
 		return new PrintWriterStateMachine();
 	}
 

@@ -16,6 +16,7 @@ import com.google.common.collect.Sets;
 
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
+import boomerang.WeightedBoomerang;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WholeProgramBoomerang;
@@ -196,7 +197,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	private Set<Node<Statement, Val>> runQuery(Collection<? extends Query> queries) {
 		final Set<Node<Statement, Val>> results = Sets.newHashSet();
 		for (final Query query : queries) {
-			Boomerang<NoWeight> solver = new Boomerang<NoWeight>() {
+			Boomerang solver = new Boomerang() {
 				@Override
 				public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 					return icfg;
@@ -207,48 +208,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					return new IDEVizDebugger(ideVizFile,icfg);
 				}
 
-				@Override
-				protected WeightFunctions<Statement, Val, Field, NoWeight> getForwardFieldWeights() {
-					return new OneWeightFunctions<Statement, Val, Field, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
-				}
-
-				@Override
-				protected WeightFunctions<Statement, Val, Field, NoWeight> getBackwardFieldWeights() {
-					return new OneWeightFunctions<Statement, Val, Field, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
-				}
-
-				@Override
-				protected WeightFunctions<Statement, Val, Statement, NoWeight> getBackwardCallWeights() {
-					return new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
-				}
-
-				@Override
-				protected WeightFunctions<Statement, Val, Statement, NoWeight> getForwardCallWeights() {
-					return new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
-				}
 			};
 			if(query instanceof BackwardQuery){
 				solver.solve(query);
-				for (final Entry<Query, AbstractBoomerangSolver<NoWeight>> fw : solver.getSolvers().entrySet()) {
-					if(fw.getKey() instanceof ForwardQuery){
-						fw.getValue().getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, NoWeight>(fw.getValue().getFieldAutomaton().getInitialState()) {
-							
-							@Override
-							public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, NoWeight w,
-									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, NoWeight> weightedPAutomaton) {
-							}
-							
-							@Override
-							public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, NoWeight w,
-									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, NoWeight> weightedPAutomaton) {
-								if(t.getLabel().equals(Field.empty())){
-									results.add(fw.getKey().asNode());
-								}
-							}
-						});
-					}
-				}
-				
+				results.addAll(solver.getResults().keySet());
 			}else{
 				solver.solve(query);
 				for(Node<Statement, Val> s : solver.getForwardReachableStates()){

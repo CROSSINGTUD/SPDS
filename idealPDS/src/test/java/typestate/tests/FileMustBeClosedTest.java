@@ -3,7 +3,7 @@ package typestate.tests;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
-import typestate.finiteautomata.MatcherStateMachine;
+import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.impl.statemachines.FileMustBeClosedStateMachine;
 import typestate.test.helper.File;
 import typestate.test.helper.ObjectWithField;
@@ -478,7 +478,7 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 	}
 
 	@Override
-	protected MatcherStateMachine getStateMachine() {
+	protected TypeStateMachineWeightFunctions getStateMachine() {
 		return new FileMustBeClosedStateMachine();
 	}
 }

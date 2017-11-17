@@ -10,13 +10,13 @@ import boomerang.jimple.Val;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
-import typestate.finiteautomata.MatcherStateMachine;
+import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
 import typestate.finiteautomata.State;
 
-public class SocketStateMachine extends MatcherStateMachine{
+public class SocketStateMachine extends TypeStateMachineWeightFunctions{
 
 	public static enum States implements State {
 		NONE, INIT, CONNECTED, ERROR;

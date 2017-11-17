@@ -28,14 +28,14 @@ import test.ExpectedResults.InternalState;
 import test.core.selfrunning.AbstractTestingFramework;
 import test.core.selfrunning.ImprecisionException;
 import typestate.TransitionFunction;
-import typestate.finiteautomata.MatcherStateMachine;
+import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected JimpleBasedInterproceduralCFG icfg;
 	protected long analysisTime;
 	protected TestingResultReporter testingResultReporter;
 
-	protected abstract MatcherStateMachine getStateMachine();
+	protected abstract TypeStateMachineWeightFunctions getStateMachine();
 
 	protected IDEALAnalysis<TransitionFunction> createAnalysis() {
 		return new IDEALAnalysis<TransitionFunction>(new IDEALAnalysisDefinition<TransitionFunction>() {

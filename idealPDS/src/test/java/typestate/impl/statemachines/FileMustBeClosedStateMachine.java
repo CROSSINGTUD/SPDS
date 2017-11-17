@@ -6,13 +6,13 @@ import java.util.Collections;
 import boomerang.jimple.Val;
 import soot.SootMethod;
 import soot.Unit;
-import typestate.finiteautomata.MatcherStateMachine;
+import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
 import typestate.finiteautomata.State;
 
-public class FileMustBeClosedStateMachine extends MatcherStateMachine{
+public class FileMustBeClosedStateMachine extends TypeStateMachineWeightFunctions{
 
   public static enum States implements State {
     INIT, OPENED, CLOSED;

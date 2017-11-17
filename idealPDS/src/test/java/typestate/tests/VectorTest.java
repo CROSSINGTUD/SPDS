@@ -5,7 +5,7 @@ import java.util.Vector;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
-import typestate.finiteautomata.MatcherStateMachine;
+import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.impl.statemachines.VectorStateMachine;
 
 @SuppressWarnings("deprecation")
@@ -81,7 +81,7 @@ public class VectorTest extends IDEALTestingFramework {
 	}
 	
 	@Override
-	protected MatcherStateMachine getStateMachine() {
+	protected TypeStateMachineWeightFunctions getStateMachine() {
 		return new VectorStateMachine();
 	}
 }

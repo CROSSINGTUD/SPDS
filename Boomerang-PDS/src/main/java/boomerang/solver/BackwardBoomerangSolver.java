@@ -10,7 +10,8 @@ import java.util.Set;
 import com.google.common.collect.Sets;
 
 import boomerang.BackwardQuery;
-import boomerang.Boomerang;
+import boomerang.WeightedBoomerang;
+import boomerang.BoomerangOptions;
 import boomerang.MethodReachableQueue;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -46,8 +47,8 @@ import wpds.interfaces.State;
 
 public abstract class BackwardBoomerangSolver<W extends Weight> extends AbstractBoomerangSolver<W>{
 
-	public BackwardBoomerangSolver(MethodReachableQueue queue, BiDiInterproceduralCFG<Unit, SootMethod> icfg, BackwardQuery query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, boolean useCallSummaries, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, boolean useFieldSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries){
-		super(queue, icfg, query, genField, useCallSummaries, callSummaries, useFieldSummaries, fieldSummaries);
+	public BackwardBoomerangSolver(MethodReachableQueue queue, BiDiInterproceduralCFG<Unit, SootMethod> icfg, BackwardQuery query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries){
+		super(queue, icfg, query, genField, options, callSummaries, fieldSummaries);
 	}
 
 	@Override
@@ -131,7 +132,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 	@Override
 	protected Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Val fact, Stmt succ) {
 //		assert !fact.equals(thisVal()) && !fact.equals(returnVal()) && !fact.equals(param(0));
-		if(Boomerang.isAllocationVal(fact.value())){
+		if(options.isAllocationVal(fact.value())){
 			return Collections.emptySet();
 		}
 		Set<State> out = Sets.newHashSet();
@@ -156,12 +157,12 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
 							new Field(ifr.getField()), PDSSystem.FIELDS));
 				} else if(rightOp instanceof StaticFieldRef){
-					if(Boomerang.TRACK_STATIC){
+					if(options.staticFlows()){
 						out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(new EquivalentValue(rightOp),method)));
 					}
 				} else if(rightOp instanceof ArrayRef){
 					ArrayRef ifr = (ArrayRef) rightOp;
-					if(Boomerang.TRACK_ARRAYS){
+					if(options.arrayFlows()){
 						out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
 								Field.array(), PDSSystem.FIELDS));
 					}

@@ -1,5 +1,9 @@
 package boomerang;
 
+import java.util.List;
+
+import com.beust.jcommander.internal.Lists;
+
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import soot.Type;

@@ -7,7 +7,7 @@ import java.io.InputStream;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
-import typestate.finiteautomata.MatcherStateMachine;
+import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.impl.statemachines.InputStreamStateMachine;
 
 public class InputStreamTest extends IDEALTestingFramework {
@@ -38,7 +38,7 @@ public class InputStreamTest extends IDEALTestingFramework {
 	}
 
 	@Override
-	protected MatcherStateMachine getStateMachine() {
+	protected TypeStateMachineWeightFunctions getStateMachine() {
 		return new InputStreamStateMachine();
 	}
 }
