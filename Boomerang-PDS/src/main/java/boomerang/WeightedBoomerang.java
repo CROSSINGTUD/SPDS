@@ -35,17 +35,12 @@ import soot.RefType;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
-import soot.Type;
 import soot.Unit;
-import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InvokeExpr;
-import soot.jimple.NewArrayExpr;
-import soot.jimple.NewExpr;
 import soot.jimple.NewMultiArrayExpr;
-import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
@@ -65,7 +60,6 @@ import wpds.impl.Transition;
 import wpds.impl.UnbalancedPopListener;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
-import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
@@ -1358,6 +1352,35 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		}
 		return results;
 	}
+
+	public Set<Node<Statement,Val>> getResults(final BackwardQuery query){
+		final Set<Node<Statement,Val>> results = Sets.newHashSet();
+		for (final Entry<Query, AbstractBoomerangSolver<W>> fw : queryToSolvers.entrySet()) {
+			if(fw.getKey() instanceof ForwardQuery){
+				fw.getValue().getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(fw.getValue().getFieldAutomaton().getInitialState()) {
+					
+					@Override
+					public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+					}
+					
+					@Override
+					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+						if(t.getLabel().equals(Field.empty()) && t.getStart().fact().equals(query.asNode())){
+							results.add(fw.getKey().asNode());
+						}
+					}
+				});
+			}
+		}
+		return results;
+	}
+	
+	public Map<Node<Statement, Val>, W> getObjectDestructingStatements(
+			ForwardQuery analysisSeedWithSpecification) {
+		return null;
+	}
 	
 	public abstract Debugger<W> createDebugger();
 
@@ -1428,5 +1451,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		System.out.println("Reachable nodes (Min/Avg/Max): " +min +"/"+ average+"/"+max); 
 		System.out.println("Maximal Query: " +maxQuery); 
 	}
+
 	
 }

@@ -43,10 +43,14 @@ public class IDEALAnalysis<W extends Weight> {
 			System.err.println("Analysing " + initialSeeds.size() + " seeds!");
 		
 		for (Node<Statement, Val> seed : initialSeeds) {
-			new PerSeedAnalysisContext<W>(analysisDefinition, seed).run();
+			run(seed);
 		}
 	}
-
+	public PerSeedAnalysisContext<W> run(Node<Statement, Val> seed) {
+		PerSeedAnalysisContext<W> idealAnalysis = new PerSeedAnalysisContext<W>(analysisDefinition, seed);
+		idealAnalysis.run();
+		return idealAnalysis;
+	}
 	private void printOptions() {
 		if(PRINT_OPTIONS)
 			System.out.println(analysisDefinition);

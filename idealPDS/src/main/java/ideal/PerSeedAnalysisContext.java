@@ -1,5 +1,6 @@
 package ideal;
 
+import java.util.Map;
 import java.util.Map.Entry;
 
 import boomerang.BackwardQuery;
@@ -19,6 +20,7 @@ import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import typestate.TransitionFunction;
 import wpds.impl.ConnectPushListener;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -30,6 +32,8 @@ public class PerSeedAnalysisContext<W extends Weight> {
 	private final IDEALWeightFunctions<W> idealWeightFunctions;
 	private final W zero;
 	private final W one;
+	private WeightedBoomerang<W> phase1Solver;
+	private WeightedBoomerang<W> phase2Solver;
 	public static enum Phases {
 		ObjectFlow, ValueFlow
 	};
@@ -43,11 +47,11 @@ public class PerSeedAnalysisContext<W extends Weight> {
 	}
 
 	public void run() {
-		runPhase(Phases.ObjectFlow);
-		runPhase(Phases.ValueFlow);
+		phase1Solver = runPhase(Phases.ObjectFlow);
+		phase2Solver = runPhase(Phases.ValueFlow);
 	}
 
-	private void runPhase(final Phases phase) {
+	private WeightedBoomerang<W> runPhase(final Phases phase) {
 		System.out.println("STARTING PHASE " + phase);
 		final WeightedBoomerang<W> boomerang = new WeightedBoomerang<W>() {
 			@Override
@@ -125,6 +129,11 @@ public class PerSeedAnalysisContext<W extends Weight> {
 				}
 			}
 		}
+		return boomerang;
+	}
+
+	public Map<Node<Statement, Val>, W> getResults() {
+		return phase2Solver.getResults();
 	}
 
 }
