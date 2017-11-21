@@ -211,7 +211,19 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			};
 			if(query instanceof BackwardQuery){
 				solver.solve(query);
-				results.addAll(solver.getResults().keySet());
+				
+                for (final Entry<Query, AbstractBoomerangSolver<NoWeight>> fw : solver.getSolvers().entrySet()) {
+                    if(fw.getKey() instanceof ForwardQuery){
+                        fw.getValue().synchedEmptyStackReachable(query.asNode(),new EmptyStackWitnessListener<Statement, Val>() {
+                           
+                            @Override
+                            public void witnessFound(Node<Statement, Val> allocation) {
+                                results.add(fw.getKey().asNode());    
+                         }
+                        
+                    });}}
+                        
+
 			}else{
 				solver.solve(query);
 				for(Node<Statement, Val> s : solver.getForwardReachableStates()){
