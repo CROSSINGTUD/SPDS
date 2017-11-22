@@ -32,6 +32,10 @@ public class InputStreamStateMachine extends TypeStateMachineWeightFunctions {
 			return false;
 		}
 
+		@Override
+		public boolean isAccepting() {
+			return false;
+		}
 	}
 
 	public InputStreamStateMachine() {

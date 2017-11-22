@@ -37,8 +37,6 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 	 */
 	public abstract WeightFunctions<Statement,Val,Statement,W> weightFunctions();
 
-	public abstract ResultReporter<W> resultReporter();
-	
 	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
 
 	public abstract boolean enableAliasing();

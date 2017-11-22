@@ -26,6 +26,11 @@ public class PipedInputStreamStateMachine extends TypeStateMachineWeightFunction
 		public boolean isInitialState() {
 			return false;
 		}
+
+		@Override
+		public boolean isAccepting() {
+			return false;
+		}
 	}
 
 	PipedInputStreamStateMachine() {

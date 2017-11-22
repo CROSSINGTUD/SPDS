@@ -28,6 +28,10 @@ public class PipedOutputStreamStateMachine extends TypeStateMachineWeightFunctio
 			return false;
 		}
 
+		@Override
+		public boolean isAccepting() {
+			return false;
+		}
 	}
 
 	PipedOutputStreamStateMachine() {

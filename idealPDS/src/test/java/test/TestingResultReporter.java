@@ -6,20 +6,19 @@ import java.util.Set;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
-import boomerang.ForwardQuery;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
-import ideal.ResultReporter;
 import soot.Unit;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
-import typestate.TransitionFunction;
+import sync.pds.solver.nodes.Node;
 import wpds.impl.Transition;
+import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAUpdateListener;
 
-public class TestingResultReporter implements ResultReporter<TransitionFunction>{
+public class TestingResultReporter<W extends Weight>{
 	private Multimap<Unit, Assertion> stmtToResults = HashMultimap.create();
 	public TestingResultReporter(Set<Assertion> expectedResults) {
 		for(Assertion e : expectedResults){
@@ -28,13 +27,12 @@ public class TestingResultReporter implements ResultReporter<TransitionFunction>
 		}
 	}
 
-	@Override
-	public void onSeedFinished(ForwardQuery seed,final AbstractBoomerangSolver<TransitionFunction> seedSolver) {
+	public void onSeedFinished(Node<Statement,Val> seed,final AbstractBoomerangSolver<W> seedSolver) {
 		for(final Entry<Unit, Assertion> e : stmtToResults.entries()){
 			if(e.getValue() instanceof ComparableResult){
-				final ComparableResult<TransitionFunction> expectedResults = (ComparableResult) e.getValue();
+				final ComparableResult<W,Val> expectedResults = (ComparableResult) e.getValue();
 //				System.out.println(Joiner.on("\n").join(seedSolver.getNodesToWeights().entrySet()));
-				WeightedPAutomaton<Statement, INode<Val>, TransitionFunction> aut = new WeightedPAutomaton<Statement, INode<Val>, TransitionFunction>(null) {
+				WeightedPAutomaton<Statement, INode<Val>, W> aut = new WeightedPAutomaton<Statement, INode<Val>, W>(null) {
 					@Override
 					public INode<Val> createState(INode<Val> d, Statement loc) {
 						return null;
@@ -51,12 +49,12 @@ public class TestingResultReporter implements ResultReporter<TransitionFunction>
 					}
 
 					@Override
-					public TransitionFunction getZero() {
+					public W getZero() {
 						return seedSolver.getCallAutomaton().getZero();
 					}
 
 					@Override
-					public TransitionFunction getOne() {
+					public W getOne() {
 						return seedSolver.getCallAutomaton().getOne();
 					}
 				};
@@ -72,11 +70,11 @@ public class TestingResultReporter implements ResultReporter<TransitionFunction>
 //						}
 //					}
 //				}
-				seedSolver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, TransitionFunction>() {
+				seedSolver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
 					
 					@Override
-					public void onWeightAdded(Transition<Statement, INode<Val>> t, TransitionFunction w,
-							WeightedPAutomaton<Statement, INode<Val>, TransitionFunction> aut) {
+					public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
+							WeightedPAutomaton<Statement, INode<Val>, W> aut) {
 						if((t.getStart() instanceof GeneratedState)  || !t.getStart().fact().equals(expectedResults.getVal()))
 							return;
 						if(t.getLabel().getUnit().isPresent()){

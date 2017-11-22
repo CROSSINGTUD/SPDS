@@ -1,9 +1,8 @@
 package test;
 
-import boomerang.jimple.Val;
 import soot.Unit;
 
-public abstract class ExpectedResults<State> implements Assertion, ComparableResult<State>{
+public abstract class ExpectedResults<State, Val> implements Assertion, ComparableResult<State,Val>{
 	final Unit unit;
 	final Val val;
 	final InternalState state;

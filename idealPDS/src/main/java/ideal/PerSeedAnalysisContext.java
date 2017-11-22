@@ -32,8 +32,6 @@ public class PerSeedAnalysisContext<W extends Weight> {
 	private final IDEALWeightFunctions<W> idealWeightFunctions;
 	private final W zero;
 	private final W one;
-	private WeightedBoomerang<W> phase1Solver;
-	private WeightedBoomerang<W> phase2Solver;
 	public static enum Phases {
 		ObjectFlow, ValueFlow
 	};
@@ -46,9 +44,9 @@ public class PerSeedAnalysisContext<W extends Weight> {
 		this.one = analysisDefinition.weightFunctions().getOne();
 	}
 
-	public void run() {
-		phase1Solver = runPhase(Phases.ObjectFlow);
-		phase2Solver = runPhase(Phases.ValueFlow);
+	public WeightedBoomerang<W> run() {
+		runPhase(Phases.ObjectFlow);
+		return runPhase(Phases.ValueFlow);
 	}
 
 	private WeightedBoomerang<W> runPhase(final Phases phase) {
@@ -121,19 +119,8 @@ public class PerSeedAnalysisContext<W extends Weight> {
 		});
 		System.out.println("");
 		boomerang.debugOutput();
-		if(phase.equals(Phases.ValueFlow)){
-			for(Query q : boomerang.getSolvers().keySet()){
-				if(q.equals(seed)){
-//					System.out.println(boomerang.getSolvers().get(q).getCallAutomaton().toDotString());
-					analysisDefinition.resultReporter().onSeedFinished((ForwardQuery)q, boomerang.getSolvers().getOrCreate(q));
-				}
-			}
-		}
-		return boomerang;
-	}
 
-	public Map<Node<Statement, Val>, W> getResults() {
-		return phase2Solver.getResults();
+		return boomerang;
 	}
 
 }

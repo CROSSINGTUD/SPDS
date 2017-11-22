@@ -30,6 +30,11 @@ public class SocketStateMachine extends TypeStateMachineWeightFunctions{
 		public boolean isInitialState() {
 			return false;
 		}
+
+		@Override
+		public boolean isAccepting() {
+			return false;
+		}
 	}
 	public SocketStateMachine() {
 		addTransition(

@@ -32,6 +32,11 @@ public class InputStreamStateMachine extends TypeStateMachineWeightFunctions{
 			// TODO Auto-generated method stub
 			return false;
 		}
+
+		@Override
+		public boolean isAccepting() {
+			return false;
+		}
 	}
 
 	InputStreamStateMachine() {

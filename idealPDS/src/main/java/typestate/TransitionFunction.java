@@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import typestate.finiteautomata.ITransition;
+import typestate.finiteautomata.State;
 import typestate.finiteautomata.Transition;
 import wpds.impl.Weight;
 
@@ -138,6 +139,14 @@ public class TransitionFunction extends Weight {
 		} else if (!value.equals(other.value))
 			return false;
 		return true;
+	}
+
+	public Collection<State> getStates() {
+		Set<State> states = Sets.newHashSet();
+		for(ITransition t : values()){
+			states.add(t.to());
+		}
+		return states;
 	}
 
 }

@@ -29,6 +29,11 @@ public class PrintStreamStateMachine extends TypeStateMachineWeightFunctions {
 		public boolean isInitialState() {
 			return false;
 		}
+
+		@Override
+		public boolean isAccepting() {
+			return false;
+		}
 	}
 
 	PrintStreamStateMachine() {

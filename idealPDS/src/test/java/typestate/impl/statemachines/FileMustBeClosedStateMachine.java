@@ -27,6 +27,11 @@ public class FileMustBeClosedStateMachine extends TypeStateMachineWeightFunction
 		return false;
 	}
 
+	@Override
+	public boolean isAccepting() {
+		return false;
+	}
+
   }
 
   public FileMustBeClosedStateMachine() {

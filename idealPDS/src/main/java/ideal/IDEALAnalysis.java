@@ -2,8 +2,12 @@ package ideal;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Maps;
+
+import boomerang.WeightedBoomerang;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
@@ -31,7 +35,7 @@ public class IDEALAnalysis<W extends Weight> {
 		this.icfg = analysisDefinition.icfg();
 	}
 
-	public void run() {
+	public Map<Node<Statement, Val>, WeightedBoomerang<W>> run() {
 		printOptions();
 		long before = System.currentTimeMillis();
 		Set<Node<Statement,Val>> initialSeeds = computeSeeds();
@@ -41,15 +45,15 @@ public class IDEALAnalysis<W extends Weight> {
 			System.err.println("No seeds found!");
 		else
 			System.err.println("Analysing " + initialSeeds.size() + " seeds!");
-		
+		Map<Node<Statement,Val>, WeightedBoomerang<W>> seedToSolver = Maps.newHashMap();
 		for (Node<Statement, Val> seed : initialSeeds) {
-			run(seed);
+			seedToSolver.put(seed, run(seed));
 		}
+		return seedToSolver;
 	}
-	public PerSeedAnalysisContext<W> run(Node<Statement, Val> seed) {
+	public WeightedBoomerang<W> run(Node<Statement, Val> seed) {
 		PerSeedAnalysisContext<W> idealAnalysis = new PerSeedAnalysisContext<W>(analysisDefinition, seed);
-		idealAnalysis.run();
-		return idealAnalysis;
+		return idealAnalysis.run();
 	}
 	private void printOptions() {
 		if(PRINT_OPTIONS)

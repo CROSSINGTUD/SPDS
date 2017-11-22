@@ -11,7 +11,7 @@ import typestate.finiteautomata.ITransition;
 import typestate.finiteautomata.State;
 import typestate.finiteautomata.Transition;
 
-public class MustBe extends ExpectedResults<TransitionFunction> {
+public class MustBe extends ExpectedResults<TransitionFunction,Val> {
 
 	MustBe(Unit unit, Val val, InternalState state) {
 		super(unit, val, state);

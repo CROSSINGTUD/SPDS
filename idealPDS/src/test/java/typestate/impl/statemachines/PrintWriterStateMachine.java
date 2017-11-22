@@ -30,6 +30,10 @@ public class PrintWriterStateMachine extends TypeStateMachineWeightFunctions{
 			return false;
 		}
 
+		@Override
+		public boolean isAccepting() {
+			return false;
+		}
 	}
 
 	public PrintWriterStateMachine() {
