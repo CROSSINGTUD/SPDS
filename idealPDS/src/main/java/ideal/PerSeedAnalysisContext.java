@@ -28,7 +28,7 @@ import wpds.impl.WeightedPAutomaton;
 public class PerSeedAnalysisContext<W extends Weight> {
 
 	private final IDEALAnalysisDefinition<W> analysisDefinition;
-	private final ForwardQuery seed;
+	private final Query seed;
 	private final IDEALWeightFunctions<W> idealWeightFunctions;
 	private final W zero;
 	private final W one;
@@ -36,9 +36,9 @@ public class PerSeedAnalysisContext<W extends Weight> {
 		ObjectFlow, ValueFlow
 	};
 
-	public PerSeedAnalysisContext(IDEALAnalysisDefinition<W> analysisDefinition, Node<Statement, Val> seed) {
+	public PerSeedAnalysisContext(IDEALAnalysisDefinition<W> analysisDefinition, Query seed) {
 		this.analysisDefinition = analysisDefinition;
-		this.seed = new ForwardQuery(seed.stmt(), seed.fact());
+		this.seed = seed;
 		this.idealWeightFunctions = new IDEALWeightFunctions<W>(analysisDefinition.weightFunctions());
 		this.zero = analysisDefinition.weightFunctions().getZero();
 		this.one = analysisDefinition.weightFunctions().getOne();
@@ -50,7 +50,7 @@ public class PerSeedAnalysisContext<W extends Weight> {
 	}
 
 	private WeightedBoomerang<W> runPhase(final Phases phase) {
-		System.out.println("STARTING PHASE " + phase);
+//		System.out.println("STARTING PHASE " + phase);
 		final WeightedBoomerang<W> boomerang = new WeightedBoomerang<W>() {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
@@ -117,7 +117,7 @@ public class PerSeedAnalysisContext<W extends Weight> {
 				}
 			}
 		});
-		System.out.println("");
+//		System.out.println("");
 		boomerang.debugOutput();
 
 		return boomerang;

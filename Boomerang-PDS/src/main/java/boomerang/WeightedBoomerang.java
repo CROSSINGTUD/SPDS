@@ -10,10 +10,12 @@ import java.util.Set;
 
 import com.beust.jcommander.internal.Maps;
 import com.google.common.base.Optional;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 
 import boomerang.customize.BackwardEmptyCalleeFlow;
 import boomerang.customize.EmptyCalleeFlow;
@@ -65,7 +67,7 @@ import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedBoomerang<W extends Weight> implements MethodReachableQueue {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private boolean first;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
@@ -291,7 +293,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return false;
 	}
 
-	protected AbstractBoomerangSolver<W> createForwardSolver(final ForwardQuery sourceQuery) {
+	protected ForwardBoomerangSolver<W> createForwardSolver(final ForwardQuery sourceQuery) {
 		final ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(WeightedBoomerang.this, icfg(), sourceQuery,
 				genField, options, createCallSummaries(sourceQuery, forwardCallSummaries),
 				 createFieldSummaries(sourceQuery, forwardFieldSummaries)) {
@@ -1329,8 +1331,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return queryToSolvers;
 	}
 
-	public Map<Node<Statement,Val>, W> getResults(){
-		final Map<Node<Statement,Val>, W> results = Maps.newHashMap();
+	public Table<Statement,Val, W> getResults(){
+		final Table<Statement,Val, W> results = HashBasedTable.create();
 		for (final Entry<Query, AbstractBoomerangSolver<W>> fw : queryToSolvers.entrySet()) {
 			if(fw.getKey() instanceof ForwardQuery){
 				fw.getValue().getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(fw.getValue().getFieldAutomaton().getInitialState()) {
@@ -1344,7 +1346,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
 						if(t.getLabel().equals(Field.empty())){
-							results.put(fw.getKey().asNode(), w);
+							results.put(fw.getKey().stmt(),fw.getKey().var(), w);
 						}
 					}
 				});
@@ -1353,8 +1355,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return results;
 	}
 
-	public Set<Node<Statement,Val>> getResults(final BackwardQuery query){
-		final Set<Node<Statement,Val>> results = Sets.newHashSet();
+	public Table<Statement,Val, W> getResults(final Query query){
+		final Table<Statement,Val, W> results = HashBasedTable.create();
 		for (final Entry<Query, AbstractBoomerangSolver<W>> fw : queryToSolvers.entrySet()) {
 			if(fw.getKey() instanceof ForwardQuery){
 				fw.getValue().getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(fw.getValue().getFieldAutomaton().getInitialState()) {
@@ -1368,7 +1370,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
 						if(t.getLabel().equals(Field.empty()) && t.getStart().fact().equals(query.asNode())){
-							results.add(fw.getKey().asNode());
+							results.put(fw.getKey().stmt(),fw.getKey().var(), w);
 						}
 					}
 				});
@@ -1377,9 +1379,37 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return results;
 	}
 	
-	public Map<Node<Statement, Val>, W> getObjectDestructingStatements(
-			ForwardQuery analysisSeedWithSpecification) {
-		return null;
+	public Table<Statement, Val, W>  getObjectDestructingStatements(
+			ForwardQuery seed) {
+		AbstractBoomerangSolver<W> solver = queryToSolvers.get(seed);
+		if(solver == null)
+			return HashBasedTable.create();
+		Table<Statement, Val, W> res = getResults(seed);
+		ForwardBoomerangSolver<W> flowFunction = createForwardSolver(seed);
+		Table<Statement, Val, W> destructingStatement = HashBasedTable.create();
+		for(SootMethod flowReaches : flowReachable){
+			for(Unit ep : icfg().getEndPointsOf(flowReaches)){
+				Statement exitStmt = new Statement((Stmt) ep, flowReaches);
+				Set<State> escapes = Sets.newHashSet();
+				for(Unit callSite : icfg().getCallersOf(flowReaches)){
+					SootMethod callee = icfg().getMethodOf(callSite);
+					if(flowReachable.contains(callee)){
+						for(Entry<Val, W> valAndW : res.row(exitStmt).entrySet()){
+							for(Unit retSite : icfg().getSuccsOf(callSite)){
+								escapes.addAll(flowFunction.computeReturnFlow(flowReaches, (Stmt) ep, valAndW.getKey(), (Stmt) callSite, (Stmt) retSite));
+							}
+						}
+					}
+				}
+				if(escapes.isEmpty()){
+					Map<Val, W> row = res.row(exitStmt);
+					for(Entry<Val, W> e : row.entrySet()){
+						destructingStatement.put(exitStmt, e.getKey(), e.getValue());
+					}
+				}
+			}
+		}
+		return destructingStatement;
 	}
 	
 	public abstract Debugger<W> createDebugger();
@@ -1399,14 +1429,14 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		// System.out.println(q +" Call Aut (failed Additions): " +
 		// queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
 		// }
+		if (!DEBUG)
+			return;
 
 		int totalRules = 0;
 		for (Query q : queryToSolvers.keySet()) {
 			totalRules += queryToSolvers.getOrCreate(q).getNumberOfRules();
 		}
 		System.out.println("Total number of rules: " + totalRules);
-		if (!DEBUG)
-			return;
 		Debugger<W> debugger = createDebugger();
 		for (Query q : queryToSolvers.keySet()) {
 			debugger.reachableNodes(q, queryToSolvers.getOrCreate(q).getTransitionsToFinalWeights());

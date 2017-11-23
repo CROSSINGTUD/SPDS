@@ -7,6 +7,8 @@ import java.util.Set;
 
 import com.google.common.collect.Maps;
 
+import boomerang.ForwardQuery;
+import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -47,11 +49,11 @@ public class IDEALAnalysis<W extends Weight> {
 			System.err.println("Analysing " + initialSeeds.size() + " seeds!");
 		Map<Node<Statement,Val>, WeightedBoomerang<W>> seedToSolver = Maps.newHashMap();
 		for (Node<Statement, Val> seed : initialSeeds) {
-			seedToSolver.put(seed, run(seed));
+			seedToSolver.put(seed, run(new ForwardQuery(seed.stmt(),seed.fact())));
 		}
 		return seedToSolver;
 	}
-	public WeightedBoomerang<W> run(Node<Statement, Val> seed) {
+	public WeightedBoomerang<W> run(Query seed) {
 		PerSeedAnalysisContext<W> idealAnalysis = new PerSeedAnalysisContext<W>(analysisDefinition, seed);
 		return idealAnalysis.run();
 	}
