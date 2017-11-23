@@ -141,12 +141,4 @@ public class TransitionFunction extends Weight {
 		return true;
 	}
 
-	public Collection<State> getStates() {
-		Set<State> states = Sets.newHashSet();
-		for(ITransition t : values()){
-			states.add(t.to());
-		}
-		return states;
-	}
-
 }
