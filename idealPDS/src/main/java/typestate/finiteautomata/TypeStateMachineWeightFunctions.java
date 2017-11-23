@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.Sets;
 
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -20,6 +21,7 @@ import soot.Unit;
 import soot.Value;
 import soot.jimple.AssignStmt;
 import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.InvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.Stmt;
 import sync.pds.solver.WeightFunctions;
@@ -55,29 +57,30 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 	
 	@Override
 	public TransitionFunction normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
+		if(curr.stmt().getUnit().isPresent()){
+			if(curr.stmt().getUnit().get().containsInvokeExpr()){
+				return callToReturn(curr,succ, curr.stmt().getUnit().get().getInvokeExpr());
+			}
+		}
 		return getOne();
 	}
 	
 
-//	public Set<Transition<State>> getCallToReturnTransitionsFor(AccessGraph d1, Unit callSite, AccessGraph d2,
-//			Unit returnSite, AccessGraph d3) {
-//		Set<Transition<State>> res = new HashSet<>();
-//		if(callSite instanceof Stmt){
-//			Stmt stmt = (Stmt) callSite;
-//			if(stmt.containsInvokeExpr() && stmt.getInvokeExpr() instanceof InstanceInvokeExpr){
-//				SootMethod method = stmt.getInvokeExpr().getMethod();
-//				InstanceInvokeExpr e = (InstanceInvokeExpr)stmt.getInvokeExpr();
-//				if(e.getBase().equals(d2.getBase())){
-//					for (MatcherTransition<State> trans : transition) {
-//						if(trans.matches(method) && trans.getType().equals(Type.OnCallToReturn)){
-//							res.add(trans);
-//						}
-//					}	
-//				}
-//			}
-//		}
-//		return res;
-//	}
+	public TransitionFunction callToReturn(Node<Statement, Val> curr, Node<Statement, Val> succ, InvokeExpr invokeExpr) {
+		Set<Transition> res = Sets.newHashSet();
+		if(invokeExpr instanceof InstanceInvokeExpr){
+			SootMethod method = invokeExpr.getMethod();
+			InstanceInvokeExpr e = (InstanceInvokeExpr) invokeExpr;
+			if(e.getBase().equals(curr.fact().value())){
+				for (MatcherTransition trans : transition) {
+					if(trans.matches(method) && trans.getType().equals(Type.OnCallToReturn)){
+						res.add(trans);
+					}
+				}	
+			}
+		}
+		return (res.isEmpty() ? getOne() : new TransitionFunction(res));
+	}
 
 	private TransitionFunction getMatchingTransitions(SootMethod method, Val node, Type type) {
 		Set<ITransition> res = new HashSet<>();

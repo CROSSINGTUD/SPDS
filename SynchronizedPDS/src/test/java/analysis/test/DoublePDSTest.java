@@ -61,7 +61,7 @@ public class DoublePDSTest {
 	private FieldRef epsilonField = new FieldRef("eps_f");
 	private Statement epsilonCallSite = new Statement(-1);
 	
-	private SyncPDSSolver<Statement, Variable, FieldRef, NoWeight> solver = new SyncPDSSolver<Statement, Variable, FieldRef, NoWeight>(new SingleNode<Variable>(new Variable("u")), new SingleNode<Node<Statement,Variable>>(node(1,"u")), new SummaryNestedWeightedPAutomatons<Statement,INode<Variable>,NoWeight>(),new SummaryNestedWeightedPAutomatons<FieldRef,INode<Node<Statement,Variable>>,NoWeight>()) {
+	private SyncPDSSolver<Statement, Variable, FieldRef, NoWeight> solver = new SyncPDSSolver<Statement, Variable, FieldRef, NoWeight>(new SingleNode<Variable>(new Variable("u")), new SingleNode<Node<Statement,Variable>>(node(1,"u")), false, new SummaryNestedWeightedPAutomatons<Statement,INode<Variable>,NoWeight>(),false, new SummaryNestedWeightedPAutomatons<FieldRef,INode<Node<Statement,Variable>>,NoWeight>()) {
 
 		@Override
 		public Collection<State> computeSuccessor(Node<Statement, Variable> node) {
