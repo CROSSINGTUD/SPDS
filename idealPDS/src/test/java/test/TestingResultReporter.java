@@ -59,31 +59,32 @@ public class TestingResultReporter<W extends Weight>{
 					}
 				};
 				
-//				for(Entry<Transition<Statement, INode<Val>>, TransitionFunction> s : seedSolver.getTransitionsToFinalWeights().entrySet()){
-//					aut.addWeightForTransition(s.getKey(), s.getValue());
-//					Transition<Statement, INode<Val>> node = s.getKey();
-//					if((node.getStart() instanceof GeneratedState)  || !node.getStart().fact().equals(expectedResults.getVal()))
-//						continue;
-//					if(node.getLabel().getUnit().isPresent()){
-//						if(node.getLabel().getUnit().get().equals(e.getKey())){
-//							expectedResults.computedResults(s.getValue());
-//						}
-//					}
-//				}
-				seedSolver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
-					
-					@Override
-					public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
-							WeightedPAutomaton<Statement, INode<Val>, W> aut) {
-						if((t.getStart() instanceof GeneratedState)  || !t.getStart().fact().equals(expectedResults.getVal()))
-							return;
-						if(t.getLabel().getUnit().isPresent()){
-							if(t.getLabel().getUnit().get().equals(e.getKey())){
-								expectedResults.computedResults(w);
-							}
+				for(Entry<Transition<Statement, INode<Val>>, W> s : seedSolver.getTransitionsToFinalWeights().entrySet()){
+					Transition<Statement, INode<Val>> t = s.getKey();
+					W w = s.getValue();
+					aut.addWeightForTransition(t, w);
+					if((t.getStart() instanceof GeneratedState)  || !t.getStart().fact().equals(expectedResults.getVal()))
+						continue;
+					if(t.getLabel().getUnit().isPresent()){
+						if(t.getLabel().getUnit().get().equals(e.getKey())){
+							expectedResults.computedResults(w);
 						}
 					}
-				});
+				}
+//				seedSolver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
+//					
+//					@Override
+//					public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
+//							WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+//						if((t.getStart() instanceof GeneratedState)  || !t.getStart().fact().equals(expectedResults.getVal()))
+//							return;
+//						if(t.getLabel().getUnit().isPresent()){
+//							if(t.getLabel().getUnit().get().equals(e.getKey())){
+//								expectedResults.computedResults(w);
+//							}
+//						}
+//					}
+//				});
 				System.out.println("FINAL WEIGHT AUTOMATON");
 				System.out.println(aut.toDotString());
 			}
