@@ -58,8 +58,8 @@ public class Val {
 			return true;
 		if (obj == null)
 			return false;
-		if (getClass() != obj.getClass())
-			return false;
+//		if (getClass() != obj.getClass())
+//			return false;
 		Val other = (Val) obj;
 //		if (m == null) {
 //			if (other.m != null)

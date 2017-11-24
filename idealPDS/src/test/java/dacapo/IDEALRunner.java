@@ -4,14 +4,12 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import boomerang.ForwardQuery;
 import boomerang.debugger.Debugger;
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import boomerang.solver.AbstractBoomerangSolver;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
-import ideal.ResultReporter;
 import soot.G;
 import soot.PackManager;
 import soot.Scene;
@@ -42,25 +40,13 @@ public class IDEALRunner  extends ResearchQuestion  {
 		return new IDEALAnalysis<TransitionFunction>(new IDEALAnalysisDefinition<TransitionFunction>() {
 
 			@Override
-			public Collection<Val> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
+			public Collection<AllocVal> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
 				return genericsType.generateSeed(method, stmt, calledMethod);
 			}
 
 			@Override
 			public WeightFunctions<Statement, Val, Statement, TransitionFunction> weightFunctions() {
 				return genericsType;
-			}
-
-			@Override
-			public ResultReporter<TransitionFunction> resultReporter() {
-				return new ResultReporter<TransitionFunction>() {
-
-					@Override
-					public void onSeedFinished(ForwardQuery seed,
-							AbstractBoomerangSolver<TransitionFunction> seedSolver) {
-						System.out.println("Seed finished " + seed);
-					}
-				};
 			}
 
 			@Override
