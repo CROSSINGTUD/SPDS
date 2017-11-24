@@ -46,7 +46,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 				|| type.toString().equals("java.lang.StringBuffer");
 	}
 
-	private boolean isArrayAllocationVal(Value val) {
+	protected boolean isArrayAllocationVal(Value val) {
 		if(val instanceof NewArrayExpr){
 			NewArrayExpr expr = (NewArrayExpr) val;
 			return expr.getBaseType() instanceof RefType;
