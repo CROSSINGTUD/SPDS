@@ -1,5 +1,6 @@
 package ideal;
 
+import java.util.Map;
 import java.util.Map.Entry;
 
 import boomerang.BackwardQuery;
@@ -19,6 +20,7 @@ import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import typestate.TransitionFunction;
 import wpds.impl.ConnectPushListener;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -26,7 +28,7 @@ import wpds.impl.WeightedPAutomaton;
 public class PerSeedAnalysisContext<W extends Weight> {
 
 	private final IDEALAnalysisDefinition<W> analysisDefinition;
-	private final ForwardQuery seed;
+	private final Query seed;
 	private final IDEALWeightFunctions<W> idealWeightFunctions;
 	private final W zero;
 	private final W one;
@@ -34,21 +36,21 @@ public class PerSeedAnalysisContext<W extends Weight> {
 		ObjectFlow, ValueFlow
 	};
 
-	public PerSeedAnalysisContext(IDEALAnalysisDefinition<W> analysisDefinition, Node<Statement, Val> seed) {
+	public PerSeedAnalysisContext(IDEALAnalysisDefinition<W> analysisDefinition, Query seed) {
 		this.analysisDefinition = analysisDefinition;
-		this.seed = new ForwardQuery(seed.stmt(), seed.fact());
+		this.seed = seed;
 		this.idealWeightFunctions = new IDEALWeightFunctions<W>(analysisDefinition.weightFunctions());
 		this.zero = analysisDefinition.weightFunctions().getZero();
 		this.one = analysisDefinition.weightFunctions().getOne();
 	}
 
-	public void run() {
+	public WeightedBoomerang<W> run() {
 		runPhase(Phases.ObjectFlow);
-		runPhase(Phases.ValueFlow);
+		return runPhase(Phases.ValueFlow);
 	}
 
-	private void runPhase(final Phases phase) {
-		System.out.println("STARTING PHASE " + phase);
+	private WeightedBoomerang<W> runPhase(final Phases phase) {
+//		System.out.println("STARTING PHASE " + phase);
 		final WeightedBoomerang<W> boomerang = new WeightedBoomerang<W>() {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
@@ -106,7 +108,6 @@ public class PerSeedAnalysisContext<W extends Weight> {
 							@Override
 							public void witnessFound(Node<Statement, Val> targetFact) {
 								if(!e.getKey().asNode().equals(seed.asNode())){
-									System.out.println("No strong update " + curr);
 									idealWeightFunctions.weakUpdate(curr.stmt());
 								}
 							}
@@ -115,16 +116,10 @@ public class PerSeedAnalysisContext<W extends Weight> {
 				}
 			}
 		});
-		System.out.println("");
+//		System.out.println("");
 		boomerang.debugOutput();
-		if(phase.equals(Phases.ValueFlow)){
-			for(Query q : boomerang.getSolvers().keySet()){
-				if(q.equals(seed)){
-//					System.out.println(boomerang.getSolvers().get(q).getCallAutomaton().toDotString());
-					analysisDefinition.resultReporter().onSeedFinished((ForwardQuery)q, boomerang.getSolvers().getOrCreate(q));
-				}
-			}
-		}
+
+		return boomerang;
 	}
 
 }

@@ -8,13 +8,15 @@ import java.util.Set;
 
 import com.google.common.collect.Lists;
 
+import boomerang.Query;
+import boomerang.WeightedBoomerang;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
-import ideal.ResultReporter;
 import soot.Body;
 import soot.SceneTransformer;
 import soot.SootMethod;
@@ -23,7 +25,9 @@ import soot.Value;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
+import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.WeightFunctions;
+import sync.pds.solver.nodes.Node;
 import test.ExpectedResults.InternalState;
 import test.core.selfrunning.AbstractTestingFramework;
 import test.core.selfrunning.ImprecisionException;
@@ -33,7 +37,6 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected JimpleBasedInterproceduralCFG icfg;
 	protected long analysisTime;
-	protected TestingResultReporter testingResultReporter;
 
 	protected abstract TypeStateMachineWeightFunctions getStateMachine();
 
@@ -68,14 +71,8 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				return false;
 			}
 
-
 			@Override
-			public ResultReporter<TransitionFunction> resultReporter() {
-				return testingResultReporter;
-			}
-
-			@Override
-			public Collection<Val> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
+			public Collection<AllocVal> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
 				return  IDEALTestingFramework.this.getStateMachine().generateSeed(method, stmt, calledMethod);
 			}
 
@@ -98,9 +95,17 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				icfg = new JimpleBasedInterproceduralCFG(true);
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
 				System.out.println(sootTestMethod.getActiveBody());
-				testingResultReporter = new TestingResultReporter(expectedResults);
+				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				
-				executeAnalysis();
+				Map<Node<Statement, AllocVal>, WeightedBoomerang<TransitionFunction>> seedToSolvers = executeAnalysis();
+				for(Node<Statement, AllocVal> seed : seedToSolvers.keySet()){
+					System.out.println("SEED "+  seed);
+					for(Query q : seedToSolvers.get(seed).getSolvers().keySet()){
+//						if(q.asNode().equals(seed)){
+							testingResultReporter.onSeedFinished(q.asNode(), seedToSolvers.get(seed).getSolvers().getOrCreate(q));
+//						}
+					}
+				}
 				List<Assertion> unsound = Lists.newLinkedList();
 				List<Assertion> imprecise = Lists.newLinkedList();
 				for (Assertion r : expectedResults) {
@@ -122,8 +127,8 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		};
 	}
 
-	protected void executeAnalysis() {
-		IDEALTestingFramework.this.createAnalysis().run();
+	protected Map<Node<Statement, AllocVal>, WeightedBoomerang<TransitionFunction>> executeAnalysis() {
+		return IDEALTestingFramework.this.createAnalysis().run();
 	}
 
 	private Set<Assertion> parseExpectedQueryResults(SootMethod sootTestMethod) {

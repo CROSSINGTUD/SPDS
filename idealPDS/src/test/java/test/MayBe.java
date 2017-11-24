@@ -7,7 +7,7 @@ import typestate.finiteautomata.ITransition;
 import typestate.finiteautomata.State;
 import typestate.finiteautomata.Transition;
 
-public class MayBe extends ExpectedResults<TransitionFunction> {
+public class MayBe extends ExpectedResults<TransitionFunction,Val> {
 
 	MayBe(Unit unit, Val accessGraph, InternalState state) {
 		super(unit, accessGraph, state);

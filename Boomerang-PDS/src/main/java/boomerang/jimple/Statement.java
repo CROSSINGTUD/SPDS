@@ -40,6 +40,10 @@ public class Statement implements Location {
 			return Optional.absent();
 		return Optional.of(delegate);
 	}
+	
+	public boolean isCallsite(){
+		return delegate != null && delegate.containsInvokeExpr();
+	}
 
 	@Override
 	public int hashCode() {

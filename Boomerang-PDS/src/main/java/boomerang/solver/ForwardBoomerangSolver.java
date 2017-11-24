@@ -21,6 +21,7 @@ import heros.InterproceduralCFG;
 import soot.Body;
 import soot.EquivalentValue;
 import soot.Local;
+import soot.RefType;
 import soot.Scene;
 import soot.SootMethod;
 import soot.Type;
@@ -235,6 +236,9 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		Val varVal = t.getStart().fact().fact();
 		if(allocVal.isStatic() || varVal.isStatic()){
 			return false;
+		}
+		if(!(allocVal.value().getType() instanceof RefType)){
+			return false;//!allocVal.value().getType().equals(varVal.value().getType());
 		}
 		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(allocVal.value().getType(),varVal.value().getType());
 		return !castFails;

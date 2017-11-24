@@ -6,6 +6,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
 import soot.Scene;
 import soot.SootClass;
@@ -32,6 +33,10 @@ public class OutputStreamStateMachine extends TypeStateMachineWeightFunctions{
 			return false;
 		}
 
+		@Override
+		public boolean isAccepting() {
+			return false;
+		}
 	}
 
 	public OutputStreamStateMachine() {
@@ -75,7 +80,7 @@ public class OutputStreamStateMachine extends TypeStateMachineWeightFunctions{
 	}
 
 	@Override
-	public Collection<Val> generateSeed(SootMethod method, Unit unit,
+	public Collection<AllocVal> generateSeed(SootMethod method, Unit unit,
 			Collection<SootMethod> calledMethod) {
 		return generateThisAtAnyCallSitesOf(method, unit,calledMethod,constructors());
 	}

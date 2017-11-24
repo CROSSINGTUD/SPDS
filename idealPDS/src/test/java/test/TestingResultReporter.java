@@ -6,20 +6,19 @@ import java.util.Set;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 
-import boomerang.ForwardQuery;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
-import ideal.ResultReporter;
 import soot.Unit;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
-import typestate.TransitionFunction;
+import sync.pds.solver.nodes.Node;
 import wpds.impl.Transition;
+import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAUpdateListener;
 
-public class TestingResultReporter implements ResultReporter<TransitionFunction>{
+public class TestingResultReporter<W extends Weight>{
 	private Multimap<Unit, Assertion> stmtToResults = HashMultimap.create();
 	public TestingResultReporter(Set<Assertion> expectedResults) {
 		for(Assertion e : expectedResults){
@@ -28,68 +27,25 @@ public class TestingResultReporter implements ResultReporter<TransitionFunction>
 		}
 	}
 
-	@Override
-	public void onSeedFinished(ForwardQuery seed,final AbstractBoomerangSolver<TransitionFunction> seedSolver) {
+	public void onSeedFinished(Node<Statement,Val> seed,final AbstractBoomerangSolver<W> seedSolver) {
 		for(final Entry<Unit, Assertion> e : stmtToResults.entries()){
 			if(e.getValue() instanceof ComparableResult){
-				final ComparableResult<TransitionFunction> expectedResults = (ComparableResult) e.getValue();
-//				System.out.println(Joiner.on("\n").join(seedSolver.getNodesToWeights().entrySet()));
-				WeightedPAutomaton<Statement, INode<Val>, TransitionFunction> aut = new WeightedPAutomaton<Statement, INode<Val>, TransitionFunction>(null) {
-					@Override
-					public INode<Val> createState(INode<Val> d, Statement loc) {
-						return null;
-					}
-
-					@Override
-					public boolean isGeneratedState(INode<Val> d) {
-						return false;
-					}
-
-					@Override
-					public Statement epsilon() {
-						return seedSolver.getCallAutomaton().epsilon();
-					}
-
-					@Override
-					public TransitionFunction getZero() {
-						return seedSolver.getCallAutomaton().getZero();
-					}
-
-					@Override
-					public TransitionFunction getOne() {
-						return seedSolver.getCallAutomaton().getOne();
-					}
-				};
-				
-//				for(Entry<Transition<Statement, INode<Val>>, TransitionFunction> s : seedSolver.getTransitionsToFinalWeights().entrySet()){
-//					aut.addWeightForTransition(s.getKey(), s.getValue());
-//					Transition<Statement, INode<Val>> node = s.getKey();
-//					if((node.getStart() instanceof GeneratedState)  || !node.getStart().fact().equals(expectedResults.getVal()))
-//						continue;
-//					if(node.getLabel().getUnit().isPresent()){
-//						if(node.getLabel().getUnit().get().equals(e.getKey())){
-//							expectedResults.computedResults(s.getValue());
-//						}
-//					}
-//				}
-				seedSolver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, TransitionFunction>() {
-					
-					@Override
-					public void onWeightAdded(Transition<Statement, INode<Val>> t, TransitionFunction w,
-							WeightedPAutomaton<Statement, INode<Val>, TransitionFunction> aut) {
-						if((t.getStart() instanceof GeneratedState)  || !t.getStart().fact().equals(expectedResults.getVal()))
-							return;
-						if(t.getLabel().getUnit().isPresent()){
-							if(t.getLabel().getUnit().get().equals(e.getKey())){
-								expectedResults.computedResults(w);
-							}
+				final ComparableResult<W,Val> expectedResults = (ComparableResult) e.getValue();
+				for(Entry<Transition<Statement, INode<Val>>, W> s : seedSolver.getTransitionsToFinalWeights().entrySet()){
+					Transition<Statement, INode<Val>> t = s.getKey();
+					W w = s.getValue();
+					if((t.getStart() instanceof GeneratedState)  || !t.getStart().fact().equals(expectedResults.getVal()))
+						continue;
+					if(t.getLabel().getUnit().isPresent()){
+						if(t.getLabel().getUnit().get().equals(e.getKey())){
+							expectedResults.computedResults(w);
 						}
 					}
-				});
-				System.out.println("FINAL WEIGHT AUTOMATON");
-				System.out.println(aut.toDotString());
+				}
 			}
 		}
+		System.out.println(seed);
+		System.out.println(seedSolver.getTransitionsToFinalWeights());
 	}
 
 

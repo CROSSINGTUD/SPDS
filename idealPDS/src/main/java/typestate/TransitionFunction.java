@@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import typestate.finiteautomata.ITransition;
+import typestate.finiteautomata.State;
 import typestate.finiteautomata.Transition;
 import wpds.impl.Weight;
 

@@ -2,8 +2,15 @@ package ideal;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
+import com.google.common.collect.Maps;
+
+import boomerang.ForwardQuery;
+import boomerang.Query;
+import boomerang.WeightedBoomerang;
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
@@ -31,29 +38,33 @@ public class IDEALAnalysis<W extends Weight> {
 		this.icfg = analysisDefinition.icfg();
 	}
 
-	public void run() {
+	public Map<Node<Statement, AllocVal>, WeightedBoomerang<W>> run() {
 		printOptions();
 		long before = System.currentTimeMillis();
-		Set<Node<Statement,Val>> initialSeeds = computeSeeds();
+		Set<Node<Statement,AllocVal>> initialSeeds = computeSeeds();
 		long after = System.currentTimeMillis();
 		System.out.println("Computed seeds in: "+ (after-before)  + " ms");
 		if (initialSeeds.isEmpty())
 			System.err.println("No seeds found!");
 		else
 			System.err.println("Analysing " + initialSeeds.size() + " seeds!");
-		
-		for (Node<Statement, Val> seed : initialSeeds) {
-			new PerSeedAnalysisContext<W>(analysisDefinition, seed).run();
+		Map<Node<Statement,AllocVal>, WeightedBoomerang<W>> seedToSolver = Maps.newHashMap();
+		for (Node<Statement, AllocVal> seed : initialSeeds) {
+			seedToSolver.put(seed, run(new ForwardQuery(seed.stmt(),seed.fact())));
 		}
+		return seedToSolver;
 	}
-
+	public WeightedBoomerang<W> run(Query seed) {
+		PerSeedAnalysisContext<W> idealAnalysis = new PerSeedAnalysisContext<W>(analysisDefinition, seed);
+		return idealAnalysis.run();
+	}
 	private void printOptions() {
 		if(PRINT_OPTIONS)
 			System.out.println(analysisDefinition);
 	}
 
-	public Set<Node<Statement,Val>> computeSeeds() {
-		Set<Node<Statement,Val>> seeds = new HashSet<>();
+	public Set<Node<Statement,AllocVal>> computeSeeds() {
+		Set<Node<Statement,AllocVal>> seeds = new HashSet<>();
 		ReachableMethods rm = Scene.v().getReachableMethods();
 		QueueReader<MethodOrMethodContext> listener = rm.listener();
 		while (listener.hasNext()) {
@@ -63,8 +74,8 @@ public class IDEALAnalysis<W extends Weight> {
 		return seeds;
 	}
 
-	private Collection<Node<Statement,Val>> computeSeeds(SootMethod method) {
-		Set<Node<Statement,Val>> seeds = new HashSet<>();
+	private Collection<Node<Statement,AllocVal>> computeSeeds(SootMethod method) {
+		Set<Node<Statement,AllocVal>> seeds = new HashSet<>();
 		if (!method.hasActiveBody())
 			return seeds;
 		if (SEED_IN_APPLICATION_CLASS_METHOD && !method.getDeclaringClass().isApplicationClass())
@@ -72,8 +83,8 @@ public class IDEALAnalysis<W extends Weight> {
 		for (Unit u : method.getActiveBody().getUnits()) {
 			Collection<SootMethod> calledMethods = (icfg.isCallStmt(u) ? icfg.getCalleesOfCallAt(u)
 					: new HashSet<SootMethod>());
-			for (Val fact : analysisDefinition.generate(method, u, calledMethods)) {
-				seeds.add(new Node<Statement,Val>(new Statement((Stmt)u, method),fact));
+			for (AllocVal fact : analysisDefinition.generate(method, u, calledMethods)) {
+				seeds.add(new Node<Statement,AllocVal>(new Statement((Stmt)u, method),fact));
 			}
 		}
 		return seeds;

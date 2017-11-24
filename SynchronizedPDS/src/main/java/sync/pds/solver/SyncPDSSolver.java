@@ -399,27 +399,24 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 	public void solve(Node<Stmt, Fact> curr) {
-		solve(curr,callAutomaton.getOne());
-	}
-	
-	public void solve(Node<Stmt, Fact> curr,  W weight) {
 		Transition<Field, INode<Node<Stmt,Fact>>> fieldTrans = new Transition<Field, INode<Node<Stmt,Fact>>>(asFieldFact(curr), emptyField(), fieldAutomaton.getInitialState());
 		fieldAutomaton.addTransition(fieldTrans);
-		unbalancedSolve(curr,weight);
-	}
-	
-	public void unbalancedSolve(Node<Stmt, Fact> curr,  W weight) {
-		Transition<Stmt, INode<Fact>> callTrans = new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), callAutomaton.getInitialState());
+		Transition<Stmt, INode<Fact>> callTrans = createInitialCallTransition(curr);
 		callAutomaton
 				.addTransition(callTrans);
 		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
-		computeValues(callTrans, weight);
+		computeValues(callTrans, getCallWeights().getOne());
 		processNode(startNode);
 	}
+	
 	private void computeValues(Transition<Stmt, INode<Fact>> callTrans, W weight) {
 		callAutomaton.computeValues(callTrans,weight);
 	}
 
+	private Transition<Stmt, INode<Fact>> createInitialCallTransition(Node<Stmt, Fact> curr){
+		return new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), callAutomaton.getInitialState());
+	}
+	
 	protected void processNode(WitnessNode<Stmt, Fact,Field> witnessNode) {
 		if(!addReachableState(witnessNode))
 			return;

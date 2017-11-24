@@ -9,7 +9,9 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.Sets;
 
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import soot.Local;
@@ -20,6 +22,7 @@ import soot.Unit;
 import soot.Value;
 import soot.jimple.AssignStmt;
 import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.InvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.Stmt;
 import sync.pds.solver.WeightFunctions;
@@ -55,29 +58,30 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 	
 	@Override
 	public TransitionFunction normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
+		if(curr.stmt().getUnit().isPresent()){
+			if(curr.stmt().getUnit().get().containsInvokeExpr()){
+				return callToReturn(curr,succ, curr.stmt().getUnit().get().getInvokeExpr());
+			}
+		}
 		return getOne();
 	}
 	
 
-//	public Set<Transition<State>> getCallToReturnTransitionsFor(AccessGraph d1, Unit callSite, AccessGraph d2,
-//			Unit returnSite, AccessGraph d3) {
-//		Set<Transition<State>> res = new HashSet<>();
-//		if(callSite instanceof Stmt){
-//			Stmt stmt = (Stmt) callSite;
-//			if(stmt.containsInvokeExpr() && stmt.getInvokeExpr() instanceof InstanceInvokeExpr){
-//				SootMethod method = stmt.getInvokeExpr().getMethod();
-//				InstanceInvokeExpr e = (InstanceInvokeExpr)stmt.getInvokeExpr();
-//				if(e.getBase().equals(d2.getBase())){
-//					for (MatcherTransition<State> trans : transition) {
-//						if(trans.matches(method) && trans.getType().equals(Type.OnCallToReturn)){
-//							res.add(trans);
-//						}
-//					}	
-//				}
-//			}
-//		}
-//		return res;
-//	}
+	public TransitionFunction callToReturn(Node<Statement, Val> curr, Node<Statement, Val> succ, InvokeExpr invokeExpr) {
+		Set<Transition> res = Sets.newHashSet();
+		if(invokeExpr instanceof InstanceInvokeExpr){
+			SootMethod method = invokeExpr.getMethod();
+			InstanceInvokeExpr e = (InstanceInvokeExpr) invokeExpr;
+			if(e.getBase().equals(curr.fact().value())){
+				for (MatcherTransition trans : transition) {
+					if(trans.matches(method) && trans.getType().equals(Type.OnCallToReturn)){
+						res.add(trans);
+					}
+				}	
+			}
+		}
+		return (res.isEmpty() ? getOne() : new TransitionFunction(res));
+	}
 
 	private TransitionFunction getMatchingTransitions(SootMethod method, Val node, Type type) {
 		Set<ITransition> res = new HashSet<>();
@@ -157,18 +161,18 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 		return Collections.emptySet();
 	}
 
-	protected Collection<Val> getLeftSideOf(SootMethod m, Unit unit) {
+	protected Collection<AllocVal> getLeftSideOf(SootMethod m, Unit unit) {
 		if (unit instanceof AssignStmt) {
-			Set<Val> out = new HashSet<>();
+			Set<AllocVal> out = new HashSet<>();
 			AssignStmt stmt = (AssignStmt) unit;
 			out.add(
-					new Val(stmt.getLeftOp(), m));
+					new AllocVal(stmt.getLeftOp(), m, stmt.getRightOp()));
 			return out;
 		}
 		return Collections.emptySet();
 	}
 	
-	protected Collection<Val> generateThisAtAnyCallSitesOf(SootMethod m, Unit unit,
+	protected Collection<AllocVal> generateThisAtAnyCallSitesOf(SootMethod m, Unit unit,
 			Collection<SootMethod> calledMethod, Set<SootMethod> hasToCall) {
 		for (SootMethod callee : calledMethod) {
 			if (hasToCall.contains(callee)) {
@@ -176,8 +180,8 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 					if (((Stmt) unit).getInvokeExpr() instanceof InstanceInvokeExpr) {
 						InstanceInvokeExpr iie = (InstanceInvokeExpr) ((Stmt) unit).getInvokeExpr();
 						Local thisLocal = (Local) iie.getBase();
-						Set<Val> out = new HashSet<>();
-						out.add(new Val(thisLocal, m));
+						Set<AllocVal> out = new HashSet<>();
+						out.add(new AllocVal(thisLocal, m, iie));
 						return out;
 						
 					}
@@ -189,7 +193,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 	}
 	
 
-	protected Collection<Val> generateAtAllocationSiteOf(SootMethod m, Unit unit, Class allocationSuperType) {
+	protected Collection<AllocVal> generateAtAllocationSiteOf(SootMethod m, Unit unit, Class allocationSuperType) {
 		if(unit instanceof AssignStmt){
 			AssignStmt assignStmt = (AssignStmt) unit;
 			if(assignStmt.getRightOp() instanceof NewExpr){
@@ -197,7 +201,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 				Value leftOp = assignStmt.getLeftOp();
 				soot.Type type = newExpr.getType();
 				if(Scene.v().getOrMakeFastHierarchy().canStoreType(type, Scene.v().getType(allocationSuperType.getName()))){
-					return Collections.singleton(new Val(leftOp,m));
+					return Collections.singleton(new AllocVal(leftOp,m,assignStmt.getRightOp()));
 				}
 			}
 		}
@@ -209,6 +213,6 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 		return Joiner.on("\n").join(transition);
 	}
 
-	public abstract Collection<Val> generateSeed(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod); 
+	public abstract Collection<AllocVal> generateSeed(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod); 
 }
 	

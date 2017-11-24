@@ -3,6 +3,7 @@ package typestate.impl.statemachines;
 import java.util.Collection;
 import java.util.Set;
 
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
 import soot.SootMethod;
 import soot.Unit;
@@ -26,6 +27,11 @@ public class PipedInputStreamStateMachine extends TypeStateMachineWeightFunction
 		public boolean isInitialState() {
 			return false;
 		}
+
+		@Override
+		public boolean isAccepting() {
+			return false;
+		}
 	}
 
 	public 	PipedInputStreamStateMachine() {
@@ -47,7 +53,7 @@ public class PipedInputStreamStateMachine extends TypeStateMachineWeightFunction
 
 
 	@Override
-	public Collection<Val> generateSeed(SootMethod m, Unit unit,
+	public Collection<AllocVal> generateSeed(SootMethod m, Unit unit,
 			Collection<SootMethod> calledMethod) {
 		return generateAtAllocationSiteOf(m, unit, java.io.PipedInputStream.class);
 	}

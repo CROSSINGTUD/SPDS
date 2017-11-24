@@ -3,6 +3,7 @@ package ideal;
 import java.util.Collection;
 
 import boomerang.debugger.Debugger;
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import soot.SootMethod;
@@ -27,7 +28,7 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 	 *            method for the call site.
 	 * @return
 	 */
-	public abstract Collection<Val> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod);
+	public abstract Collection<AllocVal> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod);
 
 	/**
 	 * This function must generate and return the AnalysisEdgeFunctions that are
@@ -37,8 +38,6 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 	 */
 	public abstract WeightFunctions<Statement,Val,Statement,W> weightFunctions();
 
-	public abstract ResultReporter<W> resultReporter();
-	
 	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
 
 	public abstract boolean enableAliasing();

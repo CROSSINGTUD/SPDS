@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
 import soot.SootClass;
 import soot.SootMethod;
@@ -30,6 +31,10 @@ public class PrintWriterStateMachine extends TypeStateMachineWeightFunctions{
 			return false;
 		}
 
+		@Override
+		public boolean isAccepting() {
+			return false;
+		}
 	}
 
 	public PrintWriterStateMachine() {
@@ -58,7 +63,7 @@ public class PrintWriterStateMachine extends TypeStateMachineWeightFunctions{
 	}
 
 	@Override
-	public Collection<Val> generateSeed(SootMethod m, Unit unit,
+	public Collection<AllocVal> generateSeed(SootMethod m, Unit unit,
 			Collection<SootMethod> calledMethod) {
 		return generateThisAtAnyCallSitesOf(m, unit, calledMethod, closeMethods());
 	}

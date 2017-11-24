@@ -10,15 +10,18 @@ import java.util.Set;
 
 import com.beust.jcommander.internal.Maps;
 import com.google.common.base.Optional;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 
 import boomerang.customize.BackwardEmptyCalleeFlow;
 import boomerang.customize.EmptyCalleeFlow;
 import boomerang.customize.ForwardEmptyCalleeFlow;
 import boomerang.debugger.Debugger;
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -35,17 +38,14 @@ import soot.RefType;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
-import soot.Type;
 import soot.Unit;
-import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
+import soot.jimple.Constant;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InvokeExpr;
-import soot.jimple.NewArrayExpr;
-import soot.jimple.NewExpr;
 import soot.jimple.NewMultiArrayExpr;
-import soot.jimple.NullConstant;
+import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
@@ -65,13 +65,12 @@ import wpds.impl.Transition;
 import wpds.impl.UnbalancedPopListener;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
-import wpds.impl.Weight.NoWeight;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedBoomerang<W extends Weight> implements MethodReachableQueue {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private boolean first;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
@@ -249,8 +248,9 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
-				if (isAllocationNode(node.stmt(), node.fact())) {
-					forwardSolve(new ForwardQuery(node.stmt(), getAllocatedVal(node.stmt())));
+				Optional<AllocVal> allocNode = isAllocationNode(node.stmt(), node.fact());
+				if (allocNode.isPresent()) {
+					forwardSolve(new ForwardQuery(node.stmt(), allocNode.get()));
 				}
 				if (isFieldStore(node.stmt())) {
 				} else if (isArrayStore(node.stmt())) {
@@ -269,6 +269,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return solver;
 	}
 
+
 	protected void backwardHandleEnterCall(WitnessNode<Statement, Val, Field> node, ForwardCallSitePOI returnSite,
 			BackwardQuery backwardQuery) {
 		returnSite.returnsFromCall(backwardQuery, node.asNode());
@@ -280,24 +281,19 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 	protected static Val getAllocatedVal(Statement s) {
 		AssignStmt optUnit = (AssignStmt) s.getUnit().get();
-		return new Val(optUnit.getLeftOp(), s.getMethod());
+		return new AllocVal(optUnit.getLeftOp(), s.getMethod(),optUnit.getRightOp());
 	}
 
-	protected boolean isAllocationNode(Statement s, Val fact) {
+	protected Optional<AllocVal> isAllocationNode(Statement s, Val fact) {
 		Optional<Stmt> optUnit = s.getUnit();
 		if (optUnit.isPresent()) {
 			Stmt stmt = optUnit.get();
-			if (stmt instanceof AssignStmt) {
-				AssignStmt as = (AssignStmt) stmt;
-				if (as.getLeftOp().equals(fact.value()) && options.isAllocationVal(as.getRightOp())) {
-					return true;
-				}
-			}
+			return options.getAllocationVal(s.getMethod(),stmt, fact, icfg());
 		}
-		return false;
+		return Optional.absent();
 	}
 
-	protected AbstractBoomerangSolver<W> createForwardSolver(final ForwardQuery sourceQuery) {
+	protected ForwardBoomerangSolver<W> createForwardSolver(final ForwardQuery sourceQuery) {
 		final ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(WeightedBoomerang.this, icfg(), sourceQuery,
 				genField, options, createCallSummaries(sourceQuery, forwardCallSummaries),
 				 createFieldSummaries(sourceQuery, forwardFieldSummaries)) {
@@ -390,7 +386,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				if (target.fact().equals(sourceQuery.var())) {
 					return queryToSolvers.getOrCreate(sourceQuery).getCallAutomaton();
 				}
-				WeightedPAutomaton<Statement, INode<Val>, W> summaryAutomaton = summaries.getSummaryAutomaton(target);
 				return summaries.getSummaryAutomaton(target);
 			}
 		};
@@ -635,7 +630,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		if (unit.isPresent()) {
 			for (Unit succ : icfg().getSuccsOf(unit.get())) {
 				Node<Statement, Val> source = new Node<Statement, Val>(
-						new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact());
+						new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact().asNoAlloc());
 				if (isMultiArrayAllocation(unit.get()) && options.arrayFlows()) {
 					insertTransition(solver.getFieldAutomaton(),
 							new Transition<Field, INode<Node<Statement, Val>>>(
@@ -1337,8 +1332,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return queryToSolvers;
 	}
 
-	public Map<Node<Statement,Val>, W> getResults(){
-		final Map<Node<Statement,Val>, W> results = Maps.newHashMap();
+	public Table<Statement,Val, W> getResults(){
+		final Table<Statement,Val, W> results = HashBasedTable.create();
 		for (final Entry<Query, AbstractBoomerangSolver<W>> fw : queryToSolvers.entrySet()) {
 			if(fw.getKey() instanceof ForwardQuery){
 				fw.getValue().getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(fw.getValue().getFieldAutomaton().getInitialState()) {
@@ -1352,13 +1347,80 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
 						if(t.getLabel().equals(Field.empty())){
-							results.put(fw.getKey().asNode(), w);
+							results.put(fw.getKey().stmt(),fw.getKey().var(), w);
 						}
 					}
 				});
 			}
 		}
 		return results;
+	}
+
+	public Table<Statement,Val, W> getResults(final Query query){
+		final Table<Statement,Val, W> results = HashBasedTable.create();
+		if(query instanceof ForwardQuery){
+			WeightedPAutomaton<Statement, INode<Val>, W> fieldAut = queryToSolvers.getOrCreate(query).getCallAutomaton();
+			for(Entry<Transition<Statement, INode<Val>>, W> e : fieldAut.getTransitionsToFinalWeights().entrySet()){
+				Transition<Statement, INode<Val>> t = e.getKey();
+				W w = e.getValue();
+				if(t.getLabel().getUnit().isPresent())
+					results.put(t.getLabel(),t.getStart().fact(),w);
+			}
+			return results;
+		}
+		for (final Entry<Query, AbstractBoomerangSolver<W>> fw : queryToSolvers.entrySet()) {
+			if(fw.getKey() instanceof ForwardQuery){
+				fw.getValue().getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(fw.getValue().getFieldAutomaton().getInitialState()) {
+					
+					@Override
+					public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+					}
+					
+					@Override
+					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+						if(t.getLabel().equals(Field.empty()) && t.getStart().fact().equals(query.asNode())){
+							results.put(fw.getKey().stmt(),fw.getKey().var(), w);
+						}
+					}
+				});
+			}
+		}
+		return results;
+	}
+	
+	public Table<Statement, Val, W>  getObjectDestructingStatements(
+			ForwardQuery seed) {
+		AbstractBoomerangSolver<W> solver = queryToSolvers.get(seed);
+		if(solver == null)
+			return HashBasedTable.create();
+		Table<Statement, Val, W> res = getResults(seed);
+		ForwardBoomerangSolver<W> flowFunction = createForwardSolver(seed);
+		Table<Statement, Val, W> destructingStatement = HashBasedTable.create();
+		for(SootMethod flowReaches : flowReachable){
+			for(Unit ep : icfg().getEndPointsOf(flowReaches)){
+				Statement exitStmt = new Statement((Stmt) ep, flowReaches);
+				Set<State> escapes = Sets.newHashSet();
+				for(Unit callSite : icfg().getCallersOf(flowReaches)){
+					SootMethod callee = icfg().getMethodOf(callSite);
+					if(flowReachable.contains(callee)){
+						for(Entry<Val, W> valAndW : res.row(exitStmt).entrySet()){
+							for(Unit retSite : icfg().getSuccsOf(callSite)){
+								escapes.addAll(flowFunction.computeReturnFlow(flowReaches, (Stmt) ep, valAndW.getKey(), (Stmt) callSite, (Stmt) retSite));
+							}
+						}
+					}
+				}
+				if(escapes.isEmpty()){
+					Map<Val, W> row = res.row(exitStmt);
+					for(Entry<Val, W> e : row.entrySet()){
+						destructingStatement.put(exitStmt, e.getKey(), e.getValue());
+					}
+				}
+			}
+		}
+		return destructingStatement;
 	}
 	
 	public abstract Debugger<W> createDebugger();
@@ -1378,14 +1440,14 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		// System.out.println(q +" Call Aut (failed Additions): " +
 		// queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
 		// }
+		if (!DEBUG)
+			return;
 
 		int totalRules = 0;
 		for (Query q : queryToSolvers.keySet()) {
 			totalRules += queryToSolvers.getOrCreate(q).getNumberOfRules();
 		}
 		System.out.println("Total number of rules: " + totalRules);
-		if (!DEBUG)
-			return;
 		Debugger<W> debugger = createDebugger();
 		for (Query q : queryToSolvers.keySet()) {
 			debugger.reachableNodes(q, queryToSolvers.getOrCreate(q).getTransitionsToFinalWeights());
@@ -1396,18 +1458,18 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			System.out.println(q);
 			System.out.println("========================");
 			queryToSolvers.getOrCreate(q).debugOutput();
-			for (FieldReadPOI p : fieldReads.values()) {
-				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
-				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {
-					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
-				}
-			}
-			for (FieldWritePOI p : fieldWrites.values()) {
-				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
-				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {
-					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
-				}
-			}
+//			for (FieldReadPOI p : fieldReads.values()) {
+//				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
+//				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {
+//					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
+//				}
+//			}
+//			for (FieldWritePOI p : fieldWrites.values()) {
+//				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
+//				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {
+//					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
+//				}
+//			}
 		}
 	}
 	
@@ -1430,5 +1492,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		System.out.println("Reachable nodes (Min/Avg/Max): " +min +"/"+ average+"/"+max); 
 		System.out.println("Maximal Query: " +maxQuery); 
 	}
+
 	
 }

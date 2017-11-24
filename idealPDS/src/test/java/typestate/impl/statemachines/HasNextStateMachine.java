@@ -7,6 +7,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
 import soot.RefType;
 import soot.Scene;
@@ -38,6 +39,10 @@ public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
 			return false;
 		}
 
+		@Override
+		public boolean isAccepting() {
+			return false;
+		}
 	}
 
 	public HasNextStateMachine() {
@@ -96,13 +101,13 @@ public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
 	}
 
 	@Override
-	public Collection<Val> generateSeed(SootMethod method, Unit unit, Collection<SootMethod> calledMethod) {
+	public Collection<AllocVal> generateSeed(SootMethod method, Unit unit, Collection<SootMethod> calledMethod) {
 		for (SootMethod m : calledMethod) {
 			if (retrieveIteratorConstructors().contains(m)) {
 				if (unit instanceof AssignStmt) {
-					Set<Val> out = new HashSet<>();
+					Set<AllocVal> out = new HashSet<>();
 					AssignStmt stmt = (AssignStmt) unit;
-					out.add(new Val(stmt.getLeftOp(), method));
+					out.add(new AllocVal(stmt.getLeftOp(), method, stmt.getRightOp()));
 					return out;
 				}
 			}

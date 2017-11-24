@@ -559,6 +559,12 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		public void onInTransitionAdded(Transition<N,D> t, W w, WeightedPAutomaton<N, D, W> aut) {
 			if(aut != WeightedPAutomaton.this)
 				return;
+			if(t.getStart().equals(t.getTarget())){
+				if(t.getTarget().equals(initialState)){
+					transitionsToFinalWeights.put(t, w);
+				}
+				return;
+			}
 			W weightAtTarget = transitionsToFinalWeights.get(trans);
 			W extendWith = (W) weightAtTarget.extendWith(w);
 			W weightAtSource = transitionsToFinalWeights.get(t);
@@ -567,6 +573,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 				transitionsToFinalWeights.put(t, newVal);
 				registerListener(new ValueComputationListener(t));
 			}
+			
 		}
 
 		@Override
