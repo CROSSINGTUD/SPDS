@@ -39,7 +39,9 @@ public class Val {
 	public SootMethod m(){
 		return m;
 	}
-	
+	public Val asNoAlloc(){
+		return this;
+	}
 	@Override
 	public int hashCode() {
 		final int prime = 31;
