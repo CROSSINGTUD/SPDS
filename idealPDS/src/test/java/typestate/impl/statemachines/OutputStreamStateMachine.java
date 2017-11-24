@@ -34,7 +34,7 @@ public class OutputStreamStateMachine extends TypeStateMachineWeightFunctions{
 
 	}
 
-	OutputStreamStateMachine() {
+	public OutputStreamStateMachine() {
 		addTransition(new MatcherTransition(States.NONE, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
 		addTransition(
 				new MatcherTransition(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));

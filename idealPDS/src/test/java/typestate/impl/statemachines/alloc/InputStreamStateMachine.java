@@ -34,7 +34,7 @@ public class InputStreamStateMachine extends TypeStateMachineWeightFunctions{
 		}
 	}
 
-	InputStreamStateMachine() {
+	public InputStreamStateMachine() {
 		addTransition(
 				new MatcherTransition(States.OPEN, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
 		addTransition(

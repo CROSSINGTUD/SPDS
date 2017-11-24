@@ -1273,6 +1273,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 	private boolean addAllocationType(RefType type) {
 		if (allocatedTypes.add(type)) {
+			if(type.getSootClass().isInterface())
+				return true;
 			List<SootClass> classes = Scene.v().getActiveHierarchy().getSuperclassesOfIncluding(type.getSootClass());
 			for (SootClass c : classes) {
 				for (SootMethod m : c.getMethods()) {

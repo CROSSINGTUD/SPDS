@@ -28,7 +28,7 @@ public class PipedInputStreamStateMachine extends TypeStateMachineWeightFunction
 		}
 	}
 
-	PipedInputStreamStateMachine() {
+	public 	PipedInputStreamStateMachine() {
 		addTransition(
 				new MatcherTransition(States.INIT, connect(), Parameter.This, States.CONNECTED, Type.OnReturn));
 		addTransition(new MatcherTransition(States.INIT, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));

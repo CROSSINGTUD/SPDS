@@ -23,6 +23,7 @@ import typestate.finiteautomata.State;
 public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
 
 	private Set<SootMethod> hasNextMethods;
+	private HashSet<SootMethod> res;
 
 	public static enum States implements State {
 		NONE, INIT, HASNEXT, ERROR;
@@ -67,8 +68,10 @@ public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
 	}
 
 	private Set<SootMethod> retrieveIteratorConstructors() {
+		if(res != null)
+			return res;
 		Set<SootMethod> selectMethodByName = selectMethodByName(Scene.v().getClasses(), "iterator");
-		Set<SootMethod> res = new HashSet<>();
+		res = new HashSet<>();
 		for (SootMethod m : selectMethodByName) {
 			if (m.getReturnType() instanceof RefType) {
 				RefType refType = (RefType) m.getReturnType();
