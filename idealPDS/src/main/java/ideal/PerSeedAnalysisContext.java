@@ -108,7 +108,6 @@ public class PerSeedAnalysisContext<W extends Weight> {
 							@Override
 							public void witnessFound(Node<Statement, Val> targetFact) {
 								if(!e.getKey().asNode().equals(seed.asNode())){
-									System.out.println("No strong update " + curr);
 									idealWeightFunctions.weakUpdate(curr.stmt());
 								}
 							}

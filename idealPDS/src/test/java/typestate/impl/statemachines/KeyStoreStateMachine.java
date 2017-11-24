@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
 import soot.SootClass;
 import soot.SootMethod;
@@ -79,13 +80,13 @@ public class KeyStoreStateMachine extends TypeStateMachineWeightFunctions{
 	}
 
 	@Override
-	public Collection<Val> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+	public Collection<AllocVal> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
 		if (unit instanceof AssignStmt) {
 			AssignStmt stmt = (AssignStmt) unit;
 			if(stmt.containsInvokeExpr()){
 				if(keyStoreConstructor().contains(stmt.getInvokeExpr().getMethod())){
-					Set<Val> out = new HashSet<>();
-					out.add(new Val(stmt.getLeftOp(), m));
+					Set<AllocVal> out = new HashSet<>();
+					out.add(new AllocVal(stmt.getLeftOp(), m, stmt.getRightOp()));
 					return out;
 				}
 			}

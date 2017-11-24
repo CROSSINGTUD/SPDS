@@ -12,6 +12,7 @@ import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import ideal.IDEALAnalysis;
@@ -24,6 +25,7 @@ import soot.Value;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
+import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.Node;
 import test.ExpectedResults.InternalState;
@@ -70,7 +72,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			}
 
 			@Override
-			public Collection<Val> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
+			public Collection<AllocVal> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
 				return  IDEALTestingFramework.this.getStateMachine().generateSeed(method, stmt, calledMethod);
 			}
 
@@ -95,12 +97,13 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				System.out.println(sootTestMethod.getActiveBody());
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				
-				Map<Node<Statement, Val>, WeightedBoomerang<TransitionFunction>> seedToSolvers = executeAnalysis();
-				for(Node<Statement, Val> seed : seedToSolvers.keySet()){
+				Map<Node<Statement, AllocVal>, WeightedBoomerang<TransitionFunction>> seedToSolvers = executeAnalysis();
+				for(Node<Statement, AllocVal> seed : seedToSolvers.keySet()){
+					System.out.println("SEED "+  seed);
 					for(Query q : seedToSolvers.get(seed).getSolvers().keySet()){
-						if(q.asNode().equals(seed)){
+//						if(q.asNode().equals(seed)){
 							testingResultReporter.onSeedFinished(q.asNode(), seedToSolvers.get(seed).getSolvers().getOrCreate(q));
-						}
+//						}
 					}
 				}
 				List<Assertion> unsound = Lists.newLinkedList();
@@ -124,7 +127,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		};
 	}
 
-	protected Map<Node<Statement, Val>, WeightedBoomerang<TransitionFunction>> executeAnalysis() {
+	protected Map<Node<Statement, AllocVal>, WeightedBoomerang<TransitionFunction>> executeAnalysis() {
 		return IDEALTestingFramework.this.createAnalysis().run();
 	}
 

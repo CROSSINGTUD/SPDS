@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
 import soot.SootClass;
 import soot.SootMethod;
@@ -117,7 +118,7 @@ public class SignatureStateMachine extends TypeStateMachineWeightFunctions {
 	}
 
 	@Override
-	public Collection<Val> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+	public Collection<AllocVal> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
 		for (SootMethod cons : constructor()) {
 			if (calledMethod.contains(cons)) {
 				return getLeftSideOf(m, unit);

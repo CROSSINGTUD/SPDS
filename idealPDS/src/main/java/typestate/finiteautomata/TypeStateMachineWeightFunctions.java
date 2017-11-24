@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
 
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import soot.Local;
@@ -160,18 +161,18 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 		return Collections.emptySet();
 	}
 
-	protected Collection<Val> getLeftSideOf(SootMethod m, Unit unit) {
+	protected Collection<AllocVal> getLeftSideOf(SootMethod m, Unit unit) {
 		if (unit instanceof AssignStmt) {
-			Set<Val> out = new HashSet<>();
+			Set<AllocVal> out = new HashSet<>();
 			AssignStmt stmt = (AssignStmt) unit;
 			out.add(
-					new Val(stmt.getLeftOp(), m));
+					new AllocVal(stmt.getLeftOp(), m, stmt.getRightOp()));
 			return out;
 		}
 		return Collections.emptySet();
 	}
 	
-	protected Collection<Val> generateThisAtAnyCallSitesOf(SootMethod m, Unit unit,
+	protected Collection<AllocVal> generateThisAtAnyCallSitesOf(SootMethod m, Unit unit,
 			Collection<SootMethod> calledMethod, Set<SootMethod> hasToCall) {
 		for (SootMethod callee : calledMethod) {
 			if (hasToCall.contains(callee)) {
@@ -179,8 +180,8 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 					if (((Stmt) unit).getInvokeExpr() instanceof InstanceInvokeExpr) {
 						InstanceInvokeExpr iie = (InstanceInvokeExpr) ((Stmt) unit).getInvokeExpr();
 						Local thisLocal = (Local) iie.getBase();
-						Set<Val> out = new HashSet<>();
-						out.add(new Val(thisLocal, m));
+						Set<AllocVal> out = new HashSet<>();
+						out.add(new AllocVal(thisLocal, m, iie));
 						return out;
 						
 					}
@@ -192,7 +193,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 	}
 	
 
-	protected Collection<Val> generateAtAllocationSiteOf(SootMethod m, Unit unit, Class allocationSuperType) {
+	protected Collection<AllocVal> generateAtAllocationSiteOf(SootMethod m, Unit unit, Class allocationSuperType) {
 		if(unit instanceof AssignStmt){
 			AssignStmt assignStmt = (AssignStmt) unit;
 			if(assignStmt.getRightOp() instanceof NewExpr){
@@ -200,7 +201,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 				Value leftOp = assignStmt.getLeftOp();
 				soot.Type type = newExpr.getType();
 				if(Scene.v().getOrMakeFastHierarchy().canStoreType(type, Scene.v().getType(allocationSuperType.getName()))){
-					return Collections.singleton(new Val(leftOp,m));
+					return Collections.singleton(new AllocVal(leftOp,m,assignStmt.getRightOp()));
 				}
 			}
 		}
@@ -212,6 +213,6 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 		return Joiner.on("\n").join(transition);
 	}
 
-	public abstract Collection<Val> generateSeed(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod); 
+	public abstract Collection<AllocVal> generateSeed(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod); 
 }
 	

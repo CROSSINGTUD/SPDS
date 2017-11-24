@@ -3,6 +3,7 @@ package typestate.impl.statemachines;
 import java.util.Collection;
 import java.util.Collections;
 
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
 import soot.SootMethod;
 import soot.Unit;
@@ -43,7 +44,7 @@ public class FileMustBeClosedStateMachine extends TypeStateMachineWeightFunction
 
 
   @Override
-  public Collection<Val> generateSeed(SootMethod method,Unit unit,
+  public Collection<AllocVal> generateSeed(SootMethod method,Unit unit,
       Collection<SootMethod> calledMethod) {
     try {
 		return generateAtAllocationSiteOf(method, unit, Class.forName("typestate.test.helper.File"));

@@ -44,6 +44,8 @@ public class TestingResultReporter<W extends Weight>{
 				}
 			}
 		}
+		System.out.println(seed);
+		System.out.println(seedSolver.getTransitionsToFinalWeights());
 	}
 
 
