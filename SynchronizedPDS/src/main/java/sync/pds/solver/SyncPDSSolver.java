@@ -398,17 +398,19 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	}
 
-	public void solve(Node<Stmt, Fact> curr) {
+	public void solve(Node<Stmt, Fact> curr, W weight) {
 		Transition<Field, INode<Node<Stmt,Fact>>> fieldTrans = new Transition<Field, INode<Node<Stmt,Fact>>>(asFieldFact(curr), emptyField(), fieldAutomaton.getInitialState());
 		fieldAutomaton.addTransition(fieldTrans);
 		Transition<Stmt, INode<Fact>> callTrans = createInitialCallTransition(curr);
 		callAutomaton
-				.addTransition(callTrans);
+				.addWeightForTransition(callTrans,weight);
 		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
-		computeValues(callTrans, getCallWeights().getOne());
+		computeValues(callTrans, weight);
 		processNode(startNode);
 	}
-	
+	public void solve(Node<Stmt, Fact> curr) {
+		solve(curr,getCallWeights().getOne());
+	}
 	private void computeValues(Transition<Stmt, INode<Fact>> callTrans, W weight) {
 		callAutomaton.computeValues(callTrans,weight);
 	}

@@ -4,20 +4,19 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import java.util.Set;
 
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.DefaultBoomerangOptions;
-import boomerang.WeightedBoomerang;
 import boomerang.ForwardQuery;
 import boomerang.IntAndStringBoomerangOptions;
 import boomerang.Query;
@@ -50,7 +49,6 @@ import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
-import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
@@ -147,7 +145,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					}
 				}
 			}
-			return Optional.empty();
+			return Optional.absent();
 		}
 	}
 	private class IntegerAllocationSiteOf implements ValueOfInterestInUnit {
@@ -175,7 +173,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 			}
 			
-			return Optional.empty();
+			return Optional.absent();
 		}
 	}
 	private class FirstArgumentOf implements ValueOfInterestInUnit {
@@ -190,13 +188,13 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		public Optional<? extends Query> test(Stmt unit, Stmt callSite) {
 			Stmt stmt = (Stmt) unit;
 			if (!(stmt.containsInvokeExpr()))
-				return Optional.empty();
+				return Optional.absent();
 			InvokeExpr invokeExpr = stmt.getInvokeExpr();
 			if (!invokeExpr.getMethod().getName().matches(methodNameMatcher))
-				return Optional.empty();
+				return Optional.absent();
 			Value param = invokeExpr.getArg(0);
 			if (!(param instanceof Local))
-				return Optional.empty();
+				return Optional.absent();
 			return Optional.<Query>of(new BackwardQuery(new Statement(unit, icfg.getMethodOf(unit)),
 					new Val(param, icfg.getMethodOf(unit))));
 		}

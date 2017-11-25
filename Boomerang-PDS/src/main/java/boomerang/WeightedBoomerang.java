@@ -641,7 +641,12 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 									new SingleNode<Node<Statement, Val>>(source), Field.array(),
 									new SingleNode<Node<Statement, Val>>(source)));
 				}
-				solver.solve(source);
+				if(query instanceof WeightedForwardQuery){
+					WeightedForwardQuery<W> q = (WeightedForwardQuery<W>) query;
+					solver.solve(source,q.weight());
+				} else{
+					solver.solve(source);
+				}
 			}
 		}
 	}
