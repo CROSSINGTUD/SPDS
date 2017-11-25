@@ -535,7 +535,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		
 	}
 	public void computeValues(Transition<N, D> callTrans, W weight) {
-		transitionsToFinalWeights.put(callTrans, weight);
+//		transitionsToFinalWeights.put(callTrans, weight);
 		registerListener(new ValueComputationListener(callTrans));
 	}
 
@@ -566,7 +566,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 				return;
 			}
 			W weightAtTarget = transitionsToFinalWeights.get(trans);
-			W extendWith = (W) weightAtTarget.extendWith(w);
+			W extendWith = (weightAtTarget == null ? w : (W) weightAtTarget.extendWith(w));
 			W weightAtSource = transitionsToFinalWeights.get(t);
 			W newVal = (weightAtSource == null ? extendWith : (W) weightAtSource.combineWith(extendWith));
 			if(!newVal.equals(weightAtSource)){

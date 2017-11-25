@@ -405,14 +405,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		callAutomaton
 				.addWeightForTransition(callTrans,weight);
 		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
-		computeValues(callTrans, weight);
+		callAutomaton.computeValues(callTrans, weight);
 		processNode(startNode);
 	}
 	public void solve(Node<Stmt, Fact> curr) {
 		solve(curr,getCallWeights().getOne());
-	}
-	private void computeValues(Transition<Stmt, INode<Fact>> callTrans, W weight) {
-		callAutomaton.computeValues(callTrans,weight);
 	}
 
 	private Transition<Stmt, INode<Fact>> createInitialCallTransition(Node<Stmt, Fact> curr){

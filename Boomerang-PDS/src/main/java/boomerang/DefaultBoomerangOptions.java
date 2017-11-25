@@ -69,7 +69,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 
 	@Override
 	public boolean fastForwardFlows() {
-		return false;
+		return true;
 	}
 
 	@Override
