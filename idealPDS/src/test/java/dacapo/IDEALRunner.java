@@ -53,26 +53,12 @@ public class IDEALRunner  extends ResearchQuestion  {
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 				return icfg;
 			}
-
-			@Override
-			public boolean enableAliasing() {
-				// TODO Auto-generated method stub
-				return false;
-			}
-
 			@Override
 			public long analysisBudgetInSeconds() {
 				// TODO Auto-generated method stub
 				return 0;
 			}
 
-			@Override
-			public boolean enableNullPointOfAlias() {
-				// TODO Auto-generated method stub
-				return false;
-			}
-
-			@Override
 			public boolean enableStrongUpdates() {
 				// TODO Auto-generated method stub
 				return false;

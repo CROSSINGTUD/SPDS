@@ -40,11 +40,7 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 
 	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
 
-	public abstract boolean enableAliasing();
-
 	public abstract long analysisBudgetInSeconds();
-
-	public abstract boolean enableNullPointOfAlias();
 
 	public abstract boolean enableStrongUpdates();
 
