@@ -8,7 +8,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import com.beust.jcommander.internal.Maps;
 import com.google.common.base.Optional;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
@@ -41,11 +40,9 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
-import soot.jimple.Constant;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InvokeExpr;
 import soot.jimple.NewMultiArrayExpr;
-import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
@@ -197,6 +194,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	private Set<SootMethod> typeReachable = Sets.newHashSet();
 	private Set<SootMethod> flowReachable = Sets.newHashSet();
 	protected final BoomerangOptions options;
+	private Debugger<W> debugger;
 
 	public WeightedBoomerang(BoomerangOptions options){
 		this.options = options;
@@ -1445,6 +1443,10 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		// System.out.println(q +" Call Aut (failed Additions): " +
 		// queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
 		// }
+		Debugger<W> debugger = getOrCreateDebugger();
+		for (Query q : queryToSolvers.keySet()) {
+			debugger.reachableNodes(q, queryToSolvers.getOrCreate(q).getTransitionsToFinalWeights());
+		}
 		if (!DEBUG)
 			return;
 
@@ -1453,7 +1455,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			totalRules += queryToSolvers.getOrCreate(q).getNumberOfRules();
 		}
 		System.out.println("Total number of rules: " + totalRules);
-		Debugger<W> debugger = createDebugger();
 		for (Query q : queryToSolvers.keySet()) {
 			debugger.reachableNodes(q, queryToSolvers.getOrCreate(q).getTransitionsToFinalWeights());
 			debugger.reachableCallNodes(q, queryToSolvers.getOrCreate(q).getReachedStates());
@@ -1478,6 +1479,12 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		}
 	}
 	
+	public Debugger<W> getOrCreateDebugger() {
+		if(this.debugger == null)
+			this.debugger = createDebugger();
+		return debugger;
+	}
+
 	public void computeMetrics(){
 		int min = Integer.MAX_VALUE;
 		int totalReached = 0;
