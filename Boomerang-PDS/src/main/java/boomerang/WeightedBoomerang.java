@@ -1399,9 +1399,13 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		if(solver == null)
 			return HashBasedTable.create();
 		Table<Statement, Val, W> res = getResults(seed);
+		Set<SootMethod> visitedMethods = Sets.newHashSet();
+		for(Statement s : res.rowKeySet()){
+			visitedMethods.add(s.getMethod());
+		}
 		ForwardBoomerangSolver<W> flowFunction = createForwardSolver(seed);
 		Table<Statement, Val, W> destructingStatement = HashBasedTable.create();
-		for(SootMethod flowReaches : flowReachable){
+		for(SootMethod flowReaches : visitedMethods){
 			for(Unit ep : icfg().getEndPointsOf(flowReaches)){
 				Statement exitStmt = new Statement((Stmt) ep, flowReaches);
 				Set<State> escapes = Sets.newHashSet();

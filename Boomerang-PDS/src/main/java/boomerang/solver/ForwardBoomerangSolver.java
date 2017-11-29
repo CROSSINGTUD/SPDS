@@ -9,7 +9,6 @@ import java.util.Set;
 
 import com.google.common.collect.Sets;
 
-import boomerang.WeightedBoomerang;
 import boomerang.BoomerangOptions;
 import boomerang.ForwardQuery;
 import boomerang.MethodReachableQueue;
@@ -19,7 +18,6 @@ import boomerang.jimple.StaticFieldVal;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
 import soot.Body;
-import soot.EquivalentValue;
 import soot.Local;
 import soot.RefType;
 import soot.Scene;
@@ -240,6 +238,8 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		if(!(allocVal.value().getType() instanceof RefType)){
 			return false;//!allocVal.value().getType().equals(varVal.value().getType());
 		}
+		if(varVal.value().getType().toString().equals("java.security.Key") && allocVal.value().getType().toString().equals("javax.crypto.SecretKey"))
+			return false;
 		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(allocVal.value().getType(),varVal.value().getType());
 		return !castFails;
 	}
