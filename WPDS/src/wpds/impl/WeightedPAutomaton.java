@@ -540,7 +540,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public Map<Transition<N,D>, W> getTransitionsToFinalWeights() {
-		return transitionsToFinalWeights;
+		return transitionToWeights;
 	}
 	
 	private class ValueComputationListener extends WPAStateListener<N, D, W>{
