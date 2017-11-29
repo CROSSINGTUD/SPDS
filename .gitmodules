@@ -1,3 +1,6 @@
 [submodule "soot"]
 	path = soot
 	url = https://github.com/Sable/soot.git
+[submodule "heros"]
+	path = heros
+	url = https://github.com/Sable/heros
