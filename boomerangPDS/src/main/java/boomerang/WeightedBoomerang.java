@@ -33,17 +33,8 @@ import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import boomerang.solver.StatementBasedFieldTransitionListener;
 import heros.utilities.DefaultValueMap;
-import soot.RefType;
-import soot.Scene;
-import soot.SootClass;
-import soot.SootMethod;
-import soot.Unit;
-import soot.jimple.ArrayRef;
-import soot.jimple.AssignStmt;
-import soot.jimple.InstanceFieldRef;
-import soot.jimple.InvokeExpr;
-import soot.jimple.NewMultiArrayExpr;
-import soot.jimple.Stmt;
+import soot.*;
+import soot.jimple.*;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.SyncPDSUpdateListener;
@@ -641,6 +632,19 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 									new SingleNode<Node<Statement, Val>>(source), Field.array(),
 									new SingleNode<Node<Statement, Val>>(source)));
 				}
+				if(isStringAllocation(unit.get())){
+					SootClass stringClass = Scene.v().getSootClass("java.lang.String");
+					SootField valueField = stringClass.getFieldByName("value");
+					SingleNode<Node<Statement, Val>> s = new SingleNode<Node<Statement, Val>>(source);
+					INode<Node<Statement, Val>> irState = solver.getFieldAutomaton().createState(s, new Field(valueField));
+					insertTransition(solver.getFieldAutomaton(),
+							new Transition<Field, INode<Node<Statement, Val>>>(
+									new SingleNode<Node<Statement, Val>>(source), new Field(valueField),irState
+									));
+					insertTransition(solver.getFieldAutomaton(),
+							new Transition<Field, INode<Node<Statement, Val>>>(irState, Field.empty(),
+									solver.getFieldAutomaton().getInitialState()));
+				}
 				if(query instanceof WeightedForwardQuery){
 					WeightedForwardQuery<W> q = (WeightedForwardQuery<W>) query;
 					solver.solve(source,q.weight());
@@ -649,6 +653,13 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				}
 			}
 		}
+	}
+
+	private boolean isStringAllocation(Stmt stmt) {
+		if(stmt instanceof AssignStmt && ((AssignStmt) stmt).getRightOp() instanceof StringConstant){
+			return true;
+		}
+		return false;
 	}
 
 	private boolean insertTransition(final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut,

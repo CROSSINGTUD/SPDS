@@ -19,10 +19,12 @@ import boomerang.WeightedBoomerang;
 import boomerang.BoomerangOptions;
 import boomerang.MethodReachableQueue;
 import boomerang.Query;
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
+import soot.RefType;
 import soot.Scene;
 import soot.SootMethod;
 import soot.Unit;
@@ -31,6 +33,7 @@ import soot.jimple.AssignStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
+import soot.jimple.NewExpr;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import sync.pds.solver.SyncPDSSolver;
@@ -541,6 +544,39 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	public int getNumberOfRules() {
 		return callingPDS.getAllRules().size() + fieldPDS.getAllRules().size();
+	}
+	
+
+	@Override
+	protected boolean preventFieldTransitionAdd(Transition<Field, INode<Node<Statement, Val>>> t, W weight) {
+		if(!t.getLabel().equals(Field.empty()) || !options.typeCheck()){
+			return false;
+		}
+		if(t.getTarget() instanceof GeneratedState || t.getStart() instanceof GeneratedState){
+			return false;
+		}
+		Val target = t.getTarget().fact().fact();
+		Val source = t.getStart().fact().fact();
+		Value sourceVal = source.value();
+		Value targetVal = target.value();
+		
+		if(source.isStatic()){
+			return false;
+		}
+		if(!(targetVal.getType() instanceof RefType) || !(sourceVal.getType() instanceof RefType)){
+			return false;//!allocVal.value().getType().equals(varVal.value().getType());
+		}
+
+		RefType targetType = (RefType) targetVal.getType(); 
+		RefType sourceType = (RefType) sourceVal.getType(); 
+		if(targetType.getSootClass().isPhantom() || sourceType.getSootClass().isPhantom())
+			return false;
+		if(target instanceof AllocVal && ((AllocVal) target).allocationValue() instanceof NewExpr){
+			boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(targetType,sourceType);
+			return !castFails;
+		}
+		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(targetType,sourceType) || Scene.v().getOrMakeFastHierarchy().canStoreType(sourceType,targetType);
+		return !castFails;
 	}
 
 }

@@ -224,35 +224,4 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		return Collections.emptySet();
 	}
 	
-	@Override
-	protected boolean preventFieldTransitionAdd(Transition<Field, INode<Node<Statement, Val>>> t, W weight) {
-		if(!t.getLabel().equals(Field.empty()) || !options.typeCheck()){
-			return false;
-		}
-		if(t.getTarget() instanceof GeneratedState || t.getStart() instanceof GeneratedState){
-			return false;
-		}
-		Val target = t.getTarget().fact().fact();
-		Val source = t.getStart().fact().fact();
-		Value sourceVal = source.value();
-		Value targetVal = target.value();
-		
-		if(source.isStatic()){
-			return false;
-		}
-		if(!(targetVal.getType() instanceof RefType) || !(sourceVal.getType() instanceof RefType)){
-			return false;//!allocVal.value().getType().equals(varVal.value().getType());
-		}
-
-		RefType targetType = (RefType) targetVal.getType(); 
-		RefType sourceType = (RefType) sourceVal.getType(); 
-		if(targetType.getSootClass().isPhantom() || sourceType.getSootClass().isPhantom())
-			return false;
-		if(target instanceof AllocVal && ((AllocVal) target).allocationValue() instanceof NewExpr){
-			boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(targetType,sourceType);
-			return !castFails;
-		}
-		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(targetType,sourceType) || Scene.v().getOrMakeFastHierarchy().canStoreType(sourceType,targetType);
-		return !castFails;
-	}
 }
