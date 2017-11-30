@@ -51,17 +51,20 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	public W normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
 		
 		W weight = delegate.normal(curr, succ);
+		if (isObjectFlowPhase() && curr.stmt().isCallsite() && !weight.equals(getOne())){
+			addOtherThanOneWeight(curr, weight);
+		}
 		
 		if(isValueFlowPhase() && IDEALAnalysis.ENABLE_STRONG_UPDATES){
 			if(potentialStrongUpdates.containsKey(curr.stmt())){
 				W w = potentialStrongUpdates.get(curr.stmt());
-				System.err.println("Potential strong update "+ curr + "  " + w);
+//				System.err.println("Potential strong update "+ curr + "  " + w);
 				if(!weakUpdates.contains(curr.stmt())){
-					System.err.println("Strong update " + curr + w + " was " + weight);
+//					System.err.println("Strong update " + curr + w + " was " + weight);
 					return w;
 				}
 				weight = (W) weight.combineWith(w);
-				System.err.println("No strong update" + weight);
+//				System.err.println("No strong update" + weight);
 			}
 		}
 		return weight;
