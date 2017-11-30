@@ -76,7 +76,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		protected AbstractBoomerangSolver<W> createItem(final Query key) {
 			final AbstractBoomerangSolver<W> solver;
 			if (key instanceof BackwardQuery) {
-				System.out.println("Backward solving query: " + key);
+				if(DEBUG)
+					System.out.println("Backward solving query: " + key);
 				solver = createBackwardSolver((BackwardQuery) key);
 				if (!first) {
 					first = true;
@@ -85,7 +86,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 					addAllocationType(method.getDeclaringClass().getType());
 				}
 			} else {
-				System.out.println("Forward solving query: " + key);
+				if(DEBUG)
+					System.out.println("Forward solving query: " + key);
 				solver = createForwardSolver((ForwardQuery) key);
 				if (key.getType() instanceof RefType) {
 					addAllocationType((RefType) key.getType());
