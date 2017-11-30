@@ -14,5 +14,9 @@ public class StringTest extends AbstractBoomerangTest {
 		System.out.println(query);
 		queryFor(query);
 	}
-
+	@Test
+	public void stringToCharArray(){
+		char[] s = "password".toCharArray();
+		queryFor(s);
+	}
 }
