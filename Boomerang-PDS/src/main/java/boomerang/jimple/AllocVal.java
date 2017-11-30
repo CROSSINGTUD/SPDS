@@ -13,13 +13,12 @@ public class AllocVal extends Val {
 	}
 
 	@Override
-	public Val asNoAlloc(){
-		return new Val(this.value(),this.m());
-	}
-
-	@Override
 	public String toString() {
 		return super.toString() + " Value: "+ alloc;
 	}
-
+	
+	public Value allocationValue(){
+		return alloc;
+	}
+	
 }

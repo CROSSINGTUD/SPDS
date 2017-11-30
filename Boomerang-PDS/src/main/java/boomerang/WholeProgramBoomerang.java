@@ -2,6 +2,7 @@ package boomerang;
 
 import java.util.List;
 
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.ReachableMethodListener;
@@ -49,7 +50,7 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 			if(u instanceof AssignStmt){
 				AssignStmt assignStmt = (AssignStmt) u;
 				if(options.isAllocationVal(assignStmt.getRightOp())){
-					ForwardQuery q = new ForwardQuery(new Statement((Stmt) u, method), new Val(assignStmt.getLeftOp(),method));
+					ForwardQuery q = new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp()));
 					solve(q);
 					allocationSites++;
 				}

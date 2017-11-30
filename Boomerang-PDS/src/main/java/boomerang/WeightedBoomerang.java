@@ -628,7 +628,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		if (unit.isPresent()) {
 			for (Unit succ : icfg().getSuccsOf(unit.get())) {
 				Node<Statement, Val> source = new Node<Statement, Val>(
-						new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact().asNoAlloc());
+						new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact());
 				if (isMultiArrayAllocation(unit.get()) && options.arrayFlows()) {
 					insertTransition(solver.getFieldAutomaton(),
 							new Transition<Field, INode<Node<Statement, Val>>>(
