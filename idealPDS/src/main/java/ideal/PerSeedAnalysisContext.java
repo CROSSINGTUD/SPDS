@@ -40,17 +40,19 @@ public class PerSeedAnalysisContext<W extends Weight> {
 	}
 
 	public WeightedBoomerang<W> run() {
+		WeightedBoomerang<W> solverPhase1 = createSolver();
 		try{
-			runPhase(Phases.ObjectFlow);
+			runPhase(solverPhase1,Phases.ObjectFlow);
 		} catch(BoomerangTimeoutException e){
 			System.err.println(e);
-			throw new IDEALSeedTimeout();
+			throw new IDEALSeedTimeout(solverPhase1,e);
 		}
+		WeightedBoomerang<W> solverPhase2 = createSolver();
 		try{
-			return runPhase(Phases.ValueFlow);
+			return runPhase(solverPhase2,Phases.ValueFlow);
 		} catch(BoomerangTimeoutException e){
 			System.err.println(e);
-			throw new IDEALSeedTimeout();
+			throw new IDEALSeedTimeout(solverPhase2,e);
 		}
 	}
 
@@ -88,9 +90,7 @@ public class PerSeedAnalysisContext<W extends Weight> {
 		};
 	}
 
-	private WeightedBoomerang<W> runPhase(final Phases phase) {
-//		System.out.println("STARTING PHASE " + phase);
-		final WeightedBoomerang<W> boomerang = createSolver();
+	private WeightedBoomerang<W> runPhase(final WeightedBoomerang<W> boomerang, final Phases phase) {
 		idealWeightFunctions.setPhase(phase);
 		final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = boomerang.getSolvers().getOrCreate(seed).getCallAutomaton();
 		callAutomaton.registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>,W>() {
