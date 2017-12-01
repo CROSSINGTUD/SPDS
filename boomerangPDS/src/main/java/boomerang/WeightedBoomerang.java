@@ -628,6 +628,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	}
 
 	public void solve(Query query) {
+		analysisWatch.reset();
 		analysisWatch.start();
 		if (query instanceof ForwardQuery) {
 			forwardSolve((ForwardQuery) query);
@@ -666,17 +667,20 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 									new SingleNode<Node<Statement, Val>>(source)));
 				}
 				if(isStringAllocation(unit.get())){
+//					Scene.v().forceResolve("java.lang.String", SootClass.BODIES);
 					SootClass stringClass = Scene.v().getSootClass("java.lang.String");
-					SootField valueField = stringClass.getFieldByName("value");
-					SingleNode<Node<Statement, Val>> s = new SingleNode<Node<Statement, Val>>(source);
-					INode<Node<Statement, Val>> irState = solver.getFieldAutomaton().createState(s, new Field(valueField));
-					insertTransition(solver.getFieldAutomaton(),
-							new Transition<Field, INode<Node<Statement, Val>>>(
-									new SingleNode<Node<Statement, Val>>(source), new Field(valueField),irState
-									));
-					insertTransition(solver.getFieldAutomaton(),
-							new Transition<Field, INode<Node<Statement, Val>>>(irState, Field.empty(),
-									solver.getFieldAutomaton().getInitialState()));
+					if(stringClass.declaresField("char[] value")){
+						SootField valueField = stringClass.getField("char[] value");
+						SingleNode<Node<Statement, Val>> s = new SingleNode<Node<Statement, Val>>(source);
+						INode<Node<Statement, Val>> irState = solver.getFieldAutomaton().createState(s, new Field(valueField));
+						insertTransition(solver.getFieldAutomaton(),
+								new Transition<Field, INode<Node<Statement, Val>>>(
+										new SingleNode<Node<Statement, Val>>(source), new Field(valueField),irState
+										));
+						insertTransition(solver.getFieldAutomaton(),
+								new Transition<Field, INode<Node<Statement, Val>>>(irState, Field.empty(),
+										solver.getFieldAutomaton().getInitialState()));
+					}
 				}
 				if(query instanceof WeightedForwardQuery){
 					WeightedForwardQuery<W> q = (WeightedForwardQuery<W>) query;
@@ -1535,5 +1539,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return debugger;
 	}
 
-
+	public BoomerangStats<W> getStats() {
+		return stats;
+	}
 }

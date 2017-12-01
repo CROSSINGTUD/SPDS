@@ -135,7 +135,10 @@ public class BoomerangStats<W extends Weight> {
 		s+="\n";
 		return s;
 	}	
-	
+
+	public Set<SootMethod> getVisitedMethods() {
+		return Sets.newHashSet(visitedMethods);
+	}
 	public String computeMetrics(){
 		int min = Integer.MAX_VALUE;
 		int totalReached = 0;
