@@ -32,6 +32,8 @@ public class IDEALAnalysis<W extends Weight> {
 
 	private final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final IDEALAnalysisDefinition<W> analysisDefinition;
+	private int timeoutCount;
+	private int seedCount;
 
 	public IDEALAnalysis(IDEALAnalysisDefinition<W> analysisDefinition) {
 		this.analysisDefinition = analysisDefinition;
@@ -50,7 +52,13 @@ public class IDEALAnalysis<W extends Weight> {
 			System.err.println("Analysing " + initialSeeds.size() + " seeds!");
 		Map<Node<Statement,AllocVal>, WeightedBoomerang<W>> seedToSolver = Maps.newHashMap();
 		for (Node<Statement, AllocVal> seed : initialSeeds) {
-			seedToSolver.put(seed, run(new ForwardQuery(seed.stmt(),seed.fact())));
+			seedCount++;
+			try {
+				seedToSolver.put(seed, run(new ForwardQuery(seed.stmt(), seed.fact())));
+			} catch(IDEALSeedTimeout e){
+				timeoutCount++;
+			}
+			System.err.println("Analyzed (finished,timedout): \t (" + (seedCount -timeoutCount)+ "," + timeoutCount + ") of "+ initialSeeds.size() + " seeds! ");
 		}
 		return seedToSolver;
 	}

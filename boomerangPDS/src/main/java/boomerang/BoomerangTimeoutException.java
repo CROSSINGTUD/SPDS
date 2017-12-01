@@ -14,6 +14,6 @@ public class BoomerangTimeoutException extends RuntimeException {
 
 	@Override
 	public String toString() {
-		return "Boomerang Timeout after " + elapsed + "ms\\ " + stats;
+		return "Boomerang Timeout after " + elapsed + "ms\n " + stats;
 	}
 }

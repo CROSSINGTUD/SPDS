@@ -1,12 +1,8 @@
 package ideal;
 
-import java.util.Map;
 import java.util.Map.Entry;
 
-import boomerang.BackwardQuery;
-import boomerang.WeightedBoomerang;
-import boomerang.ForwardQuery;
-import boomerang.Query;
+import boomerang.*;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -20,7 +16,6 @@ import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import typestate.TransitionFunction;
 import wpds.impl.ConnectPushListener;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -45,13 +40,22 @@ public class PerSeedAnalysisContext<W extends Weight> {
 	}
 
 	public WeightedBoomerang<W> run() {
-		runPhase(Phases.ObjectFlow);
-		return runPhase(Phases.ValueFlow);
+		try{
+			runPhase(Phases.ObjectFlow);
+		} catch(BoomerangTimeoutException e){
+			System.err.println(e);
+			throw new IDEALSeedTimeout();
+		}
+		try{
+			return runPhase(Phases.ValueFlow);
+		} catch(BoomerangTimeoutException e){
+			System.err.println(e);
+			throw new IDEALSeedTimeout();
+		}
 	}
 
-	private WeightedBoomerang<W> runPhase(final Phases phase) {
-//		System.out.println("STARTING PHASE " + phase);
-		final WeightedBoomerang<W> boomerang = new WeightedBoomerang<W>() {
+	private WeightedBoomerang<W> createSolver() {
+		return new WeightedBoomerang<W>() {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 				return analysisDefinition.icfg();
@@ -82,6 +86,11 @@ public class PerSeedAnalysisContext<W extends Weight> {
 				return new OneWeightFunctions<Statement, Val, Statement, W>(zero, one);
 			}
 		};
+	}
+
+	private WeightedBoomerang<W> runPhase(final Phases phase) {
+//		System.out.println("STARTING PHASE " + phase);
+		final WeightedBoomerang<W> boomerang = createSolver();
 		idealWeightFunctions.setPhase(phase);
 		final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = boomerang.getSolvers().getOrCreate(seed).getCallAutomaton();
 		callAutomaton.registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>,W>() {
