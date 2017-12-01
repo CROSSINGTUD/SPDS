@@ -22,6 +22,8 @@ public interface BoomerangOptions {
 	
 	public boolean callSummaries();
 	public boolean fieldSummaries();
+	
+	public int analysisTimeoutMS();
 
 	public boolean isAllocationVal(Value val);
 

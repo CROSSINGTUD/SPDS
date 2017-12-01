@@ -7,8 +7,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
@@ -152,7 +154,18 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 			});
 			stats.registerSolver(key, solver);
-			
+			solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
+
+				@Override
+				public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+					if(options.analysisTimeoutMS() > 0){
+						long elapsed = analysisWatch.elapsed(TimeUnit.MILLISECONDS);
+						if(options.analysisTimeoutMS() < elapsed){
+							throw new BoomerangTimeoutException(elapsed,stats);
+						}
+					}
+				}
+			});
 			return solver;
 		}
 	};
@@ -195,6 +208,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	private Set<SootMethod> flowReachable = Sets.newHashSet();
 	protected final BoomerangOptions options;
 	private Debugger<W> debugger;
+	private Stopwatch analysisWatch = Stopwatch.createUnstarted();
 
 	public WeightedBoomerang(BoomerangOptions options){
 		this.options = options;
@@ -315,6 +329,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				if(calledMethod.isStatic()){
 					addFlowReachable(calledMethod);
 				}
+				if(value.isStatic())
+					return;
 				ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
 				callSitePoi.addByPassingAllocation(sourceQuery);
 			}
@@ -612,6 +628,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	}
 
 	public void solve(Query query) {
+		analysisWatch.start();
 		if (query instanceof ForwardQuery) {
 			forwardSolve((ForwardQuery) query);
 		}

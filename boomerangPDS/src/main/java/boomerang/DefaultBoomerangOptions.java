@@ -121,4 +121,9 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		return Optional.absent();
 	}
 
+	@Override
+	public int analysisTimeoutMS() {
+		return -1;
+	}
+
 }
