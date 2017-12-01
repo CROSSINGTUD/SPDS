@@ -123,7 +123,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 
 	@Override
 	public int analysisTimeoutMS() {
-		return -1;
+		return 30000;
 	}
 
 }
