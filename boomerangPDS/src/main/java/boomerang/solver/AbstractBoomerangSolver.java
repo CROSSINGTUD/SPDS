@@ -49,6 +49,7 @@ import wpds.impl.NestedWeightedPAutomatons;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
+import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
@@ -403,6 +404,14 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	public WeightedPAutomaton<Statement, INode<Val>, W> getCallAutomaton() {
 		return callAutomaton;
+	}
+	
+	public WeightedPushdownSystem<Statement, INode<Val>, W> getCallPDS(){
+		return callingPDS;
+	}
+	
+	public WeightedPushdownSystem<Field, INode<Node<Statement, Val>>, W> getFieldPDS(){
+		return fieldPDS;
 	}
 
 	public void addFieldAutomatonListener(WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> listener) {

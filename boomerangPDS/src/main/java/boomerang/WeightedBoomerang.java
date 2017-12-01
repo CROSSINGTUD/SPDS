@@ -32,6 +32,7 @@ import boomerang.solver.ForwardBoomerangSolver;
 import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import boomerang.solver.StatementBasedFieldTransitionListener;
+import boomerang.stats.BoomerangStats;
 import heros.utilities.DefaultValueMap;
 import soot.*;
 import soot.jimple.*;
@@ -150,6 +151,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				}
 
 			});
+			stats.registerSolver(key, solver);
 			
 			return solver;
 		}
@@ -158,6 +160,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	private BackwardsInterproceduralCFG bwicfg;
 	private EmptyCalleeFlow forwardEmptyCalleeFlow = new ForwardEmptyCalleeFlow();
 	private EmptyCalleeFlow backwardEmptyCalleeFlow = new BackwardEmptyCalleeFlow();
+	protected BoomerangStats<W> stats = new BoomerangStats<>();
+	
 	private Collection<RefType> allocatedTypes = Sets.newHashSet();
 	private Multimap<SootMethod, Runnable> queuedReachableMethod = HashMultimap.create();
 	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
@@ -168,18 +172,21 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	private DefaultValueMap<FieldWritePOI, FieldWritePOI> fieldWrites = new DefaultValueMap<FieldWritePOI, FieldWritePOI>() {
 		@Override
 		protected FieldWritePOI createItem(FieldWritePOI key) {
+			stats.registerFieldWritePOI(key);
 			return key;
 		}
 	};
 	private DefaultValueMap<FieldReadPOI, FieldReadPOI> fieldReads = new DefaultValueMap<FieldReadPOI, FieldReadPOI>() {
 		@Override
 		protected FieldReadPOI createItem(FieldReadPOI key) {
+			stats.registerFieldReadPOI(key);
 			return key;
 		}
 	};
 	private DefaultValueMap<ForwardCallSitePOI, ForwardCallSitePOI> forwardCallSitePOI = new DefaultValueMap<ForwardCallSitePOI, ForwardCallSitePOI>() {
 		@Override
 		protected ForwardCallSitePOI createItem(ForwardCallSitePOI key) {
+			stats.registerCallSitePOI(key);
 			return key;
 		}
 	};
@@ -210,6 +217,15 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 					Statement callSite, InvokeExpr invokeExpr, Val fact, SootMethod callee, Stmt calleeSp) {
 				addReachable(callee);
 				return super.computeCallFlow(caller, returnSite, callSite, invokeExpr, fact, callee, calleeSp);
+			}
+			
+			@Override
+			protected void onCallFlow(SootMethod callee, Stmt callSite, Val value,
+							Collection<? extends State> res) {
+				if (!res.isEmpty()) {
+					addFlowReachable(callee);
+				}
+				super.onCallFlow(callee, callSite, value, res);
 			}
 
 			@Override
@@ -706,7 +722,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return (stmt instanceof AssignStmt) && ((AssignStmt) stmt).getRightOp() instanceof NewMultiArrayExpr;
 	}
 
-	private class FieldWritePOI extends FieldStmtPOI {
+	public class FieldWritePOI extends FieldStmtPOI {
 		public FieldWritePOI(Statement statement, Val base, Field field, Val stored) {
 			super(statement, base, field, stored);
 		}
@@ -992,7 +1008,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			return true;
 		}
 	}
-	private class ForwardCallSitePOI {
+	public class ForwardCallSitePOI {
 		private Statement callSite;
 		private Set<QueryWithVal> returnsFromCall = Sets.newHashSet();
 		private Set<ForwardQuery> byPassingAllocations = Sets.newHashSet();
@@ -1144,7 +1160,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 	}
 
-	private class FieldReadPOI extends FieldStmtPOI {
+	public class FieldReadPOI extends FieldStmtPOI {
 		public FieldReadPOI(Statement statement, Val base, Field field, Val stored) {
 			super(statement, base, field, stored);
 		}
@@ -1502,25 +1518,5 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return debugger;
 	}
 
-	public void computeMetrics(){
-		int min = Integer.MAX_VALUE;
-		int totalReached = 0;
-		int max = 0;
-		Query maxQuery = null;
-		for (Query q : queryToSolvers.keySet()) {
-			int size = queryToSolvers.getOrCreate(q).getReachedStates().size();
-			totalReached += size;
-			min = Math.min(size, min);
-			if(size > max){
-				maxQuery = q;
-			}
-			max = Math.max(size, max);
-			
-		}
-		float average = ((float) totalReached )/ queryToSolvers.keySet().size();
-		System.out.println("Reachable nodes (Min/Avg/Max): " +min +"/"+ average+"/"+max); 
-		System.out.println("Maximal Query: " +maxQuery); 
-	}
 
-	
 }

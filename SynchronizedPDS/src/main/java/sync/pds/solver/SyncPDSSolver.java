@@ -56,7 +56,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			return "Field " + super.toString();
 		};
 	};
-	protected final Map<Transition<Stmt, INode<Fact>>, W> nodesToWeights = Maps.newHashMap(); 
 	private final Set<WitnessNode<Stmt,Fact,Field>> reachedStates = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> callingContextReachable = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> fieldContextReachable = Sets.newHashSet();

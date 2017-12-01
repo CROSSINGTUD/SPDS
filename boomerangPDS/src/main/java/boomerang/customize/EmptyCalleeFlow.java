@@ -12,8 +12,8 @@ import wpds.interfaces.State;
 
 public abstract class EmptyCalleeFlow {
 
-	SootMethod systemArrayCopyMethod;
-	boolean fetchedSystemArrayCopyMethod;
+	protected SootMethod systemArrayCopyMethod;
+	protected boolean fetchedSystemArrayCopyMethod;
 	
 	protected boolean isSystemArrayCopy(SootMethod method) {
 		fetchSystemArrayClasses();
