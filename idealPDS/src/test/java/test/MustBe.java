@@ -23,7 +23,6 @@ public class MustBe extends ExpectedResults<TransitionFunction,Val> {
 
 	@Override
 	public void computedResults(TransitionFunction val) {
-		System.out.println(val + " " + unit + " " + val);
 		Set<State> states = Sets.newHashSet();
 		for(ITransition t : val.values()){
 			if(!t.equals(Transition.identity())){
