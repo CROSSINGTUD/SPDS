@@ -8,6 +8,7 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
+import com.google.common.base.Stopwatch;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
@@ -20,39 +21,49 @@ import wpds.impl.ConnectPushListener;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 
-public class PerSeedAnalysisContext<W extends Weight> {
+public class IDEALSeedSolver<W extends Weight> {
 
 	private final IDEALAnalysisDefinition<W> analysisDefinition;
 	private final Query seed;
 	private final IDEALWeightFunctions<W> idealWeightFunctions;
 	private final W zero;
 	private final W one;
-	public static enum Phases {
+	private final WeightedBoomerang<W> phase1Solver;
+	private final WeightedBoomerang<W> phase2Solver;
+	private final Stopwatch analysisStopwatch = Stopwatch.createUnstarted();
+	private WeightedBoomerang<W> timedoutSolver;
+
+
+    public enum Phases {
 		ObjectFlow, ValueFlow
 	};
 
-	public PerSeedAnalysisContext(IDEALAnalysisDefinition<W> analysisDefinition, Query seed) {
+	public IDEALSeedSolver(IDEALAnalysisDefinition<W> analysisDefinition, Query seed) {
 		this.analysisDefinition = analysisDefinition;
 		this.seed = seed;
 		this.idealWeightFunctions = new IDEALWeightFunctions<W>(analysisDefinition.weightFunctions());
 		this.zero = analysisDefinition.weightFunctions().getZero();
 		this.one = analysisDefinition.weightFunctions().getOne();
+		this.phase1Solver = createSolver();
+		this.phase2Solver = createSolver();
 	}
 
 	public WeightedBoomerang<W> run() {
-		WeightedBoomerang<W> solverPhase1 = createSolver();
 		try{
-			runPhase(solverPhase1,Phases.ObjectFlow);
+			runPhase(this.phase1Solver,Phases.ObjectFlow);
 		} catch(BoomerangTimeoutException e){
 			System.err.println(e);
-			throw new IDEALSeedTimeout(solverPhase1,e);
+			analysisStopwatch.stop();
+			timedoutSolver = this.phase1Solver;
+			throw new IDEALSeedTimeout(this,this.phase1Solver,e);
 		}
-		WeightedBoomerang<W> solverPhase2 = createSolver();
 		try{
-			return runPhase(solverPhase2,Phases.ValueFlow);
+			return runPhase(this.phase2Solver,Phases.ValueFlow);
 		} catch(BoomerangTimeoutException e){
 			System.err.println(e);
-			throw new IDEALSeedTimeout(solverPhase2,e);
+			analysisStopwatch.stop();
+			timedoutSolver = this.phase2Solver;
+			throw new IDEALSeedTimeout(this,this.phase2Solver,e);
 		}
 	}
 
@@ -91,6 +102,7 @@ public class PerSeedAnalysisContext<W extends Weight> {
 	}
 
 	private WeightedBoomerang<W> runPhase(final WeightedBoomerang<W> boomerang, final Phases phase) {
+		analysisStopwatch.start();
 		idealWeightFunctions.setPhase(phase);
 		final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = boomerang.getSolvers().getOrCreate(seed).getCallAutomaton();
 		callAutomaton.registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>,W>() {
@@ -127,8 +139,30 @@ public class PerSeedAnalysisContext<W extends Weight> {
 		});
 //		System.out.println("");
 		boomerang.debugOutput();
-
+		analysisStopwatch.stop();
 		return boomerang;
 	}
 
+	public WeightedBoomerang<W> getPhase1Solver() {
+		return phase1Solver;
+	}
+
+	public WeightedBoomerang<W> getPhase2Solver() {
+		return phase2Solver;
+	}
+
+	public Stopwatch getAnalysisStopwatch() {
+		return analysisStopwatch;
+	}
+
+	public boolean isTimedOut(){
+		return timedoutSolver != null;
+	}
+
+	public WeightedBoomerang getTimedoutSolver() {
+		return timedoutSolver;
+	}
+	public Query getSeed() {
+		return seed;
+	}
 }

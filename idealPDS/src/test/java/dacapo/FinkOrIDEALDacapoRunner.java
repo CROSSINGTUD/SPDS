@@ -39,7 +39,7 @@ public class FinkOrIDEALDacapoRunner extends ResearchQuestion {
 			System.setProperty("rule", Util.selectTypestateMachine(System.getProperty("rule")).getName());
 			System.out.println("running " + System.getProperty("rule"));
 			System.setProperty("dacapo", "true");
-			new IDEALRunner().run();
+			new IDEALRunner().run(outputFile);
 		} else if(analysis.equalsIgnoreCase("fink-apmust")){
 //			TypestateRegressionUnit test = new TypestateRegressionUnit(null, 0);
 //			test.selectTypestateRule(System.getProperty("rule"));

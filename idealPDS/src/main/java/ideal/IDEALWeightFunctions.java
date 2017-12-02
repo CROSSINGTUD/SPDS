@@ -12,7 +12,7 @@ import com.google.common.collect.Sets;
 
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import ideal.PerSeedAnalysisContext.Phases;
+import ideal.IDEALSeedSolver.Phases;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.Weight;

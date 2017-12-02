@@ -12,7 +12,6 @@ import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
-import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
 import soot.MethodOrMethodContext;
 import soot.Scene;
@@ -40,7 +39,7 @@ public class IDEALAnalysis<W extends Weight> {
 		this.icfg = analysisDefinition.icfg();
 	}
 
-	public Map<Node<Statement, AllocVal>, WeightedBoomerang<W>> run() {
+	public Map<Node<Statement, AllocVal>, IDEALSeedSolver<W>> run() {
 		printOptions();
 		long before = System.currentTimeMillis();
 		Set<Node<Statement,AllocVal>> initialSeeds = computeSeeds();
@@ -50,21 +49,23 @@ public class IDEALAnalysis<W extends Weight> {
 			System.err.println("No seeds found!");
 		else
 			System.err.println("Analysing " + initialSeeds.size() + " seeds!");
-		Map<Node<Statement,AllocVal>, WeightedBoomerang<W>> seedToSolver = Maps.newHashMap();
+		Map<Node<Statement, AllocVal>, IDEALSeedSolver<W>> seedToSolver = Maps.newHashMap();
 		for (Node<Statement, AllocVal> seed : initialSeeds) {
 			seedCount++;
 			try {
 				seedToSolver.put(seed, run(new ForwardQuery(seed.stmt(), seed.fact())));
 			} catch(IDEALSeedTimeout e){
+				seedToSolver.put(seed, (IDEALSeedSolver<W>) e.getSolver());
 				timeoutCount++;
 			}
 			System.err.println("Analyzed (finished,timedout): \t (" + (seedCount -timeoutCount)+ "," + timeoutCount + ") of "+ initialSeeds.size() + " seeds! ");
 		}
 		return seedToSolver;
 	}
-	public WeightedBoomerang<W> run(Query seed) {
-		PerSeedAnalysisContext<W> idealAnalysis = new PerSeedAnalysisContext<W>(analysisDefinition, seed);
-		return idealAnalysis.run();
+	public IDEALSeedSolver<W> run(Query seed) {
+		IDEALSeedSolver<W> idealAnalysis = new IDEALSeedSolver<W>(analysisDefinition, seed);
+		idealAnalysis.run();
+		return idealAnalysis;
 	}
 	private void printOptions() {
 		if(PRINT_OPTIONS)

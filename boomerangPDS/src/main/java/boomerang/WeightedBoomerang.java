@@ -161,6 +161,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 					if(options.analysisTimeoutMS() > 0){
 						long elapsed = analysisWatch.elapsed(TimeUnit.MILLISECONDS);
 						if(options.analysisTimeoutMS() < elapsed){
+							analysisWatch.stop();
 							throw new BoomerangTimeoutException(elapsed,stats);
 						}
 					}
@@ -298,11 +299,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 	protected boolean isBackwardEnterCall(Statement stmt) {
 		return icfg().isExitStmt(stmt.getUnit().get());
-	}
-
-	protected static Val getAllocatedVal(Statement s) {
-		AssignStmt optUnit = (AssignStmt) s.getUnit().get();
-		return new AllocVal(optUnit.getLeftOp(), s.getMethod(),optUnit.getRightOp());
 	}
 
 	protected Optional<AllocVal> isAllocationNode(Statement s, Val fact) {
@@ -536,7 +532,11 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		}
 	}
 
-	private class TriggerBaseAllocationAtFieldWrite extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+    public Stopwatch getAnalysisStopwatch() {
+        return analysisWatch;
+    }
+
+    private class TriggerBaseAllocationAtFieldWrite extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
 		private final PointOfIndirection<Statement, Val, Field> fieldWritePoi;
 		private final ForwardQuery sourceQuery;
@@ -636,6 +636,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		if (query instanceof BackwardQuery) {
 			backwardSolve((BackwardQuery) query);
 		}
+		if(analysisWatch.isRunning())
+			analysisWatch.stop();
 	}
 
 	protected void backwardSolve(BackwardQuery query) {
@@ -657,6 +659,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				Node<Statement, Val> source = new Node<Statement, Val>(
 						new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact());
 				if (isMultiArrayAllocation(unit.get()) && options.arrayFlows()) {
+					//TODO fix; adjust as below;
 					insertTransition(solver.getFieldAutomaton(),
 							new Transition<Field, INode<Node<Statement, Val>>>(
 									new SingleNode<Node<Statement, Val>>(source), Field.array(),
@@ -1352,6 +1355,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 	protected void addReachable(SootMethod m) {
 		if (reachableMethods.add(m)) {
+			System.out.println(m);
 			Collection<Runnable> collection = queuedReachableMethod.get(m);
 			for (Runnable runnable : collection) {
 				runnable.run();

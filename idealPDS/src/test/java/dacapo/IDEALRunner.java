@@ -1,15 +1,21 @@
 package dacapo;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import boomerang.WeightedBoomerang;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
+import ideal.IDEALSeedSolver;
 import soot.G;
 import soot.PackManager;
 import soot.Scene;
@@ -21,6 +27,7 @@ import soot.Unit;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.WeightFunctions;
+import sync.pds.solver.nodes.Node;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
@@ -91,7 +98,7 @@ public class IDEALRunner  extends ResearchQuestion  {
   private IDEALAnalysis<TransitionFunction> analysis;
   protected long analysisTime;
 
-  public void run() {
+  public void run(final String outputFile) {
     G.v().reset();
 
     setupSoot();
@@ -110,7 +117,50 @@ public class IDEALRunner  extends ResearchQuestion  {
         	}
         }
         System.out.println("Application Classes: " + Scene.v().getApplicationClasses().size());
-        IDEALRunner.this.getAnalysis().run();
+        Map<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>> seedToAnalysisTime = IDEALRunner.this.getAnalysis().run();
+          File file = new File(outputFile);
+          boolean fileExisted = file.exists();
+          FileWriter writer;
+          try {
+              writer = new FileWriter(file, true);
+              if(!fileExisted)
+                  writer.write(
+                          "Seed;SeedMethod;SeedClass;AnalysisTimes;Phase1Time;Phase2Time;VisitedMethod;ReachableMethods;Is_In_Error;Timedout\n");
+
+              Set<Map.Entry<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>>> entries = seedToAnalysisTime.entrySet();
+              for (Map.Entry<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>> entry : entries) {
+                  writer.write(asCSVLine(entry.getKey(), entry.getValue()));
+              }
+              writer.close();
+          } catch (IOException e1) {
+              // TODO Auto-generated catch block
+              e1.printStackTrace();
+          }
+
+          File seedStats = new File(outputFile+"-seedStats");
+
+          try {
+              writer = new FileWriter(seedStats);
+
+              Set<Map.Entry<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>>> entries = seedToAnalysisTime.entrySet();
+              for (Map.Entry<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>> entry : entries) {
+                  IDEALSeedSolver<TransitionFunction> idealSeedSolver = entry.getValue();
+                  writer.write("Seed: "+entry.getKey().toString()+"\n");
+                  if(!idealSeedSolver.isTimedOut()) {
+                      writer.write("Stats Solver 1: "+idealSeedSolver.getPhase1Solver().getStats());
+                      writer.write("Stats Solver 2: "+idealSeedSolver.getPhase2Solver().getStats());
+                  } else{
+                      writer.write("Timedout:" + idealSeedSolver.getTimedoutSolver().getStats());
+
+                  }
+
+              }
+              writer.close();
+          } catch (IOException e1) {
+              // TODO Auto-generated catch block
+              e1.printStackTrace();
+          }
+
       }
     });
 
@@ -120,8 +170,16 @@ public class IDEALRunner  extends ResearchQuestion  {
     PackManager.v().getPack("wjtp").apply();
   }
 
+    private String asCSVLine(Node<Statement, AllocVal> key, IDEALSeedSolver<TransitionFunction> solver) {
+        return String.format("%s;%s;%s;%s;%s;%s;%s;%s;%s;%s\n",key,key.stmt().getMethod(),key.stmt().getMethod().getDeclaringClass(),solver.getAnalysisStopwatch().elapsed(TimeUnit.MILLISECONDS),solver.getPhase1Solver().getAnalysisStopwatch().elapsed(TimeUnit.MILLISECONDS),solver.getPhase2Solver().getAnalysisStopwatch().elapsed(TimeUnit.MILLISECONDS),solver.getPhase1Solver().getStats().getVisitedMethods().size(), Scene.v().getReachableMethods().size(), isInErrorState(solver),solver.isTimedOut());
+    }
 
-  protected IDEALAnalysis<TransitionFunction> getAnalysis() {
+    private boolean isInErrorState(IDEALSeedSolver<TransitionFunction> solver) {
+      return false;
+    }
+
+
+    protected IDEALAnalysis<TransitionFunction> getAnalysis() {
     if (analysis == null)
       analysis = createAnalysis();
     return analysis;

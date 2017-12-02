@@ -17,6 +17,7 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
+import ideal.IDEALSeedSolver;
 import soot.Body;
 import soot.SceneTransformer;
 import soot.SootMethod;
@@ -25,7 +26,6 @@ import soot.Value;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
-import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.Node;
 import test.ExpectedResults.InternalState;
@@ -36,7 +36,6 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected JimpleBasedInterproceduralCFG icfg;
-	protected long analysisTime;
 
 	protected abstract TypeStateMachineWeightFunctions getStateMachine();
 
@@ -86,12 +85,12 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				System.out.println(sootTestMethod.getActiveBody());
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				
-				Map<Node<Statement, AllocVal>, WeightedBoomerang<TransitionFunction>> seedToSolvers = executeAnalysis();
+				Map<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>> seedToSolvers = executeAnalysis();
 				for(Node<Statement, AllocVal> seed : seedToSolvers.keySet()){
 					System.out.println("SEED "+  seed);
-					for(Query q : seedToSolvers.get(seed).getSolvers().keySet()){
+					for(Query q : seedToSolvers.get(seed).getPhase2Solver().getSolvers().keySet()){
 //						if(q.asNode().equals(seed)){
-							testingResultReporter.onSeedFinished(q.asNode(), seedToSolvers.get(seed).getSolvers().getOrCreate(q));
+							testingResultReporter.onSeedFinished(q.asNode(), seedToSolvers.get(seed).getPhase2Solver().getSolvers().getOrCreate(q));
 //						}
 					}
 				}
@@ -116,7 +115,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		};
 	}
 
-	protected Map<Node<Statement, AllocVal>, WeightedBoomerang<TransitionFunction>> executeAnalysis() {
+	protected Map<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>> executeAnalysis() {
 		return IDEALTestingFramework.this.createAnalysis().run();
 	}
 

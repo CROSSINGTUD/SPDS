@@ -27,7 +27,7 @@ public class Main {
 	public static void main(String... args) {
 		for (int i = 0; i < NUMBER_OF_ITERATIONS; i++) {
 			runAnalysis("ideal","run-"+i,true,true);
-			runAnalysis("fink-apmust","run-"+i,true,true);
+			//runAnalysis("fink-apmust","run-"+i,true,true);
 		}
 
 		runAnalysis("ideal","noAliasing",false,true);
@@ -40,9 +40,11 @@ public class Main {
 			for (String bench : dacapo) {
 				String javaHome = System.getProperty("java.home");
 				String javaBin = javaHome + File.separator + "bin" + File.separator + "java";
-				ProcessBuilder builder = new ProcessBuilder(new String[] { javaBin, "-Xmx14g", "-Xms14g", "-Xss64m", "-cp",
+				String[] args = new String[] { javaBin, "-Xmx14g", "-Xms14g", "-Xss64m", "-cp",
 						System.getProperty("java.class.path"), FinkOrIDEALDacapoRunner.class.getName(), analysis, rule,
-						benchmarkFolder, bench, fileSuffix, /* aliasing */Boolean.toString(aliasing), /* strongUpdates */ Boolean.toString(strongUpdates) });
+						benchmarkFolder, bench, fileSuffix, /* aliasing */Boolean.toString(aliasing), /* strongUpdates */ Boolean.toString(strongUpdates) };
+				System.out.println(Arrays.toString(args));
+				ProcessBuilder builder = new ProcessBuilder(args);
 				builder.inheritIO();
 
 				Process process;
@@ -50,7 +52,6 @@ public class Main {
 					process = builder.start();
 					process.waitFor();
 				} catch (IOException | InterruptedException e) {
-					e.printStackTrace();
 				}
 			}
 		}
