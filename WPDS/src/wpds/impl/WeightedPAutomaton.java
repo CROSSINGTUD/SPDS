@@ -536,19 +536,21 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 	public void computeValues(Transition<N, D> callTrans, W weight) {
 //		transitionsToFinalWeights.put(callTrans, weight);
-		registerListener(new ValueComputationListener(callTrans));
+
 	}
 
 	public Map<Transition<N,D>, W> getTransitionsToFinalWeights() {
-		return transitionToWeights;
+		registerListener(new ValueComputationListener(initialState,getOne()));
+		return transitionsToFinalWeights;
 	}
 	
 	private class ValueComputationListener extends WPAStateListener<N, D, W>{
-		private Transition<N,D> trans;
 
-		public ValueComputationListener(Transition<N,D> trans) {
-			super(trans.getStart());
-			this.trans = trans;
+		private W weight;
+
+		public ValueComputationListener(D state, W weight) {
+			super(state);
+			this.weight = weight;
 		}
 
 		@Override
@@ -559,19 +561,13 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		public void onInTransitionAdded(Transition<N,D> t, W w, WeightedPAutomaton<N, D, W> aut) {
 			if(aut != WeightedPAutomaton.this)
 				return;
-			if(t.getStart().equals(t.getTarget()) && t.getTarget().equals(initialState)){
-				transitionsToFinalWeights.put(t, w);
-				return;
+			W newWeight = (W) weight.extendWith(w);
+			W weightAtTarget = transitionsToFinalWeights.get(t);
+			W newVal = (weightAtTarget == null ? newWeight : (W) weightAtTarget.combineWith(newWeight));
+			transitionsToFinalWeights.put(t, newVal);
+			if(isGeneratedState(t.getStart())){
+				registerListener(new ValueComputationListener(t.getStart(),newVal));
 			}
-			W weightAtTarget = transitionsToFinalWeights.get(trans);
-			W extendWith = (weightAtTarget == null ? w : (W) weightAtTarget.extendWith(w));
-			W weightAtSource = transitionsToFinalWeights.get(t);
-			W newVal = (weightAtSource == null ? extendWith : (W) weightAtSource.combineWith(extendWith));
-			if(!newVal.equals(weightAtSource)){
-				transitionsToFinalWeights.put(t, newVal);
-				registerListener(new ValueComputationListener(t));
-			}
-			
 		}
 
 		@Override
@@ -579,7 +575,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((trans == null) ? 0 : trans.hashCode());
+			result = prime * result + ((weight == null) ? 0 : weight.hashCode());
 			return result;
 		}
 
@@ -594,10 +590,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			ValueComputationListener other = (ValueComputationListener) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
-			if (trans == null) {
-				if (other.trans != null)
+			if (weight == null) {
+				if (other.weight != null)
 					return false;
-			} else if (!trans.equals(other.trans))
+			} else if (!weight.equals(other.weight))
 				return false;
 			return true;
 		}

@@ -25,6 +25,15 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		mustBeInErrorState(file);
 	}
 	@Test
+	public void simple0a() {
+		File file = new File();
+		file.open();
+		File alias = file;
+		System.err.print("");
+		escape(alias);
+		mustBeInErrorState(file);
+	}
+	@Test
 	public void simpleStrongUpdate() {
 		File file = new File();
 		File alias = file;
