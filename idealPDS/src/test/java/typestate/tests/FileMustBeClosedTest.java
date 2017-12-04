@@ -486,6 +486,21 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		mayBeInErrorState(file);
 	}
 
+	@Test
+	public void storedInObject(){
+		InnerObject o = new InnerObject();
+		File file = o.file;
+		mustBeInErrorState(file);
+	}
+
+	private static class InnerObject{
+		private final File file;
+
+		public InnerObject(){
+			this.file = new File();
+			this.file.open();
+		}
+	}
 	@Override
 	protected TypeStateMachineWeightFunctions getStateMachine() {
 		return new FileMustBeClosedStateMachine();

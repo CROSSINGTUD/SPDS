@@ -94,9 +94,12 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 							if(!((Stmt) callSite).containsInvokeExpr())
 								continue;
 							//TODO if BackwardSolver && unbalanced...
+							if(options.onTheFlyCallGraph() && solver instanceof  BackwardBoomerangSolver){
+								addTypeReachable(WeightedBoomerang.this.icfg().getMethodOf(callSite));
+							}
 							final Statement callStatement = new Statement((Stmt) callSite,
 									WeightedBoomerang.this.icfg().getMethodOf(callSite));
-							
+
 							boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) callSite, returningFact.fact());
 							if(valueUsedInStatement || AbstractBoomerangSolver.assignsValue((Stmt)callSite,returningFact.fact())){
 								unbalancedReturnFlow(callStatement, returningFact, trans, weight);
