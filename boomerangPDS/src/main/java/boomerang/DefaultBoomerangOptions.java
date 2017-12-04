@@ -4,8 +4,8 @@ import com.google.common.base.Optional;
 
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
-import java_cup.reduce_action;
 import soot.RefType;
+import soot.Scene;
 import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
@@ -22,23 +22,27 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public class DefaultBoomerangOptions implements BoomerangOptions {
 	
-	private boolean NULL_ALLOCATIONS = false;
-	private boolean TRACK_STRINGS = true;
-
 	public boolean isAllocationVal(Value val) {
-		if (!TRACK_STRINGS && isStringAllocationType(val.getType())) {
+		if (!trackStrings() && isStringAllocationType(val.getType())) {
 			return false;
 		}
-		if(NULL_ALLOCATIONS && val instanceof NullConstant){
+		if(trackNullAssignments() && val instanceof NullConstant){
 			return true;
 		}
 		if(arrayFlows() && isArrayAllocationVal(val)){
 			return true;
 		}
-		if(TRACK_STRINGS && val instanceof StringConstant){
+		if(trackStrings() && val instanceof StringConstant){
 			return true;
+		}	
+		if (!trackAnySubclassOfThrowable() && isThrowableAllocationType(val.getType())) {
+			return false;
 		}
 		return val instanceof NewExpr;
+	}
+
+	private boolean isThrowableAllocationType(Type type) {
+		return Scene.v().getFastHierarchy().canStoreType(type, Scene.v().getType("java.lang.Throwable"));
 	}
 
 	private boolean isStringAllocationType(Type type) {
@@ -97,6 +101,23 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		return false;
 	}
 
+	public boolean trackAnySubclassOfThrowable(){
+		return false;
+	}
+
+	public boolean trackStrings(){
+		return false;
+	}
+	
+	
+	public boolean trackNullAssignments(){
+		return false;
+	}
+	
+	@Override
+	public boolean isIgnoredMethod(SootMethod method) {
+		return trackAnySubclassOfThrowable() && Scene.v().getFastHierarchy().canStoreType(method.getDeclaringClass().getType(), Scene.v().getType("java.lang.Throwable"));
+	}
 	@Override
 	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, BiDiInterproceduralCFG<Unit, SootMethod> icfg) {
 		if (!(stmt instanceof AssignStmt)) {

@@ -167,6 +167,9 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			if (killFlow(method, curr, value)) {
 				return Collections.emptySet();
 			}
+			if(options.isIgnoredMethod(method)){
+				return Collections.emptySet();
+			}
 			if (curr.containsInvokeExpr() && valueUsedInStatement(curr, value) && INTERPROCEDURAL) {
 				return callFlow(method, curr, curr.getInvokeExpr(), value);
 			} else if (icfg.isExitStmt(curr)) {

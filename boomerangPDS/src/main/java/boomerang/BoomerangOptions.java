@@ -28,4 +28,6 @@ public interface BoomerangOptions {
 	public boolean isAllocationVal(Value val);
 
 	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, BiDiInterproceduralCFG<Unit, SootMethod> icfg);
+
+	public boolean isIgnoredMethod(SootMethod method);
 }
