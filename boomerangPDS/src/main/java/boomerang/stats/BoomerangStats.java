@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import boomerang.solver.BackwardBoomerangSolver;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -47,9 +48,12 @@ public class BoomerangStats<W extends Weight> {
 	private int callSitePOIs;
 	private int fieldWritePOIs;
 	private int fieldReadPOIs;
-	private Map<String,Integer> fieldMethodsRules = new TreeMap<>();
-	private Map<String,Integer> callMethodsRules = new TreeMap<>();
 	private boolean COUNT_TOP_METHODS = false;
+	private Map<String,Integer> backwardFieldMethodsRules = new TreeMap<>();
+	private Map<String,Integer> backwardCallMethodsRules = new TreeMap<>();
+
+	private Map<String,Integer> forwardFieldMethodsRules = new TreeMap<>();
+	private Map<String,Integer> forwardCallMethodsRules = new TreeMap<>();
 
 	public static <K> Map<K, Integer> sortByValues(final Map<K, Integer> map) {
 		Comparator<K> valueComparator =  new Comparator<K>() {
@@ -64,7 +68,7 @@ public class BoomerangStats<W extends Weight> {
 		return sortedByValues;
 	}
 
-	public void registerSolver(Query key, AbstractBoomerangSolver<W> solver) {
+	public void registerSolver(Query key, final AbstractBoomerangSolver<W> solver) {
 		if (queries.containsKey(key)) {
 			return;
 		}
@@ -102,8 +106,9 @@ public class BoomerangStats<W extends Weight> {
 			public void onRuleAdded(Rule<Field, INode<Node<Statement, Val>>, W> rule) {
 				if (!globalFieldRules.add(rule)) {
 					fieldRulesCollisions++;
-					if(COUNT_TOP_METHODS)
-						increaseMethod(rule.getS1().fact().stmt().getMethod().toString(), fieldMethodsRules);
+					if(COUNT_TOP_METHODS) {
+						increaseMethod(rule.getS1().fact().stmt().getMethod().toString(), (solver instanceof BackwardBoomerangSolver ? backwardFieldMethodsRules :forwardFieldMethodsRules));
+					}
 				}
 			}
 		});
@@ -114,7 +119,7 @@ public class BoomerangStats<W extends Weight> {
 				if (!globalCallRules.add(rule)) {
 					callRulesCollisions++;
 					if(COUNT_TOP_METHODS)
-						increaseMethod(rule.getL1().getMethod().toString(), callMethodsRules);
+						increaseMethod(rule.getL1().getMethod().toString(), (solver instanceof BackwardBoomerangSolver ?  backwardCallMethodsRules : forwardCallMethodsRules));
 				}
 			}
 		});
@@ -162,8 +167,13 @@ public class BoomerangStats<W extends Weight> {
 		s+= String.format("Global Call Transitions(Collisions): \t\t %s (%s)\n", globalCallTransitions.size(),callTransitionCollisions);
 		s+= String.format("Special Flows (Static/Array): \t\t %s(%s)/%s(%s)\n", staticFlows,globalCallTransitions.size(),arrayFlows,globalFieldTransitions.size());
 		if(COUNT_TOP_METHODS) {
-			s += topMostMethods(fieldMethodsRules, "field");
-			s += topMostMethods(callMethodsRules, "call");
+			s += topMostMethods(forwardFieldMethodsRules, "forward field");
+			s += topMostMethods(forwardCallMethodsRules, "forward call");
+
+			if(!backwardCallMethodsRules.isEmpty()) {
+				s += topMostMethods(backwardFieldMethodsRules, "backward field");
+				s += topMostMethods(backwardCallMethodsRules, "backward call");
+			}
 		}
 		s+= computeMetrics();
 		s+="\n";
