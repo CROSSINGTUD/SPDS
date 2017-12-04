@@ -93,7 +93,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 
 	@Override
 	public boolean callSummaries() {
-		return false;
+		return true;
 	}
 
 	@Override
