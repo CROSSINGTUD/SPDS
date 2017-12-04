@@ -559,8 +559,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 
 		@Override
 		public void onInTransitionAdded(Transition<N,D> t, W w, WeightedPAutomaton<N, D, W> aut) {
-			if(aut != WeightedPAutomaton.this)
-				return;
 			W newWeight = (W) weight.extendWith(w);
 			W weightAtTarget = transitionsToFinalWeights.get(t);
 			W newVal = (weightAtTarget == null ? newWeight : (W) weightAtTarget.combineWith(newWeight));
