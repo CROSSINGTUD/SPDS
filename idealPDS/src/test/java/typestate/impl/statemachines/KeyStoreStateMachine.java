@@ -45,12 +45,13 @@ public class KeyStoreStateMachine extends TypeStateMachineWeightFunctions{
 	public KeyStoreStateMachine() {
 		// addTransition(new MatcherTransition(States.NONE,
 		// keyStoreConstructor(),Parameter.This, States.INIT, Type.OnReturn));
-		addTransition(new MatcherTransition(States.INIT, loadMethods(), Parameter.This, States.LOADED, Type.OnReturn));
+		addTransition(new MatcherTransition(States.INIT, loadMethods(), Parameter.This, States.LOADED, Type.OnCallToReturn));
+		addTransition(new MatcherTransition(States.LOADED, anyMethodOtherThanLoad(), Parameter.This, States.LOADED, Type.OnCallToReturn));
 
 		addTransition(new MatcherTransition(States.INIT, anyMethodOtherThanLoad(), Parameter.This, States.ERROR,
-				Type.OnReturn));
+				Type.OnCallToReturn));
 		addTransition(new MatcherTransition(States.ERROR, anyMethodOtherThanLoad(), Parameter.This, States.ERROR,
-				Type.OnReturn));
+				Type.OnCallToReturn));
 
 	}
 
