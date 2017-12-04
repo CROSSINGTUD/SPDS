@@ -308,7 +308,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			}
 
 			@Override
-			protected WeightFunctions<Statement, Val, Statement, NoWeight> getForwardCallWeights() {
+			protected WeightFunctions<Statement, Val, Statement, NoWeight> getForwardCallWeights(ForwardQuery sourceQuery) {
 				return new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO,
 						NoWeight.NO_WEIGHT_ONE);
 			}

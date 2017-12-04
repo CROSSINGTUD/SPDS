@@ -52,6 +52,12 @@ public class StackTest extends IDEALTestingFramework {
 		s.pop();
 		mustBeInErrorState(s);
 	}
+	@Test
+	public void test5() {
+		Stack s = new Stack();
+		s.peek();
+		mustBeInErrorState(s);
+	}
 
 	@Test
 	public void test4() {

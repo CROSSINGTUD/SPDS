@@ -349,7 +349,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 			@Override
 			protected WeightFunctions<Statement, Val, Statement, W> getCallWeights() {
-				return WeightedBoomerang.this.getForwardCallWeights();
+				return WeightedBoomerang.this.getForwardCallWeights(sourceQuery);
 			}
 
 			@Override
@@ -1379,7 +1379,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 	protected abstract WeightFunctions<Statement, Val, Statement, W> getBackwardCallWeights();
 
-	protected abstract WeightFunctions<Statement, Val, Statement, W> getForwardCallWeights();
+	protected abstract WeightFunctions<Statement, Val, Statement, W> getForwardCallWeights(ForwardQuery sourceQuery);
 
 	public Collection<? extends Node<Statement, Val>> getForwardReachableStates() {
 		Set<Node<Statement, Val>> res = Sets.newHashSet();

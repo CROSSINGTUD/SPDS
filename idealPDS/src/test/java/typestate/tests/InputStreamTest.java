@@ -8,7 +8,7 @@ import org.junit.Test;
 
 import test.IDEALTestingFramework;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
-import typestate.impl.statemachines.InputStreamStateMachine;
+import typestate.impl.statemachines.alloc.InputStreamStateMachine;
 
 public class InputStreamTest extends IDEALTestingFramework {
 

@@ -20,7 +20,7 @@ import typestate.finiteautomata.State;
 public class SocketStateMachine extends TypeStateMachineWeightFunctions{
 
 	public static enum States implements State {
-		NONE, INIT, CONNECTED, ERROR;
+		INIT, CONNECTED, ERROR;
 
 		@Override
 		public boolean isErrorState() {
@@ -39,8 +39,9 @@ public class SocketStateMachine extends TypeStateMachineWeightFunctions{
 	}
 	public SocketStateMachine() {
 		addTransition(
-				new MatcherTransition(States.NONE, socketConstructor(), Parameter.This, States.INIT, Type.OnReturn));
+				new MatcherTransition(States.INIT, socketConstructor(), Parameter.This, States.INIT, Type.OnReturn));
 		addTransition(new MatcherTransition(States.INIT, connect(), Parameter.This, States.CONNECTED, Type.OnReturn));
+		addTransition(new MatcherTransition(States.CONNECTED, useMethods(), Parameter.This, States.CONNECTED, Type.OnReturn));
 		addTransition(new MatcherTransition(States.INIT, useMethods(), Parameter.This, States.ERROR, Type.OnReturn));
 		addTransition(new MatcherTransition(States.ERROR, useMethods(), Parameter.This, States.ERROR, Type.OnReturn));
 	}
@@ -79,6 +80,6 @@ public class SocketStateMachine extends TypeStateMachineWeightFunctions{
 
 	@Override
 	protected State initialState() {
-		return States.NONE;
+		return States.INIT;
 	}
 }

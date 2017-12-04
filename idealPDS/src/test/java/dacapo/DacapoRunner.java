@@ -1,6 +1,7 @@
 package dacapo;
 import java.util.Map;
 
+import boomerang.ForwardQuery;
 import boomerang.WholeProgramBoomerang;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
@@ -76,7 +77,7 @@ public class DacapoRunner  extends ResearchQuestion  {
 			}
 
 			@Override
-			protected WeightFunctions<Statement, Val, Statement, NoWeight> getForwardCallWeights() {
+			protected WeightFunctions<Statement, Val, Statement, NoWeight> getForwardCallWeights(ForwardQuery sourceQuery) {
 				return new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
 			}
 
