@@ -51,4 +51,8 @@ public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 		return super.getAllocationVal(m, stmt, fact, icfg);
 	}
 
+	@Override
+	public boolean trackStrings() {
+		return true;
+	}
 }
