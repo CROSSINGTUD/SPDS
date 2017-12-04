@@ -93,4 +93,8 @@ public class Val {
 		return false; 
 	}
 
+	public boolean isNewExpr(){
+		return false;
+	}
+
 }

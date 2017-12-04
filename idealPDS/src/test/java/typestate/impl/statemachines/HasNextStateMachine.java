@@ -48,8 +48,6 @@ public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
 	}
 
 	public HasNextStateMachine() {
-		addTransition(new MatcherTransition(States.NONE, retrieveIteratorConstructors(), Parameter.This, States.INIT,
-				Type.None));
 		addTransition(
 				new MatcherTransition(States.INIT, retrieveNextMethods(), Parameter.This, States.ERROR, Type.OnReturn));
 		addTransition(new MatcherTransition(States.ERROR, retrieveNextMethods(), Parameter.This, States.ERROR,
@@ -108,7 +106,7 @@ public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
 			if (retrieveIteratorConstructors().contains(m)) {
 				if (unit instanceof AssignStmt) {
 					AssignStmt stmt = (AssignStmt) unit;
-					return Collections.singleton(new WeightedForwardQuery<>(new Statement(stmt,m),new AllocVal(stmt.getLeftOp(), method, stmt.getRightOp()),initialTransition()));
+					return Collections.singleton(new WeightedForwardQuery<>(new Statement(stmt,method),new AllocVal(stmt.getLeftOp(), method, stmt.getRightOp()),initialTransition()));
 				}
 			}
 		}
@@ -117,6 +115,6 @@ public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
 
 	@Override
 	public State initialState() {
-		return States.NONE;
+		return States.INIT;
 	}
 }

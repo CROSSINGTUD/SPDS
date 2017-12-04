@@ -2,6 +2,7 @@ package boomerang.jimple;
 
 import soot.SootMethod;
 import soot.Value;
+import soot.jimple.NewExpr;
 
 public class AllocVal extends Val {
 
@@ -20,5 +21,9 @@ public class AllocVal extends Val {
 	public Value allocationValue(){
 		return alloc;
 	}
-	
+
+	@Override
+	public boolean isNewExpr() {
+		return alloc instanceof NewExpr;
+	}
 }

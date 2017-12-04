@@ -334,7 +334,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 					if(callSite.getInvokeExpr() instanceof InstanceInvokeExpr){
 						isThisValue = ((InstanceInvokeExpr) callSite.getInvokeExpr()).getBase().equals(value.value());
 					}
-					if(!isThisValue){
+					if(!isThisValue || !sourceQuery.var().isNewExpr()){
 						addReachable(callee);
 					}
 				}
