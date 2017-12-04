@@ -109,6 +109,10 @@ public class IDEALSeedSolver<W extends Weight> {
 
 			@Override
 			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
+				if(!callSite.getMethod().equals(returnedFact.fact().m()))
+					return;
+				if(!callSite.getMethod().equals(returnSite.getMethod()))
+					return;
 				if(!w.equals(one)){
 					idealWeightFunctions.addOtherThanOneWeight(new Node<Statement,Val>(callSite, returnedFact.fact()), w);
 				}

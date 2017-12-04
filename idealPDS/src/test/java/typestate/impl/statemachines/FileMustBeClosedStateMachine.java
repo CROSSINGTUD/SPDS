@@ -2,16 +2,15 @@ package typestate.impl.statemachines;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Set;
 
-import boomerang.jimple.AllocVal;
-import boomerang.jimple.Val;
+import boomerang.WeightedForwardQuery;
 import soot.SootMethod;
 import soot.Unit;
-import typestate.finiteautomata.TypeStateMachineWeightFunctions;
-import typestate.finiteautomata.MatcherTransition;
+import typestate.TransitionFunction;
+import typestate.finiteautomata.*;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
-import typestate.finiteautomata.State;
 
 public class FileMustBeClosedStateMachine extends TypeStateMachineWeightFunctions{
 
@@ -42,10 +41,14 @@ public class FileMustBeClosedStateMachine extends TypeStateMachineWeightFunction
   }
 
 
+    @Override
+    public State initialState() {
+        return States.INIT;
+    }
 
-  @Override
-  public Collection<AllocVal> generateSeed(SootMethod method,Unit unit,
-      Collection<SootMethod> calledMethod) {
+    @Override
+  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit,
+                                                                    Collection<SootMethod> calledMethod) {
     try {
 		return generateAtAllocationSiteOf(method, unit, Class.forName("typestate.test.helper.File"));
 	} catch (ClassNotFoundException e) {

@@ -5,11 +5,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import boomerang.jimple.AllocVal;
-import boomerang.jimple.Val;
+import boomerang.WeightedForwardQuery;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
+import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
@@ -61,8 +61,12 @@ public class PrintStreamStateMachine extends TypeStateMachineWeightFunctions{
 	}
 
 	@Override
-	public Collection<AllocVal> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
 		return this.generateThisAtAnyCallSitesOf(m, unit, calledMethod, closeMethods());
 	}
 
+	@Override
+	protected State initialState() {
+		return States.CLOSED;
+	}
 }

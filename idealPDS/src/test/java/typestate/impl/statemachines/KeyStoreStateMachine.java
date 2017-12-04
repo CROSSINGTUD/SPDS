@@ -6,12 +6,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import boomerang.WeightedForwardQuery;
 import boomerang.jimple.AllocVal;
-import boomerang.jimple.Val;
+import boomerang.jimple.Statement;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
+import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
@@ -80,18 +82,20 @@ public class KeyStoreStateMachine extends TypeStateMachineWeightFunctions{
 	}
 
 	@Override
-	public Collection<AllocVal> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+	public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
 		if (unit instanceof AssignStmt) {
 			AssignStmt stmt = (AssignStmt) unit;
 			if(stmt.containsInvokeExpr()){
 				if(keyStoreConstructor().contains(stmt.getInvokeExpr().getMethod())){
-					Set<AllocVal> out = new HashSet<>();
-					out.add(new AllocVal(stmt.getLeftOp(), m, stmt.getRightOp()));
-					return out;
+					return Collections.singleton(new WeightedForwardQuery<>(new Statement(stmt,m),new AllocVal(stmt.getLeftOp(), m, stmt.getRightOp()),initialTransition()));
 				}
 			}
 		}
 		return Collections.emptySet();
 	}
 
+	@Override
+	protected State initialState() {
+		return States.INIT;
+	}
 }

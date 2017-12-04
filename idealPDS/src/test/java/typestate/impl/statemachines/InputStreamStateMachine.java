@@ -6,12 +6,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import boomerang.jimple.AllocVal;
-import boomerang.jimple.Val;
+import boomerang.WeightedForwardQuery;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
+import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
@@ -19,6 +19,9 @@ import typestate.finiteautomata.MatcherTransition.Type;
 import typestate.finiteautomata.State;
 
 public class InputStreamStateMachine extends TypeStateMachineWeightFunctions {
+
+	private Set<SootMethod> closeMethods;
+	private Set<SootMethod> readMethods;
 
 	public static enum States implements State {
 		NONE, CLOSED, ERROR;
@@ -50,11 +53,17 @@ public class InputStreamStateMachine extends TypeStateMachineWeightFunctions {
 		addTransition(new MatcherTransition(States.ERROR, Collections.singleton(Scene.v().getMethod("<java.io.InputStream: int read()>")), Parameter.This, States.ERROR, Type.OnCallToReturn));
 	}
 	private Set<SootMethod> closeMethods() {
-		return selectMethodByName(getImplementersOf("java.io.InputStream"), "close");
+		if(closeMethods == null)
+			closeMethods = selectMethodByName(getImplementersOf("java.io.InputStream"), "close");
+		return closeMethods;
 	}
 
 	private Set<SootMethod> readMethods() {
-		return selectMethodByName(getImplementersOf("java.io.InputStream"), "read");
+		if(readMethods == null){
+			readMethods = selectMethodByName(getImplementersOf("java.io.InputStream"), "read");
+		}
+
+		return readMethods;
 	}
 
 
@@ -69,8 +78,13 @@ public class InputStreamStateMachine extends TypeStateMachineWeightFunctions {
 	}
 
 	@Override
-	public Collection<AllocVal> generateSeed(SootMethod method, Unit unit,
-			Collection<SootMethod> calledMethod) {
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit,
+																	  Collection<SootMethod> calledMethod) {
 		return this.generateThisAtAnyCallSitesOf(method, unit, calledMethod, closeMethods());
+	}
+
+	@Override
+	public State initialState() {
+		return States.NONE;
 	}
 }

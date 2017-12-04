@@ -6,10 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import boomerang.WeightedForwardQuery;
 import com.google.common.collect.Lists;
 
 import boomerang.Query;
-import boomerang.WeightedBoomerang;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
@@ -60,7 +60,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			}
 
 			@Override
-			public Collection<AllocVal> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
+			public Collection<WeightedForwardQuery<TransitionFunction>> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
 				return  IDEALTestingFramework.this.getStateMachine().generateSeed(method, stmt, calledMethod);
 			}
 
@@ -71,7 +71,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			
 			@Override
 			public Debugger<TransitionFunction> debugger() {
-				return new IDEVizDebugger<TransitionFunction>(ideVizFile,icfg);
+				return new IDEVizDebugger<>(ideVizFile,icfg);
 			}
 		});
 	}
@@ -85,8 +85,8 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				System.out.println(sootTestMethod.getActiveBody());
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				
-				Map<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>> seedToSolvers = executeAnalysis();
-				for(Node<Statement, AllocVal> seed : seedToSolvers.keySet()){
+				Map<WeightedForwardQuery<TransitionFunction>, IDEALSeedSolver<TransitionFunction>> seedToSolvers = executeAnalysis();
+				for(WeightedForwardQuery<TransitionFunction> seed : seedToSolvers.keySet()){
 					System.out.println("SEED "+  seed);
 					for(Query q : seedToSolvers.get(seed).getPhase2Solver().getSolvers().keySet()){
 //						if(q.asNode().equals(seed)){
@@ -115,7 +115,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		};
 	}
 
-	protected Map<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>> executeAnalysis() {
+	protected Map<WeightedForwardQuery<TransitionFunction>, IDEALSeedSolver<TransitionFunction>> executeAnalysis() {
 		return IDEALTestingFramework.this.createAnalysis().run();
 	}
 

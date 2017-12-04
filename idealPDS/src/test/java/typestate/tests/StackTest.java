@@ -25,6 +25,15 @@ public class StackTest extends IDEALTestingFramework {
 	}
 
 	@Test
+	public void test4simple() {
+		Stack s = new Stack();
+		s.peek();
+		mustBeInErrorState(s);
+		s.pop();
+		mustBeInErrorState(s);
+	}
+
+	@Test
 	public void test2() {
 		Stack s = new Stack();
 		s.add(new Object());

@@ -17,9 +17,10 @@ public class MayBe extends ExpectedResults<TransitionFunction,Val> {
 	}
 	@Override
 	public void computedResults(TransitionFunction results) {
+		System.out.println(results);
 		for(ITransition t : results.values()){
-			if(t.equals(Transition.identity()))
-				continue;
+//			if(t.equals(Transition.identity()))
+//				continue;
 			State s = t.to();
 			if(state == InternalState.ACCEPTING){
 				satisfied |= !s.isErrorState();

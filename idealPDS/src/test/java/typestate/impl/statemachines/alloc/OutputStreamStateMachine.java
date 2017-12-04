@@ -6,12 +6,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
-import boomerang.jimple.AllocVal;
-import boomerang.jimple.Val;
+import boomerang.WeightedForwardQuery;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
+import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
@@ -80,9 +80,13 @@ public class OutputStreamStateMachine extends TypeStateMachineWeightFunctions{
 	}
 
 	@Override
-	public Collection<AllocVal> generateSeed(SootMethod method, Unit unit,
-			Collection<SootMethod> calledMethod) {
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit,
+                                                                      Collection<SootMethod> calledMethod) {
 		return generateThisAtAnyCallSitesOf(method, unit,calledMethod,constructors());
 	}
 
+	@Override
+	protected State initialState() {
+		return States.OPEN;
+	}
 }

@@ -3,10 +3,10 @@ package typestate.impl.statemachines;
 import java.util.Collection;
 import java.util.Set;
 
-import boomerang.jimple.AllocVal;
-import boomerang.jimple.Val;
+import boomerang.WeightedForwardQuery;
 import soot.SootMethod;
 import soot.Unit;
+import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
@@ -53,8 +53,13 @@ public class PipedInputStreamStateMachine extends TypeStateMachineWeightFunction
 
 
 	@Override
-	public Collection<AllocVal> generateSeed(SootMethod m, Unit unit,
-			Collection<SootMethod> calledMethod) {
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit,
+																	  Collection<SootMethod> calledMethod) {
 		return generateAtAllocationSiteOf(m, unit, java.io.PipedInputStream.class);
+	}
+
+	@Override
+	protected State initialState() {
+		return States.INIT;
 	}
 }

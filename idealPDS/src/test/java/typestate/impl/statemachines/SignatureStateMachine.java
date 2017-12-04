@@ -6,11 +6,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import boomerang.jimple.AllocVal;
-import boomerang.jimple.Val;
+import boomerang.WeightedForwardQuery;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
+import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
@@ -118,7 +118,7 @@ public class SignatureStateMachine extends TypeStateMachineWeightFunctions {
 	}
 
 	@Override
-	public Collection<AllocVal> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
 		for (SootMethod cons : constructor()) {
 			if (calledMethod.contains(cons)) {
 				return getLeftSideOf(m, unit);
@@ -127,4 +127,8 @@ public class SignatureStateMachine extends TypeStateMachineWeightFunctions {
 		return Collections.emptySet();
 	}
 
+	@Override
+	protected State initialState() {
+		return States.UNITIALIZED;
+	}
 }

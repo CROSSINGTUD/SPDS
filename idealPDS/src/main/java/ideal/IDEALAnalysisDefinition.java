@@ -2,6 +2,7 @@ package ideal;
 
 import java.util.Collection;
 
+import boomerang.WeightedForwardQuery;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
@@ -28,7 +29,7 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 	 *            method for the call site.
 	 * @return
 	 */
-	public abstract Collection<AllocVal> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod);
+	public abstract Collection<WeightedForwardQuery<W>> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod);
 
 	/**
 	 * This function must generate and return the AnalysisEdgeFunctions that are

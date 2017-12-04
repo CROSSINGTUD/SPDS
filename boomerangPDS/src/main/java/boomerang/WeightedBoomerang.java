@@ -63,7 +63,6 @@ import wpds.interfaces.WPAUpdateListener;
 public abstract class WeightedBoomerang<W extends Weight> implements MethodReachableQueue {
 	public static final boolean DEBUG = false;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
-	private boolean first;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
 
 		@Override
@@ -73,12 +72,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				if(DEBUG)
 					System.out.println("Backward solving query: " + key);
 				solver = createBackwardSolver((BackwardQuery) key);
-				if (!first) {
-					first = true;
-					SootMethod method = key.asNode().stmt().getMethod();
-					addReachable(method);
-					addAllocationType(method.getDeclaringClass().getType());
-				}
 			} else {
 				if(DEBUG)
 					System.out.println("Forward solving query: " + key);
@@ -134,6 +127,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 				private void unbalancedReturnFlow(final Statement callStatement,
 						final INode<Val> returningFact, final Transition<Statement, INode<Val>> trans, final W weight) {
+					addFlowReachable(callStatement.getMethod());
 					WeightedBoomerang.this.submit(callStatement.getMethod(), new Runnable() {
 						@Override
 						public void run() {
@@ -333,8 +327,15 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 			@Override
 			protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
-				if (!res.isEmpty()) {
+				if (!res.isEmpty() && options.onTheFlyCallGraph()) {
 					addFlowReachable(callee);
+					boolean isThisValue = false;
+					if(callSite.getInvokeExpr() instanceof InstanceInvokeExpr){
+						isThisValue = ((InstanceInvokeExpr) callSite.getInvokeExpr()).getBase().equals(value.value());
+					}
+					if(!isThisValue){
+						addReachable(callee);
+					}
 				}
 				super.onCallFlow(callee, callSite, value, res);
 			}
@@ -381,6 +382,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 			@Override
 			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W returnedWeight) {
+				if(!callSite.getMethod().equals(returnSite.getMethod()))
+					return;
 				if(!returnedFact.fact().isStatic() && !returnedFact.fact().m().equals(callSite.getMethod()))
 					return;
 				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
@@ -630,6 +633,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	public void solve(Query query) {
 		analysisWatch.reset();
 		analysisWatch.start();
+		addAllocationType(query.stmt().getMethod().getDeclaringClass().getType());
+		addReachable(query.stmt().getMethod());
 		if (query instanceof ForwardQuery) {
 			forwardSolve((ForwardQuery) query);
 		}

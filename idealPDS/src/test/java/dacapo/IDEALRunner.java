@@ -5,12 +5,10 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import boomerang.WeightedBoomerang;
+import boomerang.WeightedForwardQuery;
 import boomerang.debugger.Debugger;
-import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import ideal.IDEALAnalysis;
@@ -27,7 +25,6 @@ import soot.Unit;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.WeightFunctions;
-import sync.pds.solver.nodes.Node;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
@@ -47,7 +44,7 @@ public class IDEALRunner  extends ResearchQuestion  {
 		return new IDEALAnalysis<TransitionFunction>(new IDEALAnalysisDefinition<TransitionFunction>() {
 
 			@Override
-			public Collection<AllocVal> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
+			public Collection<WeightedForwardQuery<TransitionFunction>> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
 				return genericsType.generateSeed(method, stmt, calledMethod);
 			}
 
@@ -117,7 +114,7 @@ public class IDEALRunner  extends ResearchQuestion  {
         	}
         }
         System.out.println("Application Classes: " + Scene.v().getApplicationClasses().size());
-        Map<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>> seedToAnalysisTime = IDEALRunner.this.getAnalysis().run();
+        Map<WeightedForwardQuery<TransitionFunction>, IDEALSeedSolver<TransitionFunction>> seedToAnalysisTime = IDEALRunner.this.getAnalysis().run();
           File file = new File(outputFile);
           boolean fileExisted = file.exists();
           FileWriter writer;
@@ -127,8 +124,7 @@ public class IDEALRunner  extends ResearchQuestion  {
                   writer.write(
                           "Seed;SeedMethod;SeedClass;AnalysisTimes;Phase1Time;Phase2Time;VisitedMethod;ReachableMethods;Is_In_Error;Timedout\n");
 
-              Set<Map.Entry<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>>> entries = seedToAnalysisTime.entrySet();
-              for (Map.Entry<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>> entry : entries) {
+              for (Map.Entry<WeightedForwardQuery<TransitionFunction>, IDEALSeedSolver<TransitionFunction>> entry : seedToAnalysisTime.entrySet()) {
                   writer.write(asCSVLine(entry.getKey(), entry.getValue()));
               }
               writer.close();
@@ -142,8 +138,7 @@ public class IDEALRunner  extends ResearchQuestion  {
           try {
               writer = new FileWriter(seedStats);
 
-              Set<Map.Entry<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>>> entries = seedToAnalysisTime.entrySet();
-              for (Map.Entry<Node<Statement, AllocVal>, IDEALSeedSolver<TransitionFunction>> entry : entries) {
+              for (Map.Entry<WeightedForwardQuery<TransitionFunction>, IDEALSeedSolver<TransitionFunction>> entry : seedToAnalysisTime.entrySet()) {
                   IDEALSeedSolver<TransitionFunction> idealSeedSolver = entry.getValue();
                   writer.write("Seed: "+entry.getKey().toString()+"\n");
                   if(!idealSeedSolver.isTimedOut()) {
@@ -170,7 +165,7 @@ public class IDEALRunner  extends ResearchQuestion  {
     PackManager.v().getPack("wjtp").apply();
   }
 
-    private String asCSVLine(Node<Statement, AllocVal> key, IDEALSeedSolver<TransitionFunction> solver) {
+    private String asCSVLine(WeightedForwardQuery<TransitionFunction> key, IDEALSeedSolver<TransitionFunction> solver) {
         return String.format("%s;%s;%s;%s;%s;%s;%s;%s;%s;%s\n",key,key.stmt().getMethod(),key.stmt().getMethod().getDeclaringClass(),solver.getAnalysisStopwatch().elapsed(TimeUnit.MILLISECONDS),solver.getPhase1Solver().getAnalysisStopwatch().elapsed(TimeUnit.MILLISECONDS),solver.getPhase2Solver().getAnalysisStopwatch().elapsed(TimeUnit.MILLISECONDS),solver.getPhase1Solver().getStats().getVisitedMethods().size(), Scene.v().getReachableMethods().size(), isInErrorState(solver),solver.isTimedOut());
     }
 
