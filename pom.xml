@@ -10,9 +10,10 @@
     <module>idealPDS</module>
     <module>boomerangPDS</module>
     <module>testCore</module>
-    <module>synchronizedPDS</module>
+    <module>SynchronizedPDS</module>
     <module>WPDS</module>
     <module>PathExpression</module>
+    <module>soot</module>
   </modules>
   <build>
     <plugins>
