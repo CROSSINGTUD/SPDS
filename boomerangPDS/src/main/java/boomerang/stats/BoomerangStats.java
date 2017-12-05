@@ -106,11 +106,10 @@ public class BoomerangStats<W extends Weight> {
 			public void onRuleAdded(Rule<Field, INode<Node<Statement, Val>>, W> rule) {
 				if (!globalFieldRules.add(rule)) {
 					fieldRulesCollisions++;
-					if(COUNT_TOP_METHODS) {
+				}else if(COUNT_TOP_METHODS) {
 						increaseMethod(rule.getS1().fact().stmt().getMethod().toString(), (solver instanceof BackwardBoomerangSolver ? backwardFieldMethodsRules :forwardFieldMethodsRules));
 					}
 				}
-			}
 		});
 		solver.getCallPDS().registerUpdateListener(new WPDSUpdateListener<Statement, INode<Val>, W>() {
 
@@ -118,7 +117,8 @@ public class BoomerangStats<W extends Weight> {
 			public void onRuleAdded(Rule<Statement, INode<Val>, W> rule) {
 				if (!globalCallRules.add(rule)) {
 					callRulesCollisions++;
-					if(COUNT_TOP_METHODS)
+
+				} else if(COUNT_TOP_METHODS) {
 						increaseMethod(rule.getL1().getMethod().toString(), (solver instanceof BackwardBoomerangSolver ?  backwardCallMethodsRules : forwardCallMethodsRules));
 				}
 			}
@@ -185,7 +185,7 @@ public class BoomerangStats<W extends Weight> {
 		int i = 0;
 		String s ="";
 		for(Map.Entry<String, Integer> e : sootMethodIntegerMap.entrySet()) {
-			if(++i > 4)
+			if(++i > 11)
 				break;
 			s += String.format("%s. most %s visited Method(%sx): %s\n",i, system, e.getValue(),e.getKey());
 		}
