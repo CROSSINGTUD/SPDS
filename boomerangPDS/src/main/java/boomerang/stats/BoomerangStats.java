@@ -58,7 +58,6 @@ public class BoomerangStats<W extends Weight> {
 	public static <K> Map<K, Integer> sortByValues(final Map<K, Integer> map) {
 		Comparator<K> valueComparator =  new Comparator<K>() {
 			public int compare(K k1, K k2) {
-				Integer integer = map.get(k1);
 				if (map.get(k2)> map.get(k1)) return 1;
 				else return -1;
 			}
