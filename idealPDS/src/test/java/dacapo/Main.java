@@ -9,17 +9,18 @@ public class Main {
 	static String[] dacapo = new String[] { "antlr", "chart", "eclipse",
 			/* "jython","hsqldb", */"luindex", "lusearch", "pmd", /* "xalan", */ "bloat" };
 //	static String[] dacapo = new String[] {  "bloat" };
-	static String[] rules = new String[] { "EmptyVector", "IteratorHasNext",
-			/*
-			 * "KeyStore", //No seed to Signature found in the dacapo programs
-			 * we analyzed "URLConnection",
-			 */ // No seed to Signature found in the dacapo programs we analyzed
-			"InputStreamCloseThenRead", "PipedInputStream", "OutputStreamCloseThenWrite", "PipedOutputStream",
-			"PrintStream", "PrintWriter"/*
-										 * , "Signature"
-										 */ }; // No seed to Signature found in
-												// the dacapo programs we
-												// analyzed
+static String[] rules = new String[] { "EmptyVector" };
+//	static String[] rules = new String[] { "EmptyVector", "IteratorHasNext",
+//			/*
+//			 * "KeyStore", //No seed to Signature found in the dacapo programs
+//			 * we analyzed "URLConnection",
+//			 */ // No seed to Signature found in the dacapo programs we analyzed
+//			"InputStreamCloseThenRead", "PipedInputStream", "OutputStreamCloseThenWrite", "PipedOutputStream",
+//			"PrintStream", "PrintWriter"/*
+//										 * , "Signature"
+//										 */ }; // No seed to Signature found in
+//												// the dacapo programs we
+//												// analyzed
 
 	static String benchmarkFolder = "/Users/johannesspath/Documents/dacapo/";
 	private final static int NUMBER_OF_ITERATIONS = 1;
