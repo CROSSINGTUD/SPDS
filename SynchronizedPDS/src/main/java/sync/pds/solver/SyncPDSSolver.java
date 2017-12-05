@@ -24,15 +24,7 @@ import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.NestedAutomatonListener;
-import wpds.impl.NestedWeightedPAutomatons;
-import wpds.impl.NormalRule;
-import wpds.impl.PopRule;
-import wpds.impl.PushRule;
-import wpds.impl.Transition;
-import wpds.impl.Weight;
-import wpds.impl.WeightedPAutomaton;
-import wpds.impl.WeightedPushdownSystem;
+import wpds.impl.*;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
@@ -452,14 +444,13 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		return true;
 	}
 
-	public boolean processNormal(Node<Stmt,Fact> curr, Node<Stmt, Fact> succ) {
-		boolean added = addNormalFieldFlow(curr, succ);
-		added |= addNormalCallFlow(curr, succ);
-		return added;
+	public void processNormal(Node<Stmt,Fact> curr, Node<Stmt, Fact> succ) {
+		addNormalFieldFlow(curr, succ);
+		addNormalCallFlow(curr, succ);
 	}
 
-	public boolean addNormalCallFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
-		return callingPDS.addRule(
+	public void addNormalCallFlow(Node<Stmt, Fact> curr, Node<Stmt, Fact> succ) {
+		addCallRule(
 				new NormalRule<Stmt, INode<Fact>,W>(wrap(curr.fact()), curr.stmt(), wrap(succ.fact()), succ.stmt(),getCallWeights().normal(curr,succ)));
 	}
 
@@ -526,25 +517,24 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			}
 		});
 	}
-	public boolean addNormalFieldFlow(final Node<Stmt,Fact> curr, final Node<Stmt, Fact> succ) {
-		if(fieldContextReachable.contains(succ)){
-			return false;
-		}
+	public void addNormalFieldFlow(final Node<Stmt,Fact> curr, final Node<Stmt, Fact> succ) {
 		if(succ instanceof CastNode){
-			return fieldPDS.addRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
+			addFieldRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
 					fieldWildCard(), asFieldFact(succ), fieldWildCard(), getFieldWeights().normal(curr,succ)){
 				@Override
 				public boolean canBeApplied(Transition<Field, INode<Node<Stmt, Fact>>> t, W weight) {
 					return canCastBeApplied(curr,t,(CastNode)succ,weight);
 				}
 			});
+			return;
 		}
 		if (succ instanceof ExclusionNode) {
 			ExclusionNode<Stmt, Fact, Field> exNode = (ExclusionNode) succ;
-			return fieldPDS.addRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
+			addFieldRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
 					fieldWildCard(), asFieldFact(succ), exclusionFieldWildCard(exNode.exclusion()), getFieldWeights().normal(curr,succ)));
+			return;
 		}
-		return fieldPDS.addRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
+		addFieldRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
 				fieldWildCard(), asFieldFact(succ), fieldWildCard(), getFieldWeights().normal(curr,succ)));
 	}
 
@@ -562,7 +552,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		if (system.equals(PDSSystem.FIELDS)) {
 			NodeWithLocation<Stmt, Fact, Field> node = (NodeWithLocation) location;
 			if(FieldSensitive){
-				fieldPDS.addRule(new PopRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr), node.location(),
+				addFieldRule(new PopRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr), node.location(),
 						asFieldFact(node.fact()), getFieldWeights().pop(curr, node.location())));
 			} else{
 				addNormalFieldFlow(curr, node.fact());
@@ -574,41 +564,45 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			Stmt returnSite = callPopNode.getReturnSite();
 			addNormalFieldFlow(curr, new Node<Stmt,Fact>(returnSite,(Fact)location));
 			if(ContextSensitive){
-				callingPDS.addRule(new PopRule<Stmt, INode<Fact>, W>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location),getCallWeights().pop(curr, curr.stmt())));
+				addCallRule(new PopRule<Stmt, INode<Fact>, W>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location),getCallWeights().pop(curr, curr.stmt())));
 			}else{
 				addNormalCallFlow(curr, new Node<Stmt,Fact>(returnSite,(Fact)location));
 			}
 		}
 	}
 
-	public boolean processPush(Node<Stmt,Fact> curr, Location location, Node<Stmt, Fact> succ, PDSSystem system) {
-		boolean added = false;
+	public void processPush(Node<Stmt,Fact> curr, Location location, Node<Stmt, Fact> succ, PDSSystem system) {
 		if (system.equals(PDSSystem.FIELDS)) {
 			
 			if(FieldSensitive){
 				if(!fieldContextReachable.contains(succ)){
-					added |= fieldPDS.addRule(new PushRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
+					addFieldRule(new PushRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
 							fieldWildCard(), asFieldFact(succ),  (Field) location,fieldWildCard(), getFieldWeights().push(curr,succ,(Field)location)));
 				}
 			} else{
-				added |= addNormalFieldFlow(curr, succ);
+				addNormalFieldFlow(curr, succ);
 			}
-			added |= addNormalCallFlow(curr, succ);
+			addNormalCallFlow(curr, succ);
 
 		} else if (system.equals(PDSSystem.CALLS)) {
-			added |= addNormalFieldFlow(curr, succ);
+			addNormalFieldFlow(curr, succ);
 			if(ContextSensitive){
-				added |= callingPDS.addRule(new PushRule<Stmt, INode<Fact>, W>(wrap(curr.fact()), curr.stmt(),
+				addCallRule(new PushRule<Stmt, INode<Fact>, W>(wrap(curr.fact()), curr.stmt(),
 						wrap(succ.fact()), succ.stmt(), (Stmt) location, getCallWeights().push(curr, succ, (Stmt) location)));
 			} else{
-				added |= addNormalCallFlow(curr, succ);
+				addNormalCallFlow(curr, succ);
 			}
 
 		}
-		return added;
 	}
-	
 
+	public void addCallRule(Rule<Stmt, INode<Fact>,W> rule){
+		callingPDS.addRule(rule);
+	}
+
+	public void addFieldRule(Rule<Field, INode<Node<Stmt,Fact>>, W> rule){
+		fieldPDS.addRule(rule);
+	}
 	protected abstract WeightFunctions<Stmt, Fact, Field, W> getFieldWeights();
 	
 	protected abstract WeightFunctions<Stmt, Fact, Stmt, W> getCallWeights();

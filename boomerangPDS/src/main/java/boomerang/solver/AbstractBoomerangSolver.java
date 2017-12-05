@@ -45,11 +45,7 @@ import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.NestedWeightedPAutomatons;
-import wpds.impl.Transition;
-import wpds.impl.Weight;
-import wpds.impl.WeightedPAutomaton;
-import wpds.impl.WeightedPushdownSystem;
+import wpds.impl.*;
 import wpds.interfaces.ReachabilityListener;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
@@ -110,6 +106,29 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		if (!m.equals(method))
 			return true;
 		return false;
+	}
+
+	@Override
+	public void addCallRule(final Rule<Statement, INode<Val>, W> rule) {
+		if(rule instanceof PopRule)
+			super.addCallRule(rule);
+		else
+		reachableQueue.submit(rule.getS2().fact().m(), new Runnable() {
+			@Override
+			public void run() {
+				AbstractBoomerangSolver.super.addCallRule(rule);
+			}
+		});
+	}
+
+	@Override
+	public void addFieldRule(final Rule<Field, INode<Node<Statement, Val>>, W> rule) {
+		reachableQueue.submit(rule.getS2().fact().stmt().getMethod(), new Runnable() {
+			@Override
+			public void run() {
+				AbstractBoomerangSolver.super.addFieldRule(rule);
+			}
+		});
 	}
 
 	private void addTransitionToMethod(SootMethod method, Transition<Field, INode<Node<Statement, Val>>> t) {
