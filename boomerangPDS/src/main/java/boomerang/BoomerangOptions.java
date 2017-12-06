@@ -1,5 +1,6 @@
 package boomerang;
 
+import boomerang.stats.IBoomerangStats;
 import com.google.common.base.Optional;
 
 import boomerang.jimple.AllocVal;
@@ -30,4 +31,5 @@ public interface BoomerangOptions {
 	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, BiDiInterproceduralCFG<Unit, SootMethod> icfg);
 
 	public boolean isIgnoredMethod(SootMethod method);
+	public IBoomerangStats statsFactory();
 }

@@ -1,13 +1,14 @@
 package boomerang;
 
-import boomerang.stats.BoomerangStats;
+import boomerang.stats.AdvancedBoomerangStats;
+import boomerang.stats.IBoomerangStats;
 
 public class BoomerangTimeoutException extends RuntimeException {
 
-	private BoomerangStats stats;
+	private IBoomerangStats stats;
 	private long elapsed;
 
-	public BoomerangTimeoutException(long elapsed, BoomerangStats stats) {
+	public BoomerangTimeoutException(long elapsed, IBoomerangStats stats) {
 		this.elapsed = elapsed;
 		this.stats = stats;
 	}

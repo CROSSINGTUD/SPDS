@@ -9,6 +9,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import boomerang.stats.IBoomerangStats;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
@@ -34,7 +35,6 @@ import boomerang.solver.ForwardBoomerangSolver;
 import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import boomerang.solver.StatementBasedFieldTransitionListener;
-import boomerang.stats.BoomerangStats;
 import heros.utilities.DefaultValueMap;
 import soot.*;
 import soot.jimple.*;
@@ -64,6 +64,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	public static final boolean DEBUG = false;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
+	private IBoomerangStats stats;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
 
 		@Override
@@ -132,13 +133,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 					}
 				}
 
-				private void unbalancedCallers(SootMethod callee, SootMethod caller) {
-					if(unbalancedCallers.contains(callee)){
-						unbalancedCallers.add(caller);
-						addTypeReachable(caller);
-					}
-				}
-
 				private void unbalancedReturnFlow(final Statement callStatement,
 						final INode<Val> returningFact, final Transition<Statement, INode<Val>> trans, final W weight) {
 					addFlowReachable(callStatement.getMethod());
@@ -168,7 +162,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
 					if(options.analysisTimeoutMS() > 0){
 						long elapsed = analysisWatch.elapsed(TimeUnit.MILLISECONDS);
-						if(elapsed - lastTick > 3000){
+						if(elapsed - lastTick > 15000){
 							System.err.println(stats);
 							lastTick = elapsed;
 						}
@@ -186,7 +180,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	private BackwardsInterproceduralCFG bwicfg;
 	private EmptyCalleeFlow forwardEmptyCalleeFlow = new ForwardEmptyCalleeFlow();
 	private EmptyCalleeFlow backwardEmptyCalleeFlow = new BackwardEmptyCalleeFlow();
-	protected BoomerangStats<W> stats = new BoomerangStats<>();
 	
 	private Collection<RefType> allocatedTypes = Sets.newHashSet();
 	private Multimap<SootMethod, Runnable> queuedReachableMethod = HashMultimap.create();
@@ -225,6 +218,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	private Collection<SootMethod> unbalancedCallers = Sets.newHashSet();
 	public WeightedBoomerang(BoomerangOptions options){
 		this.options = options;
+		this.stats = options.statsFactory();
 	}
 
 	public WeightedBoomerang(){
@@ -1139,6 +1133,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 		@Override
 		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+			if(t.getLabel().equals(Field.epsilon()))
+				return;
 			if (!(t.getStart() instanceof GeneratedState)) {
 				Val byPassing = t.getStart().fact().fact();
 				queryToSolvers.get(byPassingQuery).getFieldAutomaton().registerListener(
@@ -1315,7 +1311,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 			insertTransition(queryToSolvers.get(flowSolver).getFieldAutomaton(), t);
-			if(!t.getTarget().fact().equals(flowSolver.asNode())){
+			if(t.getLabel().equals(Field.epsilon())){
 				queryToSolvers.get(baseSolver).getFieldAutomaton().registerListener(new ImportToSolver(t.getTarget(), baseSolver, flowSolver));
 			}
 		}
@@ -1550,7 +1546,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return debugger;
 	}
 
-	public BoomerangStats<W> getStats() {
+	public IBoomerangStats<W> getStats() {
 		return stats;
 	}
 }

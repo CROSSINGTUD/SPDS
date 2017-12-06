@@ -67,6 +67,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Multimap<Statement, StatementBasedFieldTransitionListener<W>> perStatementFieldTransitionsListener = HashMultimap
 			.create();
 	private final MethodReachableQueue reachableQueue;
+	private Multimap<SootMethod,Rule<Field,INode<Node<Statement,Val>>,W>> queuedFieldRules = HashMultimap.create();
+	private Set<SootMethod> callReacheableMethods = Sets.newHashSet();
 	protected final BoomerangOptions options;
 	public AbstractBoomerangSolver(MethodReachableQueue reachableQueue, InterproceduralCFG<Unit, SootMethod> icfg,
 			Query query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
@@ -113,22 +115,22 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		if(rule instanceof PopRule)
 			super.addCallRule(rule);
 		else
-		reachableQueue.submit(rule.getS2().fact().m(), new Runnable() {
-			@Override
-			public void run() {
-				AbstractBoomerangSolver.super.addCallRule(rule);
-			}
-		});
-	}
+			reachableQueue.submit(rule.getS2().fact().m(), new Runnable() {
+				@Override
+				public void run() {
+					AbstractBoomerangSolver.super.addCallRule(rule);
+				}
+			});
+		}
 
 	@Override
 	public void addFieldRule(final Rule<Field, INode<Node<Statement, Val>>, W> rule) {
 		reachableQueue.submit(rule.getS2().fact().stmt().getMethod(), new Runnable() {
-			@Override
-			public void run() {
-				AbstractBoomerangSolver.super.addFieldRule(rule);
-			}
-		});
+				@Override
+				public void run() {
+					AbstractBoomerangSolver.super.addFieldRule(rule);
+		}
+			});
 	}
 
 	private void addTransitionToMethod(SootMethod method, Transition<Field, INode<Node<Statement, Val>>> t) {

@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import boomerang.WeightedForwardQuery;
 import com.google.common.collect.Maps;
@@ -53,7 +54,9 @@ public class IDEALAnalysis<W extends Weight> {
 			seedCount++;
 			System.err.println("Analyzing "+ seed);
 			try {
-				seedToSolver.put(seed, run(seed));
+				IDEALSeedSolver<W> solver = run(seed);
+				seedToSolver.put(seed, solver);
+				System.err.println(String.format("Seed Analysis finished in ms (Solver1/Solver2):  %s/%s", solver.getPhase1Solver().getAnalysisStopwatch().elapsed(), solver.getPhase2Solver().getAnalysisStopwatch().elapsed()));
 			} catch(IDEALSeedTimeout e){
 				seedToSolver.put(seed, (IDEALSeedSolver<W>) e.getSolver());
 				timeoutCount++;

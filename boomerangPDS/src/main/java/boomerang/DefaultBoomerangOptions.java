@@ -147,4 +147,8 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		return 30000;
 	}
 
+	public IBoomerangStats statsFactory(){
+		return new SimpleBoomerangStats();
+	}
+
 }

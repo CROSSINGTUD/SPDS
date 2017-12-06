@@ -31,7 +31,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 import wpds.interfaces.WPDSUpdateListener;
 
-public class BoomerangStats<W extends Weight> {
+public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats<W> {
 
 	private Map<Query, AbstractBoomerangSolver<W>> queries = Maps.newHashMap();
 	private Set<WeightedTransition<Field, INode<Node<Statement, Val>>, W>> globalFieldTransitions = Sets.newHashSet();
@@ -47,7 +47,8 @@ public class BoomerangStats<W extends Weight> {
 
 	private Set<Node<Statement,Val>> reachedBackwardNodes = Sets.newHashSet();
 	private int reachedBackwardNodeCollisions;
-	private Set<SootMethod> visitedMethods = Sets.newHashSet();
+	private Set<SootMethod> callVisitedMethods = Sets.newHashSet();
+	private Set<SootMethod> fieldVisitedMethods = Sets.newHashSet();
 	private int arrayFlows;
 	private int staticFlows;
 	private int callSitePOIs;
@@ -72,6 +73,7 @@ public class BoomerangStats<W extends Weight> {
 		return sortedByValues;
 	}
 
+	@Override
 	public void registerSolver(Query key, final AbstractBoomerangSolver<W> solver) {
 		if (queries.containsKey(key)) {
 			return;
@@ -84,6 +86,7 @@ public class BoomerangStats<W extends Weight> {
 				if (!globalFieldTransitions.add(new WeightedTransition<Field, INode<Node<Statement, Val>>, W>(t, w))) {
 					fieldTransitionCollisions++;
 				}
+				fieldVisitedMethods.add(t.getStart().fact().stmt().getMethod());
 				if(t.getLabel().equals(Field.array())){
 					arrayFlows++;
 				}
@@ -97,7 +100,7 @@ public class BoomerangStats<W extends Weight> {
 				if (!globalCallTransitions.add(new WeightedTransition<Statement, INode<Val>, W>(t, w))) {
 					callTransitionCollisions++;
 				}
-				visitedMethods.add(t.getLabel().getMethod());
+				callVisitedMethods.add(t.getLabel().getMethod());
 
 				if(t.getStart().fact().isStatic()){
 					staticFlows++;
@@ -153,14 +156,17 @@ public class BoomerangStats<W extends Weight> {
 		map.put(method,++i);
 	}
 
+	@Override
 	public void registerCallSitePOI(WeightedBoomerang<W>.ForwardCallSitePOI key) {
 		callSitePOIs++;
 	}
 
+	@Override
 	public void registerFieldWritePOI(WeightedBoomerang<W>.FieldWritePOI key) {
 		fieldWritePOIs++;
 	}
 
+	@Override
 	public void registerFieldReadPOI(WeightedBoomerang<W>.FieldReadPOI key) {
 		fieldReadPOIs++;
 	}
@@ -177,7 +183,7 @@ public class BoomerangStats<W extends Weight> {
 				backwardQuery++;
 		}
 		s+= String.format("Queries (Forward/Backward/Total): \t\t %s/%s/%s\n", forwardQuery,backwardQuery,queries.keySet().size());
-		s+= String.format("Visited Methods: \t\t %s\n", visitedMethods.size());
+		s+= String.format("Visited Methods (Field/Call): \t\t %s/%s\n", fieldVisitedMethods.size(), callVisitedMethods.size());
 		s+= String.format("Reached Forward Nodes(Collisions): \t\t %s (%s)\n", reachedForwardNodes.size(),reachedForwardNodeCollisions);
 		s+= String.format("Reached Backward Nodes(Collisions): \t\t %s (%s)\n", reachedBackwardNodes.size(),reachedBackwardNodeCollisions);
 		s+= String.format("Point of Indirections (Store/Load/Callsite): \t\t %s/%s/%s\n", fieldWritePOIs,fieldReadPOIs,callSitePOIs);
@@ -212,10 +218,11 @@ public class BoomerangStats<W extends Weight> {
 		return s;
 	}
 
-	public Set<SootMethod> getVisitedMethods() {
-		return Sets.newHashSet(visitedMethods);
+	@Override
+	public Set<SootMethod> getCallVisitedMethods() {
+		return Sets.newHashSet(callVisitedMethods);
 	}
-	public String computeMetrics(){
+	private String computeMetrics(){
 		int min = Integer.MAX_VALUE;
 		int totalReached = 0;
 		int max = 0;
