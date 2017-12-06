@@ -63,6 +63,7 @@ import wpds.interfaces.WPAUpdateListener;
 public abstract class WeightedBoomerang<W extends Weight> implements MethodReachableQueue {
 	public static final boolean DEBUG = false;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
+	private long lastTick;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
 
 		@Override
@@ -167,6 +168,10 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
 					if(options.analysisTimeoutMS() > 0){
 						long elapsed = analysisWatch.elapsed(TimeUnit.MILLISECONDS);
+						if(elapsed - lastTick > 3000){
+							System.err.println(stats);
+							lastTick = elapsed;
+						}
 						if(options.analysisTimeoutMS() < elapsed){
 							analysisWatch.stop();
 							throw new BoomerangTimeoutException(elapsed,stats);
@@ -1063,20 +1068,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				for (final ForwardQuery byPassing : Lists.newArrayList(byPassingAllocations)) {
 					eachPair(byPassing, flowQuery, returnedNode);
 				}
-//				if(returnsFromCall.size() % 100 == 0){
-//					System.out.println(callSite + "  " + returnsFromCall.size());
-//				}
-//				if(returnsFromCall.size() % 100 == 0){
-//					int i = 0;
-//					for(Boomerang<W>.QueryWithVal el : returnsFromCall){
-//						if(i++ < 30){
-//							System.err.println(el);
-//							System.out.println(el.returningFact.fact().value().getType());
-//						}
-//					}
-//					
-//				}
-				
 			}
 		}
 

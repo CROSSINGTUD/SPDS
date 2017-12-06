@@ -5,7 +5,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import boomerang.ForwardQuery;
 import boomerang.solver.BackwardBoomerangSolver;
+import boomerang.solver.ForwardBoomerangSolver;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -40,8 +42,11 @@ public class BoomerangStats<W extends Weight> {
 	private int fieldRulesCollisions;
 	private Set<Rule<Statement, INode<Val>, W>> globalCallRules = Sets.newHashSet();
 	private int callRulesCollisions;
-	private Set<Node<Statement,Val>> reachedNodes = Sets.newHashSet();
-	private int reachedNodeCollisions;
+	private Set<Node<Statement,Val>> reachedForwardNodes = Sets.newHashSet();
+	private int reachedForwardNodeCollisions;
+
+	private Set<Node<Statement,Val>> reachedBackwardNodes = Sets.newHashSet();
+	private int reachedBackwardNodeCollisions;
 	private Set<SootMethod> visitedMethods = Sets.newHashSet();
 	private int arrayFlows;
 	private int staticFlows;
@@ -127,8 +132,14 @@ public class BoomerangStats<W extends Weight> {
 
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
-				if(!reachedNodes.add(reachableNode.asNode())){
-					reachedNodeCollisions++;
+				if(solver instanceof ForwardBoomerangSolver) {
+					if (!reachedForwardNodes.add(reachableNode.asNode())) {
+						reachedForwardNodeCollisions++;
+					}
+				} else {
+					if (!reachedBackwardNodes.add(reachableNode.asNode())) {
+						reachedBackwardNodeCollisions++;
+					}
 				}
 			}
 		});
@@ -156,9 +167,19 @@ public class BoomerangStats<W extends Weight> {
 
 	public String toString(){
 		String s = "=========== Boomerang Stats =============\n";
-		s+= String.format("Queries: \t\t %s\n", queries.keySet().size());
+		int forwardQuery = 0;
+		int backwardQuery = 0;
+		for(Query q : queries.keySet()){
+			if(q instanceof ForwardQuery) {
+				forwardQuery++;
+			}
+			else
+				backwardQuery++;
+		}
+		s+= String.format("Queries (Forward/Backward/Total): \t\t %s/%s/%s\n", forwardQuery,backwardQuery,queries.keySet().size());
 		s+= String.format("Visited Methods: \t\t %s\n", visitedMethods.size());
-		s+= String.format("Reached Nodes(Collisions): \t\t %s (%s)\n", reachedNodes.size(),reachedNodeCollisions);
+		s+= String.format("Reached Forward Nodes(Collisions): \t\t %s (%s)\n", reachedForwardNodes.size(),reachedForwardNodeCollisions);
+		s+= String.format("Reached Backward Nodes(Collisions): \t\t %s (%s)\n", reachedBackwardNodes.size(),reachedBackwardNodeCollisions);
 		s+= String.format("Point of Indirections (Store/Load/Callsite): \t\t %s/%s/%s\n", fieldWritePOIs,fieldReadPOIs,callSitePOIs);
 		s+= String.format("Global Field Rules(Collisions): \t\t %s (%s)\n", globalFieldRules.size(),fieldRulesCollisions);
 		s+= String.format("Global Field Transitions(Collisions): \t\t %s (%s)\n", globalFieldTransitions.size(),fieldTransitionCollisions);
