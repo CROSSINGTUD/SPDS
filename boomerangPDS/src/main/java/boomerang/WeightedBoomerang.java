@@ -97,7 +97,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 							//TODO if BackwardSolver && unbalanced...
 							if(options.onTheFlyCallGraph() && solver instanceof  BackwardBoomerangSolver){
 								final SootMethod caller = WeightedBoomerang.this.icfg().getMethodOf(callSite);
-								unbalancedCallers(callee, caller);
+								addTypeReachable(caller);
 							}
 							final Statement callStatement = new Statement((Stmt) callSite,
 									WeightedBoomerang.this.icfg().getMethodOf(callSite));
@@ -237,7 +237,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			@Override
 			protected Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite,
 					Statement callSite, InvokeExpr invokeExpr, Val fact, SootMethod callee, Stmt calleeSp) {
-				addReachable(callee);
 				return super.computeCallFlow(caller, returnSite, callSite, invokeExpr, fact, callee, calleeSp);
 			}
 			
@@ -245,7 +244,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			protected void onCallFlow(SootMethod callee, Stmt callSite, Val value,
 							Collection<? extends State> res) {
 				if (!res.isEmpty()) {
-					addFlowReachable(callee);
+					addReachable(callee);
 				}
 				super.onCallFlow(callee, callSite, value, res);
 			}
