@@ -71,12 +71,7 @@ public class IDEALSeedSolver<W extends Weight> {
 	}
 
 	private WeightedBoomerang<W> createSolver() {
-		return new WeightedBoomerang<W>(new DefaultBoomerangOptions(){
-			@Override
-			public boolean onTheFlyCallGraph() {
-				return true;
-			}
-		}) {
+		return new WeightedBoomerang<W>(analysisDefinition.boomerangOptions()) {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 				return analysisDefinition.icfg();
@@ -140,8 +135,12 @@ public class IDEALSeedSolver<W extends Weight> {
 				if(phase.equals(Phases.ValueFlow)){
 					return;
 				}
-				boomerang.solve(new BackwardQuery(curr.stmt(),curr.fact()));
 				idealWeightFunctions.potentialStrongUpdate(curr.stmt(), weight);
+				try{
+					boomerang.solve(new BackwardQuery(curr.stmt(),curr.fact()));
+				} catch (BoomerangTimeoutException e){
+					idealWeightFunctions.weakUpdate(curr.stmt());
+				}
 				for(final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()){
 					if(e.getKey() instanceof ForwardQuery){
 						e.getValue().synchedEmptyStackReachable(curr, new EmptyStackWitnessListener<Statement, Val>() {
@@ -156,7 +155,6 @@ public class IDEALSeedSolver<W extends Weight> {
 				}
 			}
 		});
-//		System.out.println("");
 		boomerang.debugOutput();
 		analysisStopwatch.stop();
 		return boomerang;

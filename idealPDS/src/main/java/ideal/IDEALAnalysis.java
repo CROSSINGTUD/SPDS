@@ -7,6 +7,8 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import boomerang.WeightedForwardQuery;
+
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
 
 import boomerang.Query;
@@ -57,10 +59,11 @@ public class IDEALAnalysis<W extends Weight> {
 
 	public Map<WeightedForwardQuery<W>, IDEALSeedSolver<W>> run() {
 		printOptions();
-		long before = System.currentTimeMillis();
+		Stopwatch watch = Stopwatch.createStarted();
 		Collection<Query> initialSeeds = seedFactory.computeSeeds();
-		long after = System.currentTimeMillis();
-		System.out.println("Computed seeds in: "+ (after-before)  + " ms");
+		System.out.println("Computed seeds in: "+ watch.elapsed() );
+		watch.reset();
+		watch.start();
 		if (initialSeeds.isEmpty())
 			System.err.println("No seeds found!");
 		else
@@ -82,6 +85,7 @@ public class IDEALAnalysis<W extends Weight> {
 			}
 			System.err.println("Analyzed (finished,timedout): \t (" + (seedCount -timeoutCount)+ "," + timeoutCount + ") of "+ initialSeeds.size() + " seeds! ");
 		}
+		System.out.println("Analysis time for all seeds: "+ watch.elapsed());
 		return seedToSolver;
 	}
 	public IDEALSeedSolver<W> run(Query seed) {

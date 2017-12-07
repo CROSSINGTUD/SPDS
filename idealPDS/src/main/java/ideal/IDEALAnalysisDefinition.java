@@ -2,9 +2,10 @@ package ideal;
 
 import java.util.Collection;
 
+import boomerang.BoomerangOptions;
+import boomerang.DefaultBoomerangOptions;
 import boomerang.WeightedForwardQuery;
 import boomerang.debugger.Debugger;
-import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import soot.SootMethod;
@@ -58,4 +59,8 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 	}
 
 	public abstract Debugger<W> debugger();
+
+	public BoomerangOptions boomerangOptions() {
+		return new DefaultBoomerangOptions();
+	}
 }

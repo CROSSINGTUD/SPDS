@@ -50,6 +50,15 @@ public class SocketTest extends IDEALTestingFramework {
 	    }
 	}
 
+	@Test
+	public void test5() throws IOException {
+		Collection<Socket> sockets = createSockets();
+	    for (Iterator<Socket> it = sockets.iterator(); it.hasNext();) {
+	      Socket s = (Socket) it.next();
+	      talk(s);
+	      mayBeInErrorState(s);
+	    }
+	}
 	public static Socket createSocket() {
 		return new Socket();
 	}
