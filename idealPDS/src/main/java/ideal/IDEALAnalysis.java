@@ -19,6 +19,7 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.callgraph.ReachableMethods;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.util.queue.QueueReader;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.Weight;
@@ -31,18 +32,26 @@ public class IDEALAnalysis<W extends Weight> {
 
 	private final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final IDEALAnalysisDefinition<W> analysisDefinition;
+	private final SeedFactory<W> seedFactory;
 	private int timeoutCount;
 	private int seedCount;
 
-	public IDEALAnalysis(IDEALAnalysisDefinition<W> analysisDefinition) {
+	public IDEALAnalysis(final IDEALAnalysisDefinition<W> analysisDefinition) {
 		this.analysisDefinition = analysisDefinition;
 		this.icfg = analysisDefinition.icfg();
+		this.seedFactory = new SeedFactory<W>(analysisDefinition){
+
+			@Override
+			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+				return analysisDefinition.icfg();
+			}
+		};
 	}
 
 	public Map<WeightedForwardQuery<W>, IDEALSeedSolver<W>> run() {
 		printOptions();
 		long before = System.currentTimeMillis();
-		Set<WeightedForwardQuery<W>> initialSeeds = computeSeeds();
+		Set<WeightedForwardQuery<W>> initialSeeds = seedFactory.computeSeeds();
 		long after = System.currentTimeMillis();
 		System.out.println("Computed seeds in: "+ (after-before)  + " ms");
 		if (initialSeeds.isEmpty())
@@ -75,29 +84,5 @@ public class IDEALAnalysis<W extends Weight> {
 			System.out.println(analysisDefinition);
 	}
 
-	public Set<WeightedForwardQuery<W>> computeSeeds() {
-		Set<WeightedForwardQuery<W>> seeds = new HashSet<>();
-		ReachableMethods rm = Scene.v().getReachableMethods();
-		QueueReader<MethodOrMethodContext> listener = rm.listener();
-		while (listener.hasNext()) {
-			MethodOrMethodContext next = listener.next();
-			seeds.addAll(computeSeeds(next.method()));
-		}
-		return seeds;
-	}
-
-	private Collection<WeightedForwardQuery<W>> computeSeeds(SootMethod method) {
-		Set<WeightedForwardQuery<W>> seeds = new HashSet<>();
-		if (!method.hasActiveBody())
-			return seeds;
-		if (SEED_IN_APPLICATION_CLASS_METHOD && !method.getDeclaringClass().isApplicationClass())
-			return seeds;
-		for (Unit u : method.getActiveBody().getUnits()) {
-			Collection<SootMethod> calledMethods = (icfg.isCallStmt(u) ? icfg.getCalleesOfCallAt(u)
-					: new HashSet<SootMethod>());
-			seeds.addAll(analysisDefinition.generate(method, u, calledMethods));
-		}
-		return seeds;
-	}
 
 }

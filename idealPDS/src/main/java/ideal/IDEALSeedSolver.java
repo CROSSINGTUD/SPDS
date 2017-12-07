@@ -82,7 +82,7 @@ public class IDEALSeedSolver<W extends Weight> {
 			@Override
 			protected WeightFunctions<Statement, Val, Statement, W> getForwardCallWeights(ForwardQuery sourceQuery) {
 				if(sourceQuery.equals(seed))
-				return idealWeightFunctions;
+					return idealWeightFunctions;
 				return new OneWeightFunctions<Statement, Val, Statement, W>(zero, one);
 			}
 
