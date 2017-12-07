@@ -7,7 +7,9 @@ import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
+
 import com.google.common.base.Stopwatch;
 import soot.SootMethod;
 import soot.Unit;
@@ -31,16 +33,17 @@ public class IDEALSeedSolver<W extends Weight> {
 	private final WeightedBoomerang<W> phase1Solver;
 	private final WeightedBoomerang<W> phase2Solver;
 	private final Stopwatch analysisStopwatch = Stopwatch.createUnstarted();
+	private final SeedFactory<W> seedFactory;
 	private WeightedBoomerang<W> timedoutSolver;
-
 
     public enum Phases {
 		ObjectFlow, ValueFlow
 	};
 
-	public IDEALSeedSolver(IDEALAnalysisDefinition<W> analysisDefinition, Query seed) {
+	public IDEALSeedSolver(IDEALAnalysisDefinition<W> analysisDefinition, Query seed,  SeedFactory<W> seedFactory) {
 		this.analysisDefinition = analysisDefinition;
 		this.seed = seed;
+		this.seedFactory = seedFactory;
 		this.idealWeightFunctions = new IDEALWeightFunctions<W>(analysisDefinition.weightFunctions());
 		this.zero = analysisDefinition.weightFunctions().getZero();
 		this.one = analysisDefinition.weightFunctions().getOne();
@@ -68,7 +71,12 @@ public class IDEALSeedSolver<W extends Weight> {
 	}
 
 	private WeightedBoomerang<W> createSolver() {
-		return new WeightedBoomerang<W>() {
+		return new WeightedBoomerang<W>(new DefaultBoomerangOptions(){
+			@Override
+			public boolean onTheFlyCallGraph() {
+				return true;
+			}
+		}) {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 				return analysisDefinition.icfg();
@@ -99,6 +107,11 @@ public class IDEALSeedSolver<W extends Weight> {
 			@Override
 			protected WeightFunctions<Statement, Val, Statement, W> getBackwardCallWeights() {
 				return new OneWeightFunctions<Statement, Val, Statement, W>(zero, one);
+			}
+			
+			@Override
+			public SeedFactory<W> getSeedFactory() {
+				return seedFactory;
 			}
 		};
 	}

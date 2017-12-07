@@ -12,6 +12,7 @@ import com.google.common.collect.Maps;
 import boomerang.Query;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
+import boomerang.seedfactory.SeedFactory;
 import heros.InterproceduralCFG;
 import soot.MethodOrMethodContext;
 import soot.Scene;
@@ -22,6 +23,7 @@ import soot.jimple.toolkits.callgraph.ReachableMethods;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.util.queue.QueueReader;
 import sync.pds.solver.nodes.Node;
+import typestate.TransitionFunction;
 import wpds.impl.Weight;
 
 public class IDEALAnalysis<W extends Weight> {
@@ -39,11 +41,16 @@ public class IDEALAnalysis<W extends Weight> {
 	public IDEALAnalysis(final IDEALAnalysisDefinition<W> analysisDefinition) {
 		this.analysisDefinition = analysisDefinition;
 		this.icfg = analysisDefinition.icfg();
-		this.seedFactory = new SeedFactory<W>(analysisDefinition){
+		this.seedFactory = new SeedFactory<W>(){
 
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 				return analysisDefinition.icfg();
+			}
+			@Override
+			protected Collection<WeightedForwardQuery<W>> generate(SootMethod method, Stmt stmt,
+					Collection<SootMethod> calledMethods) {
+				return analysisDefinition.generate(method, stmt, calledMethods);
 			}
 		};
 	}
@@ -51,7 +58,7 @@ public class IDEALAnalysis<W extends Weight> {
 	public Map<WeightedForwardQuery<W>, IDEALSeedSolver<W>> run() {
 		printOptions();
 		long before = System.currentTimeMillis();
-		Set<WeightedForwardQuery<W>> initialSeeds = seedFactory.computeSeeds();
+		Collection<Query> initialSeeds = seedFactory.computeSeeds();
 		long after = System.currentTimeMillis();
 		System.out.println("Computed seeds in: "+ (after-before)  + " ms");
 		if (initialSeeds.isEmpty())
@@ -59,7 +66,10 @@ public class IDEALAnalysis<W extends Weight> {
 		else
 			System.err.println("Analysing " + initialSeeds.size() + " seeds!");
 		Map<WeightedForwardQuery<W>, IDEALSeedSolver<W>> seedToSolver = Maps.newHashMap();
-		for (WeightedForwardQuery<W> seed : initialSeeds) {
+		for (Query s : initialSeeds) {
+			if(!(s instanceof WeightedForwardQuery))
+				continue;
+			WeightedForwardQuery<W> seed = (WeightedForwardQuery) s;
 			seedCount++;
 			System.err.println("Analyzing "+ seed);
 			try {
@@ -75,13 +85,17 @@ public class IDEALAnalysis<W extends Weight> {
 		return seedToSolver;
 	}
 	public IDEALSeedSolver<W> run(Query seed) {
-		IDEALSeedSolver<W> idealAnalysis = new IDEALSeedSolver<W>(analysisDefinition, seed);
+		IDEALSeedSolver<W> idealAnalysis = new IDEALSeedSolver<W>(analysisDefinition, seed, seedFactory);
 		idealAnalysis.run();
 		return idealAnalysis;
 	}
 	private void printOptions() {
 		if(PRINT_OPTIONS)
 			System.out.println(analysisDefinition);
+	}
+
+	public Collection<Query> computeSeeds() {
+		return seedFactory.computeSeeds();
 	}
 
 

@@ -4,6 +4,8 @@ import com.google.common.base.Optional;
 
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
+import boomerang.stats.IBoomerangStats;
+import boomerang.stats.SimpleBoomerangStats;
 import soot.RefType;
 import soot.Scene;
 import soot.SootMethod;
@@ -147,8 +149,10 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		return 30000;
 	}
 
+	@Override
 	public IBoomerangStats statsFactory(){
 		return new SimpleBoomerangStats();
 	}
+
 
 }

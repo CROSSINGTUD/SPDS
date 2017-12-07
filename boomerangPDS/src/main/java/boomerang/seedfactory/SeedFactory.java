@@ -1,7 +1,9 @@
-package ideal;
+package boomerang.seedfactory;
 
+import boomerang.Query;
 import boomerang.WeightedForwardQuery;
 import boomerang.jimple.Statement;
+
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
@@ -14,6 +16,9 @@ import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.*;
+import wpds.impl.Weight.NoWeight;
+import wpds.interfaces.State;
+import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 import java.util.Collection;
@@ -27,10 +32,10 @@ import java.util.Set;
 public abstract class SeedFactory<W extends Weight> {
 
     private final WeightedPushdownSystem<Statement, INode<Reachable>, Weight.NoWeight> pds = new WeightedPushdownSystem<>();
-    private final Multimap<WeightedForwardQuery<W>,Transition<Statement, INode<Reachable>>> seedToTransition = HashMultimap.create();
-    private final IDEALAnalysisDefinition<W> analysisDefinition;
+    private final Multimap<Query,Transition<Statement, INode<Reachable>>> seedToTransition = HashMultimap.create();
+    
 
-    private final WeightedPAutomaton<Statement,  INode<Reachable>, Weight.NoWeight> automaton = new WeightedPAutomaton<Statement,  INode<Reachable>, Weight.NoWeight>(wrap(Reachable.v())) {
+    private final WeightedPAutomaton<Statement,  INode<Reachable>, Weight.NoWeight> automaton = new WeightedPAutomaton<Statement,  INode<Reachable>, Weight.NoWeight>(wrap(Reachable.entry())) {
         @Override
         public INode<Reachable> createState(INode<Reachable> reachable, Statement loc) {
             return new GeneratedState<>(reachable,loc);
@@ -58,15 +63,11 @@ public abstract class SeedFactory<W extends Weight> {
         }
     };
 
-    public SeedFactory(IDEALAnalysisDefinition<W> analysisDefinition){
-        this.analysisDefinition = analysisDefinition;
-    }
-
-    public Set<WeightedForwardQuery<W>> computeSeeds(){
+    public Collection<Query> computeSeeds(){
         List<SootMethod> entryPoints = Scene.v().getEntryPoints();
         for(SootMethod m : entryPoints){
             for(Unit u : icfg().getStartPointsOf(m)) {
-                addNormalRule(new Statement((Stmt) u, m),new Statement((Stmt) u, m));
+            	automaton.addTransition(new Transition<Statement, INode<Reachable>>(wrap(Reachable.v()),new Statement((Stmt) u, m),automaton.getInitialState()));
             }
         }
         pds.poststar(automaton);
@@ -78,18 +79,21 @@ public abstract class SeedFactory<W extends Weight> {
                 Stmt u = t.getLabel().getUnit().get();
                 Collection<SootMethod> calledMethods = (icfg().isCallStmt(u) ? icfg().getCalleesOfCallAt(u)
                         : new HashSet<SootMethod>());
-                for(WeightedForwardQuery<W> seed : analysisDefinition.generate(t.getLabel().getMethod(), u, calledMethods)){
+                for(Query seed : generate(t.getLabel().getMethod(), u, calledMethods)){
                     seedToTransition.put(seed, t);
                 }
             }
         });
+        
         return seedToTransition.keySet();
     }
 
+    protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods);
+	
     private void process(Statement curr) {
         Unit currUnit = curr.getUnit().get();
-        for(Unit u : icfg().getSuccsOf(currUnit)){
-            addNormalRule(curr, new Statement((Stmt) u, curr.getMethod()));
+        for(Unit succ : icfg().getSuccsOf(currUnit)){
+            addNormalRule(curr, new Statement((Stmt) succ, curr.getMethod()));
         }
         if(icfg().isCallStmt(currUnit)){
             for(Unit returnSite : icfg().getSuccsOf(currUnit)){
@@ -116,4 +120,67 @@ public abstract class SeedFactory<W extends Weight> {
 
     public abstract BiDiInterproceduralCFG<Unit,SootMethod> icfg();
 
+	public Collection<SootMethod> getMethodScope(Query query) {
+		Set<SootMethod> scope = Sets.newHashSet();
+		for(Transition<Statement, INode<Reachable>> t : seedToTransition.get(query)){
+			scope.add(t.getLabel().getMethod());
+			automaton.registerListener(new TransitiveClosure(t.getTarget(), scope));
+		}
+		return scope;		
+	}
+
+	private class TransitiveClosure extends WPAStateListener<Statement, INode<Reachable>, Weight.NoWeight>{
+
+		private final Set<SootMethod> scope;
+
+		public TransitiveClosure(INode<Reachable> start, Set<SootMethod> scope) {
+			super(start);
+			this.scope = scope;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Statement, INode<Reachable>> t, NoWeight w,
+				WeightedPAutomaton<Statement, INode<Reachable>, NoWeight> weightedPAutomaton) {
+			scope.add(t.getLabel().getMethod());
+			automaton.registerListener(new TransitiveClosure(t.getTarget(), scope));
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<Statement, INode<Reachable>> t, NoWeight w,
+				WeightedPAutomaton<Statement, INode<Reachable>, NoWeight> weightedPAutomaton) {
+			
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((scope == null) ? 0 : scope.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			TransitiveClosure other = (TransitiveClosure) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (scope == null) {
+				if (other.scope != null)
+					return false;
+			} else if (!scope.equals(other.scope))
+				return false;
+			return true;
+		}
+
+		private SeedFactory getOuterType() {
+			return SeedFactory.this;
+		}
+	}
 }

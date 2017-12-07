@@ -29,6 +29,7 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.poi.AbstractPOI;
 import boomerang.poi.PointOfIndirection;
+import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
@@ -96,11 +97,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 							if(!((Stmt) callSite).containsInvokeExpr())
 								continue;
 							
-							//TODO if BackwardSolver && unbalanced...
-							if(options.onTheFlyCallGraph() && solver instanceof  BackwardBoomerangSolver){
-								final SootMethod caller = WeightedBoomerang.this.icfg().getMethodOf(callSite);
-								addTypeReachable(caller);
-							}
 							final Statement callStatement = new Statement((Stmt) callSite,
 									WeightedBoomerang.this.icfg().getMethodOf(callSite));
 
@@ -135,7 +131,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 				private void unbalancedReturnFlow(final Statement callStatement,
 						final INode<Val> returningFact, final Transition<Statement, INode<Val>> trans, final W weight) {
-					addFlowReachable(callStatement.getMethod());
 					WeightedBoomerang.this.submit(callStatement.getMethod(), new Runnable() {
 						@Override
 						public void run() {
@@ -215,7 +210,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	protected final BoomerangOptions options;
 	private Debugger<W> debugger;
 	private Stopwatch analysisWatch = Stopwatch.createUnstarted();
-	private Collection<SootMethod> unbalancedCallers = Sets.newHashSet();
 	public WeightedBoomerang(BoomerangOptions options){
 		this.options = options;
 		this.stats = options.statsFactory();
@@ -644,9 +638,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	public void solve(Query query) {
 		analysisWatch.reset();
 		analysisWatch.start();
-		addAllocationType(query.stmt().getMethod().getDeclaringClass().getType());
-		addReachable(query.stmt().getMethod());
-		unbalancedCallers.add(query.stmt().getMethod());
+		setupScope(query);
 		if (query instanceof ForwardQuery) {
 			forwardSolve((ForwardQuery) query);
 		}
@@ -655,6 +647,15 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		}
 		if(analysisWatch.isRunning())
 			analysisWatch.stop();
+	}
+
+	private void setupScope(Query query) {
+		SeedFactory<W> seedFactory = getSeedFactory();
+		if(seedFactory == null)
+			return;
+		for(SootMethod m : seedFactory.getMethodScope(query)){
+			addReachable(m);
+		}		
 	}
 
 	protected void backwardSolve(BackwardQuery query) {
@@ -1544,6 +1545,10 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		if(this.debugger == null)
 			this.debugger = createDebugger();
 		return debugger;
+	}
+	
+	public SeedFactory<W> getSeedFactory(){
+		return null;
 	}
 
 	public IBoomerangStats<W> getStats() {
