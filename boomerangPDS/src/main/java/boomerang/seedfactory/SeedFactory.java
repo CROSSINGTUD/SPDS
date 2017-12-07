@@ -62,6 +62,7 @@ public abstract class SeedFactory<W extends Weight> {
             return Weight.NO_WEIGHT_ONE;
         }
     };
+	private Collection<Statement> processed = Sets.newHashSet();
 
     public Collection<Query> computeSeeds(){
         List<SootMethod> entryPoints = Scene.v().getEntryPoints();
@@ -91,6 +92,8 @@ public abstract class SeedFactory<W extends Weight> {
     protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods);
 	
     private void process(Statement curr) {
+    	if(!processed.add(curr))
+    		return;
         Unit currUnit = curr.getUnit().get();
         for(Unit succ : icfg().getSuccsOf(currUnit)){
             addNormalRule(curr, new Statement((Stmt) succ, curr.getMethod()));
