@@ -641,7 +641,9 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	}
 
 	public void solve(Query query) {
-		analysisWatch.start();
+		if(!analysisWatch.isRunning()){
+			analysisWatch.start();
+		}
 		queryAnalysisWatch.reset();
 		queryAnalysisWatch.start();
 		setupScope(query);

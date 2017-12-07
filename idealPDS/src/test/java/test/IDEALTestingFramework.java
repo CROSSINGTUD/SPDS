@@ -87,11 +87,8 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				
 				Map<WeightedForwardQuery<TransitionFunction>, IDEALSeedSolver<TransitionFunction>> seedToSolvers = executeAnalysis();
 				for(WeightedForwardQuery<TransitionFunction> seed : seedToSolvers.keySet()){
-					System.out.println("SEED "+  seed);
 					for(Query q : seedToSolvers.get(seed).getPhase2Solver().getSolvers().keySet()){
-//						if(q.asNode().equals(seed)){
-							testingResultReporter.onSeedFinished(q.asNode(), seedToSolvers.get(seed).getPhase2Solver().getSolvers().getOrCreate(q));
-//						}
+						testingResultReporter.onSeedFinished(q.asNode(), seedToSolvers.get(seed).getPhase2Solver().getSolvers().getOrCreate(q));
 					}
 				}
 				List<Assertion> unsound = Lists.newLinkedList();
