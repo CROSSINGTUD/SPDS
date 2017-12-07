@@ -4,7 +4,6 @@ import java.util.List;
 
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
-import boomerang.jimple.Val;
 import boomerang.solver.ReachableMethodListener;
 import soot.Scene;
 import soot.SootMethod;
@@ -39,7 +38,7 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 		System.out.println("Analyzed methods:\t" + reachableMethodCount);
 		System.out.println("Total solvers:\t" + this.getSolvers().size());
 		System.out.println("Allocation Sites:\t" + allocationSites);
-		System.out.println(stats);
+		System.out.println(options.statsFactory());
 	}
 	
 
