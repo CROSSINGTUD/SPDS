@@ -94,6 +94,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				} else{
 					allocationSites = extractQuery(new AllocationSiteOf());
 				}
+				System.out.println(sootTestMethod.getActiveBody());
 				for (AnalysisMode analysis : getAnalyses()) {
 					switch (analysis) {
 					case WholeProgram:
