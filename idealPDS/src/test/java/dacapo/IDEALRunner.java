@@ -26,6 +26,7 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.WeightFunctions;
 import typestate.TransitionFunction;
+import typestate.finiteautomata.ITransition;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public class IDEALRunner  extends ResearchQuestion  {
@@ -166,10 +167,21 @@ public class IDEALRunner  extends ResearchQuestion  {
   }
 
     private String asCSVLine(WeightedForwardQuery<TransitionFunction> key, IDEALSeedSolver<TransitionFunction> solver) {
-        return String.format("%s;%s;%s;%s;%s;%s;%s;%s;%s;%s\n",key,key.stmt().getMethod(),key.stmt().getMethod().getDeclaringClass(),solver.getAnalysisStopwatch().elapsed(TimeUnit.MILLISECONDS),solver.getPhase1Solver().getAnalysisStopwatch().elapsed(TimeUnit.MILLISECONDS),solver.getPhase2Solver().getAnalysisStopwatch().elapsed(TimeUnit.MILLISECONDS),solver.getPhase1Solver().getStats().getCallVisitedMethods().size(), Scene.v().getReachableMethods().size(), isInErrorState(solver),solver.isTimedOut());
+        return String.format("%s;%s;%s;%s;%s;%s;%s;%s;%s;%s\n",key,key.stmt().getMethod(),key.stmt().getMethod().getDeclaringClass(),solver.getAnalysisStopwatch().elapsed(TimeUnit.MILLISECONDS),solver.getPhase1Solver().getAnalysisStopwatch().elapsed(TimeUnit.MILLISECONDS),solver.getPhase2Solver().getAnalysisStopwatch().elapsed(TimeUnit.MILLISECONDS),solver.getPhase1Solver().getStats().getCallVisitedMethods().size(), Scene.v().getReachableMethods().size(), isInErrorState(key,solver),solver.isTimedOut());
     }
 
-    private boolean isInErrorState(IDEALSeedSolver<TransitionFunction> solver) {
+    private boolean isInErrorState(WeightedForwardQuery<TransitionFunction> key, IDEALSeedSolver<TransitionFunction> solver) {
+        Table<Statement, Val, TransitionFunction> objectDestructingStatements = solver.getPhase2Solver().getObjectDestructingStatements(key);
+        for(Table.Cell<Statement,Val,TransitionFunction> c : objectDestructingStatements.cellSet()){
+            for(ITransition t : c.getValue().values()){
+                if(t.to() != null){
+                    if(t.to().isErrorState()){
+                        return true;
+                    }
+                }
+            }
+
+        }
       return false;
     }
 

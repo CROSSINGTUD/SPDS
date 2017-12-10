@@ -70,7 +70,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 
 	@Override
 	public boolean arrayFlows() {
-		return true;
+		return false;
 	}
 
 	@Override
@@ -85,7 +85,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 
 	@Override
 	public boolean onTheFlyCallGraph() {
-		return true;
+		return false;
 	}
 
 	@Override

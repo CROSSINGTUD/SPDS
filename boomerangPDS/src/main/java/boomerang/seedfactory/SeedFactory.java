@@ -5,6 +5,7 @@ import boomerang.WeightedForwardQuery;
 import boomerang.jimple.Statement;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import soot.Scene;
@@ -31,13 +32,12 @@ import java.util.Set;
  */
 public abstract class SeedFactory<W extends Weight> {
 
-    private final WeightedPushdownSystem<Statement, INode<Reachable>, Weight.NoWeight> pds = new WeightedPushdownSystem<>();
-    private final Multimap<Query,Transition<Statement, INode<Reachable>>> seedToTransition = HashMultimap.create();
-    
+    private final WeightedPushdownSystem<Method, INode<Reachable>, Weight.NoWeight> pds = new WeightedPushdownSystem<>();
+    private final Multimap<Query,Transition<Method, INode<Reachable>>> seedToTransition = HashMultimap.create();
 
-    private final WeightedPAutomaton<Statement,  INode<Reachable>, Weight.NoWeight> automaton = new WeightedPAutomaton<Statement,  INode<Reachable>, Weight.NoWeight>(wrap(Reachable.entry())) {
+    private final WeightedPAutomaton<Method,  INode<Reachable>, Weight.NoWeight> automaton = new WeightedPAutomaton<Method,  INode<Reachable>, Weight.NoWeight>(wrap(Reachable.entry())) {
         @Override
-        public INode<Reachable> createState(INode<Reachable> reachable, Statement loc) {
+        public INode<Reachable> createState(INode<Reachable> reachable, Method loc) {
             return new GeneratedState<>(reachable,loc);
         }
 
@@ -48,8 +48,8 @@ public abstract class SeedFactory<W extends Weight> {
 
 
         @Override
-        public Statement epsilon() {
-            return Statement.epsilon();
+        public Method epsilon() {
+            return Method.epsilon();
         }
 
         @Override
@@ -62,27 +62,22 @@ public abstract class SeedFactory<W extends Weight> {
             return Weight.NO_WEIGHT_ONE;
         }
     };
-	private Collection<Statement> processed = Sets.newHashSet();
+	private Collection<Method> processed = Sets.newHashSet();
 
     public Collection<Query> computeSeeds(){
         List<SootMethod> entryPoints = Scene.v().getEntryPoints();
         for(SootMethod m : entryPoints){
             for(Unit u : icfg().getStartPointsOf(m)) {
-            	automaton.addTransition(new Transition<Statement, INode<Reachable>>(wrap(Reachable.v()),new Statement((Stmt) u, m),automaton.getInitialState()));
+            	automaton.addTransition(new Transition<>(wrap(Reachable.v()),new Method(m),automaton.getInitialState()));
             }
         }
         pds.poststar(automaton);
-        automaton.registerListener(new WPAUpdateListener<Statement, INode<Reachable>, Weight.NoWeight>() {
+        automaton.registerListener(new WPAUpdateListener<Method, INode<Reachable>, Weight.NoWeight>() {
             @Override
-            public void onWeightAdded(Transition<Statement, INode<Reachable>> t, Weight.NoWeight noWeight, WeightedPAutomaton<Statement, INode<Reachable>, Weight.NoWeight> aut) {
-                process(t.getLabel());
+            public void onWeightAdded(Transition<Method, INode<Reachable>> t, Weight.NoWeight noWeight, WeightedPAutomaton<Method, INode<Reachable>, Weight.NoWeight> aut) {
+                process(t);
 
-                Stmt u = t.getLabel().getUnit().get();
-                Collection<SootMethod> calledMethods = (icfg().isCallStmt(u) ? icfg().getCalleesOfCallAt(u)
-                        : new HashSet<SootMethod>());
-                for(Query seed : generate(t.getLabel().getMethod(), u, calledMethods)){
-                    seedToTransition.put(seed, t);
-                }
+
             }
         });
         
@@ -91,30 +86,31 @@ public abstract class SeedFactory<W extends Weight> {
 
     protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods);
 	
-    private void process(Statement curr) {
+    private void process(Transition<Method, INode<Reachable>> t) {
+        Method curr = t.getLabel();
     	if(!processed.add(curr))
     		return;
-        Unit currUnit = curr.getUnit().get();
-        for(Unit succ : icfg().getSuccsOf(currUnit)){
-            addNormalRule(curr, new Statement((Stmt) succ, curr.getMethod()));
-        }
-        if(icfg().isCallStmt(currUnit)){
-            for(Unit returnSite : icfg().getSuccsOf(currUnit)){
-                for(SootMethod callee : icfg().getCalleesOfCallAt(currUnit)){
-                    for(Unit sp : icfg().getStartPointsOf(callee)){
-                        addPushRule(curr, new Statement((Stmt) sp, callee),new Statement((Stmt)returnSite, curr.getMethod()));
-                    }
+        SootMethod m = curr.getMethod();
+    	if(!m.hasActiveBody())
+    	    return;
+    	for(Unit u : m.getActiveBody().getUnits()) {
+            Collection<SootMethod> calledMethods = (icfg().isCallStmt(u) ? icfg().getCalleesOfCallAt(u)
+                    : new HashSet<SootMethod>());
+            for (Query seed : generate(m, (Stmt) u, calledMethods)) {
+                seedToTransition.put(seed, t);
+            }
+            if (icfg().isCallStmt(u)) {
+                for (SootMethod callee : icfg().getCalleesOfCallAt(u)) {
+                    if (!callee.hasActiveBody())
+                        continue;
+                    addPushRule(new Method(m),new Method(callee));
                 }
             }
         }
     }
 
-    private void addPushRule(Statement curr, Statement calleeSp, Statement returnSite) {
-        pds.addRule(new PushRule<>(wrap(Reachable.v()),curr,wrap(Reachable.v()),calleeSp,returnSite, Weight.NO_WEIGHT_ONE));
-    }
-
-    private void addNormalRule(Statement curr, Statement succ) {
-        pds.addRule(new NormalRule<>(wrap(Reachable.v()),curr,wrap(Reachable.v()),succ, Weight.NO_WEIGHT_ONE));
+    private void addPushRule(Method caller, Method callee) {
+        pds.addRule(new PushRule<>(wrap(Reachable.v()),caller,wrap(Reachable.v()),callee,caller, Weight.NO_WEIGHT_ONE));
     }
 
     private INode<Reachable> wrap(Reachable r){
@@ -125,14 +121,14 @@ public abstract class SeedFactory<W extends Weight> {
 
 	public Collection<SootMethod> getMethodScope(Query query) {
 		Set<SootMethod> scope = Sets.newHashSet();
-		for(Transition<Statement, INode<Reachable>> t : seedToTransition.get(query)){
+		for(Transition<Method, INode<Reachable>> t : seedToTransition.get(query)){
 			scope.add(t.getLabel().getMethod());
 			automaton.registerListener(new TransitiveClosure(t.getTarget(), scope));
 		}
 		return scope;		
 	}
 
-	private class TransitiveClosure extends WPAStateListener<Statement, INode<Reachable>, Weight.NoWeight>{
+	private class TransitiveClosure extends WPAStateListener<Method, INode<Reachable>, Weight.NoWeight>{
 
 		private final Set<SootMethod> scope;
 
@@ -142,15 +138,15 @@ public abstract class SeedFactory<W extends Weight> {
 		}
 
 		@Override
-		public void onOutTransitionAdded(Transition<Statement, INode<Reachable>> t, NoWeight w,
-				WeightedPAutomaton<Statement, INode<Reachable>, NoWeight> weightedPAutomaton) {
+		public void onOutTransitionAdded(Transition<Method, INode<Reachable>> t, NoWeight w,
+				WeightedPAutomaton<Method, INode<Reachable>, NoWeight> weightedPAutomaton) {
 			scope.add(t.getLabel().getMethod());
 			automaton.registerListener(new TransitiveClosure(t.getTarget(), scope));
 		}
 
 		@Override
-		public void onInTransitionAdded(Transition<Statement, INode<Reachable>> t, NoWeight w,
-				WeightedPAutomaton<Statement, INode<Reachable>, NoWeight> weightedPAutomaton) {
+		public void onInTransitionAdded(Transition<Method, INode<Reachable>> t, NoWeight w,
+				WeightedPAutomaton<Method, INode<Reachable>, NoWeight> weightedPAutomaton) {
 			
 		}
 
@@ -186,4 +182,6 @@ public abstract class SeedFactory<W extends Weight> {
 			return SeedFactory.this;
 		}
 	}
+
+
 }
