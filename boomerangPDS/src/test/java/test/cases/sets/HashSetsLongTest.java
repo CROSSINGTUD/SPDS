@@ -8,6 +8,8 @@ import org.junit.Test;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
+
+@Ignore
 public class HashSetsLongTest extends AbstractBoomerangTest{
 	@Test
 	public void addAndRetrieve(){

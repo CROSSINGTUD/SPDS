@@ -36,6 +36,8 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected JimpleBasedInterproceduralCFG icfg;
+	private static final boolean FAIL_ON_IMPRECISE = false;
+
 
 	protected abstract TypeStateMachineWeightFunctions getStateMachine();
 
@@ -105,7 +107,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				}
 				if (!unsound.isEmpty())
 					throw new RuntimeException("Unsound results: " + unsound);
-				if (!imprecise.isEmpty()) {
+				if (!imprecise.isEmpty() && FAIL_ON_IMPRECISE) {
 					throw new ImprecisionException("Imprecise results: " + imprecise);
 				}
 			}
