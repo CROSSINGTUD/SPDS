@@ -25,9 +25,8 @@
 		<dependency>
 		    <groupId>com.google.guava</groupId>
 		    <artifactId>guava</artifactId>
-		    <version>23.1-jre</version>
+		    <version>23.5-jre</version>
 		</dependency>
-
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
 			<artifactId>PathExpression</artifactId>
