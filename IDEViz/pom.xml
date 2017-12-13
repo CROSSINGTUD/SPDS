@@ -20,7 +20,7 @@
 		<dependency>
 			<groupId>heros</groupId>
 			<artifactId>heros</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<version>1.0.0-SNAPSHOT</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
@@ -39,4 +39,12 @@
 			<version>3.5</version>
 		</dependency>
 	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>soot-snapshot</id>
+			<name>soot snapshots</name>
+			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
+		</repository>
+	</repositories>
 </project>
