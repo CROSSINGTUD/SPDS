@@ -39,6 +39,7 @@ public class ReadPOITest extends AbstractBoomerangTest {
 		queryFor(query);
 	}
 
+	@Ignore
 	@Test
 	public void loadTwice(){
 		OWithRecField a = new OWithRecField();

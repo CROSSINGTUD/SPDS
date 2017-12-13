@@ -96,7 +96,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				} else{
 					allocationSites = extractQuery(new AllocationSiteOf());
 				}
-				System.out.println(sootTestMethod.getActiveBody());
 				for (AnalysisMode analysis : getAnalyses()) {
 					switch (analysis) {
 					case WholeProgram:
@@ -205,9 +204,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private void compareQuery(Collection<? extends Query> expectedResults,
 			Collection<? extends Node<Statement, Val>> results, AnalysisMode analysis) {
-		System.out.println("Boomerang Allocations Sites: " + results);
-		System.out.println("Boomerang Results: " + results);
-		System.out.println("Expected Results: " + expectedResults);
+//		System.out.println("Boomerang Allocations Sites: " + results);
+//		System.out.println("Boomerang Results: " + results);
+//		System.out.println("Expected Results: " + expectedResults);
 		Collection<Node<Statement, Val>> falseNegativeAllocationSites = new HashSet<>();
 		for (Query res : expectedResults) {
 			if (!results.contains(res.asNode()))
