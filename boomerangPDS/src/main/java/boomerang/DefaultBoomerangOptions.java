@@ -40,6 +40,8 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		if (!trackAnySubclassOfThrowable() && isThrowableAllocationType(val.getType())) {
 			return false;
 		}
+		
+		
 		return val instanceof NewExpr;
 	}
 
