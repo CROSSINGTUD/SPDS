@@ -8,14 +8,14 @@ Additionally, it contains an implementation of [Boomerang](boomerangPDS) and [ID
 # Build
 
 All projects are maven projects and can be imported in any IDE. 
-To build the projects execute and test cases run
+To build the projects and execute the test cases, run
 
-'mvn clean test'
+``mvn clean test``
 
 # Notes on the Test Cases
 
 The projects Boomerang and IDEal contain JUnit test suites. As for JUnit, the test methods are annotated with @Test and can be run as normal JUnit tests.
-However, these methods are *not* executed but only statically analyzed, i.e. the test cases may throw runtime exception. When one executes the JUnit tests, the test method bodies are supplied as input to Soot 
+However, these methods are *not* executed but only statically analyzed. When one executes the JUnit tests, the test method bodies are supplied as input to Soot 
 and a static analysis is triggered. All this happens in JUnit's @Before test time. The test method itself is never run, may throw NullPointerExceptions or may not even terminate.
 
 If the static analysis succeeded, JUnit will officially label the test method as skipped. However, the test will not be labeled as Error or Failure. 
