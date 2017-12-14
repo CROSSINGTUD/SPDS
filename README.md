@@ -21,6 +21,6 @@ and a static analysis is triggered. All this happens in JUnit's @Before test tim
 If the static analysis succeeded, JUnit will officially label the test method as skipped. However, the test will not be labeled as Error or Failure. 
 Even though the test was skipped, it succeeded. Note, JUnit outputs a message:
 
-org.junit.AssumptionViolatedException: got: <false>, expected: is <true>
+``org.junit.AssumptionViolatedException: got: <false>, expected: is <true>``
 
 This is ok! The test passed!
