@@ -19,6 +19,7 @@ import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
 import ideal.IDEALSeedSolver;
 import soot.Body;
+import soot.Scene;
 import soot.SceneTransformer;
 import soot.SootMethod;
 import soot.Unit;
@@ -84,6 +85,16 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				icfg = new JimpleBasedInterproceduralCFG(true);
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
+				
+				//Iterate over units of @Test method
+				for(Unit s : sootTestMethod.getActiveBody().getUnits()){
+					if(icfg.isCallStmt(s)){
+						for(SootMethod m : icfg.getCalleesOfCallAt(s)){
+							System.out.println("Callsite: " + s + " calls " + m);
+						}
+					}
+				}
+				
 				System.out.println(sootTestMethod.getActiveBody());
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				
@@ -179,6 +190,9 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	}
 
 	protected static void mustBeInAcceptingState(Object variable) {
+	}
+	
+	protected static void shouldNotBeAnalyzed(){
 	}
 
 	/**

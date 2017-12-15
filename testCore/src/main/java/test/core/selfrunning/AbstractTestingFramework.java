@@ -73,6 +73,9 @@ public abstract class AbstractTestingFramework {
 	private void initializeSootWithEntryPoint() {
 		G.v().reset();
 		Options.v().set_whole_program(true);
+		
+		//TODO @Melanie play with Call Graph Options here.
+		//https://soot-build.cs.uni-paderborn.de/public/origin/develop/soot/soot-develop/options/soot_options.htm#phase_5_2
 		Options.v().setPhaseOption("cg.spark", "on");
 		Options.v().setPhaseOption("cg.spark", "verbose:true");
 		Options.v().set_output_format(Options.output_format_none);
