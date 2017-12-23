@@ -67,17 +67,13 @@ public abstract class SeedFactory<W extends Weight> {
     public Collection<Query> computeSeeds(){
         List<SootMethod> entryPoints = Scene.v().getEntryPoints();
         for(SootMethod m : entryPoints){
-            for(Unit u : icfg().getStartPointsOf(m)) {
-            	automaton.addTransition(new Transition<>(wrap(Reachable.v()),new Method(m),automaton.getInitialState()));
-            }
+            automaton.addTransition(new Transition<>(wrap(Reachable.v()),new Method(m),automaton.getInitialState()));
         }
         pds.poststar(automaton);
         automaton.registerListener(new WPAUpdateListener<Method, INode<Reachable>, Weight.NoWeight>() {
             @Override
             public void onWeightAdded(Transition<Method, INode<Reachable>> t, Weight.NoWeight noWeight, WeightedPAutomaton<Method, INode<Reachable>, Weight.NoWeight> aut) {
                 process(t);
-
-
             }
         });
         
