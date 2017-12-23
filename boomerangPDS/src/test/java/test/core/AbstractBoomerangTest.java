@@ -101,13 +101,16 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						if(query.isPresent()){
 							return Collections.singleton(query.get());
 						}
+						query = new FirstArgumentOf("intQueryFor").test(u);
+						if(query.isPresent()){
+							integerQueries = true;
+							return Collections.singleton(query.get());
+						}
 						return Collections.emptySet();
 					}
 				};
 				queryForCallSites = seedFactory.computeSeeds();
-				if(queryForCallSites.isEmpty()){
-					queryForCallSites = extractQuery(new FirstArgumentOf("intQueryFor"));
-					integerQueries = true;
+				if(integerQueries){
 					allocationSites = extractQuery(new IntegerAllocationSiteOf());
 				} else{
 					allocationSites = extractQuery(new AllocationSiteOf());
