@@ -1,13 +1,7 @@
 package boomerang.solver;
 
-import java.util.AbstractMap;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
@@ -347,7 +341,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				for(Unit sp : icfg.getStartPointsOf(entryPoint)){
 					Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) sp,
 							(Stmt) sp);
-					onReturnFlow(sp, sp, method, curr, value, outFlow);
 					out.addAll(outFlow);
 				}
 			}
@@ -359,7 +352,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
 					Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) callSite,
 							(Stmt) returnSite);
-					onReturnFlow(callSite, returnSite, method, curr, value, outFlow);
 					out.addAll(outFlow);
 				}
 			}
@@ -438,18 +430,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		return fieldPDS;
 	}
 
-	public void addFieldAutomatonListener(WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> listener) {
-		fieldAutomaton.registerListener(listener);
-	}
-
-	public void addCallAutomatonListener(WPAUpdateListener<Statement, INode<Val>, W> listener) {
-		callAutomaton.registerListener(listener);
-	}
-
-	public boolean addFieldFlow(Node<Statement, Val> fieldFlow) {
-		return fieldFlows.add(fieldFlow);
-	}
-
 	@Override
 	protected void processNode(final WitnessNode<Statement, Val, Field> witnessNode) {
 		reachableQueue.submit(witnessNode.stmt().getMethod(), new Runnable() {
@@ -485,91 +465,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		return "Solver for: " + query.toString();
 	}
 
-	protected void onReturnFlow(final Unit callSite, Unit returnSite, final SootMethod method, final Stmt returnStmt,
-			final Val value, Collection<? extends State> outFlow) {
-		if(this instanceof ForwardBoomerangSolver){
-			//TODO Backward?
-			return;
-		}
-		for (State r : outFlow) {
-			if (r instanceof CallPopNode) {
-				final CallPopNode<Val, Statement> callPopNode = (CallPopNode) r;
-				this.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 
-					@Override
-					public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
-						if (reachableNode.asNode().equals(
-								new Node<Statement, Val>(callPopNode.getReturnSite(), callPopNode.location()))) {
-							if (!valueUsedInStatement((Stmt) callSite, callPopNode.location())) {
-								// TODO why do we need this?
-								return;
-							}
-							onReturnFromCall(new Statement((Stmt) callSite, icfg.getMethodOf(callSite)),
-									callPopNode.getReturnSite(), reachableNode.asNode(),
-									unbalancedMethod.contains(method));
-						}
-					}
-				});
-			}
-		}
-	}
-
-	protected abstract void onReturnFromCall(Statement statement, Statement returnSite, Node<Statement, Val> node,
-			boolean unbalanced);
-
-	public void debugFieldAutomaton(final Statement statement) {
-		if (!WeightedBoomerang.DEBUG)
-			return;
-		final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight> weightedPAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement, Val>>, Weight>(
-				new AllocNode<Node<Statement, Val>>(query.asNode())) {
-
-			@Override
-			public Field epsilon() {
-				return Field.epsilon();
-			}
-
-			@Override
-			public INode<Node<Statement, Val>> createState(INode<Node<Statement, Val>> d, Field loc) {
-				return null;
-			}
-
-			@Override
-			public Weight getZero() {
-				return getCallWeights().getZero();
-			}
-
-			@Override
-			public Weight getOne() {
-				return getCallWeights().getOne();
-			}
-
-			@Override
-			public boolean isGeneratedState(INode<Node<Statement, Val>> d) {
-				return d instanceof GeneratedState;
-			}
-		};
-		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
-
-			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-				if (t.getStart().fact().stmt().equals(statement) && !(t.getStart() instanceof GeneratedState)) {
-					fieldAutomaton.registerDFSListener(t.getStart(),
-							new ReachabilityListener<Field, INode<Node<Statement, Val>>>() {
-						@Override
-						public void reachable(Transition<Field, INode<Node<Statement, Val>>> t) {
-							weightedPAutomaton.addTransition(t);
-						}
-					});
-				}
-			}
-
-		});
-		if (!weightedPAutomaton.getTransitions().isEmpty()) {
-			System.out.println(statement);
-			System.out.println(weightedPAutomaton.toDotString());
-		}
-	}
 
 	public Map<Transition<Statement, INode<Val>>, W> getTransitionsToFinalWeights() {
 		return callAutomaton.getTransitionsToFinalWeights();

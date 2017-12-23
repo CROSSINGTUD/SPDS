@@ -251,13 +251,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			}
 
 			@Override
-			protected void onReturnFromCall(final Statement callSite, Statement returnSite,
-					final Node<Statement, Val> returnedNode, final boolean unbalanced) {
-				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
-				callSitePoi.returnsFromCall(backwardQuery, returnedNode);
-			}
-
-			@Override
 			protected WeightFunctions<Statement, Val, Field, W> getFieldWeights() {
 				return WeightedBoomerang.this.getBackwardFieldWeights();
 			}
@@ -289,6 +282,20 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			}
 
 		});
+
+		solver.getCallAutomaton().registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
+
+			@Override
+			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W returnedWeight) {
+				if(!callSite.getMethod().equals(returnSite.getMethod()))
+					return;
+				if(!returnedFact.fact().isStatic() && !returnedFact.fact().m().equals(callSite.getMethod()))
+					return;
+
+				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
+				callSitePoi.returnsFromCall(backwardQuery, new Node<Statement, Val>(returnSite, returnedFact.fact()));
+			}
+		});
 		return solver;
 	}
 
@@ -315,10 +322,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		final ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(WeightedBoomerang.this, icfg(), sourceQuery,
 				genField, options, createCallSummaries(sourceQuery, forwardCallSummaries),
 				 createFieldSummaries(sourceQuery, forwardFieldSummaries)) {
-			@Override
-			protected void onReturnFromCall(Statement callSite, Statement returnSite,
-					final Node<Statement, Val> returnedNode, final boolean unbalanced) {
-			}
 
 			@Override
 			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
