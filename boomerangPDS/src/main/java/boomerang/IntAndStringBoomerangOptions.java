@@ -8,12 +8,7 @@ import soot.RefType;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
-import soot.jimple.AssignStmt;
-import soot.jimple.IntConstant;
-import soot.jimple.NewArrayExpr;
-import soot.jimple.NewMultiArrayExpr;
-import soot.jimple.ReturnStmt;
-import soot.jimple.Stmt;
+import soot.jimple.*;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
@@ -30,12 +25,27 @@ public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 		return (val instanceof NewArrayExpr || val instanceof NewMultiArrayExpr);
 	}
 
+	private Value getArrayLength(Value op) {
+		if(op instanceof NewArrayExpr){
+			return ((NewArrayExpr) op).getSize();
+		} else if (op instanceof NewMultiArrayExpr){
+			return ((NewMultiArrayExpr) op).getSize(0);
+		}
+		throw new RuntimeException("Illegal State");
+	}
 	@Override
 	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, BiDiInterproceduralCFG<Unit, SootMethod> icfg) {
 		if (!(stmt instanceof AssignStmt)) {
 			return Optional.absent();
 		}
 		AssignStmt as = (AssignStmt) stmt;
+		if(fact.value() instanceof LengthExpr){
+			if (as.getLeftOp().equals(((LengthExpr) fact.value()).getOp())) {
+				if(isArrayAllocationVal(as.getRightOp())){
+					return Optional.of(new AllocVal(fact.value(), m,getArrayLength(as.getRightOp())));
+				}
+			}
+		}
 		if (!as.getLeftOp().equals(fact.value())) {
 			return Optional.absent();
 		}
@@ -50,6 +60,7 @@ public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 		}
 		return super.getAllocationVal(m, stmt, fact, icfg);
 	}
+
 
 	@Override
 	public boolean trackStrings() {
