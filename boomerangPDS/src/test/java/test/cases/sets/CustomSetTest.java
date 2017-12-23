@@ -2,11 +2,14 @@ package test.cases.sets;
 
 import java.util.Iterator;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
+
+@Ignore
 public class CustomSetTest extends AbstractBoomerangTest {
 
 	@Test

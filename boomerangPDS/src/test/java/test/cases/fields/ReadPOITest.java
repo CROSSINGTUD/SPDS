@@ -1,5 +1,6 @@
 package test.cases.fields;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.AbstractBoomerangTest;
@@ -38,6 +39,7 @@ public class ReadPOITest extends AbstractBoomerangTest {
 		queryFor(query);
 	}
 
+	@Ignore
 	@Test
 	public void loadTwice(){
 		OWithRecField a = new OWithRecField();
@@ -52,6 +54,8 @@ public class ReadPOITest extends AbstractBoomerangTest {
 	private static class OWithField{
 		Object field = new Alloc();
 	}
+	
+	@Ignore
 	@Test
 	public void indirectAllocationSiteTwoFields(){
 		Node a = new Node();

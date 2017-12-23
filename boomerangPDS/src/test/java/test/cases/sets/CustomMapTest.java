@@ -1,10 +1,13 @@
 package test.cases.sets;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 
+
+@Ignore
 public class CustomMapTest extends AbstractBoomerangTest {
 	@Test
 	public void storeAndLoad(){

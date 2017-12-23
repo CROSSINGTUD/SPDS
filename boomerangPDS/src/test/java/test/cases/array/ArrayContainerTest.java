@@ -1,11 +1,14 @@
 package test.cases.array;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
+
+@Ignore
 public class ArrayContainerTest extends AbstractBoomerangTest {
 
 	

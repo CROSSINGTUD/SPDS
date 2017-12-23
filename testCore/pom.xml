@@ -25,9 +25,8 @@
 		<dependency>
 		    <groupId>com.google.guava</groupId>
 		    <artifactId>guava</artifactId>
-		    <version>23.1-jre</version>
+		    <version>23.5-jre</version>
 		</dependency>
-
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
 			<artifactId>PathExpression</artifactId>
@@ -48,10 +47,12 @@
 			<artifactId>synchronizedPDS</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
-		<dependency>
-			<groupId>de.fraunhofer.iem</groupId>
-			<artifactId>IDEViz</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
-		</dependency>
 	</dependencies>
+	 <repositories>
+    <repository>
+      <id>soot-snapshot</id>
+      <name>soot snapshots</name>
+      <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
+    </repository>
+</repositories> 
 </project>

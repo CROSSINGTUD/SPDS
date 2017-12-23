@@ -13,8 +13,7 @@
     <module>SynchronizedPDS</module>
     <module>WPDS</module>
     <module>PathExpression</module>
-    <module>soot</module>
-  </modules>
+    </modules>
   <build>
     <plugins>
       <plugin>

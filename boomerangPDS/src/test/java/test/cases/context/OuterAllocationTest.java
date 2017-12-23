@@ -1,10 +1,13 @@
 package test.cases.context;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
+
+@Ignore
 public class OuterAllocationTest extends AbstractBoomerangTest{
 	@Test
 	public void main() {

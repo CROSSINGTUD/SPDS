@@ -1,5 +1,6 @@
 package test.cases.array;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.AbstractBoomerangTest;
@@ -30,6 +31,7 @@ public class ArrayTest extends AbstractBoomerangTest {
 		queryFor(query);
 	}
 
+	@Ignore
 	@Test
 	public void doubleArray() {
 		Object[][] array = new Object[3][3];
@@ -39,6 +41,7 @@ public class ArrayTest extends AbstractBoomerangTest {
 		queryFor(query);
 	}
 
+	@Ignore
 	@Test
 	public void threeDimensionalArray() {
 		Object[][][] array = new Object[3][3][1];
