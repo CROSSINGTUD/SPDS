@@ -1,8 +1,11 @@
 package boomerang.jimple;
 
+import org.jboss.util.Null;
 import soot.Local;
 import soot.SootMethod;
 import soot.Value;
+import soot.jimple.Constant;
+import soot.jimple.NullConstant;
 
 public class Val {
 	private final SootMethod m;

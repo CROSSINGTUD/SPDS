@@ -37,6 +37,7 @@ import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import boomerang.solver.StatementBasedFieldTransitionListener;
 import heros.utilities.DefaultValueMap;
+import org.jboss.util.Null;
 import soot.*;
 import soot.jimple.*;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
@@ -478,7 +479,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		Optional<Stmt> optUnit = s.getUnit();
 		if (optUnit.isPresent()) {
 			Stmt stmt = optUnit.get();
-			if (stmt instanceof AssignStmt && ((AssignStmt) stmt).getLeftOp() instanceof InstanceFieldRef) {
+			if (stmt instanceof AssignStmt && ((AssignStmt) stmt).getLeftOp() instanceof InstanceFieldRef && !(((AssignStmt) stmt).getRightOp() instanceof Constant)) {
 				return true;
 			}
 		}
