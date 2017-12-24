@@ -13,23 +13,23 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public interface BoomerangOptions {
 	
-	boolean staticFlows();
+	public boolean staticFlows();
 	
-	boolean arrayFlows();
-	boolean fastForwardFlows();
-	boolean typeCheck();
-	boolean onTheFlyCallGraph();
-	boolean throwFlows();
+	public boolean arrayFlows();
+	public boolean fastForwardFlows();
+	public boolean typeCheck();
+	public boolean onTheFlyCallGraph();
+	public boolean throwFlows();
 	
-	boolean callSummaries();
-	boolean fieldSummaries();
+	public boolean callSummaries();
+	public boolean fieldSummaries();
 	
-	int analysisTimeoutMS();
+	public int analysisTimeoutMS();
 
-	boolean isAllocationVal(Value val);
-	Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, BiDiInterproceduralCFG<Unit, SootMethod> icfg);
+	public boolean isAllocationVal(Value val);
 
+	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, BiDiInterproceduralCFG<Unit, SootMethod> icfg);
 
-	boolean isIgnoredMethod(SootMethod method);
-	IBoomerangStats statsFactory();
+	public boolean isIgnoredMethod(SootMethod method);
+	public IBoomerangStats statsFactory();
 }

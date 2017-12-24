@@ -1,6 +1,5 @@
 package boomerang;
 
-import afu.org.checkerframework.checker.oigj.qual.O;
 import com.google.common.base.Optional;
 
 import boomerang.jimple.AllocVal;
@@ -13,7 +12,14 @@ import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
 import soot.Value;
-import soot.jimple.*;
+import soot.jimple.AssignStmt;
+import soot.jimple.NewArrayExpr;
+import soot.jimple.NewExpr;
+import soot.jimple.NewMultiArrayExpr;
+import soot.jimple.NullConstant;
+import soot.jimple.ReturnStmt;
+import soot.jimple.Stmt;
+import soot.jimple.StringConstant;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public class DefaultBoomerangOptions implements BoomerangOptions {
@@ -34,7 +40,8 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		if (!trackAnySubclassOfThrowable() && isThrowableAllocationType(val.getType())) {
 			return false;
 		}
-
+		
+		
 		return val instanceof NewExpr;
 	}
 
@@ -101,14 +108,16 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 	public boolean trackAnySubclassOfThrowable(){
 		return false;
 	}
+
+	public boolean trackStrings(){
+		return false;
+	}
+	
+	
 	public boolean trackNullAssignments(){
 		return false;
 	}
-
-	public boolean trackStrings() {
-		return false;
-	}
-
+	
 	@Override
 	public boolean isIgnoredMethod(SootMethod method) {
 		return trackAnySubclassOfThrowable() && Scene.v().getFastHierarchy().canStoreType(method.getDeclaringClass().getType(), Scene.v().getType("java.lang.Throwable"));
@@ -139,7 +148,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 
 	@Override
 	public int analysisTimeoutMS() {
-		return 300000;
+		return 30000;
 	}
 
 	@Override
