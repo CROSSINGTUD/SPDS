@@ -10,13 +10,6 @@ public class IntTest extends AbstractBoomerangTest {
 		int allocation = 1;
 		intQueryFor(allocation);
 	}
-
-	@Test
-	public void byteArrayLength(){
-		byte[] array = new byte[1];
-		int length = array.length;
-		intQueryFor(length);
-	}
 	@Test
 	public void simpleIntraAssign(){
 		int allocation = 1;

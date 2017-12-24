@@ -710,11 +710,11 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 						SingleNode<Node<Statement, Val>> s = new SingleNode<Node<Statement, Val>>(source);
 						INode<Node<Statement, Val>> irState = solver.getFieldAutomaton().createState(s, new Field(valueField));
 						insertTransition(solver.getFieldAutomaton(),
-								new Transition<>(
-										new SingleNode<>(source), new Field(valueField),irState
+								new Transition<Field, INode<Node<Statement, Val>>>(
+										new SingleNode<Node<Statement, Val>>(source), new Field(valueField),irState
 										));
 						insertTransition(solver.getFieldAutomaton(),
-								new Transition<>(irState, Field.empty(),
+								new Transition<Field, INode<Node<Statement, Val>>>(irState, Field.empty(),
 										solver.getFieldAutomaton().getInitialState()));
 					}
 				}

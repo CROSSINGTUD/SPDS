@@ -91,7 +91,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 
 	@Override
 	protected boolean killFlow(SootMethod m, Stmt curr, Val value) {
-		if (value.value() instanceof Local && !m.getActiveBody().getLocals().contains(value.value()))
+		if (!m.getActiveBody().getLocals().contains(value.value()) && !value.isStatic())
 			return true;
 		if (curr instanceof AssignStmt) {
 			AssignStmt as = (AssignStmt) curr;
