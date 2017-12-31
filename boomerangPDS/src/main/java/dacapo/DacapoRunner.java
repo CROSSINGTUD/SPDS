@@ -1,6 +1,7 @@
 package dacapo;
 import java.util.Map;
 
+import boomerang.DefaultBoomerangOptions;
 import boomerang.ForwardQuery;
 import boomerang.WholeProgramBoomerang;
 import boomerang.debugger.Debugger;
@@ -24,7 +25,7 @@ import wpds.impl.Weight.NoWeight;
 public class DacapoRunner  extends ResearchQuestion  {
 
   protected long analysisTime;
-public static void main(String...args) {
+  public static void main(String...args) {
 	System.setProperty("benchmarkFolder", args[0]);
 	System.setProperty("benchmark", args[1]);
 
@@ -50,7 +51,12 @@ public static void main(String...args) {
         }
 
     	final JimpleBasedInterproceduralCFG icfg = new JimpleBasedInterproceduralCFG(false);
-    	WholeProgramBoomerang<NoWeight> solver = new WholeProgramBoomerang<NoWeight>() {
+    	WholeProgramBoomerang<NoWeight> solver = new WholeProgramBoomerang<NoWeight>(new DefaultBoomerangOptions(){
+			@Override
+			public int analysisTimeoutMS() {
+				return -1;
+			}
+		}) {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 				return icfg;
