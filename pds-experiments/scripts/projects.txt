@@ -1,0 +1,11 @@
+antlr
+bloat
+chart
+eclipse
+fop
+hsqldb
+jython
+luindex
+lusearch
+pmd
+xalan
