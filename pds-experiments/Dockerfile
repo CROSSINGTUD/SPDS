@@ -30,4 +30,4 @@ WORKDIR analysis
 
 ADD dacapo/ dacapo/
 ADD scripts/ scripts/
-ADD build/pds-experiments-0.0.1-SNAPSHOT-jar-with-dependencies.jar .
+ADD build/pds-experiments-0.0.1-SNAPSHOT-jar-with-dependencies.jar build/pds-experiments-0.0.1-SNAPSHOT-jar-with-dependencies.jar 
