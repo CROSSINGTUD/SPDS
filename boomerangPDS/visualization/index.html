@@ -66,26 +66,7 @@
                                     }
                                 }
                             }
-                        }, {
-                            view: "list",
-                            id: "methodList",
-                            data: [],
-                            width: 300,
-                            template: "<span style='font-size:9pt'>#methodName#</span>",
-                            select: true,
-                            on: {
-                                onSelectChange: function(selection) {
-                                    var id = selection[0]
-                                    for(var i in methodList){
-                                        if(methodList[i].id == id){
-                                            var selectedMethod = methodList[i]
-                                            renderMethodWithESG(selectedMethod, $("div[id=methodGraph]"));
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
-                        }, {
+                        },  {
                             view: "resizer"
                         }, {
                             rows: [{
@@ -119,6 +100,27 @@
                                 },
                                 minHeight: 200,
                             }]
+                        }, {
+                            view: "resizer"
+                        }, {
+                            view: "list",
+                            id: "methodList",
+                            data: [],
+                            width: 300,
+                            template: "<span style='font-size:9pt'>#methodName#</span>",
+                            select: true,
+                            on: {
+                                onSelectChange: function(selection) {
+                                    var id = selection[0]
+                                    for(var i in methodList){
+                                        if(methodList[i].id == id){
+                                            var selectedMethod = methodList[i]
+                                            renderMethodWithESG(selectedMethod, $("div[id=methodGraph]"));
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
                         }]
 
                     }
@@ -351,18 +353,22 @@
         var cy = renderMethodIn(methodId, methodDiv);
         if (cy == null)
             return;
-        return;
         cy.on('mouseover', 'node[callSite]', function(event) {
             console.log(event)
             var el = webix.ui({
                 view: "contextmenu",
                 id: "callSiteContextMenu",
                 width: 500,
-                template: "#name#",
+                template: "#methodName#",
                 on: {
                     onItemClick: function(el) {
-                        activeMethod = el;
-                        renderMethodWithESG(el, $("div[id=methodGraph]"));
+                        for(var i in methodList){
+                            if(methodList[i].id == el){
+                                var selectedMethod = methodList[i]
+                                renderMethodWithESG(selectedMethod, $("div[id=methodGraph]"));
+                                break;
+                            }
+                        }
                     }
                 },
                 data: event.cyTarget.data().callees
@@ -379,11 +385,16 @@
                 view: "contextmenu",
                 id: "callSiteContextMenu",
                 width: 500,
-                template: "#name#",
+                template: "#methodName#",
                 on: {
                     onItemClick: function(el) {
-                        activeMethod = el;
-                        renderMethodWithESG(el, $("div[id=methodGraph]"));
+                        for(var i in methodList){
+                            if(methodList[i].id == el){
+                                var selectedMethod = methodList[i]
+                                renderMethodWithESG(selectedMethod, $("div[id=methodGraph]"));
+                                break;
+                            }
+                        }
                     }
                 },
                 data: event.cyTarget.data().callers
@@ -497,13 +508,9 @@
 
     function receivedText(file) {
         var json = JSON.parse(file.target.result);
-        methodList = json.methodList;
-        methods = json.explodedSupergraphs;
-        directions = json.directions;
-        console.log(json)
-        selectedDirection = directions[0].value;
+        queryList = json;
         initialzeView();
-        renderMethodWithESG(activeMethod, $("div[id=methodGraph]"));
+        //renderMethodWithESG(activeMethod, $("div[id=methodGraph]"));
     }
 
 
