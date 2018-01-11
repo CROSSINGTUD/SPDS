@@ -167,7 +167,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			JSONObject pos = new JSONObject();
 			pos.put("x", (factsList.indexOf(val) + 1) * 30 /*+ offset * charSize*/);
 			pos.put("y",
-					(cfg.stmtsList.indexOf(trans.getKey().getLabel().getUnit().get())) * 30 + 30 /*+ labelYOffset*/);
+					(cfg.stmtsList.indexOf(trans.getKey().getLabel().getUnit().get())) * 30 + (q instanceof BackwardQuery ?  30 : 0) /*+ labelYOffset*/);
 
 			nodeObj.put("position", pos);
 			String classes = "esgNode method" + id(m) + " ";

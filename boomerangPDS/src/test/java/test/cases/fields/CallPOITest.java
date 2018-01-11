@@ -16,6 +16,40 @@ public class CallPOITest extends AbstractBoomerangTest {
 		
 	}
 
+	@Test
+	public void simpleButDiffer() {
+		Alloc c = new Alloc();
+		T t = new T(c);
+		S s = new S();
+		t.foo(s);
+		Object q = s.get();
+		queryFor(q);
+	}
+
+	public static class T{
+		private Object value;
+
+		T(Object o){
+			this.value = o;
+		}
+		public void foo(S s){
+			Object val = this.value;
+			s.set(val);
+		}
+		
+	}
+
+	public static class S{
+		private Object valueInS;
+
+		public void set(Object val){
+			this.valueInS = val;
+		}
+		public Object get(){
+			Object alias = this.valueInS;
+			return alias;
+		}
+	}
 	private static void allocation(A a) {
 		B intermediate = a.b;
 		C e = new C();

@@ -106,6 +106,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	@Override
 	public void addCallRule(final Rule<Statement, INode<Val>, W> rule) {
+		if(rule instanceof NormalRule){
+			if(rule.getL1().equals(rule.getL2()) && rule.getS1().equals(rule.getS2()))
+				return;
+		}
 		if(rule instanceof PopRule)
 			super.addCallRule(rule);
 		else
@@ -119,12 +123,16 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	@Override
 	public void addFieldRule(final Rule<Field, INode<Node<Statement, Val>>, W> rule) {
+		if(rule instanceof NormalRule){
+			if(rule.getL1().equals(rule.getL2()) && rule.getS1().equals(rule.getS2()))
+				return;
+		}
 		reachableQueue.submit(rule.getS2().fact().stmt().getMethod(), new Runnable() {
 				@Override
 				public void run() {
 					AbstractBoomerangSolver.super.addFieldRule(rule);
 		}
-			});
+		});
 	}
 
 	private void addTransitionToMethod(SootMethod method, Transition<Field, INode<Node<Statement, Val>>> t) {
