@@ -8,12 +8,7 @@ import soot.RefType;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
-import soot.jimple.AssignStmt;
-import soot.jimple.IntConstant;
-import soot.jimple.NewArrayExpr;
-import soot.jimple.NewMultiArrayExpr;
-import soot.jimple.ReturnStmt;
-import soot.jimple.Stmt;
+import soot.jimple.*;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
@@ -38,6 +33,9 @@ public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 		AssignStmt as = (AssignStmt) stmt;
 		if (!as.getLeftOp().equals(fact.value())) {
 			return Optional.absent();
+		}
+		if(as.getRightOp() instanceof LengthExpr){
+			return Optional.of(new AllocVal(as.getLeftOp(), m,as.getRightOp()));
 		}
 		if(as.containsInvokeExpr()){
 			for(SootMethod callee : icfg.getCalleesOfCallAt(as)){

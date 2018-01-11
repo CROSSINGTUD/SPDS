@@ -1,5 +1,7 @@
 package dacapo;
 
+import typestate.impl.statemachines.HasNextStateMachine;
+
 public class Util {
 	public static boolean strongUpdates() {
 		return (System.getProperty("strongUpdates") != null && Boolean.parseBoolean(System.getProperty("strongUpdates")));
@@ -11,7 +13,7 @@ public class Util {
 	public static Class selectTypestateMachine(String rule) {
 		switch (rule) {
 		case "IteratorHasNext":
-			return typestate.impl.statemachines.HasNextStateMachine.class;
+			return HasNextStateMachine.class;
 		case "KeyStore":
 			return typestate.impl.statemachines.KeyStoreStateMachine.class;
 		case "URLConnection":

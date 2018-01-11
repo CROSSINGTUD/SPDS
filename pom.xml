@@ -13,6 +13,7 @@
     <module>SynchronizedPDS</module>
     <module>WPDS</module>
     <module>PathExpression</module>
+    <module>pds-experiments</module>
     </modules>
   <build>
     <plugins>
@@ -24,21 +25,6 @@
           <target>1.8</target>
         </configuration>
       </plugin>
-      
-
-			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<configuration>
-					<archive>
-						<manifest>
-							<mainClass>main.Executor</mainClass>
-						</manifest>
-					</archive>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
-				</configuration>
-			</plugin>
     </plugins>
     
   </build>

@@ -65,7 +65,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	public static final boolean DEBUG = false;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
-	private IBoomerangStats stats;
+	private IBoomerangStats<W> stats;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
 
 		@Override
@@ -251,13 +251,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			}
 
 			@Override
-			protected void onReturnFromCall(final Statement callSite, Statement returnSite,
-					final Node<Statement, Val> returnedNode, final boolean unbalanced) {
-				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
-				callSitePoi.returnsFromCall(backwardQuery, returnedNode);
-			}
-
-			@Override
 			protected WeightFunctions<Statement, Val, Field, W> getFieldWeights() {
 				return WeightedBoomerang.this.getBackwardFieldWeights();
 			}
@@ -289,6 +282,20 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			}
 
 		});
+
+		solver.getCallAutomaton().registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
+
+			@Override
+			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W returnedWeight) {
+				if(!callSite.getMethod().equals(returnSite.getMethod()))
+					return;
+				if(!returnedFact.fact().isStatic() && !returnedFact.fact().m().equals(callSite.getMethod()))
+					return;
+
+				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
+				callSitePoi.returnsFromCall(backwardQuery, new Node<Statement, Val>(returnSite, returnedFact.fact()));
+			}
+		});
 		return solver;
 	}
 
@@ -315,10 +322,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		final ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(WeightedBoomerang.this, icfg(), sourceQuery,
 				genField, options, createCallSummaries(sourceQuery, forwardCallSummaries),
 				 createFieldSummaries(sourceQuery, forwardFieldSummaries)) {
-			@Override
-			protected void onReturnFromCall(Statement callSite, Statement returnSite,
-					final Node<Statement, Val> returnedNode, final boolean unbalanced) {
-			}
 
 			@Override
 			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
@@ -1436,6 +1439,10 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			for(Entry<Transition<Statement, INode<Val>>, W> e : fieldAut.getTransitionsToFinalWeights().entrySet()){
 				Transition<Statement, INode<Val>> t = e.getKey();
 				W w = e.getValue();
+				if(t.getLabel().equals(Statement.epsilon()))
+					continue;
+				if(t.getStart().fact().value() instanceof Local && !t.getLabel().getMethod().equals(t.getStart().fact().m()))
+					continue;
 				if(t.getLabel().getUnit().isPresent())
 					results.put(t.getLabel(),t.getStart().fact(),w);
 			}
@@ -1473,7 +1480,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		for(Statement s : res.rowKeySet()){
 			visitedMethods.add(s.getMethod());
 		}
-		ForwardBoomerangSolver<W> flowFunction = createForwardSolver(seed);
+		ForwardBoomerangSolver<W> forwardSolver = createForwardSolver(seed);
 		Table<Statement, Val, W> destructingStatement = HashBasedTable.create();
 		for(SootMethod flowReaches : visitedMethods){
 			for(Unit ep : icfg().getEndPointsOf(flowReaches)){
@@ -1481,25 +1488,48 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				Set<State> escapes = Sets.newHashSet();
 				for(Unit callSite : icfg().getCallersOf(flowReaches)){
 					SootMethod callee = icfg().getMethodOf(callSite);
-					if(flowReachable.contains(callee)){
+					if(visitedMethods.contains(callee)){
 						for(Entry<Val, W> valAndW : res.row(exitStmt).entrySet()){
 							for(Unit retSite : icfg().getSuccsOf(callSite)){
-								escapes.addAll(flowFunction.computeReturnFlow(flowReaches, (Stmt) ep, valAndW.getKey(), (Stmt) callSite, (Stmt) retSite));
+								escapes.addAll(forwardSolver.computeReturnFlow(flowReaches, (Stmt) ep, valAndW.getKey(), (Stmt) callSite, (Stmt) retSite));
 							}
 						}
 					}
 				}
 				if(escapes.isEmpty()){
 					Map<Val, W> row = res.row(exitStmt);
-					for(Entry<Val, W> e : row.entrySet()){
-						destructingStatement.put(exitStmt, e.getKey(), e.getValue());
-					}
+					findLastUsage(exitStmt, row, destructingStatement,forwardSolver);
 				}
 			}
 		}
+
 		return destructingStatement;
 	}
 	
+	private void findLastUsage(Statement exitStmt, Map<Val, W> row, Table<Statement, Val, W> destructingStatement, ForwardBoomerangSolver<W> forwardSolver) {
+		LinkedList<Statement> worklist = Lists.newLinkedList();
+		worklist.add(exitStmt);
+		Set<Statement> visited = Sets.newHashSet();
+		while(!worklist.isEmpty()){
+			Statement curr = worklist.poll();
+			if(!visited.add(curr)){
+				continue;
+			}
+			boolean valueUsedInStmt = false;
+			for(Entry<Val, W> e : row.entrySet()){
+				if(forwardSolver.valueUsedInStatement(curr.getUnit().get(), e.getKey())){
+					destructingStatement.put(curr, e.getKey(), e.getValue());
+					valueUsedInStmt = true;
+				}
+			}
+			if(!valueUsedInStmt){
+				for(Unit succ : bwicfg().getSuccsOf(curr.getUnit().get())){
+					worklist.add(new Statement((Stmt) succ, curr.getMethod()));
+				}
+			}
+		}
+	}
+
 	public abstract Debugger<W> createDebugger();
 
 	public void debugOutput() {

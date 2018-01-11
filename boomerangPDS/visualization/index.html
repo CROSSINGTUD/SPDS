@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Boomerang Visualization</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="webix/codebase/webix.css">
+    <!-- <script src="data.js"></script>-->
+    <script src="libs/jquery-3.1.1.min.js"></script>
+    <script src="libs/cytoscape.js"></script>
+    <script src="webix/codebase/webix.js"></script>
+    <script src="libs/dagre.min.js"></script>
+    <script src="libs/cytoscape-dagre.js"></script>
+</head>
+
+<body>
+    <input type='hidden' id='MAX_FILE_SIZE' name='MAX_FILE_SIZE' value='300000' />
+    <div>
+        <input type='file' id='fileselect' name='fileselect[]' multiple='multiple' style='display: none;'/>
+        <div id='filedrag'> Drop IDEViz File here </div>
+    </div>
+    <div id='submitbutton'>
+        <button type='submit'> Upload Files </button>
+    </div>
+    <script>
+    var queryList = [];
+    var methods = [];
+    var methodList = [];
+    var directions = [{
+        value: "Forward"
+    }];
+    var selectedDirection = "Forward";
+    var isShortNotation = true;
+    var activeMethod = null;
+    var highlightedNode;
+    var mainComponent = null;
+    initialzeView();
+    function initialzeView() {
+        if(mainComponent)
+            mainComponent.destructor();
+        mainComponent = webix.ui({
+            view: "tabview",
+            cells: [
+                {
+                    header: "Boomerang Viz Visualization",
+                    body: {
+                        cols: [{
+                            view: "list",
+                            data: queryList,
+                            width: 300,
+                            template: "<span style='font-size:9pt'>#query#</span>",
+                            select: true,
+                            on: {
+                                onSelectChange: function(selection) {
+                                    var id = selection[0]
+                                    for(var i in queryList){
+                                        if(queryList[i].id == id){
+                                            selectedQuery = queryList[i]
+                                            methodList = selectedQuery.methods;
+                                            $$("methodList").clearAll();
+                                            $$("methodList").define("data", methodList);
+                                            $$("methodList").refresh();
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        },  {
+                            view: "resizer"
+                        }, {
+                            rows: [{
+                                view: "toolbar",
+                                id: "myToolbar",
+                                cols: [{
+                                    view: "segmented",
+                                    width: 270,
+                                    align: "center",
+                                    on: {
+                                        onChange: function(selection) {
+                                            selectedDirection = selection;
+                                            renderMethodWithESG(activeMethod, $("div[id=methodGraph]"));
+                                        }
+                                    },
+
+                                    options: directions
+                                }, {
+                                    view: "label",
+                                    id: "methodLabel",
+                                    label: "Label",
+                                    align: "center"
+                                }]
+                            }, {
+                                view: "template",
+                                template: "<div id='methodGraph' style='height: 100%;'></div>",
+                                on: {
+                                    onAfterRender: function() {
+                                        renderMethodWithESG(activeMethod, $("div[id=methodGraph]"));
+                                    }
+                                },
+                                minHeight: 200,
+                            }]
+                        }, {
+                            view: "resizer"
+                        }, {
+                            view: "list",
+                            id: "methodList",
+                            data: [],
+                            width: 300,
+                            template: "<span style='font-size:9pt'>#methodName#</span>",
+                            select: true,
+                            on: {
+                                onSelectChange: function(selection) {
+                                    var id = selection[0]
+                                    for(var i in methodList){
+                                        if(methodList[i].id == id){
+                                            var selectedMethod = methodList[i]
+                                            renderMethodWithESG(selectedMethod, $("div[id=methodGraph]"));
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }]
+
+                    }
+                }
+            ]
+        });
+    }
+
+    function isReverseEdge(el) {
+        if (el.data().direction == "Forward") {
+            return el.source().position().y > el.target().position().y;
+        } else {
+            return el.source().position().y < el.target().position().y;
+        }
+    }
+
+    function drawStraighLine(el) {
+        return el.source().data().stmtIndex + 1 == el.target().data().stmtIndex;
+    }
+
+    function isIdentityEdge(el) {
+        return el.source().position().x == el.target().position().x;
+    }
+
+    function addClassWhileOver(overElement, elements, cls) {
+        elements.addClass(cls);
+        overElement.once('mouseout', function(event) {
+            elements.removeClass(cls);
+        })
+    }
+
+    function renderMethodIn(methodInfo, methodDiv) {
+        var cy = null;
+        if(methodInfo == null)
+            return;
+        console.log(methodInfo)
+            $$("methodLabel").setValue(methodInfo.methodName);
+            $$("methodLabel").refresh();
+            cy = cytoscape({
+                container: methodDiv,
+                zoomingEnabled: true,
+                userZoomingEnabled: true,
+                panningEnabled: true,
+                userPanningEnabled: true,
+                autoungrabify: true,
+                layout: {
+                    name: 'preset'
+                },
+
+                style: [{
+                        selector: 'node',
+                        style: {
+                            'height': 6,
+                            'width': 6,
+                            'background-color': '#cccccc',
+                        }
+                    }, {
+                        selector: '.stmt.label',
+                        style: {
+                            'background-color': '#cccccc',
+                            'label': (isShortNotation ? 'data(shortLabel)' : 'data(label)'),
+                            'text-halign': 'left',
+                            'font-size': '12pt',
+                            'color': '#666',
+                            'height': 10,
+                            'width': 10,
+                            'font-family': 'Courier'
+                        }
+                    }, {
+                        selector: '.additional.information',
+                        style: {
+                            'background-color': '#cccccc',
+                            'text-halign': 'left',
+                            'font-size': '12pt',
+                            'color': '#666',
+                            'height': 10,
+                            'width': 10,
+                            'font-family': 'Courier'
+                        }
+                    }, {
+                        selector: '.showAdditionalInfo',
+                        style: {
+                            'label': 'data(content)'
+                        }
+                    }, 
+                    {
+                        selector: '.stmt.label.callSite',
+                        style: {
+                            'background-color': 'green'
+                        }
+                    }, {
+                        selector: '.stmt.label.returnSite',
+                        style: {
+                            'background-color': 'red'
+                        }
+                    }, {
+                        selector: '.fact.label',
+                        style: {
+                            'label': 'data(label)',
+                            'background-color': '#ffffff',
+                            'text-rotation': '90deg',
+                            'text-halign': 'left',
+                            'font-size': '12pt',
+                            'color': '#666',
+                            'font-family': 'Courier'
+                        },
+                    }, {
+                        selector: '.label.bold',
+                        style: {
+                            "font-weight": "bold",
+                            'color': '#111',
+                        }
+                    },
+
+                    {
+                        selector: '.label.boldHighlight',
+                        style: {
+                            "font-weight": "bold",
+                            'color': 'rgb(255, 156, 49)',
+                        }
+                    }, {
+                        selector: '.cfgEdge',
+                        style: {
+                            'target-arrow-shape': 'triangle',
+                            'target-arrow-color': '#ccc',
+                            'line-color': '#ccc',
+                            'width': 1,
+
+                            'curve-style': function(el) {
+                                return (drawStraighLine(el) ? 'bezier' : 'unbundled-bezier');
+                            }
+                        }
+                    }, {
+                        selector: '.esgEdge',
+                        style: {
+                            'target-arrow-shape': 'triangle',
+                            'target-arrow-color': function(el) {
+                                return (isIdentityEdge(el) ? '#cccccc' : 'blue');
+                            },
+                            'width': 1,
+                            'line-color': function(el) {
+                                return (isIdentityEdge(el) ? "#cccccc" : 'blue');
+                            },
+
+                            'curve-style': function(el) {
+                                return (isReverseEdge(el) ? 'unbundled-bezier' : 'bezier');
+                            }
+                        }
+                    }, {
+                        selector: '.hidden',
+                        style: {
+                            'opacity': '0'
+                        }
+                    }, {
+                        selector: '.callFlow',
+                        style: {
+                            'target-arrow-color': 'green',
+                            'line-color': 'green',
+                            'target-arrow-shape': 'none',
+                            'line-style': 'dotted',
+                        }
+                    }, {
+                        selector: '.summaryFlow',
+                        style: {
+                            'target-arrow-color': 'green',
+                            'line-color': 'green',
+                        }
+                    }, {
+                        selector: '.returnFlow',
+                        style: {
+                            'target-arrow-color': 'green',
+                            'line-color': 'green',
+                            'target-arrow-shape': 'none',
+                            'line-style': 'dotted',
+                        }
+                    }, {
+                        selector: '.call2ReturnFlow',
+                        style: {}
+                    }, {
+                        selector: '.indirectReadFlow',
+                        style: {
+                            'target-arrow-color': 'green',
+                            'line-color': 'green',
+                            'line-style': 'dashed',
+                        }
+                    }, {
+                        selector: '.indirectCallFlow',
+                        style: {
+                            'target-arrow-color': 'green',
+                            'line-color': 'green',
+                            'line-style': 'dashed',
+                        }
+                    }, {
+                        selector: '.indirectReturnFlow',
+                        style: {
+                            'target-arrow-color': 'green',
+                            'line-color': 'green',
+                            'line-style': 'dashed',
+                        }
+                    }, {
+                        selector: '.highlight',
+                        style: {
+                            'height': 8,
+                            'width': 8,
+                            'opacity': '1',
+                            'background-color': 'orange'
+                        }
+                    }, {
+                        selector: '.showLabel',
+                        style: {
+                            'label': 'data(ideValue)'
+                        }
+                    }, {
+                        selector: '.indirectWriteFlow',
+                        style: {
+                            'target-arrow-color': 'green',
+                            'line-color': 'green',
+                            'line-style': 'dashed',
+                        }
+                    }
+                ],
+
+                elements: methodInfo.cfg.controlFlowNode.concat(methodInfo.dfg.dataFlowNode)
+            });
+        return cy;
+    }
+
+    function renderMethodWithESG(methodId, methodDiv) {
+
+        var cy = renderMethodIn(methodId, methodDiv);
+        if (cy == null)
+            return;
+        cy.on('mouseover', 'node[callSite]', function(event) {
+            console.log(event)
+            var el = webix.ui({
+                view: "contextmenu",
+                id: "callSiteContextMenu",
+                width: 500,
+                template: "#methodName#",
+                on: {
+                    onItemClick: function(el) {
+                        for(var i in methodList){
+                            if(methodList[i].id == el){
+                                var selectedMethod = methodList[i]
+                                renderMethodWithESG(selectedMethod, $("div[id=methodGraph]"));
+                                break;
+                            }
+                        }
+                    }
+                },
+                data: event.cyTarget.data().callees
+            }).show();
+            $$("callSiteContextMenu").setPosition(event.originalEvent.clientX, event.originalEvent.clientY);
+            event.cyTarget.once('mouseout', function(event) {
+                $$("callSiteContextMenu").hide();
+            })
+
+        });
+        cy.on('mouseover', 'node[returnSite]', function(event) {
+            console.log(event)
+            var el = webix.ui({
+                view: "contextmenu",
+                id: "callSiteContextMenu",
+                width: 500,
+                template: "#methodName#",
+                on: {
+                    onItemClick: function(el) {
+                        for(var i in methodList){
+                            if(methodList[i].id == el){
+                                var selectedMethod = methodList[i]
+                                renderMethodWithESG(selectedMethod, $("div[id=methodGraph]"));
+                                break;
+                            }
+                        }
+                    }
+                },
+                data: event.cyTarget.data().callers
+            }).show();
+
+            $$("callSiteContextMenu").setPosition(event.originalEvent.clientX, event.originalEvent.clientY);
+            event.cyTarget.once('mouseout', function(event) {
+                $$("callSiteContextMenu").hide();
+            })
+
+        });
+        cy.on('mouseover', 'node', function(event) {
+            var tgt = event.cyTarget;
+            if (tgt.hasClass("hidden"))
+                return;
+            if (!tgt.hasClass("queryNode"))
+                return;
+            var queryId = tgt.data().queryId;
+            var elements = cy.elements("node[queryId=" + queryId + "]");
+
+            addClassWhileOver(tgt, elements, "hightlight");
+        });
+        cy.on('mouseover', 'node.esgNode', function(event) {
+            var tgt = event.cyTarget;
+            if (tgt.hasClass("hidden"))
+                return;
+
+            addClassWhileOver(tgt, tgt, "showLabel");
+            global = tgt;
+            cy.elements().breadthFirstSearch({
+                root: tgt,
+                directed: true,
+                visit: function(i, depth, v) {
+                    addClassWhileOver(tgt, v, "highlight")
+                }
+            });
+            var stmtId = tgt.data().stmtId;
+            var elements = cy.$("node[stmtId=" + stmtId + "]");
+            addClassWhileOver(tgt, elements, "bold");
+
+            var factId = tgt.data().factId;
+            var elements = cy.$("node[factId=" + factId + "]");
+            addClassWhileOver(tgt, elements, "bold");
+        });
+        return cy;
+    };
+
+    // getElementById
+    function $id(id) {
+        return document.getElementById(id);
+    }
+
+    // call initialization file
+    if (window.File && window.FileList && window.FileReader) {
+        Init();
+    }
+
+    //
+    // initialize
+    function Init() {
+
+        var fileselect = $id("fileselect"),
+            filedrag = $id("filedrag"),
+            submitbutton = $id("submitbutton");
+
+        // file select
+        fileselect.addEventListener("change", FileSelectHandler, false);
+
+        // is XHR2 available?
+        var xhr = new XMLHttpRequest();
+        if (xhr.upload) {
+
+            // file drop
+            filedrag.addEventListener("dragover", FileDragHover, false);
+            filedrag.addEventListener("dragleave", FileDragHover, false);
+            filedrag.addEventListener("drop", FileSelectHandler, false);
+            filedrag.style.display = "block";
+
+            // remove submit button
+            submitbutton.style.display = "none";
+        }
+
+    }
+    // file drag hover
+    function FileDragHover(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        e.target.className = (e.type == "dragover" ? "hover" : "");
+    }
+    // file selection
+    function FileSelectHandler(e) {
+
+        // cancel event and hover styling
+        FileDragHover(e);
+
+        // fetch FileList object
+        var files = e.target.files || e.dataTransfer.files;
+
+        // process all File objects
+        for (var i = 0, f; f = files[i]; i++) {
+            ParseFile(f);
+        }
+
+    }
+
+    function ParseFile(file) {
+        fr = new FileReader();
+        fr.onload = receivedText;
+        fr.readAsText(file);
+    }
+
+    function receivedText(file) {
+        var json = JSON.parse(file.target.result);
+        queryList = json;
+        initialzeView();
+        //renderMethodWithESG(activeMethod, $("div[id=methodGraph]"));
+    }
+
+
+
+var DATA = [{"methods":[{"dfg":{"dataFlowNode":[{"data":{"factId":17,"label":"variable (AbstractBoomerangTest.queryFor)"},"classes":"fact label method2","position":{"x":30,"y":0}},{"data":{"factId":18,"label":"l0 (WritePOITest$Alloc.<init>)"},"classes":"fact label method2","position":{"x":60,"y":0}},{"data":{"factId":19,"label":"$r1 (WritePOITest.directAllocationSiteSimpler)"},"classes":"fact label method2","position":{"x":90,"y":0}},{"data":{"factId":20,"label":"query (WritePOITest.directAllocationSiteSimpler)"},"classes":"fact label method2","position":{"x":120,"y":0}},{"data":{"factId":21,"label":"$r0 (WritePOITest.directAllocationSiteSimpler)"},"classes":"fact label method2","position":{"x":150,"y":0}},{"data":{"factId":22,"label":"a (WritePOITest.directAllocationSiteSimpler)"},"classes":"fact label method2","position":{"x":180,"y":0}},{"data":{"stmtId":13,"factId":20,"id":"n23"},"classes":"esgNode method2 ","position":{"x":120,"y":240},"group":"nodes"},{"data":{"stmtId":13,"factId":22,"id":"n24"},"classes":"esgNode method2 ","position":{"x":180,"y":240},"group":"nodes"},{"data":{"stmtId":9,"factId":20,"id":"n25"},"classes":"esgNode method2 ","position":{"x":120,"y":150},"group":"nodes"},{"data":{"stmtId":15,"factId":21,"id":"n26"},"classes":"esgNode method2 ","position":{"x":150,"y":270},"group":"nodes"},{"data":{"stmtId":8,"factId":20,"id":"n27"},"classes":"esgNode method2 ","position":{"x":120,"y":120},"group":"nodes"},{"data":{"stmtId":12,"factId":21,"id":"n28"},"classes":"esgNode method2 ","position":{"x":150,"y":210},"group":"nodes"},{"data":{"stmtId":15,"factId":19,"id":"n29"},"classes":"esgNode method2 ","position":{"x":90,"y":270},"group":"nodes"},{"data":{"stmtId":13,"factId":21,"id":"n30"},"classes":"esgNode method2 ","position":{"x":150,"y":240},"group":"nodes"},{"data":{"stmtId":15,"factId":20,"id":"n31"},"classes":"esgNode method2 ","position":{"x":120,"y":270},"group":"nodes"},{"data":{"stmtId":11,"factId":20,"id":"n32"},"classes":"esgNode method2 ","position":{"x":120,"y":180},"group":"nodes"},{"data":{"stmtId":9,"factId":21,"id":"n33"},"classes":"esgNode method2 ","position":{"x":150,"y":150},"group":"nodes"},{"data":{"stmtId":15,"factId":22,"id":"n34"},"classes":"esgNode method2 ","position":{"x":180,"y":270},"group":"nodes"},{"data":{"stmtId":8,"factId":21,"id":"n35"},"classes":"esgNode method2 ","position":{"x":150,"y":120},"group":"nodes"},{"data":{"stmtId":7,"factId":18,"id":"n36"},"classes":"esgNode method2 ","position":{"x":60,"y":90},"group":"nodes"},{"data":{"stmtId":5,"factId":21,"id":"n37"},"classes":"esgNode method2 ","position":{"x":150,"y":60},"group":"nodes"},{"data":{"stmtId":11,"factId":21,"id":"n38"},"classes":"esgNode method2 ","position":{"x":150,"y":180},"group":"nodes"},{"data":{"stmtId":13,"factId":19,"id":"n39"},"classes":"esgNode method2 ","position":{"x":90,"y":240},"group":"nodes"},{"data":{"stmtId":15,"factId":17,"id":"n40"},"classes":"esgNode method2 ","position":{"x":30,"y":270},"group":"nodes"},{"data":{"stmtId":12,"factId":20,"id":"n41"},"classes":"esgNode method2 ","position":{"x":120,"y":210},"group":"nodes"},{"data":{"stmtId":7,"factId":21,"id":"n42"},"classes":"esgNode method2 ","position":{"x":150,"y":90},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":3,"shortLabel":"this := @this: test.cases.fields.WritePOITest","label":"this := @this: test.cases.fields.WritePOITest","id":"stmt3","stmtIndex":0},"classes":"stmt label    method2","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt3","target":"stmt4"},"classes":"cfgEdge label method2"},{"data":{"stmtId":4,"shortLabel":"$r0 = new test.cases.fields.WritePOITest$Alloc","label":"$r0 = new test.cases.fields.WritePOITest$Alloc","id":"stmt4","stmtIndex":1},"classes":"stmt label    method2","position":{"x":10,"y":60}},{"data":{"directed":"true","source":"stmt4","target":"stmt5"},"classes":"cfgEdge label method2"},{"data":{"callSite":true,"stmtId":5,"callees":[{"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;(test.cases.fields.WritePOITest$Alloc)&gt;","id":6}],"shortLabel":"specialinvoke $r0.<test.cases.fields.WritePOITest$Alloc: void <init>(test.cases.fields.WritePOITest$Alloc)>(null)","label":"specialinvoke $r0.<test.cases.fields.WritePOITest$Alloc: void <init>(test.cases.fields.WritePOITest$Alloc)>(null)","id":"stmt5","stmtIndex":2},"classes":"stmt label   callSite  method2","position":{"x":10,"y":90}},{"data":{"directed":"true","source":"stmt5","target":"stmt7"},"classes":"cfgEdge label method2"},{"data":{"stmtId":7,"shortLabel":"query = $r0","label":"query = $r0","id":"stmt7","stmtIndex":3},"classes":"stmt label    method2","position":{"x":10,"y":120}},{"data":{"directed":"true","source":"stmt7","target":"stmt8"},"classes":"cfgEdge label method2"},{"data":{"stmtId":8,"shortLabel":"$r1 = new test.cases.fields.WritePOITest$A","label":"$r1 = new test.cases.fields.WritePOITest$A","id":"stmt8","stmtIndex":4},"classes":"stmt label    method2","position":{"x":10,"y":150}},{"data":{"directed":"true","source":"stmt8","target":"stmt9"},"classes":"cfgEdge label method2"},{"data":{"callSite":true,"stmtId":9,"callees":[{"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;(test.cases.fields.WritePOITest$A)&gt;","id":10}],"shortLabel":"specialinvoke $r1.<test.cases.fields.WritePOITest$A: void <init>(test.cases.fields.WritePOITest$A)>(null)","label":"specialinvoke $r1.<test.cases.fields.WritePOITest$A: void <init>(test.cases.fields.WritePOITest$A)>(null)","id":"stmt9","stmtIndex":5},"classes":"stmt label   callSite  method2","position":{"x":10,"y":180}},{"data":{"directed":"true","source":"stmt9","target":"stmt11"},"classes":"cfgEdge label method2"},{"data":{"stmtId":11,"shortLabel":"a = $r1","label":"a = $r1","id":"stmt11","stmtIndex":6},"classes":"stmt label    method2","position":{"x":10,"y":210}},{"data":{"directed":"true","source":"stmt11","target":"stmt12"},"classes":"cfgEdge label method2"},{"data":{"stmtId":12,"shortLabel":"a.<test.cases.fields.WritePOITest$A: java.lang.Object b> = query","label":"a.<test.cases.fields.WritePOITest$A: java.lang.Object b> = query","id":"stmt12","stmtIndex":7},"classes":"stmt label    method2","position":{"x":10,"y":240}},{"data":{"directed":"true","source":"stmt12","target":"stmt13"},"classes":"cfgEdge label method2"},{"data":{"callSite":true,"stmtId":13,"callees":[{"methodName":"&lt;test.core.AbstractBoomerangTest: void queryFor(java.lang.Object)&gt;","id":14}],"shortLabel":"virtualinvoke this.<test.cases.fields.WritePOITest: void queryFor(java.lang.Object)>(query)","label":"virtualinvoke this.<test.cases.fields.WritePOITest: void queryFor(java.lang.Object)>(query)","id":"stmt13","stmtIndex":8},"classes":"stmt label   callSite  method2","position":{"x":10,"y":270}},{"data":{"directed":"true","source":"stmt13","target":"stmt15"},"classes":"cfgEdge label method2"},{"data":{"stmtId":15,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;dummyClass: void main(java.lang.String[])&gt;","id":16}],"id":"stmt15","stmtIndex":9},"classes":"stmt label  returnSite   method2","position":{"x":10,"y":300}}]},"methodName":"&lt;test.cases.fields.WritePOITest: void directAllocationSiteSimpler()&gt;","id":2},{"dfg":{"dataFlowNode":[{"data":{"factId":18,"label":"l0 (WritePOITest$Alloc.<init>)"},"classes":"fact label method6","position":{"x":30,"y":0}},{"data":{"factId":48,"label":"this (WritePOITest$Alloc.<init>)"},"classes":"fact label method6","position":{"x":60,"y":0}},{"data":{"stmtId":47,"factId":18,"id":"n49"},"classes":"esgNode method6 ","position":{"x":30,"y":90},"group":"nodes"},{"data":{"stmtId":43,"factId":18,"id":"n50"},"classes":"esgNode method6 ","position":{"x":30,"y":0},"group":"nodes"},{"data":{"stmtId":45,"factId":18,"id":"n51"},"classes":"esgNode method6 ","position":{"x":30,"y":60},"group":"nodes"},{"data":{"stmtId":44,"factId":18,"id":"n52"},"classes":"esgNode method6 ","position":{"x":30,"y":30},"group":"nodes"},{"data":{"stmtId":47,"factId":48,"id":"n53"},"classes":"esgNode method6 ","position":{"x":60,"y":90},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":43,"shortLabel":"l0 := @this: test.cases.fields.WritePOITest$Alloc","label":"l0 := @this: test.cases.fields.WritePOITest$Alloc","id":"stmt43","stmtIndex":0},"classes":"stmt label    method6","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt43","target":"stmt44"},"classes":"cfgEdge label method6"},{"data":{"stmtId":44,"shortLabel":"l1 := @parameter0: test.cases.fields.WritePOITest$Alloc","label":"l1 := @parameter0: test.cases.fields.WritePOITest$Alloc","id":"stmt44","stmtIndex":1},"classes":"stmt label    method6","position":{"x":10,"y":60}},{"data":{"directed":"true","source":"stmt44","target":"stmt45"},"classes":"cfgEdge label method6"},{"data":{"callSite":true,"stmtId":45,"callees":[{"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;()&gt;","id":46}],"shortLabel":"specialinvoke l0.<test.cases.fields.WritePOITest$Alloc: void <init>()>()","label":"specialinvoke l0.<test.cases.fields.WritePOITest$Alloc: void <init>()>()","id":"stmt45","stmtIndex":2},"classes":"stmt label   callSite  method6","position":{"x":10,"y":90}},{"data":{"directed":"true","source":"stmt45","target":"stmt47"},"classes":"cfgEdge label method6"},{"data":{"stmtId":47,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;test.cases.fields.WritePOITest: void directAllocationSiteSimpler()&gt;","id":2}],"id":"stmt47","stmtIndex":3},"classes":"stmt label  returnSite   method6","position":{"x":10,"y":120}}]},"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;(test.cases.fields.WritePOITest$Alloc)&gt;","id":6},{"dfg":{"dataFlowNode":[{"data":{"factId":58,"label":"l0 (Object.<init>)"},"classes":"fact label method46","position":{"x":30,"y":0}},{"data":{"factId":48,"label":"this (WritePOITest$Alloc.<init>)"},"classes":"fact label method46","position":{"x":60,"y":0}},{"data":{"stmtId":54,"factId":48,"id":"n59"},"classes":"esgNode method46 ","position":{"x":60,"y":0},"group":"nodes"},{"data":{"stmtId":57,"factId":58,"id":"n60"},"classes":"esgNode method46 ","position":{"x":30,"y":60},"group":"nodes"},{"data":{"stmtId":55,"factId":48,"id":"n61"},"classes":"esgNode method46 ","position":{"x":60,"y":30},"group":"nodes"},{"data":{"stmtId":57,"factId":48,"id":"n62"},"classes":"esgNode method46 ","position":{"x":60,"y":60},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":54,"shortLabel":"this := @this: test.cases.fields.WritePOITest$Alloc","label":"this := @this: test.cases.fields.WritePOITest$Alloc","id":"stmt54","stmtIndex":0},"classes":"stmt label    method46","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt54","target":"stmt55"},"classes":"cfgEdge label method46"},{"data":{"callSite":true,"stmtId":55,"callees":[{"methodName":"&lt;java.lang.Object: void &lt;init&gt;()&gt;","id":56}],"shortLabel":"specialinvoke this.<java.lang.Object: void <init>()>()","label":"specialinvoke this.<java.lang.Object: void <init>()>()","id":"stmt55","stmtIndex":1},"classes":"stmt label   callSite  method46","position":{"x":10,"y":60}},{"data":{"directed":"true","source":"stmt55","target":"stmt57"},"classes":"cfgEdge label method46"},{"data":{"stmtId":57,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;(test.cases.fields.WritePOITest$Alloc)&gt;","id":6}],"id":"stmt57","stmtIndex":2},"classes":"stmt label  returnSite   method46","position":{"x":10,"y":90}}]},"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;()&gt;","id":46},{"dfg":{"dataFlowNode":[{"data":{"factId":58,"label":"l0 (Object.<init>)"},"classes":"fact label method56","position":{"x":30,"y":0}},{"data":{"stmtId":63,"factId":58,"id":"n66"},"classes":"esgNode method56 ","position":{"x":30,"y":0},"group":"nodes"},{"data":{"stmtId":64,"factId":58,"id":"n67"},"classes":"esgNode method56 ","position":{"x":30,"y":30},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":63,"shortLabel":"l0 := @this: java.lang.Object","label":"l0 := @this: java.lang.Object","id":"stmt63","stmtIndex":0},"classes":"stmt label    method56","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt63","target":"stmt64"},"classes":"cfgEdge label method56"},{"data":{"stmtId":64,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;()&gt;","id":46},{"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;()&gt;","id":65}],"id":"stmt64","stmtIndex":1},"classes":"stmt label  returnSite   method56","position":{"x":10,"y":60}}]},"methodName":"&lt;java.lang.Object: void &lt;init&gt;()&gt;","id":56},{"dfg":{"dataFlowNode":[{"data":{"factId":17,"label":"variable (AbstractBoomerangTest.queryFor)"},"classes":"fact label method14","position":{"x":30,"y":0}},{"data":{"stmtId":70,"factId":17,"id":"n71"},"classes":"esgNode method14 ","position":{"x":30,"y":60},"group":"nodes"},{"data":{"stmtId":68,"factId":17,"id":"n72"},"classes":"esgNode method14 ","position":{"x":30,"y":0},"group":"nodes"},{"data":{"stmtId":69,"factId":17,"id":"n73"},"classes":"esgNode method14 ","position":{"x":30,"y":30},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":68,"shortLabel":"this := @this: test.core.AbstractBoomerangTest","label":"this := @this: test.core.AbstractBoomerangTest","id":"stmt68","stmtIndex":0},"classes":"stmt label    method14","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt68","target":"stmt69"},"classes":"cfgEdge label method14"},{"data":{"stmtId":69,"shortLabel":"variable := @parameter0: java.lang.Object","label":"variable := @parameter0: java.lang.Object","id":"stmt69","stmtIndex":1},"classes":"stmt label    method14","position":{"x":10,"y":60}},{"data":{"directed":"true","source":"stmt69","target":"stmt70"},"classes":"cfgEdge label method14"},{"data":{"stmtId":70,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;test.cases.fields.WritePOITest: void directAllocationSiteSimpler()&gt;","id":2}],"id":"stmt70","stmtIndex":2},"classes":"stmt label  returnSite   method14","position":{"x":10,"y":90}}]},"methodName":"&lt;test.core.AbstractBoomerangTest: void queryFor(java.lang.Object)&gt;","id":14}],"query":"ForwardQuery: (test.cases.fields.WritePOITest.directAllocationSiteSimpler $r0 = new WritePOITest$Alloc,$r0 (WritePOITest.directAllocationSiteSimpler) Value: new test.cases.fields.WritePOITest$Alloc)","id":1},{"methods":[{"dfg":{"dataFlowNode":[{"data":{"factId":75,"label":"new test.cases.fields.WritePOITest$Alloc (WritePOITest.directAllocationSiteSimpler)"},"classes":"fact label method2","position":{"x":30,"y":0}},{"data":{"factId":18,"label":"l0 (WritePOITest$Alloc.<init>)"},"classes":"fact label method2","position":{"x":60,"y":0}},{"data":{"factId":20,"label":"query (WritePOITest.directAllocationSiteSimpler)"},"classes":"fact label method2","position":{"x":90,"y":0}},{"data":{"factId":21,"label":"$r0 (WritePOITest.directAllocationSiteSimpler)"},"classes":"fact label method2","position":{"x":120,"y":0}},{"data":{"stmtId":12,"factId":20,"id":"n76"},"classes":"esgNode method2 ","position":{"x":90,"y":210},"group":"nodes"},{"data":{"stmtId":4,"factId":18,"id":"n77"},"classes":"esgNode method2 ","position":{"x":60,"y":30},"group":"nodes"},{"data":{"stmtId":4,"factId":21,"id":"n78"},"classes":"esgNode method2 ","position":{"x":120,"y":30},"group":"nodes"},{"data":{"stmtId":7,"factId":20,"id":"n79"},"classes":"esgNode method2 ","position":{"x":90,"y":90},"group":"nodes"},{"data":{"stmtId":9,"factId":20,"id":"n80"},"classes":"esgNode method2 ","position":{"x":90,"y":150},"group":"nodes"},{"data":{"stmtId":5,"factId":21,"id":"n81"},"classes":"esgNode method2 ","position":{"x":120,"y":60},"group":"nodes"},{"data":{"stmtId":11,"factId":20,"id":"n82"},"classes":"esgNode method2 ","position":{"x":90,"y":180},"group":"nodes"},{"data":{"stmtId":3,"factId":75,"id":"n83"},"classes":"esgNode method2 ","position":{"x":30,"y":0},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":3,"shortLabel":"this := @this: test.cases.fields.WritePOITest","label":"this := @this: test.cases.fields.WritePOITest","id":"stmt3","stmtIndex":0},"classes":"stmt label    method2","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt3","target":"stmt4"},"classes":"cfgEdge label method2"},{"data":{"stmtId":4,"shortLabel":"$r0 = new test.cases.fields.WritePOITest$Alloc","label":"$r0 = new test.cases.fields.WritePOITest$Alloc","id":"stmt4","stmtIndex":1},"classes":"stmt label    method2","position":{"x":10,"y":60}},{"data":{"directed":"true","source":"stmt4","target":"stmt5"},"classes":"cfgEdge label method2"},{"data":{"callSite":true,"stmtId":5,"callees":[{"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;(test.cases.fields.WritePOITest$Alloc)&gt;","id":6}],"shortLabel":"specialinvoke $r0.<test.cases.fields.WritePOITest$Alloc: void <init>(test.cases.fields.WritePOITest$Alloc)>(null)","label":"specialinvoke $r0.<test.cases.fields.WritePOITest$Alloc: void <init>(test.cases.fields.WritePOITest$Alloc)>(null)","id":"stmt5","stmtIndex":2},"classes":"stmt label   callSite  method2","position":{"x":10,"y":90}},{"data":{"directed":"true","source":"stmt5","target":"stmt7"},"classes":"cfgEdge label method2"},{"data":{"stmtId":7,"shortLabel":"query = $r0","label":"query = $r0","id":"stmt7","stmtIndex":3},"classes":"stmt label    method2","position":{"x":10,"y":120}},{"data":{"directed":"true","source":"stmt7","target":"stmt8"},"classes":"cfgEdge label method2"},{"data":{"stmtId":8,"shortLabel":"$r1 = new test.cases.fields.WritePOITest$A","label":"$r1 = new test.cases.fields.WritePOITest$A","id":"stmt8","stmtIndex":4},"classes":"stmt label    method2","position":{"x":10,"y":150}},{"data":{"directed":"true","source":"stmt8","target":"stmt9"},"classes":"cfgEdge label method2"},{"data":{"callSite":true,"stmtId":9,"callees":[{"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;(test.cases.fields.WritePOITest$A)&gt;","id":10}],"shortLabel":"specialinvoke $r1.<test.cases.fields.WritePOITest$A: void <init>(test.cases.fields.WritePOITest$A)>(null)","label":"specialinvoke $r1.<test.cases.fields.WritePOITest$A: void <init>(test.cases.fields.WritePOITest$A)>(null)","id":"stmt9","stmtIndex":5},"classes":"stmt label   callSite  method2","position":{"x":10,"y":180}},{"data":{"directed":"true","source":"stmt9","target":"stmt11"},"classes":"cfgEdge label method2"},{"data":{"stmtId":11,"shortLabel":"a = $r1","label":"a = $r1","id":"stmt11","stmtIndex":6},"classes":"stmt label    method2","position":{"x":10,"y":210}},{"data":{"directed":"true","source":"stmt11","target":"stmt12"},"classes":"cfgEdge label method2"},{"data":{"stmtId":12,"shortLabel":"a.<test.cases.fields.WritePOITest$A: java.lang.Object b> = query","label":"a.<test.cases.fields.WritePOITest$A: java.lang.Object b> = query","id":"stmt12","stmtIndex":7},"classes":"stmt label    method2","position":{"x":10,"y":240}},{"data":{"directed":"true","source":"stmt12","target":"stmt13"},"classes":"cfgEdge label method2"},{"data":{"callSite":true,"stmtId":13,"callees":[{"methodName":"&lt;test.core.AbstractBoomerangTest: void queryFor(java.lang.Object)&gt;","id":14}],"shortLabel":"virtualinvoke this.<test.cases.fields.WritePOITest: void queryFor(java.lang.Object)>(query)","label":"virtualinvoke this.<test.cases.fields.WritePOITest: void queryFor(java.lang.Object)>(query)","id":"stmt13","stmtIndex":8},"classes":"stmt label   callSite  method2","position":{"x":10,"y":270}},{"data":{"directed":"true","source":"stmt13","target":"stmt15"},"classes":"cfgEdge label method2"},{"data":{"stmtId":15,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;dummyClass: void main(java.lang.String[])&gt;","id":16}],"id":"stmt15","stmtIndex":9},"classes":"stmt label  returnSite   method2","position":{"x":10,"y":300}}]},"methodName":"&lt;test.cases.fields.WritePOITest: void directAllocationSiteSimpler()&gt;","id":2},{"dfg":{"dataFlowNode":[{"data":{"factId":18,"label":"l0 (WritePOITest$Alloc.<init>)"},"classes":"fact label method6","position":{"x":30,"y":0}},{"data":{"factId":48,"label":"this (WritePOITest$Alloc.<init>)"},"classes":"fact label method6","position":{"x":60,"y":0}},{"data":{"stmtId":44,"factId":18,"id":"n84"},"classes":"esgNode method6 ","position":{"x":30,"y":30},"group":"nodes"},{"data":{"stmtId":45,"factId":18,"id":"n85"},"classes":"esgNode method6 ","position":{"x":30,"y":60},"group":"nodes"},{"data":{"stmtId":44,"factId":48,"id":"n86"},"classes":"esgNode method6 ","position":{"x":60,"y":30},"group":"nodes"},{"data":{"stmtId":47,"factId":18,"id":"n87"},"classes":"esgNode method6 ","position":{"x":30,"y":90},"group":"nodes"},{"data":{"stmtId":43,"factId":18,"id":"n88"},"classes":"esgNode method6 ","position":{"x":30,"y":0},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":43,"shortLabel":"l0 := @this: test.cases.fields.WritePOITest$Alloc","label":"l0 := @this: test.cases.fields.WritePOITest$Alloc","id":"stmt43","stmtIndex":0},"classes":"stmt label    method6","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt43","target":"stmt44"},"classes":"cfgEdge label method6"},{"data":{"stmtId":44,"shortLabel":"l1 := @parameter0: test.cases.fields.WritePOITest$Alloc","label":"l1 := @parameter0: test.cases.fields.WritePOITest$Alloc","id":"stmt44","stmtIndex":1},"classes":"stmt label    method6","position":{"x":10,"y":60}},{"data":{"directed":"true","source":"stmt44","target":"stmt45"},"classes":"cfgEdge label method6"},{"data":{"callSite":true,"stmtId":45,"callees":[{"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;()&gt;","id":46}],"shortLabel":"specialinvoke l0.<test.cases.fields.WritePOITest$Alloc: void <init>()>()","label":"specialinvoke l0.<test.cases.fields.WritePOITest$Alloc: void <init>()>()","id":"stmt45","stmtIndex":2},"classes":"stmt label   callSite  method6","position":{"x":10,"y":90}},{"data":{"directed":"true","source":"stmt45","target":"stmt47"},"classes":"cfgEdge label method6"},{"data":{"stmtId":47,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;test.cases.fields.WritePOITest: void directAllocationSiteSimpler()&gt;","id":2}],"id":"stmt47","stmtIndex":3},"classes":"stmt label  returnSite   method6","position":{"x":10,"y":120}}]},"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;(test.cases.fields.WritePOITest$Alloc)&gt;","id":6},{"dfg":{"dataFlowNode":[{"data":{"factId":58,"label":"l0 (Object.<init>)"},"classes":"fact label method46","position":{"x":30,"y":0}},{"data":{"factId":48,"label":"this (WritePOITest$Alloc.<init>)"},"classes":"fact label method46","position":{"x":60,"y":0}},{"data":{"stmtId":54,"factId":58,"id":"n89"},"classes":"esgNode method46 ","position":{"x":30,"y":0},"group":"nodes"},{"data":{"stmtId":54,"factId":48,"id":"n90"},"classes":"esgNode method46 ","position":{"x":60,"y":0},"group":"nodes"},{"data":{"stmtId":57,"factId":48,"id":"n91"},"classes":"esgNode method46 ","position":{"x":60,"y":60},"group":"nodes"},{"data":{"stmtId":55,"factId":48,"id":"n92"},"classes":"esgNode method46 ","position":{"x":60,"y":30},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":54,"shortLabel":"this := @this: test.cases.fields.WritePOITest$Alloc","label":"this := @this: test.cases.fields.WritePOITest$Alloc","id":"stmt54","stmtIndex":0},"classes":"stmt label    method46","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt54","target":"stmt55"},"classes":"cfgEdge label method46"},{"data":{"callSite":true,"stmtId":55,"callees":[{"methodName":"&lt;java.lang.Object: void &lt;init&gt;()&gt;","id":56}],"shortLabel":"specialinvoke this.<java.lang.Object: void <init>()>()","label":"specialinvoke this.<java.lang.Object: void <init>()>()","id":"stmt55","stmtIndex":1},"classes":"stmt label   callSite  method46","position":{"x":10,"y":60}},{"data":{"directed":"true","source":"stmt55","target":"stmt57"},"classes":"cfgEdge label method46"},{"data":{"stmtId":57,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;(test.cases.fields.WritePOITest$Alloc)&gt;","id":6}],"id":"stmt57","stmtIndex":2},"classes":"stmt label  returnSite   method46","position":{"x":10,"y":90}}]},"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;()&gt;","id":46},{"dfg":{"dataFlowNode":[{"data":{"factId":58,"label":"l0 (Object.<init>)"},"classes":"fact label method56","position":{"x":30,"y":0}},{"data":{"stmtId":64,"factId":58,"id":"n93"},"classes":"esgNode method56 ","position":{"x":30,"y":30},"group":"nodes"},{"data":{"stmtId":63,"factId":58,"id":"n94"},"classes":"esgNode method56 ","position":{"x":30,"y":0},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":63,"shortLabel":"l0 := @this: java.lang.Object","label":"l0 := @this: java.lang.Object","id":"stmt63","stmtIndex":0},"classes":"stmt label    method56","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt63","target":"stmt64"},"classes":"cfgEdge label method56"},{"data":{"stmtId":64,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;()&gt;","id":46},{"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;()&gt;","id":65}],"id":"stmt64","stmtIndex":1},"classes":"stmt label  returnSite   method56","position":{"x":10,"y":60}}]},"methodName":"&lt;java.lang.Object: void &lt;init&gt;()&gt;","id":56}],"query":"BackwardQuery: (test.cases.fields.WritePOITest.directAllocationSiteSimpler this.queryFor(query),query (WritePOITest.directAllocationSiteSimpler))","id":74},{"methods":[{"dfg":{"dataFlowNode":[{"data":{"factId":96,"label":"l0 (WritePOITest$A.<init>)"},"classes":"fact label method2","position":{"x":30,"y":0}},{"data":{"factId":97,"label":"new test.cases.fields.WritePOITest$A (WritePOITest.directAllocationSiteSimpler)"},"classes":"fact label method2","position":{"x":60,"y":0}},{"data":{"factId":19,"label":"$r1 (WritePOITest.directAllocationSiteSimpler)"},"classes":"fact label method2","position":{"x":90,"y":0}},{"data":{"factId":22,"label":"a (WritePOITest.directAllocationSiteSimpler)"},"classes":"fact label method2","position":{"x":120,"y":0}},{"data":{"stmtId":8,"factId":96,"id":"n98"},"classes":"esgNode method2 ","position":{"x":30,"y":120},"group":"nodes"},{"data":{"stmtId":9,"factId":19,"id":"n99"},"classes":"esgNode method2 ","position":{"x":90,"y":150},"group":"nodes"},{"data":{"stmtId":8,"factId":19,"id":"n100"},"classes":"esgNode method2 ","position":{"x":90,"y":120},"group":"nodes"},{"data":{"stmtId":11,"factId":22,"id":"n101"},"classes":"esgNode method2 ","position":{"x":120,"y":180},"group":"nodes"},{"data":{"stmtId":7,"factId":97,"id":"n102"},"classes":"esgNode method2 ","position":{"x":60,"y":90},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":3,"shortLabel":"this := @this: test.cases.fields.WritePOITest","label":"this := @this: test.cases.fields.WritePOITest","id":"stmt3","stmtIndex":0},"classes":"stmt label    method2","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt3","target":"stmt4"},"classes":"cfgEdge label method2"},{"data":{"stmtId":4,"shortLabel":"$r0 = new test.cases.fields.WritePOITest$Alloc","label":"$r0 = new test.cases.fields.WritePOITest$Alloc","id":"stmt4","stmtIndex":1},"classes":"stmt label    method2","position":{"x":10,"y":60}},{"data":{"directed":"true","source":"stmt4","target":"stmt5"},"classes":"cfgEdge label method2"},{"data":{"callSite":true,"stmtId":5,"callees":[{"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;(test.cases.fields.WritePOITest$Alloc)&gt;","id":6}],"shortLabel":"specialinvoke $r0.<test.cases.fields.WritePOITest$Alloc: void <init>(test.cases.fields.WritePOITest$Alloc)>(null)","label":"specialinvoke $r0.<test.cases.fields.WritePOITest$Alloc: void <init>(test.cases.fields.WritePOITest$Alloc)>(null)","id":"stmt5","stmtIndex":2},"classes":"stmt label   callSite  method2","position":{"x":10,"y":90}},{"data":{"directed":"true","source":"stmt5","target":"stmt7"},"classes":"cfgEdge label method2"},{"data":{"stmtId":7,"shortLabel":"query = $r0","label":"query = $r0","id":"stmt7","stmtIndex":3},"classes":"stmt label    method2","position":{"x":10,"y":120}},{"data":{"directed":"true","source":"stmt7","target":"stmt8"},"classes":"cfgEdge label method2"},{"data":{"stmtId":8,"shortLabel":"$r1 = new test.cases.fields.WritePOITest$A","label":"$r1 = new test.cases.fields.WritePOITest$A","id":"stmt8","stmtIndex":4},"classes":"stmt label    method2","position":{"x":10,"y":150}},{"data":{"directed":"true","source":"stmt8","target":"stmt9"},"classes":"cfgEdge label method2"},{"data":{"callSite":true,"stmtId":9,"callees":[{"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;(test.cases.fields.WritePOITest$A)&gt;","id":10}],"shortLabel":"specialinvoke $r1.<test.cases.fields.WritePOITest$A: void <init>(test.cases.fields.WritePOITest$A)>(null)","label":"specialinvoke $r1.<test.cases.fields.WritePOITest$A: void <init>(test.cases.fields.WritePOITest$A)>(null)","id":"stmt9","stmtIndex":5},"classes":"stmt label   callSite  method2","position":{"x":10,"y":180}},{"data":{"directed":"true","source":"stmt9","target":"stmt11"},"classes":"cfgEdge label method2"},{"data":{"stmtId":11,"shortLabel":"a = $r1","label":"a = $r1","id":"stmt11","stmtIndex":6},"classes":"stmt label    method2","position":{"x":10,"y":210}},{"data":{"directed":"true","source":"stmt11","target":"stmt12"},"classes":"cfgEdge label method2"},{"data":{"stmtId":12,"shortLabel":"a.<test.cases.fields.WritePOITest$A: java.lang.Object b> = query","label":"a.<test.cases.fields.WritePOITest$A: java.lang.Object b> = query","id":"stmt12","stmtIndex":7},"classes":"stmt label    method2","position":{"x":10,"y":240}},{"data":{"directed":"true","source":"stmt12","target":"stmt13"},"classes":"cfgEdge label method2"},{"data":{"callSite":true,"stmtId":13,"callees":[{"methodName":"&lt;test.core.AbstractBoomerangTest: void queryFor(java.lang.Object)&gt;","id":14}],"shortLabel":"virtualinvoke this.<test.cases.fields.WritePOITest: void queryFor(java.lang.Object)>(query)","label":"virtualinvoke this.<test.cases.fields.WritePOITest: void queryFor(java.lang.Object)>(query)","id":"stmt13","stmtIndex":8},"classes":"stmt label   callSite  method2","position":{"x":10,"y":270}},{"data":{"directed":"true","source":"stmt13","target":"stmt15"},"classes":"cfgEdge label method2"},{"data":{"stmtId":15,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;dummyClass: void main(java.lang.String[])&gt;","id":16}],"id":"stmt15","stmtIndex":9},"classes":"stmt label  returnSite   method2","position":{"x":10,"y":300}}]},"methodName":"&lt;test.cases.fields.WritePOITest: void directAllocationSiteSimpler()&gt;","id":2},{"dfg":{"dataFlowNode":[{"data":{"factId":58,"label":"l0 (Object.<init>)"},"classes":"fact label method56","position":{"x":30,"y":0}},{"data":{"stmtId":64,"factId":58,"id":"n93"},"classes":"esgNode method56 ","position":{"x":30,"y":30},"group":"nodes"},{"data":{"stmtId":63,"factId":58,"id":"n94"},"classes":"esgNode method56 ","position":{"x":30,"y":0},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":63,"shortLabel":"l0 := @this: java.lang.Object","label":"l0 := @this: java.lang.Object","id":"stmt63","stmtIndex":0},"classes":"stmt label    method56","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt63","target":"stmt64"},"classes":"cfgEdge label method56"},{"data":{"stmtId":64,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;()&gt;","id":46},{"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;()&gt;","id":65}],"id":"stmt64","stmtIndex":1},"classes":"stmt label  returnSite   method56","position":{"x":10,"y":60}}]},"methodName":"&lt;java.lang.Object: void &lt;init&gt;()&gt;","id":56},{"dfg":{"dataFlowNode":[{"data":{"factId":58,"label":"l0 (Object.<init>)"},"classes":"fact label method65","position":{"x":30,"y":0}},{"data":{"factId":107,"label":"null (WritePOITest$A.<init>)"},"classes":"fact label method65","position":{"x":60,"y":0}},{"data":{"factId":108,"label":"this (WritePOITest$A.<init>)"},"classes":"fact label method65","position":{"x":90,"y":0}},{"data":{"stmtId":103,"factId":58,"id":"n109"},"classes":"esgNode method65 ","position":{"x":30,"y":0},"group":"nodes"},{"data":{"stmtId":104,"factId":108,"id":"n110"},"classes":"esgNode method65 ","position":{"x":90,"y":30},"group":"nodes"},{"data":{"stmtId":105,"factId":108,"id":"n111"},"classes":"esgNode method65 ","position":{"x":90,"y":60},"group":"nodes"},{"data":{"stmtId":104,"factId":107,"id":"n112"},"classes":"esgNode method65 ","position":{"x":60,"y":30},"group":"nodes"},{"data":{"stmtId":106,"factId":108,"id":"n113"},"classes":"esgNode method65 ","position":{"x":90,"y":90},"group":"nodes"},{"data":{"stmtId":103,"factId":108,"id":"n114"},"classes":"esgNode method65 ","position":{"x":90,"y":0},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":103,"shortLabel":"this := @this: test.cases.fields.WritePOITest$A","label":"this := @this: test.cases.fields.WritePOITest$A","id":"stmt103","stmtIndex":0},"classes":"stmt label    method65","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt103","target":"stmt104"},"classes":"cfgEdge label method65"},{"data":{"callSite":true,"stmtId":104,"callees":[{"methodName":"&lt;java.lang.Object: void &lt;init&gt;()&gt;","id":56}],"shortLabel":"specialinvoke this.<java.lang.Object: void <init>()>()","label":"specialinvoke this.<java.lang.Object: void <init>()>()","id":"stmt104","stmtIndex":1},"classes":"stmt label   callSite  method65","position":{"x":10,"y":60}},{"data":{"directed":"true","source":"stmt104","target":"stmt105"},"classes":"cfgEdge label method65"},{"data":{"stmtId":105,"shortLabel":"this.<test.cases.fields.WritePOITest$A: java.lang.Object b> = null","label":"this.<test.cases.fields.WritePOITest$A: java.lang.Object b> = null","id":"stmt105","stmtIndex":2},"classes":"stmt label    method65","position":{"x":10,"y":90}},{"data":{"directed":"true","source":"stmt105","target":"stmt106"},"classes":"cfgEdge label method65"},{"data":{"stmtId":106,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;(test.cases.fields.WritePOITest$A)&gt;","id":10}],"id":"stmt106","stmtIndex":3},"classes":"stmt label  returnSite   method65","position":{"x":10,"y":120}}]},"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;()&gt;","id":65},{"dfg":{"dataFlowNode":[{"data":{"factId":96,"label":"l0 (WritePOITest$A.<init>)"},"classes":"fact label method10","position":{"x":30,"y":0}},{"data":{"factId":108,"label":"this (WritePOITest$A.<init>)"},"classes":"fact label method10","position":{"x":60,"y":0}},{"data":{"stmtId":115,"factId":96,"id":"n119"},"classes":"esgNode method10 ","position":{"x":30,"y":0},"group":"nodes"},{"data":{"stmtId":117,"factId":96,"id":"n120"},"classes":"esgNode method10 ","position":{"x":30,"y":60},"group":"nodes"},{"data":{"stmtId":116,"factId":96,"id":"n121"},"classes":"esgNode method10 ","position":{"x":30,"y":30},"group":"nodes"},{"data":{"stmtId":118,"factId":96,"id":"n122"},"classes":"esgNode method10 ","position":{"x":30,"y":90},"group":"nodes"},{"data":{"stmtId":116,"factId":108,"id":"n123"},"classes":"esgNode method10 ","position":{"x":60,"y":30},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":115,"shortLabel":"l0 := @this: test.cases.fields.WritePOITest$A","label":"l0 := @this: test.cases.fields.WritePOITest$A","id":"stmt115","stmtIndex":0},"classes":"stmt label    method10","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt115","target":"stmt116"},"classes":"cfgEdge label method10"},{"data":{"stmtId":116,"shortLabel":"l1 := @parameter0: test.cases.fields.WritePOITest$A","label":"l1 := @parameter0: test.cases.fields.WritePOITest$A","id":"stmt116","stmtIndex":1},"classes":"stmt label    method10","position":{"x":10,"y":60}},{"data":{"directed":"true","source":"stmt116","target":"stmt117"},"classes":"cfgEdge label method10"},{"data":{"callSite":true,"stmtId":117,"callees":[{"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;()&gt;","id":65}],"shortLabel":"specialinvoke l0.<test.cases.fields.WritePOITest$A: void <init>()>()","label":"specialinvoke l0.<test.cases.fields.WritePOITest$A: void <init>()>()","id":"stmt117","stmtIndex":2},"classes":"stmt label   callSite  method10","position":{"x":10,"y":90}},{"data":{"directed":"true","source":"stmt117","target":"stmt118"},"classes":"cfgEdge label method10"},{"data":{"stmtId":118,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;test.cases.fields.WritePOITest: void directAllocationSiteSimpler()&gt;","id":2}],"id":"stmt118","stmtIndex":3},"classes":"stmt label  returnSite   method10","position":{"x":10,"y":120}}]},"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;(test.cases.fields.WritePOITest$A)&gt;","id":10}],"query":"BackwardQuery: (test.cases.fields.WritePOITest.directAllocationSiteSimpler a.b = query,a (WritePOITest.directAllocationSiteSimpler))","id":95},{"methods":[{"dfg":{"dataFlowNode":[{"data":{"factId":96,"label":"l0 (WritePOITest$A.<init>)"},"classes":"fact label method2","position":{"x":30,"y":0}},{"data":{"factId":19,"label":"$r1 (WritePOITest.directAllocationSiteSimpler) Value: new test.cases.fields.WritePOITest$A"},"classes":"fact label method2","position":{"x":60,"y":0}},{"data":{"factId":22,"label":"a (WritePOITest.directAllocationSiteSimpler)"},"classes":"fact label method2","position":{"x":90,"y":0}},{"data":{"stmtId":9,"factId":19,"id":"n125"},"classes":"esgNode method2 ","position":{"x":60,"y":150},"group":"nodes"},{"data":{"stmtId":12,"factId":22,"id":"n126"},"classes":"esgNode method2 ","position":{"x":90,"y":210},"group":"nodes"},{"data":{"stmtId":11,"factId":19,"id":"n127"},"classes":"esgNode method2 ","position":{"x":60,"y":180},"group":"nodes"},{"data":{"stmtId":15,"factId":22,"id":"n128"},"classes":"esgNode method2 ","position":{"x":90,"y":270},"group":"nodes"},{"data":{"stmtId":15,"factId":19,"id":"n129"},"classes":"esgNode method2 ","position":{"x":60,"y":270},"group":"nodes"},{"data":{"stmtId":12,"factId":19,"id":"n130"},"classes":"esgNode method2 ","position":{"x":60,"y":210},"group":"nodes"},{"data":{"stmtId":11,"factId":96,"id":"n131"},"classes":"esgNode method2 ","position":{"x":30,"y":180},"group":"nodes"},{"data":{"stmtId":13,"factId":19,"id":"n132"},"classes":"esgNode method2 ","position":{"x":60,"y":240},"group":"nodes"},{"data":{"stmtId":13,"factId":22,"id":"n133"},"classes":"esgNode method2 ","position":{"x":90,"y":240},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":3,"shortLabel":"this := @this: test.cases.fields.WritePOITest","label":"this := @this: test.cases.fields.WritePOITest","id":"stmt3","stmtIndex":0},"classes":"stmt label    method2","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt3","target":"stmt4"},"classes":"cfgEdge label method2"},{"data":{"stmtId":4,"shortLabel":"$r0 = new test.cases.fields.WritePOITest$Alloc","label":"$r0 = new test.cases.fields.WritePOITest$Alloc","id":"stmt4","stmtIndex":1},"classes":"stmt label    method2","position":{"x":10,"y":60}},{"data":{"directed":"true","source":"stmt4","target":"stmt5"},"classes":"cfgEdge label method2"},{"data":{"callSite":true,"stmtId":5,"callees":[{"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;(test.cases.fields.WritePOITest$Alloc)&gt;","id":6}],"shortLabel":"specialinvoke $r0.<test.cases.fields.WritePOITest$Alloc: void <init>(test.cases.fields.WritePOITest$Alloc)>(null)","label":"specialinvoke $r0.<test.cases.fields.WritePOITest$Alloc: void <init>(test.cases.fields.WritePOITest$Alloc)>(null)","id":"stmt5","stmtIndex":2},"classes":"stmt label   callSite  method2","position":{"x":10,"y":90}},{"data":{"directed":"true","source":"stmt5","target":"stmt7"},"classes":"cfgEdge label method2"},{"data":{"stmtId":7,"shortLabel":"query = $r0","label":"query = $r0","id":"stmt7","stmtIndex":3},"classes":"stmt label    method2","position":{"x":10,"y":120}},{"data":{"directed":"true","source":"stmt7","target":"stmt8"},"classes":"cfgEdge label method2"},{"data":{"stmtId":8,"shortLabel":"$r1 = new test.cases.fields.WritePOITest$A","label":"$r1 = new test.cases.fields.WritePOITest$A","id":"stmt8","stmtIndex":4},"classes":"stmt label    method2","position":{"x":10,"y":150}},{"data":{"directed":"true","source":"stmt8","target":"stmt9"},"classes":"cfgEdge label method2"},{"data":{"callSite":true,"stmtId":9,"callees":[{"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;(test.cases.fields.WritePOITest$A)&gt;","id":10}],"shortLabel":"specialinvoke $r1.<test.cases.fields.WritePOITest$A: void <init>(test.cases.fields.WritePOITest$A)>(null)","label":"specialinvoke $r1.<test.cases.fields.WritePOITest$A: void <init>(test.cases.fields.WritePOITest$A)>(null)","id":"stmt9","stmtIndex":5},"classes":"stmt label   callSite  method2","position":{"x":10,"y":180}},{"data":{"directed":"true","source":"stmt9","target":"stmt11"},"classes":"cfgEdge label method2"},{"data":{"stmtId":11,"shortLabel":"a = $r1","label":"a = $r1","id":"stmt11","stmtIndex":6},"classes":"stmt label    method2","position":{"x":10,"y":210}},{"data":{"directed":"true","source":"stmt11","target":"stmt12"},"classes":"cfgEdge label method2"},{"data":{"stmtId":12,"shortLabel":"a.<test.cases.fields.WritePOITest$A: java.lang.Object b> = query","label":"a.<test.cases.fields.WritePOITest$A: java.lang.Object b> = query","id":"stmt12","stmtIndex":7},"classes":"stmt label    method2","position":{"x":10,"y":240}},{"data":{"directed":"true","source":"stmt12","target":"stmt13"},"classes":"cfgEdge label method2"},{"data":{"callSite":true,"stmtId":13,"callees":[{"methodName":"&lt;test.core.AbstractBoomerangTest: void queryFor(java.lang.Object)&gt;","id":14}],"shortLabel":"virtualinvoke this.<test.cases.fields.WritePOITest: void queryFor(java.lang.Object)>(query)","label":"virtualinvoke this.<test.cases.fields.WritePOITest: void queryFor(java.lang.Object)>(query)","id":"stmt13","stmtIndex":8},"classes":"stmt label   callSite  method2","position":{"x":10,"y":270}},{"data":{"directed":"true","source":"stmt13","target":"stmt15"},"classes":"cfgEdge label method2"},{"data":{"stmtId":15,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;dummyClass: void main(java.lang.String[])&gt;","id":16}],"id":"stmt15","stmtIndex":9},"classes":"stmt label  returnSite   method2","position":{"x":10,"y":300}}]},"methodName":"&lt;test.cases.fields.WritePOITest: void directAllocationSiteSimpler()&gt;","id":2},{"dfg":{"dataFlowNode":[{"data":{"factId":58,"label":"l0 (Object.<init>)"},"classes":"fact label method56","position":{"x":30,"y":0}},{"data":{"stmtId":63,"factId":58,"id":"n66"},"classes":"esgNode method56 ","position":{"x":30,"y":0},"group":"nodes"},{"data":{"stmtId":64,"factId":58,"id":"n67"},"classes":"esgNode method56 ","position":{"x":30,"y":30},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":63,"shortLabel":"l0 := @this: java.lang.Object","label":"l0 := @this: java.lang.Object","id":"stmt63","stmtIndex":0},"classes":"stmt label    method56","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt63","target":"stmt64"},"classes":"cfgEdge label method56"},{"data":{"stmtId":64,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;test.cases.fields.WritePOITest$Alloc: void &lt;init&gt;()&gt;","id":46},{"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;()&gt;","id":65}],"id":"stmt64","stmtIndex":1},"classes":"stmt label  returnSite   method56","position":{"x":10,"y":60}}]},"methodName":"&lt;java.lang.Object: void &lt;init&gt;()&gt;","id":56},{"dfg":{"dataFlowNode":[{"data":{"factId":58,"label":"l0 (Object.<init>)"},"classes":"fact label method65","position":{"x":30,"y":0}},{"data":{"factId":108,"label":"this (WritePOITest$A.<init>)"},"classes":"fact label method65","position":{"x":60,"y":0}},{"data":{"stmtId":104,"factId":108,"id":"n134"},"classes":"esgNode method65 ","position":{"x":60,"y":30},"group":"nodes"},{"data":{"stmtId":105,"factId":108,"id":"n135"},"classes":"esgNode method65 ","position":{"x":60,"y":60},"group":"nodes"},{"data":{"stmtId":106,"factId":108,"id":"n136"},"classes":"esgNode method65 ","position":{"x":60,"y":90},"group":"nodes"},{"data":{"stmtId":103,"factId":108,"id":"n137"},"classes":"esgNode method65 ","position":{"x":60,"y":0},"group":"nodes"},{"data":{"stmtId":105,"factId":58,"id":"n138"},"classes":"esgNode method65 ","position":{"x":30,"y":60},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":103,"shortLabel":"this := @this: test.cases.fields.WritePOITest$A","label":"this := @this: test.cases.fields.WritePOITest$A","id":"stmt103","stmtIndex":0},"classes":"stmt label    method65","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt103","target":"stmt104"},"classes":"cfgEdge label method65"},{"data":{"callSite":true,"stmtId":104,"callees":[{"methodName":"&lt;java.lang.Object: void &lt;init&gt;()&gt;","id":56}],"shortLabel":"specialinvoke this.<java.lang.Object: void <init>()>()","label":"specialinvoke this.<java.lang.Object: void <init>()>()","id":"stmt104","stmtIndex":1},"classes":"stmt label   callSite  method65","position":{"x":10,"y":60}},{"data":{"directed":"true","source":"stmt104","target":"stmt105"},"classes":"cfgEdge label method65"},{"data":{"stmtId":105,"shortLabel":"this.<test.cases.fields.WritePOITest$A: java.lang.Object b> = null","label":"this.<test.cases.fields.WritePOITest$A: java.lang.Object b> = null","id":"stmt105","stmtIndex":2},"classes":"stmt label    method65","position":{"x":10,"y":90}},{"data":{"directed":"true","source":"stmt105","target":"stmt106"},"classes":"cfgEdge label method65"},{"data":{"stmtId":106,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;(test.cases.fields.WritePOITest$A)&gt;","id":10}],"id":"stmt106","stmtIndex":3},"classes":"stmt label  returnSite   method65","position":{"x":10,"y":120}}]},"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;()&gt;","id":65},{"dfg":{"dataFlowNode":[{"data":{"factId":96,"label":"l0 (WritePOITest$A.<init>)"},"classes":"fact label method10","position":{"x":30,"y":0}},{"data":{"factId":108,"label":"this (WritePOITest$A.<init>)"},"classes":"fact label method10","position":{"x":60,"y":0}},{"data":{"stmtId":117,"factId":96,"id":"n139"},"classes":"esgNode method10 ","position":{"x":30,"y":60},"group":"nodes"},{"data":{"stmtId":118,"factId":108,"id":"n140"},"classes":"esgNode method10 ","position":{"x":60,"y":90},"group":"nodes"},{"data":{"stmtId":116,"factId":96,"id":"n141"},"classes":"esgNode method10 ","position":{"x":30,"y":30},"group":"nodes"},{"data":{"stmtId":115,"factId":96,"id":"n142"},"classes":"esgNode method10 ","position":{"x":30,"y":0},"group":"nodes"},{"data":{"stmtId":118,"factId":96,"id":"n143"},"classes":"esgNode method10 ","position":{"x":30,"y":90},"group":"nodes"}]},"cfg":{"controlFlowNode":[{"data":{"stmtId":115,"shortLabel":"l0 := @this: test.cases.fields.WritePOITest$A","label":"l0 := @this: test.cases.fields.WritePOITest$A","id":"stmt115","stmtIndex":0},"classes":"stmt label    method10","position":{"x":10,"y":30}},{"data":{"directed":"true","source":"stmt115","target":"stmt116"},"classes":"cfgEdge label method10"},{"data":{"stmtId":116,"shortLabel":"l1 := @parameter0: test.cases.fields.WritePOITest$A","label":"l1 := @parameter0: test.cases.fields.WritePOITest$A","id":"stmt116","stmtIndex":1},"classes":"stmt label    method10","position":{"x":10,"y":60}},{"data":{"directed":"true","source":"stmt116","target":"stmt117"},"classes":"cfgEdge label method10"},{"data":{"callSite":true,"stmtId":117,"callees":[{"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;()&gt;","id":65}],"shortLabel":"specialinvoke l0.<test.cases.fields.WritePOITest$A: void <init>()>()","label":"specialinvoke l0.<test.cases.fields.WritePOITest$A: void <init>()>()","id":"stmt117","stmtIndex":2},"classes":"stmt label   callSite  method10","position":{"x":10,"y":90}},{"data":{"directed":"true","source":"stmt117","target":"stmt118"},"classes":"cfgEdge label method10"},{"data":{"stmtId":118,"returnSite":true,"shortLabel":"return","label":"return","callers":[{"methodName":"&lt;test.cases.fields.WritePOITest: void directAllocationSiteSimpler()&gt;","id":2}],"id":"stmt118","stmtIndex":3},"classes":"stmt label  returnSite   method10","position":{"x":10,"y":120}}]},"methodName":"&lt;test.cases.fields.WritePOITest$A: void &lt;init&gt;(test.cases.fields.WritePOITest$A)&gt;","id":10}],"query":"ForwardQuery: (test.cases.fields.WritePOITest.directAllocationSiteSimpler $r1 = new WritePOITest$A,$r1 (WritePOITest.directAllocationSiteSimpler) Value: new test.cases.fields.WritePOITest$A)","id":124}]
+    </script>
+</body>
+
+</html>

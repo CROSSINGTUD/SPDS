@@ -1,6 +1,7 @@
 package dacapo;
 import java.util.Map;
 
+import boomerang.DefaultBoomerangOptions;
 import boomerang.ForwardQuery;
 import boomerang.WholeProgramBoomerang;
 import boomerang.debugger.Debugger;
@@ -21,14 +22,14 @@ import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import wpds.impl.Weight.NoWeight;
 
-public class DacapoRunner  extends ResearchQuestion  {
+public class WholeProgramPointsToAnalysis extends ResearchQuestion  {
 
   protected long analysisTime;
-public static void main(String...args) {
+  public static void main(String...args) {
 	System.setProperty("benchmarkFolder", args[0]);
 	System.setProperty("benchmark", args[1]);
 
-	  new DacapoRunner().run();
+	  new WholeProgramPointsToAnalysis().run();
   }
   public void run() {
     G.v().reset();
@@ -40,7 +41,7 @@ public static void main(String...args) {
         if (Scene.v().getMainMethod() == null)
           throw new RuntimeException("No main class existing.");
         for(SootClass c : Scene.v().getClasses()){
-        	for(String app : DacapoRunner.this.getApplicationClasses()){
+        	for(String app : WholeProgramPointsToAnalysis.this.getApplicationClasses()){
         		if(c.isApplicationClass())
         			continue;
         		if(c.toString().startsWith(app.replace("<",""))){
@@ -50,7 +51,12 @@ public static void main(String...args) {
         }
 
     	final JimpleBasedInterproceduralCFG icfg = new JimpleBasedInterproceduralCFG(false);
-    	WholeProgramBoomerang<NoWeight> solver = new WholeProgramBoomerang<NoWeight>() {
+    	WholeProgramBoomerang<NoWeight> solver = new WholeProgramBoomerang<NoWeight>(new DefaultBoomerangOptions(){
+			@Override
+			public int analysisTimeoutMS() {
+				return -1;
+			}
+		}) {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 				return icfg;

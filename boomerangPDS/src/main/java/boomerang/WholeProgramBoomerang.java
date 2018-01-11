@@ -16,6 +16,15 @@ import wpds.impl.Weight;
 public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBoomerang<W>{
 	private int reachableMethodCount;
 	private int allocationSites;
+
+	public WholeProgramBoomerang(BoomerangOptions opts){
+		super(opts);
+	}
+	
+	public WholeProgramBoomerang(){
+		this(new DefaultBoomerangOptions());
+	}
+
 	public void wholeProgramAnalysis(){
 //		System.out.println("Tracking Strings: " + Boomerang.TRACK_STRING);
 //		System.out.println("Tracking Arrays: " + Boomerang.TRACK_ARRAYS);

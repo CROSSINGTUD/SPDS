@@ -1,11 +1,9 @@
 package test.core;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 
+import boomerang.seedfactory.SeedFactory;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
@@ -54,6 +52,7 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import test.core.selfrunning.AbstractTestingFramework;
 import wpds.impl.Transition;
+import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
@@ -71,6 +70,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	protected Collection<Error> imprecisionErrors = Sets.newHashSet();
 
 	private boolean integerQueries;
+	private SeedFactory<NoWeight> seedFactory;
 
 	private enum AnalysisMode {
 		WholeProgram, DemandDrivenForward, DemandDrivenBackward;
@@ -88,10 +88,29 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				icfg = new JimpleBasedInterproceduralCFG(true);
-				queryForCallSites = extractQuery(new FirstArgumentOf("queryFor"));
-				if(queryForCallSites.isEmpty()){
-					queryForCallSites = extractQuery(new FirstArgumentOf("intQueryFor"));
-					integerQueries = true;
+				seedFactory = new SeedFactory<NoWeight>(){
+					@Override
+					public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+						return icfg;
+					}
+
+					@Override
+					protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection calledMethods) {
+						Optional<? extends Query> query = new FirstArgumentOf("queryFor").test(u);
+
+						if(query.isPresent()){
+							return Collections.singleton(query.get());
+						}
+						query = new FirstArgumentOf("intQueryFor").test(u);
+						if(query.isPresent()){
+							integerQueries = true;
+							return Collections.singleton(query.get());
+						}
+						return Collections.emptySet();
+					}
+				};
+				queryForCallSites = seedFactory.computeSeeds();
+				if(integerQueries){
 					allocationSites = extractQuery(new IntegerAllocationSiteOf());
 				} else{
 					allocationSites = extractQuery(new AllocationSiteOf());
@@ -124,6 +143,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		if (queryForCallSites.size() > 1)
 			throw new RuntimeException("Found more than one backward query to execute!");
 		Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
+		System.out.println(backwardResults);
 		compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
 	}
 
@@ -134,7 +154,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	}
 
 	private class AllocationSiteOf implements ValueOfInterestInUnit {
-		public Optional<? extends Query> test(Stmt unit, Stmt callSite) {
+		public Optional<? extends Query> test(Stmt unit) {
 			if (unit instanceof AssignStmt) {
 				AssignStmt as = (AssignStmt) unit;
 				if (as.getLeftOp() instanceof Local && as.getRightOp() instanceof NewExpr) {
@@ -151,7 +171,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		}
 	}
 	private class IntegerAllocationSiteOf implements ValueOfInterestInUnit {
-		public Optional<? extends Query> test(Stmt unit, Stmt callSite) {
+		public Optional<? extends Query> test(Stmt unit) {
 			if (unit instanceof AssignStmt) {
 				AssignStmt as = (AssignStmt) unit;
 				if (as.getLeftOp().toString().equals("allocation")) {
@@ -187,7 +207,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		}
 
 		@Override
-		public Optional<? extends Query> test(Stmt unit, Stmt callSite) {
+		public Optional<? extends Query> test(Stmt unit) {
 			Stmt stmt = (Stmt) unit;
 			if (!(stmt.containsInvokeExpr()))
 				return Optional.absent();
@@ -204,9 +224,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private void compareQuery(Collection<? extends Query> expectedResults,
 			Collection<? extends Node<Statement, Val>> results, AnalysisMode analysis) {
-//		System.out.println("Boomerang Allocations Sites: " + results);
-//		System.out.println("Boomerang Results: " + results);
-//		System.out.println("Expected Results: " + expectedResults);
+		System.out.println("Boomerang Results: " + results);
+		System.out.println("Expected Results: " + expectedResults);
 		Collection<Node<Statement, Val>> falseNegativeAllocationSites = new HashSet<>();
 		for (Query res : expectedResults) {
 			if (!results.contains(res.asNode()))
@@ -246,6 +265,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					return new IDEVizDebugger(ideVizFile,icfg);
 				}
 
+				@Override
+				public SeedFactory<NoWeight> getSeedFactory() {
+					return seedFactory;
+				}
 			};
 			if(query instanceof BackwardQuery){
 				solver.solve(query);
@@ -389,7 +412,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		for (Unit u : activeBody.getUnits()) {
 			if (!(u instanceof Stmt))
 				continue;
-			Optional<? extends Query> optOfVal = predicate.test((Stmt) u, callSite);
+			Optional<? extends Query> optOfVal = predicate.test((Stmt) u);
 			if (optOfVal.isPresent()) {
 				queries.add(optOfVal.get());
 			}
@@ -439,6 +462,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	}
 
 	private interface ValueOfInterestInUnit {
-		Optional<? extends Query> test(Stmt unit, Stmt callSite);
+		Optional<? extends Query> test(Stmt unit);
 	}
 }
