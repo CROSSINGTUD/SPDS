@@ -1550,7 +1550,9 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		Debugger<W> debugger = getOrCreateDebugger();
 		for (Query q : queryToSolvers.keySet()) {
 			debugger.reachableNodes(q, queryToSolvers.getOrCreate(q).getTransitionsToFinalWeights());
+			debugger.callRules(q, queryToSolvers.getOrCreate(q).getCallPDS().getAllRules());
 		}
+		debugger.done();
 		if (!DEBUG)
 			return;
 
@@ -1560,10 +1562,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		}
 		System.out.println("Total number of rules: " + totalRules);
 		for (Query q : queryToSolvers.keySet()) {
-			debugger.reachableNodes(q, queryToSolvers.getOrCreate(q).getTransitionsToFinalWeights());
-			debugger.reachableCallNodes(q, queryToSolvers.getOrCreate(q).getReachedStates());
-			debugger.reachableFieldNodes(q, queryToSolvers.getOrCreate(q).getReachedStates());
-
 			System.out.println("========================");
 			System.out.println(q);
 			System.out.println("========================");
