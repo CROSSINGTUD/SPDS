@@ -9,6 +9,7 @@ import org.junit.rules.Timeout;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -271,8 +272,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 			};
 			if(query instanceof BackwardQuery){
+				Stopwatch watch = Stopwatch.createStarted();
 				solver.solve(query);
-				
+				System.out.println("Test ("+sootTestMethod+" took: " + watch.elapsed());
                 for (final Entry<Query, AbstractBoomerangSolver<NoWeight>> fw : solver.getSolvers().entrySet()) {
                     if(fw.getKey() instanceof ForwardQuery){
                         fw.getValue().synchedEmptyStackReachable(query.asNode(),new EmptyStackWitnessListener<Statement, Val>() {
