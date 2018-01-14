@@ -32,6 +32,7 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
+import soot.jimple.ThrowStmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
@@ -94,6 +95,9 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 			InvokeExpr invokeExpr, Val fact, SootMethod callee, Stmt calleeSp) {
 		if (!callee.hasActiveBody())
 			return Collections.emptySet();
+		if(calleeSp instanceof ThrowStmt){
+			return Collections.emptySet();
+		}
 		Body calleeBody = callee.getActiveBody();
 		
 		if (invokeExpr instanceof InstanceInvokeExpr) {

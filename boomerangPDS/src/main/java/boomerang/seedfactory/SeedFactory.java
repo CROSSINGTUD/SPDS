@@ -119,7 +119,7 @@ public abstract class SeedFactory<W extends Weight> {
 		Set<SootMethod> scope = Sets.newHashSet();
 		for(Transition<Method, INode<Reachable>> t : seedToTransition.get(query)){
 			scope.add(t.getLabel().getMethod());
-			automaton.registerListener(new TransitiveClosure(t.getTarget(), scope));
+			automaton.registerListener(new TransitiveClosure(t.getTarget(), scope, query));
 		}
 		return scope;		
 	}
@@ -127,17 +127,19 @@ public abstract class SeedFactory<W extends Weight> {
 	private class TransitiveClosure extends WPAStateListener<Method, INode<Reachable>, Weight.NoWeight>{
 
 		private final Set<SootMethod> scope;
+		private Query query;
 
-		public TransitiveClosure(INode<Reachable> start, Set<SootMethod> scope) {
+		public TransitiveClosure(INode<Reachable> start, Set<SootMethod> scope, Query query) {
 			super(start);
 			this.scope = scope;
+			this.query = query;
 		}
 
 		@Override
 		public void onOutTransitionAdded(Transition<Method, INode<Reachable>> t, NoWeight w,
 				WeightedPAutomaton<Method, INode<Reachable>, NoWeight> weightedPAutomaton) {
 			scope.add(t.getLabel().getMethod());
-			automaton.registerListener(new TransitiveClosure(t.getTarget(), scope));
+			automaton.registerListener(new TransitiveClosure(t.getTarget(), scope, query));
 		}
 
 		@Override
@@ -151,7 +153,7 @@ public abstract class SeedFactory<W extends Weight> {
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((scope == null) ? 0 : scope.hashCode());
+			result = prime * result + ((query == null) ? 0 : query.hashCode());
 			return result;
 		}
 
@@ -166,10 +168,10 @@ public abstract class SeedFactory<W extends Weight> {
 			TransitiveClosure other = (TransitiveClosure) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
-			if (scope == null) {
-				if (other.scope != null)
+			if (query == null) {
+				if (other.query != null)
 					return false;
-			} else if (!scope.equals(other.scope))
+			} else if (!query.equals(other.query))
 				return false;
 			return true;
 		}
