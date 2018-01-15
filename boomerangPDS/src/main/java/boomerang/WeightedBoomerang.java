@@ -1167,8 +1167,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((byPassingQuery == null) ? 0 : byPassingQuery.hashCode());
 			result = prime * result + ((flowQuery == null) ? 0 : flowQuery.hashCode());
+			result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
 			return result;
 		}
 
@@ -1183,15 +1183,15 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			ImportFlowAtReturn other = (ImportFlowAtReturn) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
-			if (byPassingQuery == null) {
-				if (other.byPassingQuery != null)
-					return false;
-			} else if (!byPassingQuery.equals(other.byPassingQuery))
-				return false;
 			if (flowQuery == null) {
 				if (other.flowQuery != null)
 					return false;
 			} else if (!flowQuery.equals(other.flowQuery))
+				return false;
+			if (returnedNode == null) {
+				if (other.returnedNode != null)
+					return false;
+			} else if (!returnedNode.equals(other.returnedNode))
 				return false;
 			return true;
 		}
