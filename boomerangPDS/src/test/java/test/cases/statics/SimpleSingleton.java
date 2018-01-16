@@ -9,7 +9,20 @@ public class SimpleSingleton extends AbstractBoomerangTest {
 	@Test
 	public void singletonDirect(){
 		Alloc singleton = alloc;
-		queryFor(singleton);
+		queryForAndNotEmpty(singleton);
 	}
 	private static Alloc alloc = new Alloc();
+	@Test
+	public void simpleWithAssign(){
+		alloc = new Alloc();
+	    Object b = alloc;
+		queryFor(b);
+	}
+	@Test
+	public void simpleWithAssign2(){
+		alloc = new Alloc();
+	    Object b = alloc;
+	    Object a = alloc;
+		queryFor(b);
+	}
 }

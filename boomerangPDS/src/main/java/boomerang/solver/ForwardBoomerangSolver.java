@@ -155,7 +155,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 				}
 			} else if(rightOp instanceof StaticFieldRef){
 				StaticFieldRef sfr = (StaticFieldRef) rightOp;
-				if (fact.isStatic() && fact.equals( new StaticFieldVal(rightOp,sfr.getField(),method))) {
+				if (fact.isStatic() && fact.equals(new StaticFieldVal(rightOp,sfr.getField(),method))) {
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
 				}
 			} else if(rightOp instanceof ArrayRef){

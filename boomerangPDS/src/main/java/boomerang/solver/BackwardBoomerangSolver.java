@@ -162,7 +162,8 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 							new Field(ifr.getField()), PDSSystem.FIELDS));
 				} else if(rightOp instanceof StaticFieldRef){
 					if(options.staticFlows()){
-						out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(new EquivalentValue(rightOp),method)));
+						StaticFieldRef sfr = (StaticFieldRef) rightOp;
+						out.add(new Node<Statement, Val>(new Statement(succ, method), new StaticFieldVal(leftOp,sfr.getField(),method)));
 					}
 				} else if(rightOp instanceof ArrayRef){
 					ArrayRef ifr = (ArrayRef) rightOp;
@@ -192,7 +193,8 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
 				}
 			} else if(leftOp instanceof StaticFieldRef){
-				if (fact.isStatic() && fact.value().equals(new EquivalentValue(leftOp))) {
+				StaticFieldRef sfr = (StaticFieldRef) leftOp;
+				if (fact.isStatic() && fact.equals(new StaticFieldVal(leftOp,sfr.getField(),method))) {
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(rightOp,method)));
 				}
 			} else if (leftOp instanceof ArrayRef) {

@@ -69,6 +69,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	protected Collection<? extends Query> queryForCallSites;
 	protected Collection<Error> unsoundErrors = Sets.newHashSet();
 	protected Collection<Error> imprecisionErrors = Sets.newHashSet();
+	protected boolean resultsMustNotBeEmpty = false;
 
 	private boolean integerQueries;
 	private SeedFactory<NoWeight> seedFactory;
@@ -103,6 +104,12 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						if(query.isPresent()){
 							return Collections.singleton(query.get());
 						}
+						query = new FirstArgumentOf("queryForAndNotEmpty").test(u);
+
+						if(query.isPresent()){
+							resultsMustNotBeEmpty = true;
+							return Collections.singleton(query.get());
+						}
 						query = new FirstArgumentOf("intQueryFor").test(u);
 						if(query.isPresent()){
 							integerQueries = true;
@@ -130,6 +137,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						break;
 					}
 				}
+				if(resultsMustNotBeEmpty)
+					return;
 				if (!unsoundErrors.isEmpty()) {
 					throw new RuntimeException(Joiner.on("\n").join(unsoundErrors));
 				}
@@ -145,7 +154,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		if (queryForCallSites.size() > 1)
 			throw new RuntimeException("Found more than one backward query to execute!");
 		Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
-		System.out.println(backwardResults);
 		compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
 	}
 
@@ -245,6 +253,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		}
 		if (!falsePositiveAllocationSites.isEmpty())
 			imprecisionErrors.add(new Error(analysis + " Imprecise results for:" + answer));
+		
+		if(resultsMustNotBeEmpty && results.isEmpty()){
+			throw new RuntimeException("Expected some results, but Boomerang returned no allocation sites.");
+		}
 	}
 
 	private Set<Node<Statement, Val>> runQuery(Collection<? extends Query> queries) {
@@ -440,6 +452,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	}
 
+	protected void queryForAndNotEmpty(Object variable) {
+
+	}
 	protected void intQueryFor(int variable) {
 
 	}
