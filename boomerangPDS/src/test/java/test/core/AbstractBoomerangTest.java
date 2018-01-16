@@ -60,7 +60,7 @@ import wpds.interfaces.WPAStateListener;
 
 public class AbstractBoomerangTest extends AbstractTestingFramework {
 
-	private static final boolean FAIL_ON_IMPRECISE = false;
+	private static final boolean FAIL_ON_IMPRECISE = true;
 
 	@Rule
 	public Timeout timeout = new Timeout(10000000);
@@ -79,9 +79,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	protected AnalysisMode[] getAnalyses() {
 		return new AnalysisMode[] {
-				// AnalysisMode.WholeProgram,
+				 AnalysisMode.WholeProgram,
 				// AnalysisMode.DemandDrivenForward,
-				AnalysisMode.DemandDrivenBackward };
+//				AnalysisMode.DemandDrivenBackward
+				};
 	}
 
 	protected SceneTransformer createAnalysisTransformer() {
