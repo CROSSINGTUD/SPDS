@@ -1330,6 +1330,31 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return results;
 	}
 	
+	
+	public Set<ForwardQuery> getAllocationSites(final BackwardQuery query){
+		final Set<ForwardQuery> results = Sets.newHashSet();
+		for (final Entry<Query, AbstractBoomerangSolver<W>> fw : queryToSolvers.entrySet()) {
+			if(fw.getKey() instanceof ForwardQuery){
+				fw.getValue().getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(fw.getValue().getFieldAutomaton().getInitialState()) {
+					
+					@Override
+					public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+					}
+					
+					@Override
+					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+						if(t.getLabel().equals(Field.empty()) && t.getStart().fact().equals(query.asNode())){
+							results.add((ForwardQuery) fw.getKey());
+						}
+					}
+				});
+			}
+		}
+		return results;
+	}
+	
 	public Table<Statement, Val, W>  getObjectDestructingStatements(
 			ForwardQuery seed) {
 		AbstractBoomerangSolver<W> solver = queryToSolvers.get(seed);
