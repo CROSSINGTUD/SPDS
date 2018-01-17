@@ -269,9 +269,9 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 					forwardSolve(new ForwardQuery(node.stmt(), allocNode.get()));
 				}
 				if (isFieldStore(node.stmt())) {
-				} else if (isArrayStore(node.stmt())) {
-					// forwardHandleFieldWrite(node,
-					// createArrayFieldStore(node.stmt()), sourceQuery);
+				} else if (isArrayLoad(node.stmt())) {
+					backwardHandleFieldRead(node,
+					createArrayFieldLoad(node.stmt()), backwardQuery);
 				} else if (isFieldLoad(node.stmt())) {
 					backwardHandleFieldRead(node, createFieldLoad(node.stmt()), backwardQuery);
 				}
@@ -379,6 +379,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 					}
 				} else if (isFieldLoad(node.stmt())) {
 					forwardHandleFieldLoad(node, createFieldLoad(node.stmt()), sourceQuery);
+				} else if(isArrayLoad(node.stmt())){
+					forwardHandleFieldLoad(node, createArrayFieldLoad(node.stmt()), sourceQuery);
 				}
 				if (isBackwardEnterCall(node.stmt())) {
 					if(!(WeightedBoomerang.this instanceof WholeProgramBoomerang)){
@@ -455,6 +457,14 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				.getOrCreate(new FieldReadPOI(s, base, field, new Val(as.getLeftOp(), icfg().getMethodOf(as))));
 	}
 
+	protected FieldReadPOI createArrayFieldLoad(Statement s) {
+		Stmt stmt = s.getUnit().get();
+		AssignStmt as = (AssignStmt) stmt;
+		ArrayRef ifr = (ArrayRef) as.getRightOp();
+		Val base = new Val(ifr.getBase(), icfg().getMethodOf(as));
+		Val stored = new Val(as.getLeftOp(), icfg().getMethodOf(as));
+		return fieldReads.getOrCreate(new FieldReadPOI(s, base, Field.array(), stored));
+	}
 	protected FieldWritePOI createArrayFieldStore(Statement s) {
 		Stmt stmt = s.getUnit().get();
 		AssignStmt as = (AssignStmt) stmt;
@@ -495,7 +505,16 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		}
 		return false;
 	}
-
+	public static boolean isArrayLoad(Statement s) {
+		Optional<Stmt> optUnit = s.getUnit();
+		if (optUnit.isPresent()) {
+			Stmt stmt = optUnit.get();
+			if (stmt instanceof AssignStmt && ((AssignStmt) stmt).getRightOp() instanceof ArrayRef) {
+				return true;
+			}
+		}
+		return false;
+	}
 	public static boolean isFieldLoad(Statement s) {
 		Optional<Stmt> optUnit = s.getUnit();
 		if (optUnit.isPresent()) {

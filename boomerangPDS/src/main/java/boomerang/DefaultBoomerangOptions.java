@@ -72,7 +72,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 
 	@Override
 	public boolean arrayFlows() {
-		return false;
+		return true;
 	}
 
 	@Override
