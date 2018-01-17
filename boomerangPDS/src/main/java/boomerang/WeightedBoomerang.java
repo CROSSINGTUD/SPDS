@@ -1408,30 +1408,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return queryToSolvers;
 	}
 
-	public Table<Statement,Val, W> getResults(){
-		final Table<Statement,Val, W> results = HashBasedTable.create();
-		for (final Entry<Query, AbstractBoomerangSolver<W>> fw : queryToSolvers.entrySet()) {
-			if(fw.getKey() instanceof ForwardQuery){
-				fw.getValue().getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(fw.getValue().getFieldAutomaton().getInitialState()) {
-					
-					@Override
-					public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-					}
-					
-					@Override
-					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-						if(t.getLabel().equals(Field.empty())){
-							results.put(fw.getKey().stmt(),fw.getKey().var(), w);
-						}
-					}
-				});
-			}
-		}
-		return results;
-	}
-
 	public Table<Statement,Val, W> getResults(final Query query){
 		final Table<Statement,Val, W> results = HashBasedTable.create();
 		if(query instanceof ForwardQuery){
