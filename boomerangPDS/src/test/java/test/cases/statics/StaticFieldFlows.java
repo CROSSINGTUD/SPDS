@@ -9,6 +9,7 @@ import test.core.AbstractBoomerangTest;
 public class StaticFieldFlows extends AbstractBoomerangTest {
 	private static Object alloc;
 	private static Alloc instance;
+	private static Alloc i;
 	@Test
 	public void simple(){
 		alloc = new Alloc();
@@ -21,8 +22,20 @@ public class StaticFieldFlows extends AbstractBoomerangTest {
 		Object alias = singleton;
 		queryFor(alias);
 	}
-	
 
+	@Test
+	public void getAndSet(){
+		setStatic();
+		Object alias = getStatic();
+		queryFor(alias);
+	}
+	
+	private Object getStatic() {
+		return i;
+	}
+	private void setStatic() {
+		i = new Alloc();
+	}
 	@Test
 	public void doubleUnbalancedSingleton(){
 		Alloc singleton = returns();

@@ -13,7 +13,6 @@ import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
 
-@Ignore
 public class ArrayListsLongTest extends AbstractBoomerangTest{
 	@Test
 	public void addAndRetrieveWithIterator(){

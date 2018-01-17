@@ -171,7 +171,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 						out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
 								Field.array(), PDSSystem.FIELDS));
 					}
-					leftSideMatches = false;
+//					leftSideMatches = false;
 				} else if(rightOp instanceof CastExpr){
 					CastExpr castExpr = (CastExpr) rightOp;
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(castExpr.getOp(),method)));

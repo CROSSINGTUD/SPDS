@@ -83,7 +83,7 @@ public abstract class AbstractTestingFramework {
 			if (javaHome == null || javaHome.equals(""))
 				throw new RuntimeException("Could not get property java.home!");
 			sootCp += File.pathSeparator + javaHome + "/lib/rt.jar";
-			Options.v().setPhaseOption("cg", "trim-clinit:false");
+//			Options.v().setPhaseOption("cg", "trim-clinit:false");
 			Options.v().set_no_bodies_for_excluded(true);
 			Options.v().set_allow_phantom_refs(true);
 
