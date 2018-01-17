@@ -57,12 +57,13 @@ import wpds.impl.Transition;
 import wpds.impl.UnbalancedPopListener;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
+import wpds.interfaces.Empty;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedBoomerang<W extends Weight> implements MethodReachableQueue {
-	public static final boolean DEBUG = true;
+	public static final boolean DEBUG = false;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
 	private IBoomerangStats<W> stats;
@@ -1203,8 +1204,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 			insertTransition(queryToSolvers.get(flowSolver).getFieldAutomaton(), t);
-			if(!t.getLabel().equals(Field.epsilon())){
-				queryToSolvers.get(baseSolver).getFieldAutomaton().registerListener(new ImportToSolver(t.getTarget(), baseSolver, flowSolver));
+			if(!(t.getLabel() instanceof Empty)){
+				queryToSolvers.get(baseSolver).getFieldAutomaton().registerListener(new ImportToSolver(t.getTarget(), baseSolver, flowSolver));	
 			}
 		}
 
