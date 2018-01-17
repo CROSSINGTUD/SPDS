@@ -1,7 +1,6 @@
 package test.cases.lists;
 
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Vector;
 
@@ -11,7 +10,6 @@ import org.junit.Test;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
-@Ignore
 public class VectorsLongTest extends AbstractBoomerangTest{
 	@Test
 	public void addAndRetrieveWithIterator(){
