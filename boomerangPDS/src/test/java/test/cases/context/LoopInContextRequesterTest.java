@@ -6,8 +6,6 @@ import org.junit.Test;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
-
-@Ignore
 public class LoopInContextRequesterTest extends AbstractBoomerangTest{
 
   @Test

@@ -288,16 +288,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				Stopwatch watch = Stopwatch.createStarted();
 				solver.solve(query);
 				System.out.println("Test ("+sootTestMethod+" took: " + watch.elapsed());
-                for (final Entry<Query, AbstractBoomerangSolver<NoWeight>> fw : solver.getSolvers().entrySet()) {
-                    if(fw.getKey() instanceof ForwardQuery){
-                        fw.getValue().synchedEmptyStackReachable(query.asNode(),new EmptyStackWitnessListener<Statement, Val>() {
-                           
-                            @Override
-                            public void witnessFound(Node<Statement, Val> allocation) {
-                                results.add(fw.getKey().asNode());    
-                         }
-                        
-                    });}}
+				for(ForwardQuery q : solver.getAllocationSites((BackwardQuery) query)){
+					results.add(q.asNode());
+				}
                         
 
 			}else{
