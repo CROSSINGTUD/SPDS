@@ -36,7 +36,7 @@ public class Singleton extends AbstractBoomerangTest {
     	public void reset();
     }
 
-	private static Alloc alloc = new Alloc();
+	private static Alloc alloc;
 	private static GlobalObjectGetter objectGetter = new GlobalObjectGetter() {
 
         Alloc instance = new Alloc();
