@@ -52,6 +52,7 @@ public class StaticFieldFlows extends AbstractBoomerangTest {
 	}
 	
 	private static Alloc returns() {
+		System.out.println();
 		return StaticFieldFlows.v();
 	}
 	
