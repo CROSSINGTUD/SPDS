@@ -25,6 +25,7 @@ import boomerang.debugger.Debugger;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
+import boomerang.jimple.StaticFieldVal;
 import boomerang.jimple.Val;
 import boomerang.poi.AbstractPOI;
 import boomerang.poi.PointOfIndirection;
@@ -50,6 +51,7 @@ import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.NewMultiArrayExpr;
+import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.StringConstant;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
@@ -65,6 +67,7 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.ConnectPushListener;
 import wpds.impl.NestedWeightedPAutomatons;
+import wpds.impl.PushRule;
 import wpds.impl.SummaryNestedWeightedPAutomatons;
 import wpds.impl.Transition;
 import wpds.impl.UnbalancedPopListener;
@@ -291,6 +294,19 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 					backwardHandleEnterCall(node, forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(node.stmt())),
 								backwardQuery);
 				}
+				if(isFirstStatementOfEntryPoint(node.stmt()) && node.fact().isStatic()){
+					StaticFieldVal val = (StaticFieldVal) node.fact();
+					for(SootMethod m : val.field().getDeclaringClass().getMethods()){
+						if(m.isStaticInitializer()){
+							addReachable(m);
+							for(Unit ep : icfg().getEndPointsOf(m)){
+								StaticFieldVal newVal = new StaticFieldVal(val.value(),val.field(),m);
+								solver.addNormalCallFlow(node.asNode(),new Node<Statement,Val>(new Statement((Stmt)ep,m),newVal));
+								solver.addNormalFieldFlow(node.asNode(),new Node<Statement,Val>(new Statement((Stmt)ep,m),newVal));
+							}
+						}
+					}
+				}
 			}
 
 		});
@@ -311,6 +327,17 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return solver;
 	}
 
+
+	protected boolean isFirstStatementOfEntryPoint(Statement stmt) {
+		for(SootMethod m : Scene.v().getEntryPoints()){
+			if(m.hasActiveBody()){
+				if(stmt.equals(new Statement((Stmt)m.getActiveBody().getUnits().getFirst(), m))){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 
 	protected void backwardHandleEnterCall(WitnessNode<Statement, Val, Field> node, ForwardCallSitePOI returnSite,
 			BackwardQuery backwardQuery) {

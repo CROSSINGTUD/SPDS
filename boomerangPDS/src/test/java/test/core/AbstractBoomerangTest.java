@@ -61,7 +61,7 @@ import wpds.interfaces.WPAStateListener;
 
 public class AbstractBoomerangTest extends AbstractTestingFramework {
 
-	private static final boolean FAIL_ON_IMPRECISE = true;
+	private static final boolean FAIL_ON_IMPRECISE = false;
 
 	@Rule
 	public Timeout timeout = new Timeout(10000000);
