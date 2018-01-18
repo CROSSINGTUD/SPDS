@@ -9,7 +9,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import boomerang.stats.IBoomerangStats;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
@@ -36,9 +35,23 @@ import boomerang.solver.ForwardBoomerangSolver;
 import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import boomerang.solver.StatementBasedFieldTransitionListener;
+import boomerang.stats.IBoomerangStats;
 import heros.utilities.DefaultValueMap;
-import soot.*;
-import soot.jimple.*;
+import soot.Local;
+import soot.RefType;
+import soot.Scene;
+import soot.SootClass;
+import soot.SootField;
+import soot.SootMethod;
+import soot.Unit;
+import soot.jimple.ArrayRef;
+import soot.jimple.AssignStmt;
+import soot.jimple.InstanceFieldRef;
+import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.InvokeExpr;
+import soot.jimple.NewMultiArrayExpr;
+import soot.jimple.Stmt;
+import soot.jimple.StringConstant;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.SyncPDSUpdateListener;
@@ -57,7 +70,6 @@ import wpds.impl.Transition;
 import wpds.impl.UnbalancedPopListener;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
-import wpds.interfaces.Empty;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
@@ -242,7 +254,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				if (!res.isEmpty()) {
 					addReachable(callee);
 				}
-				super.onCallFlow(callee, callSite, value, res);
 			}
 
 			@Override
@@ -348,7 +359,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 						addReachable(callee);
 					}
 				}
-				super.onCallFlow(callee, callSite, value, res);
 			}
 
 			@Override

@@ -48,6 +48,24 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 //		}
 		queryFor(alias2);
 	}
+	
+	@Test
+	public void branchWithCall(){
+		Alloc a1 = new Alloc();
+		Alloc a2 = new Alloc();
+		Object a = null;
+		if(staticallyUnknown()){
+			a = a1;
+		} else{
+			a = a2;
+		}
+		wrappedFoo(a);
+		queryFor(a);
+	}
+	
+	private void wrappedFoo(Object param) {
+	}
+	
 
 	private Alloc nestedIdentity(Alloc param2) {
 		int shouldNotSeeThis = 1;
