@@ -15,6 +15,15 @@ public class StaticFieldFlows extends AbstractBoomerangTest {
 		Object alias = alloc;
 		queryFor(alias);
 	}
+	
+	@Test
+	public void simple2(){
+		alloc = new Alloc();
+		Object sr = new Object();
+		Object r = new String();
+		queryFor(alloc);
+	}
+
 	@Test
 	public void singleton(){
 		Alloc singleton = StaticFieldFlows.v();

@@ -101,6 +101,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		if (t.getStart() instanceof GeneratedState)
 			return false;
 		Val fact = t.getStart().fact();
+		if(fact.isStatic())
+			return false;
 		SootMethod m = fact.m();
 		SootMethod method = t.getLabel().getMethod();
 		if (m == null || method == null)

@@ -128,7 +128,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				for (AnalysisMode analysis : getAnalyses()) {
 					switch (analysis) {
 					case WholeProgram:
-						runWholeProgram();
+						if(!integerQueries)
+							runWholeProgram();
 						break;
 					case DemandDrivenBackward:
 						runDemandDrivenBackward();

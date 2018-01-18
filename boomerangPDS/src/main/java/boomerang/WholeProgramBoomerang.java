@@ -74,26 +74,6 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 	}
 	
 
-	public void analyzeMethod(SootMethod method) {
-		if(!method.hasActiveBody())
-			return;
-		for(Unit u : method.getActiveBody().getUnits()){
-			if(u instanceof AssignStmt){
-				AssignStmt assignStmt = (AssignStmt) u;
-				if(options.isAllocationVal(assignStmt.getRightOp())){
-					ForwardQuery q = new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp()));
-					solve(q);
-					allocationSites++;
-				}
-			}
-			if(((Stmt) u).containsInvokeExpr()){
-				InvokeExpr invokeExpr = ((Stmt) u).getInvokeExpr();
-				if(invokeExpr.getMethod().isStatic()){
-					addReachable(invokeExpr.getMethod());
-				}
-			}
-		}
-	}
 	
 	@Override
 	protected void backwardSolve(BackwardQuery query) {

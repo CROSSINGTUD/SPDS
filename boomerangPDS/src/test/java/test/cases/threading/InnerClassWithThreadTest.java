@@ -3,15 +3,15 @@ package test.cases.threading;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
-import test.core.selfrunning.AllocatedObject;
 
-@Ignore
 public class InnerClassWithThreadTest extends AbstractBoomerangTest {
-	private static Allocation param;
+	private static Alloc param;
+	@Ignore
 	@Test
-	public void runWithThread(){
-		param = new Allocation();
+	public void runWithThreadStatic(){
+		param = new Alloc();
 		Runnable r = new Runnable(){
 
 			@Override
@@ -29,9 +29,27 @@ public class InnerClassWithThreadTest extends AbstractBoomerangTest {
 		Thread t = new Thread(r);
 		t.start();
 	}
-	private class Allocation implements AllocatedObject{
-		
+	@Test
+	public void runWithThread(){
+		final Alloc u = new Alloc();
+		Runnable r = new Runnable(){
+
+			@Override
+			public void run() {
+				String cmd = System.getProperty("");
+//				if(cmd!=null){
+//					param = new Allocation();
+//				}
+				for(int i = 1; i < 3; i++){
+					queryFor(u);
+				}
+			}
+			
+		};
+		Thread t = new Thread(r);
+		t.start();
 	}
+	
 	@Override
 	protected boolean includeJDK() {
 		return true;
