@@ -18,7 +18,6 @@ public class GenericsTest extends AbstractBoomerangTest{
 		queryFor(query);
 	}
 
-	@Ignore
 	@Test
 	public void genericFieldAccessWrapped(){
 		WrappedGenericClass<GenericType> c = new WrappedGenericClass<GenericType>();

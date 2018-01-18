@@ -1,4 +1,4 @@
-package test.cases.subclassing;
+package test.cases.threading;
 
 import org.junit.Ignore;
 import org.junit.Test;
