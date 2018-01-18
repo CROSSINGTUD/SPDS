@@ -29,6 +29,7 @@ public class InnerClassWithThreadTest extends AbstractBoomerangTest {
 		Thread t = new Thread(r);
 		t.start();
 	}
+	@Ignore
 	@Test
 	public void runWithThread(){
 		final Alloc u = new Alloc();
