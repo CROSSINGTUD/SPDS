@@ -2,7 +2,6 @@ package test.cases.string;
 
 import org.junit.Test;
 
-import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 
 public class StringTest extends AbstractBoomerangTest {

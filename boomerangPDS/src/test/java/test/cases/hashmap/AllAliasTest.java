@@ -1,10 +1,8 @@
 package test.cases.hashmap;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.AbstractBoomerangTest;
-import test.core.selfrunning.AllocatedObject;
 
 
 public class AllAliasTest extends AbstractBoomerangTest{

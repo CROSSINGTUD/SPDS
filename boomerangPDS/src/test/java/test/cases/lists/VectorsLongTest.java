@@ -4,7 +4,6 @@ package test.cases.lists;
 import java.util.List;
 import java.util.Vector;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.AbstractBoomerangTest;

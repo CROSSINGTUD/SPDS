@@ -3,7 +3,6 @@ package test.cases.hashmap;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 
 class TreeNode<K,V> extends Entry<K,V> {
 	 /**

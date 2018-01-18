@@ -1,9 +1,11 @@
 package test.core;
 
-import java.util.*;
-import java.util.Map.Entry;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
-import boomerang.seedfactory.SeedFactory;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
@@ -26,6 +28,7 @@ import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import heros.utilities.DefaultValueMap;
 import soot.Body;
@@ -45,7 +48,6 @@ import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
-import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
@@ -53,7 +55,6 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import test.core.selfrunning.AbstractTestingFramework;
 import wpds.impl.Transition;
-import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;

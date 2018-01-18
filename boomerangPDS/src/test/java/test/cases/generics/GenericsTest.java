@@ -1,10 +1,7 @@
 package test.cases.generics;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
-import soot.Scene;
-import soot.SootClass;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 

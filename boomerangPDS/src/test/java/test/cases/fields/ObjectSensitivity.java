@@ -1,6 +1,7 @@
 package test.cases.fields;
 
 import org.junit.Test;
+
 import test.core.AbstractBoomerangTest;
 
 public class ObjectSensitivity extends AbstractBoomerangTest{

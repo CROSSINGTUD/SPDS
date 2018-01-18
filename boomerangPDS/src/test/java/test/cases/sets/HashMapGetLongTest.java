@@ -3,7 +3,6 @@ package test.cases.sets;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.cases.fields.Alloc;
