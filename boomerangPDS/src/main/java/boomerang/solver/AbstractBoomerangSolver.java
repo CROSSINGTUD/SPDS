@@ -1,7 +1,13 @@
 package boomerang.solver;
 
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
@@ -9,7 +15,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
-import boomerang.WeightedBoomerang;
 import boomerang.BoomerangOptions;
 import boomerang.MethodReachableQueue;
 import boomerang.Query;
@@ -31,16 +36,20 @@ import soot.jimple.NewExpr;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import sync.pds.solver.SyncPDSSolver;
-import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.AllocNode;
-import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.*;
-import wpds.interfaces.ReachabilityListener;
+import wpds.impl.NestedWeightedPAutomatons;
+import wpds.impl.NormalRule;
+import wpds.impl.PopRule;
+import wpds.impl.Rule;
+import wpds.impl.Transition;
+import wpds.impl.Weight;
+import wpds.impl.WeightedPAutomaton;
+import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
@@ -487,7 +496,9 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		Val source = t.getStart().fact().fact();
 		Value sourceVal = source.value();
 		Value targetVal = target.value();
-		
+		if(sourceVal.getType().equals(targetVal.getType())){
+			return false;
+		}
 		if(source.isStatic()){
 			return false;
 		}

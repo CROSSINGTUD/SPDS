@@ -28,7 +28,7 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 	public void failedCast() {
 		Object o = new Object();
 		Object returned = flow(o);
-		AllocatedObject t = (AllocatedObject) returned;
+		String t = (String) returned;
 		queryFor(t);
 	}	
 	
@@ -39,13 +39,13 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 	@Test
 	public void summaryReuseTest4() {
 		Alloc alias2;
-//		if(staticallyUnknown()){
+		if(staticallyUnknown()){
 			Alloc alias1 = new Alloc();
 			alias2 = nestedIdentity(alias1);
-//		}else{
-//			Alloc alias1 = new Alloc();
-//			alias2 = nestedIdentity(alias1);
-//		}
+		}else{
+			Alloc alias1 = new Alloc();
+			alias2 = nestedIdentity(alias1);
+		}
 		queryFor(alias2);
 	}
 	
