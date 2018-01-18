@@ -1134,7 +1134,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 									return;
 								final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut = baseSolver
 										.getFieldAutomaton();
-								if(t.getTarget() instanceof GeneratedState)
 									aut.registerListener(new ImportToSolver(t.getTarget(), baseAllocation, flowAllocation));
 
 								for (final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())) {
@@ -1206,9 +1205,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 			insertTransition(queryToSolvers.get(flowSolver).getFieldAutomaton(), t);
-			if(t.getTarget() instanceof GeneratedState){
 				queryToSolvers.get(baseSolver).getFieldAutomaton().registerListener(new ImportToSolver(t.getTarget(), baseSolver, flowSolver));	
-			}
 		}
 
 		@Override

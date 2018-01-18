@@ -119,7 +119,21 @@ public class CallPOITest extends AbstractBoomerangTest {
 		intermediate.c = d;
 		AllocObj AndMe = a.b.c;
 	}
-	
+	@Test
+	public void whyRecursiveCallPOIIsNecessarySimpler2(){
+		A a = new A();
+		AllocObj alloc = new AllocObj();
+		allocationIndirect2(a,alloc);
+	}
+	private void allocationIndirect2(A whereAmI, AllocObj d) {
+		B b = new B();
+		A a2 = whereAmI;
+		a2.b = b;
+		B intermediate = a2.b;
+		intermediate.c = d;
+		AllocObj AndMe = whereAmI.b.c;
+		queryFor(AndMe);
+	}
 	@Test
 	public void innerSetFieldOnAlias(){
 		Outer o = new Outer();
