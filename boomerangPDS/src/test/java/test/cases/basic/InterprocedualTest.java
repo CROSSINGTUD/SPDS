@@ -14,7 +14,16 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 		AllocatedObject alias2 = identity(alias1);
 		queryFor(alias2);
 	}
-
+	@Test
+	public void identityTest1() {
+		Alloc alias1 = new Alloc();
+		Object alias2 = alias1;
+		identity(alias1);
+		otherCall(alias2);
+		queryFor(alias1);
+	}
+	private void otherCall(Object alias2) {
+	}
 	@Test
 	public void summaryReuseTest1() {
 		AllocatedObject alias1 = new AllocatedObject(){}, alias2, alias3, alias4;
