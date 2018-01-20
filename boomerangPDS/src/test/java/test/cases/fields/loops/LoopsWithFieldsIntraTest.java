@@ -1,10 +1,12 @@
 package test.cases.fields.loops;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
+@Ignore
 public class LoopsWithFieldsIntraTest extends AbstractBoomerangTest{
 	@Test
 	public void oneFields() {

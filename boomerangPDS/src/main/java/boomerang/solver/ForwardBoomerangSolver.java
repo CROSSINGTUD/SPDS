@@ -57,10 +57,11 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			return Collections.emptySet();
 		}
 		Body calleeBody = callee.getActiveBody();
+		Set<State> out = Sets.newHashSet();
 		if (invokeExpr instanceof InstanceInvokeExpr) {
 			InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
 			if (iie.getBase().equals(fact.value()) && !callee.isStatic()) {
-				return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
+				out.add(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
 						new Val(calleeBody.getThisLocal(),callee), returnSite, PDSSystem.CALLS));
 			}
 		}
@@ -69,16 +70,16 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		for (Value arg : invokeExpr.getArgs()) {
 			if (arg.equals(fact.value()) && parameterLocals.size() > i) {
 				Local param = parameterLocals.get(i);
-				return Collections.singleton(new PushNode<Statement,  Val, Statement>(new Statement(calleeSp, callee),
+				out.add(new PushNode<Statement,  Val, Statement>(new Statement(calleeSp, callee),
 						new Val(param,callee), returnSite, PDSSystem.CALLS));
 			}
 			i++;
 		}
 		if(fact.isStatic()){
-			return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
+			out.add(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
 					new StaticFieldVal(fact.value(),((StaticFieldVal) fact).field(), callee), returnSite, PDSSystem.CALLS));
 		}
-		return Collections.emptySet();
+		return out;
 	}
 	
 	
@@ -155,7 +156,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 				}
 			} else if(rightOp instanceof StaticFieldRef){
 				StaticFieldRef sfr = (StaticFieldRef) rightOp;
-				if (fact.isStatic() && fact.equals( new StaticFieldVal(rightOp,sfr.getField(),method))) {
+				if (fact.isStatic() && fact.equals(new StaticFieldVal(rightOp,sfr.getField(),method))) {
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(leftOp,method)));
 				}
 			} else if(rightOp instanceof ArrayRef){
@@ -184,11 +185,12 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		if(curr instanceof ThrowStmt && !options.throwFlows()){
 			return Collections.emptySet();
 		}
+		Set<State> out = Sets.newHashSet();
 		if (curr instanceof ReturnStmt) {
 			Value op = ((ReturnStmt) curr).getOp();
 			if (op.equals(value.value())) {
 				if(callSite instanceof AssignStmt){
-					return Collections.singleton(new CallPopNode<Val,Statement>(new Val(((AssignStmt)callSite).getLeftOp(), icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
+					out.add(new CallPopNode<Val,Statement>(new Val(((AssignStmt)callSite).getLeftOp(), icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 				}
 			}
 		}
@@ -197,7 +199,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 				if (callSite.containsInvokeExpr()) {
 					if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
 						InstanceInvokeExpr iie = (InstanceInvokeExpr) callSite.getInvokeExpr();
-						return Collections.singleton(new CallPopNode<Val,Statement>(new Val(iie.getBase(), icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
+						out.add(new CallPopNode<Val,Statement>(new Val(iie.getBase(), icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 					}
 				}
 			}
@@ -207,15 +209,15 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			if (param.equals(value.value())) {
 				if (callSite.containsInvokeExpr()) {
 					InvokeExpr iie = (InvokeExpr) callSite.getInvokeExpr();
-					return Collections.singleton(new CallPopNode<Val,Statement>(new Val(iie.getArg(index),icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
+					out.add(new CallPopNode<Val,Statement>(new Val(iie.getArg(index),icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 				}
 			}
 			index++;
 		}
 		if(value.isStatic()){
-			return Collections.singleton(new CallPopNode<Val,Statement>(new StaticFieldVal(value.value(),((StaticFieldVal) value).field(), icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
+			out.add(new CallPopNode<Val,Statement>(new StaticFieldVal(value.value(),((StaticFieldVal) value).field(), icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 		}
-		return Collections.emptySet();
+		return out;
 	}
 	
 }

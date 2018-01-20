@@ -64,12 +64,13 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 	@Override
 	protected Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite, Stmt returnSite) {
 		Statement returnSiteStatement = new Statement(returnSite,icfg.getMethodOf(returnSite));
+		Set<State> out = Sets.newHashSet();
 		if (!method.isStatic()) {
 			if (method.getActiveBody().getThisLocal().equals(value.value())) {
 				if(callSite.containsInvokeExpr()){
 					if(callSite.getInvokeExpr() instanceof InstanceInvokeExpr){
 						InstanceInvokeExpr iie = (InstanceInvokeExpr) callSite.getInvokeExpr();
-						return Collections.singleton(new CallPopNode<Val,Statement>(new Val(iie.getBase(),icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
+						out.add(new CallPopNode<Val,Statement>(new Val(iie.getBase(),icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 					}
 				}
 			}
@@ -79,15 +80,15 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 			if (param.equals(value.value())) {
 				if(callSite.containsInvokeExpr()){
 					InvokeExpr ie = callSite.getInvokeExpr();
-					return Collections.singleton(new CallPopNode<Val,Statement>(new Val(ie.getArg(index),icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
+					out.add(new CallPopNode<Val,Statement>(new Val(ie.getArg(index),icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 				}
 			}
 			index++;
 		}
 		if(value.isStatic()){
-			return Collections.singleton(new CallPopNode<Val,Statement>(new StaticFieldVal(value.value(),((StaticFieldVal) value).field(), icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
+			out.add(new CallPopNode<Val,Statement>(new StaticFieldVal(value.value(),((StaticFieldVal) value).field(), icfg.getMethodOf(callSite)), PDSSystem.CALLS,returnSiteStatement));
 		}
-		return Collections.emptySet();
+		return out;
 	}
 
 	@Override
@@ -99,11 +100,11 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 			return Collections.emptySet();
 		}
 		Body calleeBody = callee.getActiveBody();
-		
+		Set<State> out = Sets.newHashSet();
 		if (invokeExpr instanceof InstanceInvokeExpr) {
 			InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
 			if (iie.getBase().equals(fact.value()) && !callee.isStatic()) {
-				return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
+				out.add(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
 						new Val(calleeBody.getThisLocal(),callee), returnSite, PDSSystem.CALLS));
 			}
 		}
@@ -112,7 +113,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 		for (Value arg : invokeExpr.getArgs()) {
 			if (arg.equals(fact.value()) && parameterLocals.size() > i) {
 				Local param = parameterLocals.get(i);
-				return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
+				out.add(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
 						new Val(param,callee), returnSite, PDSSystem.CALLS));
 			}
 			i++;
@@ -122,15 +123,15 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 			AssignStmt as = (AssignStmt) callSite.getUnit().get();
 			ReturnStmt retStmt = (ReturnStmt) calleeSp;
 			if(as.getLeftOp().equals(fact.value())){
-				return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
+				out.add(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
 						new Val(retStmt.getOp(),callee), returnSite, PDSSystem.CALLS));
 			}
 		}
 		if(fact.isStatic()){
-			return Collections.singleton(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
+			out.add(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
 					new StaticFieldVal(fact.value(),((StaticFieldVal) fact).field(), callee), returnSite, PDSSystem.CALLS));
 		}
-		return Collections.emptySet();
+		return out;
 	}
 
 	@Override
@@ -162,7 +163,8 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 							new Field(ifr.getField()), PDSSystem.FIELDS));
 				} else if(rightOp instanceof StaticFieldRef){
 					if(options.staticFlows()){
-						out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(new EquivalentValue(rightOp),method)));
+						StaticFieldRef sfr = (StaticFieldRef) rightOp;
+						out.add(new Node<Statement, Val>(new Statement(succ, method), new StaticFieldVal(leftOp,sfr.getField(),method)));
 					}
 				} else if(rightOp instanceof ArrayRef){
 					ArrayRef ifr = (ArrayRef) rightOp;
@@ -170,7 +172,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 						out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
 								Field.array(), PDSSystem.FIELDS));
 					}
-					leftSideMatches = false;
+//					leftSideMatches = false;
 				} else if(rightOp instanceof CastExpr){
 					CastExpr castExpr = (CastExpr) rightOp;
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(castExpr.getOp(),method)));
@@ -192,7 +194,8 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 					out.add(new PopNode<NodeWithLocation<Statement, Val, Field>>(succNode, PDSSystem.FIELDS));
 				}
 			} else if(leftOp instanceof StaticFieldRef){
-				if (fact.isStatic() && fact.value().equals(new EquivalentValue(leftOp))) {
+				StaticFieldRef sfr = (StaticFieldRef) leftOp;
+				if (fact.isStatic() && fact.equals(new StaticFieldVal(leftOp,sfr.getField(),method))) {
 					out.add(new Node<Statement, Val>(new Statement(succ, method), new Val(rightOp,method)));
 				}
 			} else if (leftOp instanceof ArrayRef) {

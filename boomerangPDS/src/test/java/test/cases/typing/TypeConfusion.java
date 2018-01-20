@@ -1,8 +1,5 @@
 package test.cases.typing;
 
-import java.util.Collection;
-import java.util.Collections;
-
 import org.junit.Test;
 
 import test.core.AbstractBoomerangTest;

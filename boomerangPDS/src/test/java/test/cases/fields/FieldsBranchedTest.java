@@ -6,6 +6,7 @@ import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
 public class FieldsBranchedTest extends AbstractBoomerangTest{
+	@Ignore
 	@Test
 	public void twoFieldsNoLoop() {
 		Node x = new Node();

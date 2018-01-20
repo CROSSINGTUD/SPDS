@@ -1,10 +1,7 @@
 package test.cases.generics;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
-import soot.Scene;
-import soot.SootClass;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
@@ -18,7 +15,6 @@ public class GenericsTest extends AbstractBoomerangTest{
 		queryFor(query);
 	}
 
-	@Ignore
 	@Test
 	public void genericFieldAccessWrapped(){
 		WrappedGenericClass<GenericType> c = new WrappedGenericClass<GenericType>();

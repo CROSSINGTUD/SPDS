@@ -10,6 +10,19 @@ public class WritePOITest extends AbstractBoomerangTest {
 		Object b = null;
 //		Alloc c = null;
 	}
+	
+	private static class I{
+		Object b;// = new Object();
+	}
+	@Test
+	public void overwrite(){
+		I a = new I();
+		a.b = new Object();
+		a.b = new Alloc();
+		Object alias = a.b;
+		queryFor(alias);
+	}
+	
 	@Test
 	public void indirectAllocationSite12(){
 		A a = new A();

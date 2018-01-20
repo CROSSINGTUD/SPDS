@@ -1,9 +1,11 @@
 package test.core;
 
-import java.util.*;
-import java.util.Map.Entry;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
-import boomerang.seedfactory.SeedFactory;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
@@ -26,6 +28,7 @@ import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import heros.utilities.DefaultValueMap;
 import soot.Body;
@@ -45,7 +48,6 @@ import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
-import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
@@ -53,7 +55,6 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import test.core.selfrunning.AbstractTestingFramework;
 import wpds.impl.Transition;
-import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
@@ -69,6 +70,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	protected Collection<? extends Query> queryForCallSites;
 	protected Collection<Error> unsoundErrors = Sets.newHashSet();
 	protected Collection<Error> imprecisionErrors = Sets.newHashSet();
+	protected boolean resultsMustNotBeEmpty = false;
 
 	private boolean integerQueries;
 	private SeedFactory<NoWeight> seedFactory;
@@ -79,9 +81,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	protected AnalysisMode[] getAnalyses() {
 		return new AnalysisMode[] {
-				// AnalysisMode.WholeProgram,
-				// AnalysisMode.DemandDrivenForward,
-				AnalysisMode.DemandDrivenBackward };
+				 AnalysisMode.WholeProgram,
+//				 AnalysisMode.DemandDrivenForward,
+				AnalysisMode.DemandDrivenBackward
+				};
 	}
 
 	protected SceneTransformer createAnalysisTransformer() {
@@ -102,6 +105,12 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						if(query.isPresent()){
 							return Collections.singleton(query.get());
 						}
+						query = new FirstArgumentOf("queryForAndNotEmpty").test(u);
+
+						if(query.isPresent()){
+							resultsMustNotBeEmpty = true;
+							return Collections.singleton(query.get());
+						}
 						query = new FirstArgumentOf("intQueryFor").test(u);
 						if(query.isPresent()){
 							integerQueries = true;
@@ -119,7 +128,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				for (AnalysisMode analysis : getAnalyses()) {
 					switch (analysis) {
 					case WholeProgram:
-						runWholeProgram();
+						if(!integerQueries)
+							runWholeProgram();
 						break;
 					case DemandDrivenBackward:
 						runDemandDrivenBackward();
@@ -129,6 +139,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						break;
 					}
 				}
+				if(resultsMustNotBeEmpty)
+					return;
 				if (!unsoundErrors.isEmpty()) {
 					throw new RuntimeException(Joiner.on("\n").join(unsoundErrors));
 				}
@@ -144,7 +156,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		if (queryForCallSites.size() > 1)
 			throw new RuntimeException("Found more than one backward query to execute!");
 		Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
-		System.out.println(backwardResults);
 		compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
 	}
 
@@ -244,6 +255,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		}
 		if (!falsePositiveAllocationSites.isEmpty())
 			imprecisionErrors.add(new Error(analysis + " Imprecise results for:" + answer));
+		
+		if(resultsMustNotBeEmpty && results.isEmpty()){
+			throw new RuntimeException("Expected some results, but Boomerang returned no allocation sites.");
+		}
 	}
 
 	private Set<Node<Statement, Val>> runQuery(Collection<? extends Query> queries) {
@@ -275,16 +290,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				Stopwatch watch = Stopwatch.createStarted();
 				solver.solve(query);
 				System.out.println("Test ("+sootTestMethod+" took: " + watch.elapsed());
-                for (final Entry<Query, AbstractBoomerangSolver<NoWeight>> fw : solver.getSolvers().entrySet()) {
-                    if(fw.getKey() instanceof ForwardQuery){
-                        fw.getValue().synchedEmptyStackReachable(query.asNode(),new EmptyStackWitnessListener<Statement, Val>() {
-                           
-                            @Override
-                            public void witnessFound(Node<Statement, Val> allocation) {
-                                results.add(fw.getKey().asNode());    
-                         }
-                        
-                    });}}
+				for(ForwardQuery q : solver.getAllocationSites((BackwardQuery) query)){
+					results.add(q.asNode());
+				}
                         
 
 			}else{
@@ -439,6 +447,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	}
 
+	protected void queryForAndNotEmpty(Object variable) {
+
+	}
 	protected void intQueryFor(int variable) {
 
 	}

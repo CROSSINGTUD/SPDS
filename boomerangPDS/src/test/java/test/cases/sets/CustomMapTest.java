@@ -1,13 +1,11 @@
 package test.cases.sets;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 
 
-@Ignore
 public class CustomMapTest extends AbstractBoomerangTest {
 	@Test
 	public void storeAndLoad(){
@@ -35,7 +33,7 @@ public class CustomMapTest extends AbstractBoomerangTest {
 		queryFor(alias);
 	}
 	public static class Map{
-		InnerMap m = new InnerMap();
+		public InnerMap m = new InnerMap();
 		public void add(Object o){
 			InnerMap map = this.m;
 			map.innerAdd(o);
@@ -48,7 +46,7 @@ public class CustomMapTest extends AbstractBoomerangTest {
 		}
 	}
 	public static class InnerMap{
-		private Object content= null;
+		public Object content = null;
 		public void innerAdd(Object o) {
 			content = o;
 		}

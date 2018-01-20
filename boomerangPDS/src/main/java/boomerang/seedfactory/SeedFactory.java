@@ -9,6 +9,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import soot.Scene;
+import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
@@ -77,10 +78,33 @@ public abstract class SeedFactory<W extends Weight> {
             }
         });
         
+        if(analyseClassInitializers()){
+        	Set<SootClass> sootClasses = Sets.newHashSet();
+        	for(Method p : Sets.newHashSet(processed)){
+        		if(sootClasses.add(p.getMethod().getDeclaringClass())){
+        			addStaticInitializerFor(p.getMethod().getDeclaringClass());
+        		}
+        	}
+        }
+        
         return seedToTransition.keySet();
     }
 
-    protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods);
+    private void addStaticInitializerFor(SootClass declaringClass) {
+		for(SootMethod m : declaringClass.getMethods()){
+			if(m.isStaticInitializer()){
+		        for(SootMethod ep : Scene.v().getEntryPoints()){
+		        	addPushRule(new Method(ep), new Method(m));
+		        }
+			}
+		}
+	}
+
+	protected boolean analyseClassInitializers() {
+		return false;
+	}
+
+	protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods);
 	
     private void process(Transition<Method, INode<Reachable>> t) {
         Method curr = t.getLabel();

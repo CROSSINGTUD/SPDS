@@ -1,9 +1,12 @@
 package boomerang;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
+import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.ReachableMethodListener;
 import soot.Scene;
 import soot.SootMethod;
@@ -11,11 +14,14 @@ import soot.Unit;
 import soot.jimple.AssignStmt;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import wpds.impl.Weight;
+import wpds.impl.Weight.NoWeight;
 
 public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBoomerang<W>{
 	private int reachableMethodCount;
 	private int allocationSites;
+	private SeedFactory<W> seedFactory;
 
 	public WholeProgramBoomerang(BoomerangOptions opts){
 		super(opts);
@@ -25,23 +31,40 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 		this(new DefaultBoomerangOptions());
 	}
 
+	@Override
+	public SeedFactory<W> getSeedFactory() {
+		return seedFactory;
+	}
+	
 	public void wholeProgramAnalysis(){
-//		System.out.println("Tracking Strings: " + Boomerang.TRACK_STRING);
-//		System.out.println("Tracking Arrays: " + Boomerang.TRACK_ARRAYS);
-//		System.out.println("Tracking Static: " + Boomerang.TRACK_STATIC);
-		List<SootMethod> entryPoints = Scene.v().getEntryPoints();
 		long before = System.currentTimeMillis();
-		for(SootMethod m : entryPoints){
-			addReachable(m);
+		seedFactory = new SeedFactory<W>() {
+
+			@Override
+			protected Collection<? extends Query> generate(SootMethod method, Stmt u,
+					Collection<SootMethod> calledMethods) {
+				if(u instanceof AssignStmt){
+					AssignStmt assignStmt = (AssignStmt) u;
+					if(options.isAllocationVal(assignStmt.getRightOp())){
+						return Collections.singleton(new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp())));
+					}
+				}
+				return Collections.emptySet();
+			}
+
+			@Override
+			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+				return WholeProgramBoomerang.this.icfg();
+			}
+			@Override
+			protected boolean analyseClassInitializers() {
+				return true;
+			}
+		};
+		for(Query s :seedFactory.computeSeeds()){
+			solve(s);
 		}
 		
-		registerReachableMethodListener(new ReachableMethodListener<W>() {
-			@Override
-			public void reachable(SootMethod m) {
-				analyzeMethod(m);
-				reachableMethodCount++;
-			}
-		});
 		long after = System.currentTimeMillis();
 		System.out.println("Analysis Time (in ms):\t" + (after-before));
 		System.out.println("Analyzed methods:\t" + reachableMethodCount);
@@ -51,26 +74,6 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 	}
 	
 
-	public void analyzeMethod(SootMethod method) {
-		if(!method.hasActiveBody())
-			return;
-		for(Unit u : method.getActiveBody().getUnits()){
-			if(u instanceof AssignStmt){
-				AssignStmt assignStmt = (AssignStmt) u;
-				if(options.isAllocationVal(assignStmt.getRightOp())){
-					ForwardQuery q = new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp()));
-					solve(q);
-					allocationSites++;
-				}
-			}
-			if(((Stmt) u).containsInvokeExpr()){
-				InvokeExpr invokeExpr = ((Stmt) u).getInvokeExpr();
-				if(invokeExpr.getMethod().isStatic()){
-					addReachable(invokeExpr.getMethod());
-				}
-			}
-		}
-	}
 	
 	@Override
 	protected void backwardSolve(BackwardQuery query) {

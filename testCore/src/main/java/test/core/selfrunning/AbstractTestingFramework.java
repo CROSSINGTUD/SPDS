@@ -83,7 +83,7 @@ public abstract class AbstractTestingFramework {
 			if (javaHome == null || javaHome.equals(""))
 				throw new RuntimeException("Could not get property java.home!");
 			sootCp += File.pathSeparator + javaHome + "/lib/rt.jar";
-			Options.v().setPhaseOption("cg", "trim-clinit:false");
+//			Options.v().setPhaseOption("cg", "trim-clinit:false");
 			Options.v().set_no_bodies_for_excluded(true);
 			Options.v().set_allow_phantom_refs(true);
 
@@ -123,9 +123,20 @@ public abstract class AbstractTestingFramework {
 		if (c != null) {
 			c.setApplicationClass();
 		}
-
 		SootMethod methodByName = c.getMethodByName("main");
 		List<SootMethod> ePoints = new LinkedList<>();
+		for (SootMethod m : sootTestCaseClass.getMethods()) {
+			if (m.isStaticInitializer())
+				ePoints.add(m);
+		}
+		for(SootClass inner : Scene.v().getClasses()){
+			if(inner.getName().contains(sootTestCaseClass.getName())){
+				for (SootMethod m : inner.getMethods()) {
+					if (m.isStaticInitializer())
+						ePoints.add(m);
+				}
+			}
+		}
 		ePoints.add(methodByName);
 		Scene.v().setEntryPoints(ePoints);
 	}

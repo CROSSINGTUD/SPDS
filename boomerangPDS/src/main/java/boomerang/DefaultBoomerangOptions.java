@@ -72,12 +72,12 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 
 	@Override
 	public boolean arrayFlows() {
-		return false;
+		return true;
 	}
 
 	@Override
 	public boolean fastForwardFlows() {
-		return true;
+		return false;
 	}
 
 	@Override
@@ -148,7 +148,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 
 	@Override
 	public int analysisTimeoutMS() {
-		return 30000;
+		return 60000;
 	}
 
 	@Override

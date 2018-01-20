@@ -1,12 +1,9 @@
 package test.cases.fields.complexity;
 
-import java.util.Random;
-
 import org.junit.Test;
 
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
-import test.core.selfrunning.AllocatedObject;
 
 public class Recursion2LongTest extends AbstractBoomerangTest {
 	@Test

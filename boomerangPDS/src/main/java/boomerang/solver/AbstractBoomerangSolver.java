@@ -1,7 +1,13 @@
 package boomerang.solver;
 
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
@@ -9,7 +15,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
-import boomerang.WeightedBoomerang;
 import boomerang.BoomerangOptions;
 import boomerang.MethodReachableQueue;
 import boomerang.Query;
@@ -31,16 +36,20 @@ import soot.jimple.NewExpr;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import sync.pds.solver.SyncPDSSolver;
-import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.AllocNode;
-import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.*;
-import wpds.interfaces.ReachabilityListener;
+import wpds.impl.NestedWeightedPAutomatons;
+import wpds.impl.NormalRule;
+import wpds.impl.PopRule;
+import wpds.impl.Rule;
+import wpds.impl.Transition;
+import wpds.impl.Weight;
+import wpds.impl.WeightedPAutomaton;
+import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
@@ -49,7 +58,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
-	private Collection<Node<Statement, Val>> fieldFlows = Sets.newHashSet();
 	private Collection<SootMethod> unbalancedMethod = Sets.newHashSet();
 	private final Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> generatedFieldState;
 	private Multimap<SootMethod, Transition<Field, INode<Node<Statement, Val>>>> perMethodFieldTransitions = HashMultimap
@@ -61,8 +69,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Multimap<Statement, StatementBasedFieldTransitionListener<W>> perStatementFieldTransitionsListener = HashMultimap
 			.create();
 	private final MethodReachableQueue reachableQueue;
-	private Multimap<SootMethod,Rule<Field,INode<Node<Statement,Val>>,W>> queuedFieldRules = HashMultimap.create();
-	private Set<SootMethod> callReacheableMethods = Sets.newHashSet();
 	protected final BoomerangOptions options;
 	public AbstractBoomerangSolver(MethodReachableQueue reachableQueue, InterproceduralCFG<Unit, SootMethod> icfg,
 			Query query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
@@ -95,6 +101,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		if (t.getStart() instanceof GeneratedState)
 			return false;
 		Val fact = t.getStart().fact();
+		if(fact.isStatic())
+			return false;
 		SootMethod m = fact.m();
 		SootMethod method = t.getLabel().getMethod();
 		if (m == null || method == null)
@@ -279,7 +287,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			AssignStmt as = (AssignStmt) curr;
 			if (as.getLeftOp() instanceof InstanceFieldRef) {
 				InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
-				return ifr.getBase().equals(base);
+				return ifr.getBase().equals(base.value());
 			}
 		}
 		return false;
@@ -449,13 +457,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	}
 
-	protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
-		if (!res.isEmpty()) {
-			if (callee.isStatic()) {
-//				 addReachableMethod(callee);
-			}
-		}
-	}
+	protected abstract void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res);
 
 	public Set<Statement> getSuccsOf(Statement stmt) {
 		Set<Statement> res = Sets.newHashSet();
@@ -496,7 +498,9 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		Val source = t.getStart().fact().fact();
 		Value sourceVal = source.value();
 		Value targetVal = target.value();
-		
+		if(sourceVal.getType().equals(targetVal.getType())){
+			return false;
+		}
 		if(source.isStatic()){
 			return false;
 		}
