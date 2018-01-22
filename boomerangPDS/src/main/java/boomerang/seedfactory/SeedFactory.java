@@ -64,6 +64,7 @@ public abstract class SeedFactory<W extends Weight> {
         }
     };
 	private Collection<Method> processed = Sets.newHashSet();
+	private Multimap<Query, SootMethod> queryToScope = HashMultimap.create();
 
     public Collection<Query> computeSeeds(){
         List<SootMethod> entryPoints = Scene.v().getEntryPoints();
@@ -141,10 +142,14 @@ public abstract class SeedFactory<W extends Weight> {
 
 	public Collection<SootMethod> getMethodScope(Query query) {
 		Set<SootMethod> scope = Sets.newHashSet();
+		if(queryToScope.containsKey(query)){
+			return queryToScope.get(query);
+		}
 		for(Transition<Method, INode<Reachable>> t : seedToTransition.get(query)){
 			scope.add(t.getLabel().getMethod());
 			automaton.registerListener(new TransitiveClosure(t.getTarget(), scope, query));
 		}
+		queryToScope.putAll(query, scope);
 		return scope;		
 	}
 

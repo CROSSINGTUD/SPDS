@@ -592,7 +592,8 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			final FieldWritePOI fieldWritePoi, final ForwardQuery sourceQuery) {
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(), fieldWritePoi.getBaseVar());
 		if (node.fact().equals(fieldWritePoi.getStoredVar())) {
-//			backwardSolve(backwardQuery);
+			if(sourceQuery instanceof WeightedForwardQuery) //Additional logic for IDEal
+				backwardSolve(backwardQuery);
 			fieldWritePoi.addFlowAllocation(sourceQuery);
 		}
 		if (node.fact().equals(fieldWritePoi.getBaseVar())) {
