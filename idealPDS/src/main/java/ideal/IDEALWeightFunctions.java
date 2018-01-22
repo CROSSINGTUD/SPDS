@@ -36,6 +36,18 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		if (isObjectFlowPhase() &&!weight.equals(getOne())){	
 			addOtherThanOneWeight(curr, weight);
 		}
+		if(isValueFlowPhase() && IDEALAnalysis.ENABLE_STRONG_UPDATES && curr.fact().isStatic()){
+			if(potentialStrongUpdates.containsKey(curr.stmt())){
+				W w = potentialStrongUpdates.get(curr.stmt());
+//				System.err.println("Potential strong update "+ curr + "  " + w);
+				if(!weakUpdates.contains(curr.stmt())){
+//					System.err.println("Strong update " + curr + w + " was " + weight);
+					return w;
+				}
+				weight = (W) weight.combineWith(w);
+//				System.err.println("No strong update" + weight);
+			}
+		}
 		return weight;
 	}
 
@@ -49,7 +61,6 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 
 	@Override
 	public W normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
-		
 		W weight = delegate.normal(curr, succ);
 		if (isObjectFlowPhase() && curr.stmt().isCallsite() && !weight.equals(getOne())){
 			addOtherThanOneWeight(curr, weight);
@@ -80,11 +91,7 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	
 	@Override
 	public W pop(Node<Statement, Val> curr, Statement location) {
-		W weight = delegate.pop(curr, location);
-//		if (isObjectFlowPhase() && !weight.equals(getOne())){
-//			addOtherThanOneWeight(curr, weight);
-//		}
-		return weight;
+		return delegate.pop(curr, location);
 	}
 
 	public void registerListener(NonOneFlowListener<W> listener){
@@ -107,16 +114,6 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	}
 
 
-//	@Override
-//	public EdgeFunction<TypestateDomainValue<State>> getCallToReturnEdgeFunction(AccessGraph d1, Unit callSite, AccessGraph d2,
-//			Unit returnSite, AccessGraph d3) {
-//		Set<? extends Transition<State>> trans = func.getCallToReturnTransitionsFor(d1, callSite, d2, returnSite, d3);
-//		if (trans.isEmpty())
-//			return EdgeIdentity.v();
-//		return new TransitionFunction<State>(trans);
-//	}
-
-	
 	@Override
 	public String toString() {
 		return "[IDEAL-Wrapped Weights] " + delegate.toString();

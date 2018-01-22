@@ -79,6 +79,17 @@ public class VectorTest extends IDEALTestingFramework {
 			s.elementAt(0);
 		mustBeInAcceptingState(s);
 	}
+	static Vector v;
+	public static void foo() {
+	}
+	@Test
+	public void staticAccessTest(){
+	    Vector x = new Vector();
+	    v = x;
+	    foo();
+	    v.firstElement();
+	    mustBeInErrorState(v);
+	}
 	
 	@Override
 	protected TypeStateMachineWeightFunctions getStateMachine() {

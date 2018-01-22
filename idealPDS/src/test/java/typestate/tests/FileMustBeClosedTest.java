@@ -485,7 +485,29 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		}
 		mayBeInErrorState(file);
 	}
+	
+	static File v;
+	
+	@Test
+	public void staticFlow(){
+		File a = new File();
+		v = a;
+		v.open();
+		foo();
+		mustBeInErrorState(v);
+		v.close();
+		mustBeInAcceptingState(v);
+	} 
+	@Test
+	public void staticFlowSimple(){
+		File a = new File();
+		v = a;
+		v.open();
+		mustBeInErrorState(v);
+	} 
 
+	public static void foo() {
+	}
 	@Test
 	public void storedInObject(){
 		InnerObject o = new InnerObject();
