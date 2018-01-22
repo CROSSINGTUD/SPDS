@@ -1,6 +1,6 @@
 /*!	SWFObject v2.2 <http://code.google.com/p/swfobject/> 
 
-Copyright (c) 2009 bobbyvanderluis and TenSafeF...@gmail.com
+Copyright (c) 2009, 2018 bobbyvanderluis and TenSafeF...@gmail.com
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
