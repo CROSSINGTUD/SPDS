@@ -93,6 +93,7 @@ public abstract class AbstractTestingFramework {
 			includeList.add("java.io.*");
 			includeList.add("sun.misc.*");
 			includeList.add("java.net.*");
+			includeList.add("sun.nio.*");
 			includeList.add("javax.servlet.*");
 			includeList.add("javax.crypto.*");
 

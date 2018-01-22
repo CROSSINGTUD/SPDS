@@ -23,7 +23,7 @@ public class PrintStreamStateMachine extends TypeStateMachineWeightFunctions {
 
 		@Override
 		public boolean isErrorState() {
-			return this == ERROR;
+			return this == ERROR || this == OPEN;
 		}
 
 		@Override
@@ -50,6 +50,14 @@ public class PrintStreamStateMachine extends TypeStateMachineWeightFunctions {
 				Type.OnReturn));
 		addTransition(new MatcherTransition(States.ERROR, closeMethods(), Parameter.This, States.ERROR,
 				Type.OnReturn));
+
+
+		addTransition(new MatcherTransition(States.OPEN, closeMethods(), Parameter.This, States.CLOSED,
+				Type.OnCallToReturn));
+		addTransition(new MatcherTransition(States.ERROR, closeMethods(), Parameter.This, States.ERROR,
+				Type.OnCallToReturn));
+		addTransition(new MatcherTransition(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED,
+				Type.OnCallToReturn));
 	}
 
 	private Set<SootMethod> closeMethods() {

@@ -54,6 +54,18 @@ public class KeystoreTest extends IDEALTestingFramework {
 		mustBeInAcceptingState(ks);
 	}
 
+	
+	@Test 
+	public void catchClause(){
+	    try {
+	      final KeyStore keyStore = KeyStore.getInstance("JKS");
+	      // ... Some code
+	      int size = keyStore.size(); // Hit !
+	      mustBeInErrorState(keyStore);
+	    } catch (KeyStoreException e) {
+	      e.printStackTrace();
+	    }
+	}
 	@Override
 	protected TypeStateMachineWeightFunctions getStateMachine() {
 		return new KeyStoreStateMachine();
