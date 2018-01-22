@@ -117,6 +117,7 @@ public abstract class AbstractTestingFramework {
 		if (sootTestMethod == null)
 			throw new RuntimeException(
 					"The method with name " + testMethodName.getMethodName() + " was not found in the Soot Scene.");
+		sootTestMethod.getDeclaringClass().setApplicationClass();
 		Scene.v().addBasicClass(getTargetClass(), SootClass.BODIES);
 		Scene.v().loadNecessaryClasses();
 		SootClass c = Scene.v().forceResolve(getTargetClass(), SootClass.BODIES);
