@@ -299,7 +299,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			if(query instanceof BackwardQuery){
 				Stopwatch watch = Stopwatch.createStarted();
 				solver.solve(query);
-				System.out.println("Test ("+sootTestMethod+" took: " + watch.elapsed());
 				for(ForwardQuery q : solver.getAllocationSites((BackwardQuery) query)){
 					results.add(q.asNode());
 				}
