@@ -452,7 +452,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	 * Code.
 	 */
 
-	protected void queryFor(Object variable) {
+	protected static void queryFor(Object variable) {
 
 	}
 
