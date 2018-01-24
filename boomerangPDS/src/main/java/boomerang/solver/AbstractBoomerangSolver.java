@@ -68,7 +68,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
-	private Collection<SootMethod> unbalancedMethod = Sets.newHashSet();
 	private final Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> generatedFieldState;
 	private Multimap<SootMethod, Transition<Field, INode<Node<Statement, Val>>>> perMethodFieldTransitions = HashMultimap
 			.create();
@@ -78,19 +77,22 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			.create();
 	private Multimap<Statement, StatementBasedFieldTransitionListener<W>> perStatementFieldTransitionsListener = HashMultimap
 			.create();
-	private final MethodReachableQueue reachableQueue;
+	private Set<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
+	private Multimap<SootMethod, Runnable> queuedReachableMethod = HashMultimap.create();
+	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
+	private Set<ReachableMethodListener<W>> scopeOpeningReachableMethodListeners = Sets.newHashSet();
+	private Multimap<SootMethod, Runnable> scopeOpeningReachableMethodQueue = HashMultimap.create();
+	private Collection<SootMethod> scopeOpeningReachableMethods = Sets.newHashSet();
 	protected final BoomerangOptions options;
-	public AbstractBoomerangSolver(MethodReachableQueue reachableQueue, InterproceduralCFG<Unit, SootMethod> icfg,
+	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg,
 			Query query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
 			BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
 			 NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries) {
 		super(new SingleNode<Val>(query.asNode().fact()), new AllocNode<Node<Statement, Val>>(query.asNode()),
 				options.callSummaries(), callSummaries, options.fieldSummaries(), fieldSummaries);
-		this.reachableQueue = reachableQueue;
 		this.options = options;
 		this.icfg = icfg;
 		this.query = query;
-		this.unbalancedMethod.add(query.asNode().stmt().getMethod());
 		this.fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 
 			@Override
@@ -104,6 +106,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 		// TODO recap, I assume we can implement this more easily.
 		this.generatedFieldState = genField;
+		addReachable(query.asNode().stmt().getMethod());
+		scopeOpeningReachableMethods.add(query.asNode().stmt().getMethod());
 	}
 	
 	@Override
@@ -131,7 +135,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		if(rule instanceof PopRule)
 			super.addCallRule(rule);
 		else
-			reachableQueue.submit(rule.getS2().fact().m(), new Runnable() {
+			submit(rule.getS2().fact().m(), new Runnable() {
 				@Override
 				public void run() {
 					AbstractBoomerangSolver.super.addCallRule(rule);
@@ -145,7 +149,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			if(rule.getL1().equals(rule.getL2()) && rule.getS1().equals(rule.getS2()))
 				return;
 		}
-		reachableQueue.submit(rule.getS2().fact().stmt().getMethod(), new Runnable() {
+		submit(rule.getS2().fact().stmt().getMethod(), new Runnable() {
 				@Override
 				public void run() {
 					AbstractBoomerangSolver.super.addFieldRule(rule);
@@ -395,8 +399,11 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 							new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
 					onCallFlow(callee, callSite, value, res);
 					out.addAll(res);
+					if(!res.isEmpty())
+						openScope(caller, callee);
 				}
 			}
+			addReachable(callee);
 		}
 		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
 			if (icfg.getCalleesOfCallAt(callSite).isEmpty()) {
@@ -458,7 +465,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	@Override
 	protected void processNode(final WitnessNode<Statement, Val, Field> witnessNode) {
-		reachableQueue.submit(witnessNode.stmt().getMethod(), new Runnable() {
+		submit(witnessNode.stmt().getMethod(), new Runnable() {
 			@Override
 			public void run() {
 				AbstractBoomerangSolver.super.processNode(witnessNode);
@@ -529,5 +536,69 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(targetType,sourceType) || Scene.v().getOrMakeFastHierarchy().canStoreType(sourceType,targetType);
 		return !castFails;
 	}
+	
 
+	public void addReachable(SootMethod m) {
+		if (reachableMethods.add(m)) {
+//			System.out.println(this + "  " + m);
+			Collection<Runnable> collection = queuedReachableMethod.get(m);
+			for (Runnable runnable : collection) {
+				runnable.run();
+			}
+			for (ReachableMethodListener<W> l : Lists.newArrayList(reachableMethodListeners)) {
+				l.reachable(m);
+			}
+		}
+	}
+	public void submit(SootMethod method, Runnable runnable) {
+		if (reachableMethods.contains(method) || !options.onTheFlyCallGraph()) {
+			runnable.run();
+		} else {
+			queuedReachableMethod.put(method, runnable);
+		}
+	}
+
+	public void registerReachableMethodListener(ReachableMethodListener<W> reachableMethodListener) {
+		if (reachableMethodListeners.add(reachableMethodListener)) {
+			for (SootMethod m : Lists.newArrayList(reachableMethods)) {
+				reachableMethodListener.reachable(m);
+			}
+		}
+	}
+	
+	public void registerScopeOpeningReachableMethodListener(ReachableMethodListener<W> l){
+		if(scopeOpeningReachableMethodListeners.add(l)){
+			for(SootMethod r : Lists.newArrayList(scopeOpeningReachableMethods)){
+				l.reachable(r);
+			}
+		}
+	}
+	
+	private void registerOpeningScopeMethodListener(SootMethod m, Runnable r) {
+		if(scopeOpeningReachableMethods.contains(m)){
+			r.run();
+		} else{
+			scopeOpeningReachableMethodQueue.put(m,r);
+		}
+	}
+	
+	private void openScope(SootMethod callee){
+		if(scopeOpeningReachableMethods.add(callee)){
+			for (ReachableMethodListener<W> l : Lists.newArrayList(scopeOpeningReachableMethodListeners)) {
+				l.reachable(callee);
+			}
+		}
+	}
+	
+	private void openScope(SootMethod caller, final SootMethod callee) {
+		if(scopeOpeningReachableMethods.contains(caller)){
+			openScope(callee);
+		} else{
+			registerOpeningScopeMethodListener(caller, new Runnable(){
+				public void run() {
+					openScope(callee);
+				};
+			}); 
+		}
+	}
 }

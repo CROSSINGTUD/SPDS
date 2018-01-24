@@ -58,8 +58,8 @@ import wpds.interfaces.State;
 
 public abstract class BackwardBoomerangSolver<W extends Weight> extends AbstractBoomerangSolver<W>{
 
-	public BackwardBoomerangSolver(MethodReachableQueue queue, BiDiInterproceduralCFG<Unit, SootMethod> icfg, BackwardQuery query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries){
-		super(queue, icfg, query, genField, options, callSummaries, fieldSummaries);
+	public BackwardBoomerangSolver(BiDiInterproceduralCFG<Unit, SootMethod> icfg, BackwardQuery query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries){
+		super(icfg, query, genField, options, callSummaries, fieldSummaries);
 	}
 
 	@Override

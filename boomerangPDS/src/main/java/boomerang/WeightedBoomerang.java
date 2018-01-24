@@ -13,7 +13,6 @@ package boomerang;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -22,9 +21,7 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 
@@ -49,7 +46,6 @@ import boomerang.solver.StatementBasedFieldTransitionListener;
 import boomerang.stats.IBoomerangStats;
 import heros.utilities.DefaultValueMap;
 import soot.Local;
-import soot.RefType;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootField;
@@ -58,10 +54,8 @@ import soot.Unit;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.InstanceFieldRef;
-import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.NewMultiArrayExpr;
-import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.StringConstant;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
@@ -77,7 +71,6 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.ConnectPushListener;
 import wpds.impl.NestedWeightedPAutomatons;
-import wpds.impl.PushRule;
 import wpds.impl.SummaryNestedWeightedPAutomatons;
 import wpds.impl.Transition;
 import wpds.impl.UnbalancedPopListener;
@@ -87,7 +80,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
-public abstract class WeightedBoomerang<W extends Weight> implements MethodReachableQueue {
+public abstract class WeightedBoomerang<W extends Weight> {
 	public static final boolean DEBUG = false;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
@@ -105,9 +98,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				if(DEBUG)
 					System.out.println("Forward solving query: " + key);
 				solver = createForwardSolver((ForwardQuery) key);
-				if (key.getType() instanceof RefType) {
-					addAllocationType((RefType) key.getType());
-				}
 			}
 			
 			solver.getCallAutomaton()
@@ -136,7 +126,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 							for (Unit ep : WeightedBoomerang.this.icfg().getStartPointsOf(entryPoint)) {
 								final Statement callStatement = new Statement((Stmt) ep,
 										WeightedBoomerang.this.icfg().getMethodOf(ep));
-								WeightedBoomerang.this.submit(callStatement.getMethod(), new Runnable() {
+								solver.submit(callStatement.getMethod(), new Runnable() {
 									@Override
 									public void run() {
 
@@ -157,7 +147,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 				private void unbalancedReturnFlow(final Statement callStatement,
 						final INode<Val> returningFact, final Transition<Statement, INode<Val>> trans, final W weight) {
-					WeightedBoomerang.this.submit(callStatement.getMethod(), new Runnable() {
+					solver.submit(callStatement.getMethod(), new Runnable() {
 						@Override
 						public void run() {
 							for (Statement returnSite : solver.getSuccsOf(callStatement)) {
@@ -195,17 +185,24 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 					}
 				}
 			});
+			SeedFactory<W> seedFactory = getSeedFactory();
+	        if(seedFactory != null){
+	        	for(SootMethod m : seedFactory.getMethodScope(key)){
+	        		solver.addReachable(m);
+	        	}
+	        }
 			return solver;
 		}
 	};
+    private void setupScope(Query query) {
+         
+    }
+
 
 	private BackwardsInterproceduralCFG bwicfg;
 	private EmptyCalleeFlow forwardEmptyCalleeFlow = new ForwardEmptyCalleeFlow();
 	private EmptyCalleeFlow backwardEmptyCalleeFlow = new BackwardEmptyCalleeFlow();
 	
-	private Collection<RefType> allocatedTypes = Sets.newHashSet();
-	private Multimap<SootMethod, Runnable> queuedReachableMethod = HashMultimap.create();
-	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
 	private NestedWeightedPAutomatons<Statement, INode<Val>, W> backwardCallSummaries = new SummaryNestedWeightedPAutomatons<>();
 	private NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> backwardFieldSummaries = new SummaryNestedWeightedPAutomatons<>();
 	private NestedWeightedPAutomatons<Statement, INode<Val>, W> forwardCallSummaries = new SummaryNestedWeightedPAutomatons<>();
@@ -231,7 +228,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			return key;
 		}
 	};
-	private Set<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
 	private Set<SootMethod> typeReachable = Sets.newHashSet();
 	private Set<SootMethod> flowReachable = Sets.newHashSet();
 	protected final BoomerangOptions options;
@@ -248,7 +244,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	}
 	
 	protected AbstractBoomerangSolver<W> createBackwardSolver(final BackwardQuery backwardQuery) {
-		final BackwardBoomerangSolver<W> solver = new BackwardBoomerangSolver<W>(WeightedBoomerang.this, bwicfg(),
+		final BackwardBoomerangSolver<W> solver = new BackwardBoomerangSolver<W>(bwicfg(),
 				backwardQuery, genField, options, createCallSummaries(backwardQuery, backwardCallSummaries),
 				createFieldSummaries(backwardQuery, backwardFieldSummaries)) {
 
@@ -264,9 +260,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			@Override
 			protected void onCallFlow(SootMethod callee, Stmt callSite, Val value,
 							Collection<? extends State> res) {
-				if (!res.isEmpty()) {
-					addReachable(callee);
-				}
 			}
 
 			@Override
@@ -291,7 +284,15 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
 				Optional<AllocVal> allocNode = isAllocationNode(node.stmt(), node.fact());
 				if (allocNode.isPresent()) {
-					forwardSolve(new ForwardQuery(node.stmt(), allocNode.get()));
+					ForwardQuery q = new ForwardQuery(node.stmt(), allocNode.get());
+					final AbstractBoomerangSolver<W> forwardSolver = forwardSolve(q);
+					solver.registerScopeOpeningReachableMethodListener(new ReachableMethodListener<W>() {
+
+						@Override
+						public void reachable(SootMethod m) {
+							forwardSolver.addReachable(m);
+						}
+					});
 				}
 				if (isFieldStore(node.stmt())) {
 				} else if (isArrayLoad(node.stmt())) {
@@ -308,7 +309,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 					StaticFieldVal val = (StaticFieldVal) node.fact();
 					for(SootMethod m : val.field().getDeclaringClass().getMethods()){
 						if(m.isStaticInitializer()){
-							addReachable(m);
+							solver.addReachable(m);
 							for(Unit ep : icfg().getEndPointsOf(m)){
 								StaticFieldVal newVal = new StaticFieldVal(val.value(),val.field(),m);
 								solver.addNormalCallFlow(node.asNode(),new Node<Statement,Val>(new Statement((Stmt)ep,m),newVal));
@@ -368,16 +369,13 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 	}
 
 	protected ForwardBoomerangSolver<W> createForwardSolver(final ForwardQuery sourceQuery) {
-		final ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(WeightedBoomerang.this, icfg(), sourceQuery,
+		final ForwardBoomerangSolver<W> solver = new ForwardBoomerangSolver<W>(icfg(), sourceQuery,
 				genField, options, createCallSummaries(sourceQuery, forwardCallSummaries),
 				 createFieldSummaries(sourceQuery, forwardFieldSummaries)) {
 
 			@Override
 			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
 				SootMethod calledMethod = callSite.getUnit().get().getInvokeExpr().getMethod();
-				if(calledMethod.isStatic()){
-					addFlowReachable(calledMethod);
-				}
 				if(value.isStatic())
 					return;
 				ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
@@ -386,16 +384,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 			@Override
 			protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
-				if (!res.isEmpty() && options.onTheFlyCallGraph()) {
-					addFlowReachable(callee);
-					boolean isThisValue = false;
-					if(callSite.getInvokeExpr() instanceof InstanceInvokeExpr){
-						isThisValue = ((InstanceInvokeExpr) callSite.getInvokeExpr()).getBase().equals(value.value());
-					}
-					if(!isThisValue || !sourceQuery.var().isNewExpr()){
-						addReachable(callee);
-					}
-				}
 			}
 
 			@Override
@@ -574,22 +562,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		return false;
 	}
 
-	@Override
-	public void submit(SootMethod method, Runnable runnable) {
-		if (reachableMethods.contains(method) || !options.onTheFlyCallGraph()) {
-			runnable.run();
-		} else {
-			queuedReachableMethod.put(method, runnable);
-		}
-	}
-
-	public void registerReachableMethodListener(ReachableMethodListener<W> reachableMethodListener) {
-		if (reachableMethodListeners.add(reachableMethodListener)) {
-			for (SootMethod m : Lists.newArrayList(reachableMethods)) {
-				reachableMethodListener.reachable(m);
-			}
-		}
-	}
+	
 
 	protected void backwardHandleFieldRead(final WitnessNode<Statement, Val, Field> node, FieldReadPOI fieldRead,
 			final BackwardQuery sourceQuery) {
@@ -717,7 +690,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		}
 		queryAnalysisWatch.reset();
 		queryAnalysisWatch.start();
-		setupScope(query);
 		if (query instanceof ForwardQuery) {
 			forwardSolve((ForwardQuery) query);
 		}
@@ -732,15 +704,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		}
 	}
 
-	private void setupScope(Query query) {
-		SeedFactory<W> seedFactory = getSeedFactory();
-		if(seedFactory == null)
-			return;
-		for(SootMethod m : seedFactory.getMethodScope(query)){
-			addReachable(m);
-		}		
-	}
-
 	protected void backwardSolve(BackwardQuery query) {
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
 		AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
@@ -752,7 +715,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 		}
 	}
 
-	private void forwardSolve(ForwardQuery query) {
+	private AbstractBoomerangSolver<W> forwardSolve(ForwardQuery query) {
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
 		AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
 		if (unit.isPresent()) {
@@ -794,6 +757,7 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 				}
 			}
 		}
+		return solver;
 	}
 
 	private boolean isStringAllocation(Stmt stmt) {
@@ -1263,49 +1227,6 @@ public abstract class WeightedBoomerang<W extends Weight> implements MethodReach
 
 		private WeightedBoomerang getOuterType() {
 			return WeightedBoomerang.this;
-		}
-	}
-
-	private boolean addAllocationType(RefType type) {
-		if (allocatedTypes.add(type)) {
-			if(type.getSootClass().isInterface())
-				return true;
-			List<SootClass> classes = Scene.v().getActiveHierarchy().getSuperclassesOfIncluding(type.getSootClass());
-			for (SootClass c : classes) {
-				for (SootMethod m : c.getMethods()) {
-					addTypeReachable(m);
-				}
-			}
-			return true;
-		}
-		return false;
-	}
-
-	private void addTypeReachable(SootMethod m) {
-		if (typeReachable.add(m)) {
-			if (flowReachable.contains(m) || m.isStaticInitializer() || !options.onTheFlyCallGraph()) {
-				addReachable(m);
-			}
-		}
-	}
-
-	private void addFlowReachable(SootMethod m) {
-		if(flowReachable.add(m)){
-			if(typeReachable.contains(m) || m.isStatic() || !options.onTheFlyCallGraph()){
-				addReachable(m);
-			}
-		}
-	}
-
-	protected void addReachable(SootMethod m) {
-		if (reachableMethods.add(m)) {
-			Collection<Runnable> collection = queuedReachableMethod.get(m);
-			for (Runnable runnable : collection) {
-				runnable.run();
-			}
-			for (ReachableMethodListener<W> l : Lists.newArrayList(reachableMethodListeners)) {
-				l.reachable(m);
-			}
 		}
 	}
 
