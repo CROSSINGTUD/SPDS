@@ -286,7 +286,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				if (allocNode.isPresent()) {
 					ForwardQuery q = new ForwardQuery(node.stmt(), allocNode.get());
 					final AbstractBoomerangSolver<W> forwardSolver = forwardSolve(q);
-					solver.registerScopeOpeningReachableMethodListener(new ReachableMethodListener<W>() {
+					solver.registerReachableMethodListener(new ReachableMethodListener<W>() {
 
 						@Override
 						public void reachable(SootMethod m) {
