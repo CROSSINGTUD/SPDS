@@ -26,7 +26,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 import boomerang.BoomerangOptions;
-import boomerang.MethodReachableQueue;
 import boomerang.Query;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
@@ -399,8 +398,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 							new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
 					onCallFlow(callee, callSite, value, res);
 					out.addAll(res);
-					if(!res.isEmpty())
-						openScope(caller, callee);
 				}
 			}
 			addReachable(callee);
@@ -566,39 +563,4 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		}
 	}
 	
-	public void registerScopeOpeningReachableMethodListener(ReachableMethodListener<W> l){
-		if(scopeOpeningReachableMethodListeners.add(l)){
-			for(SootMethod r : Lists.newArrayList(scopeOpeningReachableMethods)){
-				l.reachable(r);
-			}
-		}
-	}
-	
-	private void registerOpeningScopeMethodListener(SootMethod m, Runnable r) {
-		if(scopeOpeningReachableMethods.contains(m)){
-			r.run();
-		} else{
-			scopeOpeningReachableMethodQueue.put(m,r);
-		}
-	}
-	
-	private void openScope(SootMethod callee){
-		if(scopeOpeningReachableMethods.add(callee)){
-			for (ReachableMethodListener<W> l : Lists.newArrayList(scopeOpeningReachableMethodListeners)) {
-				l.reachable(callee);
-			}
-		}
-	}
-	
-	private void openScope(SootMethod caller, final SootMethod callee) {
-		if(scopeOpeningReachableMethods.contains(caller)){
-			openScope(callee);
-		} else{
-			registerOpeningScopeMethodListener(caller, new Runnable(){
-				public void run() {
-					openScope(callee);
-				};
-			}); 
-		}
-	}
 }
