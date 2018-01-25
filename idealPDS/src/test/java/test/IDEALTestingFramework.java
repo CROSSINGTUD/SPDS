@@ -7,19 +7,17 @@ import java.util.Map;
 import java.util.Set;
 
 import boomerang.WeightedForwardQuery;
-import com.google.common.collect.Lists;
-
 import boomerang.Query;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import com.google.common.collect.Lists;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
 import ideal.IDEALSeedSolver;
 import soot.Body;
-import soot.Scene;
 import soot.SceneTransformer;
 import soot.SootMethod;
 import soot.Unit;
@@ -28,7 +26,6 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.WeightFunctions;
-import sync.pds.solver.nodes.Node;
 import test.ExpectedResults.InternalState;
 import test.core.selfrunning.AbstractTestingFramework;
 import test.core.selfrunning.ImprecisionException;
@@ -85,17 +82,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				icfg = new JimpleBasedInterproceduralCFG(true);
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
-				
-				//Iterate over units of @Test method
-				for(Unit s : sootTestMethod.getActiveBody().getUnits()){
-					if(icfg.isCallStmt(s)){
-						for(SootMethod m : icfg.getCalleesOfCallAt(s)){
-							System.out.println("Callsite: " + s + " calls " + m);
-						}
-					}
-				}
-				
-				System.out.println(sootTestMethod.getActiveBody());
+
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				
 				Map<WeightedForwardQuery<TransitionFunction>, IDEALSeedSolver<TransitionFunction>> seedToSolvers = executeAnalysis();
@@ -106,6 +93,11 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				}
 				List<Assertion> unsound = Lists.newLinkedList();
 				List<Assertion> imprecise = Lists.newLinkedList();
+				for (Assertion r : expectedResults){
+					if (r instanceof ShouldNotBeAnalysed){
+						throw new RuntimeException("Methods should not be included in analysis.");
+					}
+				}
 				for (Assertion r : expectedResults) {
 					if (!r.isSatisfied()) {
 						unsound.add(r);
