@@ -145,6 +145,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				continue;
 			InvokeExpr invokeExpr = stmt.getInvokeExpr();
 			String invocationName = invokeExpr.getMethod().getName();
+			//TODO add new assertion for ShouldNotBeAnalyzed here
 			if (!invocationName.startsWith("mayBeIn") && !invocationName.startsWith("mustBeIn"))
 				continue;
 			Value param = invokeExpr.getArg(0);

@@ -29,6 +29,7 @@ public class TestingResultReporter<W extends Weight>{
 
 	public void onSeedFinished(Node<Statement,Val> seed,final AbstractBoomerangSolver<W> seedSolver) {
 		for(final Entry<Unit, Assertion> e : stmtToResults.entries()){
+			//for every pair of statement and assertion, check if assertion holds
 			if(e.getValue() instanceof ComparableResult){
 				final ComparableResult<W,Val> expectedResults = (ComparableResult) e.getValue();
 				for(Entry<Transition<Statement, INode<Val>>, W> s : seedSolver.getTransitionsToFinalWeights().entrySet()){
@@ -36,13 +37,15 @@ public class TestingResultReporter<W extends Weight>{
 					W w = s.getValue();
 					if((t.getStart() instanceof GeneratedState)  || !t.getStart().fact().equals(expectedResults.getVal()))
 						continue;
-					if(t.getLabel().getUnit().isPresent()){
+					if(t.getLabel().getUnit().isPresent()) {
+						//check whether we have an assertion here
 						if(t.getLabel().getUnit().get().equals(e.getKey())){
 							expectedResults.computedResults(w);
 						}
 					}
 				}
 			}
+			//TODO Melanie : Check here for actually visited should not be analysed, set isSatisfied to true
 		}
 	}
 

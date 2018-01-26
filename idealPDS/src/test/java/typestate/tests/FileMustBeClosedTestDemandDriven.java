@@ -13,7 +13,7 @@ public class FileMustBeClosedTestDemandDriven extends IDEALTestingFramework{
 	public void notCaughtByCHA() {
 		File file = new File();
 		file.open();
-		B b = new B();
+		I b = new B();
 		b.flow(file);
 		mustBeInAcceptingState(file);
 	}
@@ -22,8 +22,9 @@ public class FileMustBeClosedTestDemandDriven extends IDEALTestingFramework{
 	public void notCaughtByRTA() {
 		File file = new File();
 		file.open();
-		A a = new A();
-		B b = new B();
+		I a = new A();
+		a.flow(null);
+		I b = new B();
 		b.flow(file);
 		mustBeInAcceptingState(file);
 	}
