@@ -40,12 +40,29 @@ public class TestingResultReporter<W extends Weight>{
 					if(t.getLabel().getUnit().isPresent()) {
 						//check whether we have an assertion here
 						if(t.getLabel().getUnit().get().equals(e.getKey())){
+							//Set result depending on kind of assertion
 							expectedResults.computedResults(w);
 						}
 					}
 				}
 			}
-			//TODO Melanie : Check here for actually visited should not be analysed, set isSatisfied to true
+			//check if any of the methods that should not be analyzed have been analyzed
+			if (e.getValue() instanceof ShouldNotBeAnalyzed){
+				final ShouldNotBeAnalyzed shouldNotBeAnalyzed = (ShouldNotBeAnalyzed) e.getValue();
+				for(Entry<Transition<Statement, INode<Val>>, W> s : seedSolver.getTransitionsToFinalWeights().entrySet()){
+					Transition<Statement, INode<Val>> t = s.getKey();
+					W w = s.getValue();
+					if((t.getStart() instanceof GeneratedState))
+						continue;
+					if(t.getLabel().getUnit().isPresent()) {
+						//check whether we have an assertion here
+						if(t.getLabel().getUnit().get().equals(e.getKey())){
+							//We have included this in analysis
+							shouldNotBeAnalyzed.hasBeenAnalyzed();
+						}
+					}
+				}
+			}
 		}
 	}
 
