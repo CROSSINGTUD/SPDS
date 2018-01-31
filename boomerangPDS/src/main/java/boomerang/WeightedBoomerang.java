@@ -179,8 +179,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 							lastTick = elapsed;
 						}
 						if(options.analysisTimeoutMS() < elapsed){
-							queryAnalysisWatch.stop();
-							analysisWatch.stop();
+							if(queryAnalysisWatch.isRunning())
+								queryAnalysisWatch.stop();
+							if(analysisWatch.isRunning())
+								analysisWatch.stop();
 							throw new BoomerangTimeoutException(elapsed,stats);
 						}
 					}
