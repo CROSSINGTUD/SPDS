@@ -13,7 +13,6 @@
     <module>SynchronizedPDS</module>
     <module>WPDS</module>
     <module>PathExpression</module>
-    <module>pds-experiments</module>
     </modules>
   <build>
     <plugins>
