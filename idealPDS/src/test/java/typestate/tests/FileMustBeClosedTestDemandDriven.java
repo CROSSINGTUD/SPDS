@@ -11,22 +11,23 @@ import typestate.test.helper.ObjectWithField;
 public class FileMustBeClosedTestDemandDriven extends IDEALTestingFramework{
 	@Test
 	public void notCaughtByCHA() {
+		I b = new B();
+		callOnInterface(b);
+
+	}
+
+	private void callOnInterface(I i) {
 		File file = new File();
 		file.open();
-		I b = new B();
-		b.flow(file);
+		i.flow(file);
 		mustBeInAcceptingState(file);
 	}
 
 	@Test
 	public void notCaughtByRTA() {
-		File file = new File();
-		file.open();
 		I a = new A();
-		a.flow(null);
 		I b = new B();
-		b.flow(file);
-		mustBeInAcceptingState(file);
+		callOnInterface(b);
 	}
 
 	private interface I{
