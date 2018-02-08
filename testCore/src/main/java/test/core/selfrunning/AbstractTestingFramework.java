@@ -77,6 +77,7 @@ public abstract class AbstractTestingFramework {
 		//TODO @Melanie play with Call Graph Options here.
 		//https://soot-build.cs.uni-paderborn.de/public/origin/develop/soot/soot-develop/options/soot_options.htm#phase_5_2
 		Options.v().set_output_format(Options.output_format_none);
+		setCallGraphOptions();
 		String userdir = System.getProperty("user.dir");
 		String sootCp = userdir + "/target/test-classes";
 		if (includeJDK()) {
@@ -131,6 +132,18 @@ public abstract class AbstractTestingFramework {
 		Scene.v().setEntryPoints(ePoints);
 	}
 
+	private void setCallGraphOptions() {
+		if (getCallGraphAlgorithm() != null){
+			Options.v().setPhaseOption("cg."+getCallGraphAlgorithm(), "on");
+		}
+		if(getCallGraphOptions() != null) {
+			String[] options = getCallGraphOptions();
+			for (String option : options){
+				Options.v().setPhaseOption("cg."+getCallGraphAlgorithm(), option);
+			}
+		}
+	}
+
 	private String getTargetClass() {
 		SootClass sootClass = new SootClass("dummyClass");
 		Type paramType = ArrayType.v(RefType.v("java.lang.String"), 1);
@@ -163,6 +176,14 @@ public abstract class AbstractTestingFramework {
 
 	protected boolean includeJDK() {
 		return true;
+	}
+
+	protected String getCallGraphAlgorithm(){
+		return "spark";
+	}
+
+	protected String[] getCallGraphOptions(){
+		return null;
 	}
 
 	public List<String> excludedPackages() {
