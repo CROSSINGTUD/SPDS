@@ -11,6 +11,8 @@ public class ShouldNotBeAnalyzed implements Assertion{
     ShouldNotBeAnalyzed(Unit unit) {
         this.unit = unit;
     }
+
+    //TODO Melanie: Get calling method, atm this is always shouldNotBeAnalyzed
     public String toString(){
         return "Method should not be included in analysis: " + unit.toString();
     }

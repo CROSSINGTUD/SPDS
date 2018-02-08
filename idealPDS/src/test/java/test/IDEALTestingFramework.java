@@ -94,7 +94,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				List<Assertion> imprecise = Lists.newLinkedList();
 				for (Assertion r : expectedResults){
 					if (r instanceof ShouldNotBeAnalyzed){
-						throw new RuntimeException("Methods should not be included in analysis.");
+						throw new RuntimeException(r.toString());
 					}
 				}
 				for (Assertion r : expectedResults) {
