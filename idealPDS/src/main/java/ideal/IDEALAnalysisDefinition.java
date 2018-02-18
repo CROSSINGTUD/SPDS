@@ -53,8 +53,6 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 
 	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
 
-	public abstract long analysisBudgetInSeconds();
-
 	public abstract boolean enableStrongUpdates();
 
 	public String toString() {

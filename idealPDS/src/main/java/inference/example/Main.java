@@ -109,12 +109,6 @@ public class Main {
 
 
 					@Override
-					public long analysisBudgetInSeconds() {
-						return 0;
-					}
-
-
-					@Override
 					public boolean enableStrongUpdates() {
 						return false;
 					}

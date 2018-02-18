@@ -60,13 +60,6 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				return icfg;
 			}
 
-
-			@Override
-			public long analysisBudgetInSeconds() {
-				return 0;
-			}
-
-
 			@Override
 			public boolean enableStrongUpdates() {
 				return false;

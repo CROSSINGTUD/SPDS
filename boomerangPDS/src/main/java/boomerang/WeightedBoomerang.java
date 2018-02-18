@@ -173,14 +173,12 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				@Override
 				public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
 					if(options.analysisTimeoutMS() > 0){
-						long elapsed = queryAnalysisWatch.elapsed(TimeUnit.MILLISECONDS);
+						long elapsed = analysisWatch.elapsed(TimeUnit.MILLISECONDS);
 						if(elapsed - lastTick > 15000){
 							System.err.println(stats);
 							lastTick = elapsed;
 						}
 						if(options.analysisTimeoutMS() < elapsed){
-							if(queryAnalysisWatch.isRunning())
-								queryAnalysisWatch.stop();
 							if(analysisWatch.isRunning())
 								analysisWatch.stop();
 							throw new BoomerangTimeoutException(elapsed,stats);
@@ -231,12 +229,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			return key;
 		}
 	};
-	private Set<SootMethod> typeReachable = Sets.newHashSet();
-	private Set<SootMethod> flowReachable = Sets.newHashSet();
 	protected final BoomerangOptions options;
 	private Debugger<W> debugger;
 	private Stopwatch analysisWatch = Stopwatch.createUnstarted();
-	private Stopwatch queryAnalysisWatch  = Stopwatch.createUnstarted();
 	public WeightedBoomerang(BoomerangOptions options){
 		this.options = options;
 		this.stats = options.statsFactory();
@@ -593,9 +588,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
         return analysisWatch;
     }
 
-    public Stopwatch getQueryStopwatch() {
-        return queryAnalysisWatch;
-    }
     private class TriggerBaseAllocationAtFieldWrite extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
 		private final PointOfIndirection<Statement, Val, Field> fieldWritePoi;
@@ -691,8 +683,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		if(!analysisWatch.isRunning()){
 			analysisWatch.start();
 		}
-		queryAnalysisWatch.reset();
-		queryAnalysisWatch.start();
 		if (query instanceof ForwardQuery) {
 			forwardSolve((ForwardQuery) query);
 		}
@@ -701,9 +691,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		}
 		if(analysisWatch.isRunning()){
 			analysisWatch.stop();
-		}
-		if(queryAnalysisWatch.isRunning()){
-			queryAnalysisWatch.stop();
 		}
 	}
 

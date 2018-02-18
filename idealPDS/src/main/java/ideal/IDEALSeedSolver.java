@@ -147,10 +147,13 @@ public class IDEALSeedSolver<W extends Weight> {
 					return;
 				}
 				idealWeightFunctions.potentialStrongUpdate(curr.stmt(), weight);
-				try{
+//				try{
 					boomerang.solve(new BackwardQuery(curr.stmt(),curr.fact()));
-				} catch (BoomerangTimeoutException e){
-					idealWeightFunctions.weakUpdate(curr.stmt());
+//				} catch (BoomerangTimeoutException e){
+//					idealWeightFunctions.weakUpdate(curr.stmt());
+//				}
+				if(!boomerang.getAnalysisStopwatch().isRunning()) {
+					boomerang.getAnalysisStopwatch().start();
 				}
 				for(final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()){
 					if(e.getKey() instanceof ForwardQuery){
