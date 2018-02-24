@@ -280,6 +280,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
+				if(hasNoMethod(node)) {
+					return;
+				}
 				Optional<AllocVal> allocNode = isAllocationNode(node.stmt(), node.fact());
 				if (allocNode.isPresent()) {
 					ForwardQuery q = new ForwardQuery(node.stmt(), allocNode.get());
@@ -337,6 +340,13 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 
+	protected boolean hasNoMethod(WitnessNode<Statement, Val, Field> node) {
+		if(icfg().getMethodOf(node.stmt().getUnit().get()) == null) {
+			return true;
+		}
+		return false;
+	}
+
 	protected boolean isFirstStatementOfEntryPoint(Statement stmt) {
 		for(SootMethod m : Scene.v().getEntryPoints()){
 			if(m.hasActiveBody()){
@@ -354,7 +364,13 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 	protected boolean isBackwardEnterCall(Statement stmt) {
-		return icfg().isExitStmt(stmt.getUnit().get());
+		if(!stmt.getUnit().isPresent())
+			return false;
+		try {
+			return icfg().isExitStmt(stmt.getUnit().get());
+		} catch (NullPointerException e) {
+			return false;
+		}
 	}
 
 	protected Optional<AllocVal> isAllocationNode(Statement s, Val fact) {
@@ -405,6 +421,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
 			@Override
 			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> node) {
+				if(hasNoMethod(node)) {
+					return;
+				}
 				if (isFieldStore(node.stmt())) {
 					forwardHandleFieldWrite(node, createFieldStore(node.stmt()), sourceQuery);
 				} else if (isArrayStore(node.stmt())) {
@@ -1281,7 +1300,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		return results;
 	}
 	
-	
+
 	public Set<ForwardQuery> getAllocationSites(final BackwardQuery query){
 		final Set<ForwardQuery> results = Sets.newHashSet();
 		for (final Entry<Query, AbstractBoomerangSolver<W>> fw : queryToSolvers.entrySet()) {
@@ -1301,6 +1320,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 						}
 					}
 				});
+				
 			}
 		}
 		return results;

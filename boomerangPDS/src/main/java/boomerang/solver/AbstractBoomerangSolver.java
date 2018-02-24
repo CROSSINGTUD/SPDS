@@ -209,6 +209,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			Stmt curr = unit.get();
 			Val value = node.fact();
 			SootMethod method = icfg.getMethodOf(curr);
+			if(method == null)
+				return Collections.emptySet();
 			if (killFlow(method, curr, value)) {
 				return Collections.emptySet();
 			}
