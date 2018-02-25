@@ -239,6 +239,9 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 		int offset = 0;
 		JSONArray data = new JSONArray();
 		for (Unit u : m.getActiveBody().getUnits()) {
+			if(icfg.getMethodOf(u) == null) {
+				continue;
+			}
 			JSONObject nodeObj = new JSONObject();
 			JSONObject pos = new JSONObject();
 			cfg.stmtsList.add(u);
