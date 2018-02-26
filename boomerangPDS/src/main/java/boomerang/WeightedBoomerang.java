@@ -11,9 +11,11 @@
  *******************************************************************************/
 package boomerang;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -45,6 +47,7 @@ import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import boomerang.solver.StatementBasedFieldTransitionListener;
 import boomerang.stats.IBoomerangStats;
+import boomerang.util.AccessPath;
 import heros.utilities.DefaultValueMap;
 import soot.Local;
 import soot.Scene;
@@ -1305,25 +1308,165 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		final Set<ForwardQuery> results = Sets.newHashSet();
 		for (final Entry<Query, AbstractBoomerangSolver<W>> fw : queryToSolvers.entrySet()) {
 			if(fw.getKey() instanceof ForwardQuery){
-				fw.getValue().getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(fw.getValue().getFieldAutomaton().getInitialState()) {
-					
-					@Override
-					public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-					}
-					
-					@Override
-					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-						if(t.getLabel().equals(Field.empty()) && t.getStart().fact().equals(query.asNode())){
-							results.add((ForwardQuery) fw.getKey());
-						}
-					}
-				});
-				
+				fw.getValue().getFieldAutomaton().registerListener(new ExtractAllocationSiteStateListener(fw.getValue().getFieldAutomaton().getInitialState(), query, (ForwardQuery) fw.getKey(), results));
 			}
 		}
 		return results;
+	}
+	
+	private class ExtractAllocationSiteStateListener extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+		
+		private ForwardQuery query;
+		private Set<ForwardQuery> results;
+		private BackwardQuery bwQuery;
+
+		public ExtractAllocationSiteStateListener(INode<Node<Statement, Val>> state,  BackwardQuery bwQuery,ForwardQuery query, Set<ForwardQuery> results) {
+			super(state);
+			this.bwQuery = bwQuery;
+			this.query = query;
+			this.results = results;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+		}
+		
+		@Override
+		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+			if(t.getLabel().equals(Field.empty()) && t.getStart().fact().equals(bwQuery.asNode())){
+				results.add(query);
+			}
+		}
+
+		@Override
+		public int hashCode() {
+			//Otherwise we cannot register this listener twice.
+			return System.identityHashCode(this);
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			//Otherwise we cannot register this listener twice.
+			return this == obj;
+		}
+	}
+	
+	public Set<AccessPath> getAllAliases(final BackwardQuery query) {
+		Set<ForwardQuery> allocationSites = getAllocationSites(query);
+		final Set<AccessPath> results = Sets.newHashSet();
+		for (final ForwardQuery fw :allocationSites) {
+			final INode<Node<Statement, Val>> allocNode = queryToSolvers.getOrCreate(fw).getFieldAutomaton().getInitialState();
+			queryToSolvers.getOrCreate(fw).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
+				@Override
+				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+					if(t.getStart().fact().stmt().equals(query.stmt()) && !(t.getStart() instanceof GeneratedState)){
+						final Val base = t.getStart().fact().fact();
+						if (t.getLabel().equals(Field.empty())) {
+							if (t.getTarget().equals(allocNode)) {
+								results.add(new AccessPath(base));
+							}
+						} else{
+							List<Field> fields = Lists.newArrayList();
+							if (!t.getLabel().equals(Field.epsilon())) {
+								fields.add(t.getLabel());
+							}
+							queryToSolvers.getOrCreate(fw).getFieldAutomaton().registerListener(new ExtractAccessPathStateListener(t.getTarget(),allocNode,base, fields, results));
+						}
+					}
+				}
+			});
+		}
+		return results;
+	}
+	
+	private class ExtractAccessPathStateListener extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+
+		private INode<Node<Statement, Val>> allocNode;
+		private Collection<Field> fields;
+		private Set<AccessPath> results;
+		private Val base;
+
+		public ExtractAccessPathStateListener(INode<Node<Statement, Val>> state, INode<Node<Statement, Val>> allocNode,
+				Val base, Collection<Field> fields, Set<AccessPath> results) {
+			super(state);
+			this.allocNode = allocNode;
+			this.base = base;
+			this.fields = fields;
+			this.results = results;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+			if(t.getLabel().equals(Field.epsilon()))
+				return;
+			Collection<Field> copiedFields = (fields instanceof Set ? Sets.newHashSet(fields) : Lists.newArrayList(fields));
+			if (!t.getLabel().equals(Field.empty())) {
+				if(copiedFields.contains(t.getLabel())){
+					copiedFields = Sets.newHashSet(fields);
+				}
+				copiedFields.add(t.getLabel());
+			}
+			if (t.getTarget().equals(allocNode)) {
+				results.add(new AccessPath(base, copiedFields));
+			} else {
+				weightedPAutomaton.registerListener(
+							new ExtractAccessPathStateListener(t.getTarget(), allocNode, base, copiedFields, results));
+			}
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((allocNode == null) ? 0 : allocNode.hashCode());
+			result = prime * result + ((base == null) ? 0 : base.hashCode());
+			result = prime * result + ((fields == null) ? 0 : fields.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ExtractAccessPathStateListener other = (ExtractAccessPathStateListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (allocNode == null) {
+				if (other.allocNode != null)
+					return false;
+			} else if (!allocNode.equals(other.allocNode))
+				return false;
+			if (base == null) {
+				if (other.base != null)
+					return false;
+			} else if (!base.equals(other.base))
+				return false;
+			if (fields == null) {
+				if (other.fields != null)
+					return false;
+			} else if (!fields.equals(other.fields))
+				return false;
+			return true;
+		}
+
+		private WeightedBoomerang getOuterType() {
+			return WeightedBoomerang.this;
+		}
+
 	}
 	
 	public Table<Statement, Val, W>  getObjectDestructingStatements(

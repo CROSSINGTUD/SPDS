@@ -298,13 +298,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 			};
 			if(query instanceof BackwardQuery){
-				Stopwatch watch = Stopwatch.createStarted();
 				solver.solve(query);
 				for(ForwardQuery q : solver.getAllocationSites((BackwardQuery) query)){
 					results.add(q.asNode());
 				}
-                        
-
 			}else{
 				solver.solve(query);
 				for(Node<Statement, Val> s : solver.getForwardReachableStates()){
