@@ -3,6 +3,7 @@ package boomerang.util;
 import java.util.Collection;
 import java.util.Set;
 
+import com.beust.jcommander.internal.Sets;
 import com.google.common.collect.Lists;
 
 import boomerang.jimple.Field;
@@ -31,9 +32,13 @@ public class AccessPath {
 		return val.value().toString() +"" + (fieldChain.isEmpty() ? "": fieldChain.toString()) + (isOverApproximated() ? "*" : "");
 	}
 
-	private boolean isOverApproximated() {
+	public boolean isOverApproximated() {
 		return fieldChain instanceof Set;
 	}
+	
+	public Collection<Field> getFields(){
+		return fieldChain;
+	} 
 
 	@Override
 	public int hashCode() {

@@ -100,6 +100,7 @@ public class ExampleMain {
 				//1. Create a Boomerang solver.
 				Boomerang solver = new Boomerang(new DefaultBoomerangOptions(){
 					public boolean onTheFlyCallGraph() {
+						//Must be turned of if no SeedFactory is specified.
 						return false;
 					};
 				}) {
