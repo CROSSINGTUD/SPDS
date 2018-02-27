@@ -30,7 +30,7 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		A a = new A();
 		B alloc = new B();
 		a.b = alloc;
-		queryFor(alloc);
+		accessPathQueryFor(alloc,"a[b]");
 	}
 	@Test
 	public void getAllAliasesBranched(){
@@ -42,7 +42,7 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		} else{
 			b.b = alloc;
 		}
-		queryFor(alloc);
+		accessPathQueryFor(alloc,"a[b];b[b]");
 	}
 	@Test
 	public void getAllAliasesLooped(){
@@ -53,7 +53,7 @@ public class AccessPathTest extends AbstractBoomerangTest {
 			B d = alloc;
 			alloc.c = d;
 		}
-		queryFor(alloc);
+		accessPathQueryFor(alloc,"a[b];alloc[c]*");
 	}
 	@Test
 	public void getAllAliasesLoopedComplex(){
@@ -67,6 +67,6 @@ public class AccessPathTest extends AbstractBoomerangTest {
 			if(staticallyUnknown())
 				alloc.d = d;
 		}
-		queryFor(alloc);
+		accessPathQueryFor(alloc,"a[b];alloc[c]*;alloc[d]*;alloc[c,d];alloc[d,c]");
 	}
 }

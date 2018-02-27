@@ -3,7 +3,6 @@ package boomerang.util;
 import java.util.Collection;
 import java.util.Set;
 
-import com.beust.jcommander.internal.Sets;
 import com.google.common.collect.Lists;
 
 import boomerang.jimple.Field;

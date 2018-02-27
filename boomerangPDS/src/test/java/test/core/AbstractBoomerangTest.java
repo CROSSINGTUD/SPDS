@@ -14,6 +14,7 @@ package test.core;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -41,6 +42,8 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.util.AccessPath;
+import boomerang.util.AccessPathParser;
 import heros.utilities.DefaultValueMap;
 import soot.Body;
 import soot.Local;
@@ -48,7 +51,9 @@ import soot.RefType;
 import soot.Scene;
 import soot.SceneTransformer;
 import soot.SootClass;
+import soot.SootField;
 import soot.SootMethod;
+import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.AssignStmt;
@@ -57,8 +62,10 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
+import soot.jimple.StringConstant;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
+import soot.util.Chain;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
@@ -82,6 +89,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	protected Collection<Error> unsoundErrors = Sets.newHashSet();
 	protected Collection<Error> imprecisionErrors = Sets.newHashSet();
 	protected boolean resultsMustNotBeEmpty = false;
+	private boolean accessPathQuery = false;
+	private Set<AccessPath> expectedAccessPaths = Sets.newHashSet();
 
 	private boolean integerQueries;
 	private SeedFactory<NoWeight> seedFactory;
@@ -104,6 +113,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				icfg = new JimpleBasedInterproceduralCFG(true);
 				seedFactory = new SeedFactory<NoWeight>(){
+
+
 					@Override
 					public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 						return icfg;
@@ -127,8 +138,26 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 							integerQueries = true;
 							return Collections.singleton(query.get());
 						}
+						
+						query = new FirstArgumentOf("accessPathQueryFor").test(u);
+						if(query.isPresent()){
+							accessPathQuery = true;
+							getAllExpectedAccessPath(u, method);
+							return Collections.singleton(query.get());
+						}
 						return Collections.emptySet();
 					}
+
+					private void getAllExpectedAccessPath(Stmt u, SootMethod m) {
+						Value arg = u.getInvokeExpr().getArg(1);
+						if(arg instanceof StringConstant){
+							StringConstant stringConstant = (StringConstant) arg;
+							String value = stringConstant.value;
+							expectedAccessPaths.addAll(AccessPathParser.parseAllFromString(value,m));
+						}
+					}
+
+					
 				};
 				queryForCallSites = seedFactory.computeSeeds();
 				if(integerQueries){
@@ -302,6 +331,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				for(ForwardQuery q : solver.getAllocationSites((BackwardQuery) query)){
 					results.add(q.asNode());
 				}
+				if(accessPathQuery){
+					checkContainsAllExpectedAccessPath(solver.getAllAliases((BackwardQuery) query));
+				}
 			}else{
 				solver.solve(query);
 				for(Node<Statement, Val> s : solver.getForwardReachableStates()){
@@ -321,6 +353,14 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			
 		}
 		return results;
+	}
+
+	private void checkContainsAllExpectedAccessPath(Set<AccessPath> allAliases) {
+		HashSet<AccessPath> expected = Sets.newHashSet(expectedAccessPaths);
+		expected.removeAll(allAliases);
+		if(!expected.isEmpty()){
+			throw new RuntimeException("Did not find all access path! " +expected);
+		}
 	}
 
 	private void runWholeProgram() {
@@ -454,6 +494,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	}
 
+	public static void accessPathQueryFor(Object variable, String aliases) {
+
+	}
 	protected void queryForAndNotEmpty(Object variable) {
 
 	}
