@@ -35,6 +35,10 @@ public class AccessPath {
 		return fieldChain instanceof Set;
 	}
 	
+	public Val getBase() {
+		return this.val;
+	}
+
 	public Collection<Field> getFields(){
 		return fieldChain;
 	} 
@@ -50,23 +54,30 @@ public class AccessPath {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (this == obj) {
 			return true;
-		if (obj == null)
+		}
+		if (obj == null) {
 			return false;
-		if (getClass() != obj.getClass())
+		}
+		if (getClass() != obj.getClass()) {
 			return false;
+		}
 		AccessPath other = (AccessPath) obj;
 		if (fieldChain == null) {
-			if (other.fieldChain != null)
+			if (other.fieldChain != null) {
 				return false;
-		} else if (!fieldChain.equals(other.fieldChain))
+			}
+		} else if (!fieldChain.equals(other.fieldChain)) {
 			return false;
+		}
 		if (val == null) {
-			if (other.val != null)
+			if (other.val != null) {
 				return false;
-		} else if (!val.equals(other.val))
+			}
+		} else if (!val.equals(other.val)) {
 			return false;
+		}
 		return true;
 	}
 	
