@@ -95,6 +95,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	private boolean integerQueries;
 	private SeedFactory<NoWeight> seedFactory;
 
+	protected int analysisTimeout = 300 *1000;
+
 	private enum AnalysisMode {
 		WholeProgram, DemandDrivenForward, DemandDrivenBackward;
 	}
@@ -309,6 +311,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				public boolean arrayFlows() {
 					return true;
 				}
+				
+				@Override
+				public int analysisTimeoutMS() {
+					return analysisTimeout;
+				}
 			});
 			Boomerang solver = new Boomerang(options) {
 				@Override
@@ -365,7 +372,12 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private void runWholeProgram() {
 		final Set<Node<Statement, Val>> results = Sets.newHashSet();
-		WholeProgramBoomerang<NoWeight> solver = new WholeProgramBoomerang<NoWeight>() {
+		WholeProgramBoomerang<NoWeight> solver = new WholeProgramBoomerang<NoWeight>(new DefaultBoomerangOptions() {
+			@Override
+			public int analysisTimeoutMS() {
+				return analysisTimeout;
+			}
+		}) {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 				return icfg;

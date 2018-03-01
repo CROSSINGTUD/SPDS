@@ -36,7 +36,9 @@ public class FieldsBranchedTest extends AbstractBoomerangTest{
 		Node h = t;
 		queryFor(h);
 	}
+	
 	@Test
+	@Ignore
 	public void twoFieldsNoLoop2() {
 		Node x = new Node();
 		Node t = null;
