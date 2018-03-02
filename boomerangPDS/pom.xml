@@ -1,9 +1,10 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>de.fraunhofer.iem</groupId>
-  <artifactId>boomerangPDS</artifactId>
-  <version>1.0.0</version>
-  <build>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>de.fraunhofer.iem</groupId>
+	<artifactId>boomerangPDS</artifactId>
+	<version>1.0.0</version>
+	<build>
 		<plugins>
 			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -13,14 +14,22 @@
 					<target>1.7</target>
 				</configuration>
 			</plugin>
-			
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>-Xmx4G</argLine>
+                    <argLine>-Xss128m</argLine>
+                </configuration>
+            </plugin>
 		</plugins>
 	</build>
-  	<dependencies>
+	<dependencies>
 		<dependency>
-			  <groupId>de.fraunhofer.iem</groupId>
-			  <artifactId>testCore</artifactId>
-			  <version>1.0.0</version>
+			<groupId>de.fraunhofer.iem</groupId>
+			<artifactId>testCore</artifactId>
+			<version>1.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
@@ -28,9 +37,9 @@
 			<version>1.0.0</version>
 		</dependency>
 		<dependency>
-		    <groupId>com.google.guava</groupId>
-		    <artifactId>guava</artifactId>
-		    <version>23.5-jre</version>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>23.5-jre</version>
 		</dependency>
 
 		<dependency>
@@ -44,9 +53,9 @@
 			<version>4.12</version>
 		</dependency>
 		<dependency>
-  			<groupId>ca.mcgill.sable</groupId>
-  			<artifactId>soot</artifactId>
-  			<version>3.0.0-SNAPSHOT</version>
+			<groupId>ca.mcgill.sable</groupId>
+			<artifactId>soot</artifactId>
+			<version>3.0.0-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
@@ -64,11 +73,11 @@
 			<version>3.5</version>
 		</dependency>
 	</dependencies>
-	 <repositories>
-    <repository>
-      <id>soot-snapshot</id>
-      <name>soot snapshots</name>
-      <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
-    </repository>
-</repositories> 
+	<repositories>
+		<repository>
+			<id>soot-snapshot</id>
+			<name>soot snapshots</name>
+			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
+		</repository>
+	</repositories>
 </project>
