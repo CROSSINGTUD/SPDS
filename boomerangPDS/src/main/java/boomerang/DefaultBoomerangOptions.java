@@ -57,7 +57,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 	}
 
 	private boolean isThrowableAllocationType(Type type) {
-		return Scene.v().getFastHierarchy().canStoreType(type, Scene.v().getType("java.lang.Throwable"));
+		return Scene.v().getOrMakeFastHierarchy().canStoreType(type, Scene.v().getType("java.lang.Throwable"));
 	}
 
 	private boolean isStringAllocationType(Type type) {

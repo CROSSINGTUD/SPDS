@@ -89,32 +89,27 @@ public abstract class AbstractTestingFramework {
 		Options.v().set_output_format(Options.output_format_none);
 		String userdir = System.getProperty("user.dir");
 		String sootCp = userdir + "/target/test-classes";
-		if (includeJDK()) {
-			String javaHome = System.getProperty("java.home");
-			if (javaHome == null || javaHome.equals(""))
-				throw new RuntimeException("Could not get property java.home!");
-			sootCp += File.pathSeparator + javaHome + "/lib/rt.jar";
+		String javaHome = System.getProperty("java.home");
+		if (javaHome == null || javaHome.equals(""))
+			throw new RuntimeException("Could not get property java.home!");
+		sootCp += File.pathSeparator + javaHome + "/lib/rt.jar";
+		sootCp += File.pathSeparator + javaHome + "/lib/jce.jar";
 //			Options.v().setPhaseOption("cg", "trim-clinit:false");
-			Options.v().set_no_bodies_for_excluded(true);
-			Options.v().set_allow_phantom_refs(true);
+		Options.v().set_no_bodies_for_excluded(true);
+		Options.v().set_allow_phantom_refs(true);
 
-			List<String> includeList = new LinkedList<String>();
-			includeList.add("java.lang.*");
-			includeList.add("java.util.*");
-			includeList.add("java.io.*");
-			includeList.add("sun.misc.*");
-			includeList.add("java.net.*");
-			includeList.add("sun.nio.*");
-			includeList.add("javax.servlet.*");
-			includeList.add("javax.crypto.*");
+		List<String> includeList = new LinkedList<String>();
+		includeList.add("java.lang.*");
+		includeList.add("java.util.*");
+		includeList.add("java.io.*");
+		includeList.add("sun.misc.*");
+		includeList.add("java.net.*");
+		includeList.add("sun.nio.*");
+		includeList.add("javax.servlet.*");
+//		includeList.add("javax.crypto.*");
 
-			Options.v().set_include(includeList);
+		Options.v().set_include(includeList);
 
-		} else {
-			Options.v().set_no_bodies_for_excluded(true);
-			Options.v().set_allow_phantom_refs(true);
-			// Options.v().setPhaseOption("cg", "all-reachable:true");
-		}
 		Options.v().setPhaseOption("jb", "use-original-names:true");
 
 		Options.v().set_exclude(excludedPackages());
@@ -182,10 +177,6 @@ public abstract class AbstractTestingFramework {
 
 	private String getTestCaseClassName() {
 		return this.getClass().getName().replace("class ", "");
-	}
-
-	protected boolean includeJDK() {
-		return true;
 	}
 
 	public List<String> excludedPackages() {
