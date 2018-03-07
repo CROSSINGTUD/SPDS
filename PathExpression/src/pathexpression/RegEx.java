@@ -95,7 +95,7 @@ public class RegEx<V> implements IRegEx<V> {
     }
 
     public String toString() {
-      return "(" + a.toString() + " . " + b.toString() + ")";
+      return "(" + a.toString() + " \u00B7 " + b.toString() + ")";
     }
 
     public IRegEx<V> getFirst() {

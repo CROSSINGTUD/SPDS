@@ -3,13 +3,16 @@
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
  *     Johannes Spaeth - initial API and implementation
  *******************************************************************************/
+
 package pathexpression;
+
+import java.util.Objects;
 
 public class Epsilon<V> implements IRegEx<V> {
   private V v;
@@ -28,23 +31,28 @@ public class Epsilon<V> implements IRegEx<V> {
 
   @Override
   public boolean equals(Object obj) {
-    if (this == obj)
+    if (this == obj) {
       return true;
-    if (obj == null)
+    }
+    if (obj == null) {
       return false;
-    if (getClass() != obj.getClass())
+    }
+    if (getClass() != obj.getClass()) {
       return false;
+    }
     Epsilon other = (Epsilon) obj;
     if (v == null) {
-      if (other.v != null)
+      if (other.v != null) {
         return false;
-    } else if (!v.equals(other.v))
+      }
+    } else if (!v.equals(other.v)) {
       return false;
+    }
     return true;
   }
 
   @Override
   public String toString() {
-    return "EPS:" + v.toString();
+    return "EPS:" + Objects.toString(v, "null");
   }
 }
