@@ -123,7 +123,7 @@ public class PathExpressionComputer<N, V> {
       Integer head = getIntegerFor(e.getStart());
       Integer tail = getIntegerFor(e.getTarget());
       IRegEx<V> pht = table.get(head, tail);
-      if (e.getLabel() == null || e.getLabel().equals(graph.epsilon())) {
+      if (e.getLabel() == graph.epsilon() || e.getLabel().equals(graph.epsilon())) {
         pht = RegEx.<V>union(new Epsilon(e.getLabel()), pht);
       } else {
         pht = RegEx.<V>union(new RegEx.Plain<V>(e.getLabel()), pht);
