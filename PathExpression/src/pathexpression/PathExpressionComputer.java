@@ -114,9 +114,9 @@ public class PathExpressionComputer<N, V> {
 
   private void eliminate() {
     int numberOfNodes = graph.getNodes().size();
-    for (int i = 1; i <= numberOfNodes; i++) {
-      for (int j = 1; j <= numberOfNodes; j++) {
-        updateTable(i, j, emptyRegEx);
+    for (int v = 1; v <= numberOfNodes; v++) {
+      for (int w = 1; w <= numberOfNodes; w++) {
+        updateTable(v, w, emptyRegEx);
       }
     }
     for (Edge<N, V> e : graph.getEdges()) {
@@ -133,16 +133,14 @@ public class PathExpressionComputer<N, V> {
     for (int v = 1; v <= numberOfNodes; v++) {
       IRegEx<V> pvv = table.get(v, v);
       updateTable(v, v, RegEx.<V>star(pvv));
-      int u = v + 1;
-      int w = v + 1;
-      for (; u <= numberOfNodes; u++) {
+      for (int u = v + 1; u <= numberOfNodes; u++) {
         IRegEx<V> puv = table.get(u, v);
         if (puv instanceof EmptySet) {
           continue;
         }
         puv = RegEx.<V>concatenate(puv, pvv);
         updateTable(u, v, puv);
-        for (; w <= numberOfNodes; w++) {
+        for (int w = v + 1; w <= numberOfNodes; w++) {
           IRegEx<V> pvw = table.get(v, w);
           if (pvw instanceof EmptySet) {
             continue;
