@@ -50,34 +50,44 @@ public class Field implements Location {
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj)
+		if (this == obj) {
 			return true;
-		if(rep != null)
+		}
+		if(rep != null) {
 			return false;
-		if (obj == null)
+		}
+		if (obj == null) {
 			return false;
-		if (getClass() != obj.getClass())
+		}
+		if (getClass() != obj.getClass()) {
 			return false;
+		}
 		Field other = (Field) obj;
-		if(other.rep != null)
+		if(other.rep != null) {
 			return false;
+		}
 		if (delegate == null) {
-			if (other.delegate != null)
+			if (other.delegate != null) {
 				return false;
-		} else if (!delegate.equals(other.delegate))
+			}
+		} else if (!delegate.equals(other.delegate)) {
 			return false;
+		}
 		if (rep == null) {
-			if (other.rep != null)
+			if (other.rep != null) {
 				return false;
-		} else if (!rep.equals(other.rep))
+			}
+		} else if (!rep.equals(other.rep)) {
 			return false;
+		}
 		return true;
 	}
 
 	@Override
 	public String toString() {
-		if (delegate == null)
+		if (delegate == null) {
 			return rep;
+		}
 		return delegate.getName().toString();
 	}
 
@@ -130,7 +140,7 @@ public class Field implements Location {
 
 		@Override
 		public Field excludes() {
-			return (Field) excludes;
+			return excludes;
 		}
 		@Override
 		public String toString() {
@@ -147,18 +157,23 @@ public class Field implements Location {
 
 		@Override
 		public boolean equals(Object obj) {
-			if (this == obj)
+			if (this == obj) {
 				return true;
-			if (!super.equals(obj))
+			}
+			if (!super.equals(obj)) {
 				return false;
-			if (getClass() != obj.getClass())
+			}
+			if (getClass() != obj.getClass()) {
 				return false;
+			}
 			ExclusionWildcardField other = (ExclusionWildcardField) obj;
 			if (excludes == null) {
-				if (other.excludes != null)
+				if (other.excludes != null) {
 					return false;
-			} else if (!excludes.equals(other.excludes))
+				}
+			} else if (!excludes.equals(other.excludes)) {
 				return false;
+			}
 			return true;
 		}
 		
@@ -171,5 +186,9 @@ public class Field implements Location {
 			exclusionWildcards.put(exclusion, new ExclusionWildcardField(exclusion));
 		}
 		return exclusionWildcards.get(exclusion);
+	}
+
+	public SootField getSootField() {
+		return this.delegate;
 	}
 }
