@@ -32,6 +32,7 @@ import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.ConnectPushListener;
 import wpds.impl.Weight;
+import wpds.impl.Weight.NoWeight;
 import wpds.impl.WeightedPAutomaton;
 
 public class IDEALSeedSolver<W extends Weight> {
@@ -46,6 +47,7 @@ public class IDEALSeedSolver<W extends Weight> {
 	private final Stopwatch analysisStopwatch = Stopwatch.createUnstarted();
 	private final SeedFactory<W> seedFactory;
 	private WeightedBoomerang<W> timedoutSolver;
+	private Boomerang boomerangSolver;
 
     public enum Phases {
 		ObjectFlow, ValueFlow
@@ -60,6 +62,13 @@ public class IDEALSeedSolver<W extends Weight> {
 		this.one = analysisDefinition.weightFunctions().getOne();
 		this.phase1Solver = createSolver();
 		this.phase2Solver = createSolver();
+		this.boomerangSolver = new Boomerang() {
+			
+			@Override
+			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+				return analysisDefinition.icfg();
+			}
+		};
 	}
 
 	public WeightedBoomerang<W> run() {
@@ -148,14 +157,14 @@ public class IDEALSeedSolver<W extends Weight> {
 				}
 				idealWeightFunctions.potentialStrongUpdate(curr.stmt(), weight);
 //				try{
-					boomerang.solve(new BackwardQuery(curr.stmt(),curr.fact()));
+				boomerangSolver.solve(new BackwardQuery(curr.stmt(),curr.fact()));
 //				} catch (BoomerangTimeoutException e){
 //					idealWeightFunctions.weakUpdate(curr.stmt());
 //				}
 				if(!boomerang.getAnalysisStopwatch().isRunning()) {
 					boomerang.getAnalysisStopwatch().start();
 				}
-				for(final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()){
+				for(final Entry<Query, AbstractBoomerangSolver<NoWeight>> e : boomerangSolver.getSolvers().entrySet()){
 					if(e.getKey() instanceof ForwardQuery){
 						e.getValue().synchedEmptyStackReachable(curr, new EmptyStackWitnessListener<Statement, Val>() {
 							@Override

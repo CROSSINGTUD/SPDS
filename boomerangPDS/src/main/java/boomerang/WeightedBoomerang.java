@@ -11,7 +11,6 @@
  *******************************************************************************/
 package boomerang;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -80,6 +79,7 @@ import wpds.impl.Transition;
 import wpds.impl.UnbalancedPopListener;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
+import wpds.interfaces.Empty;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
@@ -191,9 +191,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			});
 			SeedFactory<W> seedFactory = getSeedFactory();
 	        if(seedFactory != null){
-	        	for(SootMethod m : seedFactory.getMethodScope(key)){
-	        		solver.addReachable(m);
-	        	}
+	        		for(SootMethod m : seedFactory.getMethodScope(key)){
+	        			solver.addReachable(m);
+	        		}
 	        }
 			return solver;
 		}
@@ -595,8 +595,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			final FieldWritePOI fieldWritePoi, final ForwardQuery sourceQuery) {
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(), fieldWritePoi.getBaseVar());
 		if (node.fact().equals(fieldWritePoi.getStoredVar())) {
-			if(sourceQuery instanceof WeightedForwardQuery) //Additional logic for IDEal
-				backwardSolve(backwardQuery);
+//			if(sourceQuery instanceof WeightedForwardQuery) //Additional logic for IDEal
+			
+				backwardSolveUnderScope(backwardQuery,sourceQuery);
 			fieldWritePoi.addFlowAllocation(sourceQuery);
 		}
 		if (node.fact().equals(fieldWritePoi.getBaseVar())) {
@@ -606,7 +607,19 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		}
 	}
 
-    public Stopwatch getAnalysisStopwatch() {
+    private void backwardSolveUnderScope(BackwardQuery backwardQuery, ForwardQuery forwardQuery) {
+		backwardSolve(backwardQuery);
+		AbstractBoomerangSolver<W> bwSolver = queryToSolvers.getOrCreate(backwardQuery);
+		AbstractBoomerangSolver<W> fwSolver = queryToSolvers.getOrCreate(forwardQuery);
+		fwSolver.registerReachableMethodListener(new ReachableMethodListener<W>() {
+			@Override
+			public void reachable(SootMethod m) {
+				bwSolver.addReachable(m);
+			}
+		});
+	}
+
+	public Stopwatch getAnalysisStopwatch() {
         return analysisWatch;
     }
 
@@ -1356,25 +1369,26 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	public Set<AccessPath> getAllAliases(final BackwardQuery query) {
 		Set<ForwardQuery> allocationSites = getAllocationSites(query);
 		final Set<AccessPath> results = Sets.newHashSet();
-		for (final ForwardQuery fw :allocationSites) {
-			final INode<Node<Statement, Val>> allocNode = queryToSolvers.getOrCreate(fw).getFieldAutomaton().getInitialState();
-			queryToSolvers.getOrCreate(fw).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
+		for (final Query fw : queryToSolvers.keySet()) {
+			if(fw instanceof BackwardQuery)
+				continue;
+			final INode<Node<Statement, Val>> allocNode = queryToSolvers.getOrCreate(fw).getFieldAutomaton().getInitialState();			queryToSolvers.getOrCreate(fw).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 				@Override
 				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+
 					if(t.getStart().fact().stmt().equals(query.stmt()) && !(t.getStart() instanceof GeneratedState)){
 						final Val base = t.getStart().fact().fact();
 						if (t.getLabel().equals(Field.empty())) {
 							if (t.getTarget().equals(allocNode)) {
 								results.add(new AccessPath(base));
 							}
-						} else{
-							List<Field> fields = Lists.newArrayList();
-							if (!t.getLabel().equals(Field.epsilon())) {
-								fields.add(t.getLabel());
-							}
-							queryToSolvers.getOrCreate(fw).getFieldAutomaton().registerListener(new ExtractAccessPathStateListener(t.getTarget(),allocNode,base, fields, results));
 						}
+						List<Field> fields = Lists.newArrayList();
+						if (!(t.getLabel() instanceof Empty)) {
+							fields.add(t.getLabel());
+						}
+						queryToSolvers.getOrCreate(fw).getFieldAutomaton().registerListener(new ExtractAccessPathStateListener(t.getTarget(),allocNode,base, fields, results));
 					}
 				}
 			});
@@ -1401,21 +1415,22 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		@Override
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if(t.getLabel().equals(Field.epsilon()))
-				return;
+//			if(t.getLabel().equals(Field.epsilon()))
+//				return;
 			Collection<Field> copiedFields = (fields instanceof Set ? Sets.newHashSet(fields) : Lists.newArrayList(fields));
 			if (!t.getLabel().equals(Field.empty())) {
 				if(copiedFields.contains(t.getLabel())){
 					copiedFields = Sets.newHashSet(fields);
 				}
-				copiedFields.add(t.getLabel());
+				if(!(t.getLabel() instanceof Empty))
+					copiedFields.add(t.getLabel());
 			}
 			if (t.getTarget().equals(allocNode)) {
 				results.add(new AccessPath(base, copiedFields));
-			} else {
-				weightedPAutomaton.registerListener(
-							new ExtractAccessPathStateListener(t.getTarget(), allocNode, base, copiedFields, results));
 			}
+			
+			weightedPAutomaton.registerListener(
+							new ExtractAccessPathStateListener(t.getTarget(), allocNode, base, copiedFields, results));
 		}
 
 		@Override

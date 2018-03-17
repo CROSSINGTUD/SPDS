@@ -338,9 +338,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				for(ForwardQuery q : solver.getAllocationSites((BackwardQuery) query)){
 					results.add(q.asNode());
 				}
+				solver.debugOutput();
 				if(accessPathQuery){
 					checkContainsAllExpectedAccessPath(solver.getAllAliases((BackwardQuery) query));
 				}
+
 			}else{
 				solver.solve(query);
 				for(Node<Statement, Val> s : solver.getForwardReachableStates()){

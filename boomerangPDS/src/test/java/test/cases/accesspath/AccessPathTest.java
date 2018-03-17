@@ -24,6 +24,10 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		B c = null;
 		B d = null;
 	}
+	private static class C{
+		B b = null;
+		A attr = new A();
+	}
 	
 	@Test
 	public void getAllAliases(){
@@ -69,4 +73,63 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		}
 		accessPathQueryFor(alloc,"a[b];alloc[c]*;alloc[d]*;alloc[c,d];alloc[d,c]");
 	}
+	
+	@Test
+	public void simpleIndirect(){
+		A a = new A();
+		A b = a;
+		B alloc = new B();
+		a.b = alloc;
+		accessPathQueryFor(alloc,"a[b];b[b]");
+		use(b);
+	}
+	
+	@Test
+	public void contextQuery(){
+		B a = new B();
+		B b = a;
+		context(a,b);
+	}
+	
+	private void context(B a, B b) {
+		accessPathQueryFor(a,"a;b");
+	}
+	
+	
+	@Test
+	public void doubeContextQuery(){
+		B a = new B();
+		B b = a;
+		context1(a,b);
+	}
+	
+	private void context1(B a, B b) {
+		context(a,b);
+	}
+	static void use(A b) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Test
+	public void twoLevelTest() {
+		C b = new C();
+		taintMe(b);
+	}
+	@Test
+	public void threeLevelTest() {
+		C b = new C();
+		taintOnNextLevel(b);
+	}
+	
+	private void taintMe(C b) {
+		B alloc = new B();
+		b.attr.b = alloc;
+		accessPathQueryFor(alloc,"alloc;b[attr,b]");
+	}
+	
+	private void taintOnNextLevel(C b) {
+		taintMe(b);
+	}
+	
 }
