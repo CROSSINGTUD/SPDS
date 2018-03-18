@@ -53,7 +53,9 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 
 	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
 
-	public abstract boolean enableStrongUpdates();
+	public boolean enableStrongUpdates() {
+		return true;
+	}
 
 	public String toString() {
 		String str = "====== IDEal Analysis Options ======";

@@ -57,7 +57,7 @@ public class IDEALSeedSolver<W extends Weight> {
 		this.analysisDefinition = analysisDefinition;
 		this.seed = seed;
 		this.seedFactory = seedFactory;
-		this.idealWeightFunctions = new IDEALWeightFunctions<W>(analysisDefinition.weightFunctions());
+		this.idealWeightFunctions = new IDEALWeightFunctions<W>(analysisDefinition.weightFunctions(), analysisDefinition.enableStrongUpdates());
 		this.zero = analysisDefinition.weightFunctions().getZero();
 		this.one = analysisDefinition.weightFunctions().getOne();
 		this.phase1Solver = createSolver();

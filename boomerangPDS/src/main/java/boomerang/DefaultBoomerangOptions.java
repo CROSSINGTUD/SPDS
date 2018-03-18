@@ -167,5 +167,9 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		return new SimpleBoomerangStats();
 	}
 
+	@Override
+	public boolean aliasing() {
+		return true;
+	}
 
 }

@@ -61,11 +61,6 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			}
 
 			@Override
-			public boolean enableStrongUpdates() {
-				return false;
-			}
-
-			@Override
 			public Collection<WeightedForwardQuery<TransitionFunction>> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
 				return  IDEALTestingFramework.this.getStateMachine().generateSeed(method, stmt, calledMethod);
 			}

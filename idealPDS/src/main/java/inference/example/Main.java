@@ -107,12 +107,6 @@ public class Main {
 						return icfg;
 					}
 
-
-					@Override
-					public boolean enableStrongUpdates() {
-						return false;
-					}
-
 					@Override
 					public Collection<WeightedForwardQuery<InferenceWeight>> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
 						if(stmt instanceof AssignStmt){

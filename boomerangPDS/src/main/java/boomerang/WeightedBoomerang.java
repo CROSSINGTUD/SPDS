@@ -730,6 +730,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 	protected void backwardSolve(BackwardQuery query) {
+		if(!options.aliasing())
+			return;
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
 		AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
 		if (unit.isPresent()) {

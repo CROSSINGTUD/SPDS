@@ -35,10 +35,12 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	private Map<Statement, W> potentialStrongUpdates = Maps.newHashMap();
 	private Set<Statement> weakUpdates = Sets.newHashSet();
 	private Multimap<Node<Statement,Val>, W> nonOneFlowNodes = HashMultimap.create();
-	private Phases phase; 
+	private Phases phase;
+	private boolean strongUpdates; 
 
-	public IDEALWeightFunctions(WeightFunctions<Statement,Val,Statement,W>  delegate) {
+	public IDEALWeightFunctions(WeightFunctions<Statement,Val,Statement,W>  delegate, boolean strongUpdates) {
 		this.delegate = delegate;
+		this.strongUpdates = strongUpdates;
 	}
 	
 	@Override
@@ -47,11 +49,11 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		if (isObjectFlowPhase() &&!weight.equals(getOne())){	
 			addOtherThanOneWeight(curr, weight);
 		}
-		if(isValueFlowPhase() && IDEALAnalysis.ENABLE_STRONG_UPDATES && curr.fact().isStatic()){
+		if(isValueFlowPhase() && curr.fact().isStatic()){
 			if(potentialStrongUpdates.containsKey(curr.stmt())){
 				W w = potentialStrongUpdates.get(curr.stmt());
 //				System.err.println("Potential strong update "+ curr + "  " + w);
-				if(!weakUpdates.contains(curr.stmt())){
+				if(!weakUpdates.contains(curr.stmt()) && strongUpdates){
 //					System.err.println("Strong update " + curr + w + " was " + weight);
 					return w;
 				}
@@ -77,11 +79,11 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 			addOtherThanOneWeight(curr, weight);
 		}
 		
-		if(isValueFlowPhase() && IDEALAnalysis.ENABLE_STRONG_UPDATES){
+		if(isValueFlowPhase()){
 			if(potentialStrongUpdates.containsKey(curr.stmt())){
 				W w = potentialStrongUpdates.get(curr.stmt());
 //				System.err.println("Potential strong update "+ curr + "  " + w);
-				if(!weakUpdates.contains(curr.stmt())){
+				if(!weakUpdates.contains(curr.stmt()) && strongUpdates){
 //					System.err.println("Strong update " + curr + w + " was " + weight);
 					return w;
 				}

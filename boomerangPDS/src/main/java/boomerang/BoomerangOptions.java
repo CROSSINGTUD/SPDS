@@ -43,4 +43,6 @@ public interface BoomerangOptions {
 
 	public boolean isIgnoredMethod(SootMethod method);
 	public IBoomerangStats statsFactory();
+
+	public boolean aliasing();
 }
