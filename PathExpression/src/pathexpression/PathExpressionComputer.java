@@ -3,23 +3,23 @@
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
  *     Johannes Spaeth - initial API and implementation
  *******************************************************************************/
-package pathexpression;
 
-import java.util.LinkedList;
-import java.util.List;
+package pathexpression;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Table;
-
 import pathexpression.RegEx.EmptySet;
+
+import java.util.LinkedList;
+import java.util.List;
 
 public class PathExpressionComputer<N, V> {
 
@@ -37,8 +37,10 @@ public class PathExpressionComputer<N, V> {
 
 
   private void initNodesToIntMap() {
+    int size = nodeToIntMap.size();
     for (N node : graph.getNodes()) {
-      nodeToIntMap.put(node, (nodeToIntMap.size() + 1));
+      System.out.println(node);
+      nodeToIntMap.put(node, (++size));
     }
   }
 
@@ -48,8 +50,9 @@ public class PathExpressionComputer<N, V> {
   }
 
   public IRegEx<V> getExpressionBetween(N a, N b) {
-    if (!graph.getNodes().contains(a))
+    if (!graph.getNodes().contains(a)) {
       return emptyRegEx;
+    }
     List<IRegEx<V>> allExpr = computeAllPathFrom(a);
     return allExpr.get(getIntegerFor(b) - 1);
   }
@@ -63,8 +66,9 @@ public class PathExpressionComputer<N, V> {
     eliminate();
     List<PathExpression<V>> extractPathSequence = extractPathSequence();
     List<IRegEx<V>> regEx = new LinkedList<>();
-    for (int i = 0; i < graph.getNodes().size(); i++)
+    for (int i = 0; i < graph.getNodes().size(); i++) {
       regEx.add(emptyRegEx);
+    }
     regEx.set(getIntegerFor(a) - 1, eps);
     for (int i = 0; i < extractPathSequence.size(); i++) {
       PathExpression<V> tri = extractPathSequence.get(i);
@@ -116,7 +120,11 @@ public class PathExpressionComputer<N, V> {
     int numberOfNodes = graph.getNodes().size();
     for (int v = 1; v <= numberOfNodes; v++) {
       for (int w = 1; w <= numberOfNodes; w++) {
-        updateTable(v, w, emptyRegEx);
+        if (v == w) {
+          updateTable(v, w, new Epsilon<V>(graph.epsilon()));
+        } else {
+          updateTable(v, w, emptyRegEx);
+        }
       }
     }
     for (Edge<N, V> e : graph.getEdges()) {
@@ -153,6 +161,7 @@ public class PathExpressionComputer<N, V> {
         }
       }
     }
+    System.out.println();
   }
 
 

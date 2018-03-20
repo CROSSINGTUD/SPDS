@@ -3,7 +3,7 @@
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -12,11 +12,12 @@
 package pathexpression;
 
 
+import java.util.Objects;
 
 public class RegEx<V> implements IRegEx<V> {
-  private static class Union<V> implements IRegEx<V> {
-    private IRegEx<V> b;
-    private IRegEx<V> a;
+  public static class Union<V> implements IRegEx<V> {
+    public IRegEx<V> b;
+    public IRegEx<V> a;
 
     public Union(IRegEx<V> a, IRegEx<V> b) {
       assert a != null;
@@ -26,7 +27,7 @@ public class RegEx<V> implements IRegEx<V> {
     }
 
     public String toString() {
-      return "{" + a.toString() + " U " + b.toString() + "}";
+      return "{" + Objects.toString(a,"null") + " U " + Objects.toString(b,"null") + "}";
     }
 
     public IRegEx<V> getFirst() {
@@ -83,7 +84,7 @@ public class RegEx<V> implements IRegEx<V> {
     }
 
   }
-  private static class Concatenate<V> implements IRegEx<V> {
+  public static class Concatenate<V> implements IRegEx<V> {
     public IRegEx<V> b;
     public IRegEx<V> a;
 
@@ -95,7 +96,7 @@ public class RegEx<V> implements IRegEx<V> {
     }
 
     public String toString() {
-      return "(" + a.toString() + " \u00B7 " + b.toString() + ")";
+      return "(" + Objects.toString(a,"null") + " \u00B7 " + Objects.toString(b,"null") + ")";
     }
 
     public IRegEx<V> getFirst() {
@@ -137,7 +138,7 @@ public class RegEx<V> implements IRegEx<V> {
       return true;
     }
   }
-  private static class Star<V> implements IRegEx<V> {
+  public static class Star<V> implements IRegEx<V> {
     public IRegEx<V> a;
 
     public Star(IRegEx<V> a) {
@@ -146,7 +147,7 @@ public class RegEx<V> implements IRegEx<V> {
     }
 
     public String toString() {
-      return "[" + a.toString() + "]* ";
+      return "[" + Objects.toString(a,"null") + "]* ";
     }
 
     public IRegEx<V> getPlain() {
@@ -182,10 +183,7 @@ public class RegEx<V> implements IRegEx<V> {
   public static <V> IRegEx<V> union(IRegEx<V> a, IRegEx<V> b) {
     assert a != null;
     assert b != null;
-    if (a instanceof EmptySet)
-      return b;
-    if (b instanceof EmptySet)
-      return a;
+
     return simplify(new Union<V>(a, b));
   }
 
@@ -193,16 +191,6 @@ public class RegEx<V> implements IRegEx<V> {
     assert a != null;
     assert b != null;
 
-    if (b instanceof EmptySet)
-      return a;
-
-    if (a instanceof EmptySet)
-      return a;
-    if (b instanceof Epsilon)
-      return a;
-
-    if (a instanceof Epsilon)
-      return b;
     return simplify(new Concatenate<V>(a, b));
   }
 
@@ -219,8 +207,6 @@ public class RegEx<V> implements IRegEx<V> {
   }
 
   public static <V> IRegEx<V> star(IRegEx<V> reg) {
-    if (reg instanceof EmptySet || reg instanceof Epsilon)
-      return reg;
     return simplify(new Star<V>(reg));
   }
 
@@ -233,14 +219,22 @@ public class RegEx<V> implements IRegEx<V> {
         return u.getFirst();
       if (u.getFirst().equals(u.getSecond()))
         return u.getFirst();
+      if(u.getFirst() instanceof Epsilon)
+        return u.getSecond();
+      if(u.getSecond() instanceof Epsilon)
+        return u.getFirst();
     }
     if (in instanceof Concatenate) {
       Concatenate<V> c = (Concatenate<V>) in;
       IRegEx<V> first = c.getFirst();
       IRegEx<V> second = c.getSecond();
+      if(first instanceof  EmptySet)
+        return first;
+      if(second instanceof EmptySet)
+        return second;
       if (first instanceof Epsilon)
         return c.getSecond();
-      if (second instanceof Epsilon || second instanceof EmptySet)
+      if (second instanceof Epsilon)
         return c.getFirst();
     }
 
@@ -265,7 +259,7 @@ public class RegEx<V> implements IRegEx<V> {
     }
 
     public String toString() {
-      return v.toString();
+      return Objects.toString(v,"null");
     }
 
     @Override

@@ -51,6 +51,10 @@ public class Epsilon<V> implements IRegEx<V> {
     return true;
   }
 
+  public V getV() {
+    return v;
+  }
+
   @Override
   public String toString() {
     return "EPS:" + Objects.toString(v, "null");
