@@ -18,6 +18,4 @@ public interface LabeledGraph<N, V> {
 
   Set<N> getNodes();
 
-  V epsilon();
-
 }

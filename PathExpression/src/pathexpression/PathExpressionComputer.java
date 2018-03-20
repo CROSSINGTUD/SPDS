@@ -3,23 +3,23 @@
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
  *     Johannes Spaeth - initial API and implementation
  *******************************************************************************/
-package pathexpression;
 
-import java.util.LinkedList;
-import java.util.List;
+package pathexpression;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Table;
-
 import pathexpression.RegEx.EmptySet;
+
+import java.util.LinkedList;
+import java.util.List;
 
 public class PathExpressionComputer<N, V> {
 
@@ -27,18 +27,18 @@ public class PathExpressionComputer<N, V> {
   private BiMap<N, Integer> nodeToIntMap = HashBiMap.create();
   private Table<Integer, Integer, IRegEx<V>> table = HashBasedTable.create();
   private IRegEx<V> emptyRegEx = new RegEx.EmptySet<V>();
-  private Epsilon<V> eps;
 
   public PathExpressionComputer(LabeledGraph<N, V> graph) {
     this.graph = graph;
-    eps = new Epsilon<V>(graph.epsilon());
     initNodesToIntMap();
   }
 
 
   private void initNodesToIntMap() {
+    int size = nodeToIntMap.size();
     for (N node : graph.getNodes()) {
-      nodeToIntMap.put(node, (nodeToIntMap.size() + 1));
+      System.out.println(node);
+      nodeToIntMap.put(node, (++size));
     }
   }
 
@@ -48,14 +48,11 @@ public class PathExpressionComputer<N, V> {
   }
 
   public IRegEx<V> getExpressionBetween(N a, N b) {
-    if (!graph.getNodes().contains(a))
+    if (!graph.getNodes().contains(a)) {
       return emptyRegEx;
+    }
     List<IRegEx<V>> allExpr = computeAllPathFrom(a);
     return allExpr.get(getIntegerFor(b) - 1);
-  }
-
-  public Epsilon<V> getEpsilon() {
-    return eps;
   }
 
   private List<IRegEx<V>> computeAllPathFrom(N a) {
@@ -63,9 +60,10 @@ public class PathExpressionComputer<N, V> {
     eliminate();
     List<PathExpression<V>> extractPathSequence = extractPathSequence();
     List<IRegEx<V>> regEx = new LinkedList<>();
-    for (int i = 0; i < graph.getNodes().size(); i++)
+    for (int i = 0; i < graph.getNodes().size(); i++) {
       regEx.add(emptyRegEx);
-    regEx.set(getIntegerFor(a) - 1, eps);
+    }
+    regEx.set(getIntegerFor(a) - 1, new Epsilon<V>());
     for (int i = 0; i < extractPathSequence.size(); i++) {
       PathExpression<V> tri = extractPathSequence.get(i);
       if (tri.getSource() == tri.getTarget()) {
@@ -96,7 +94,7 @@ public class PathExpressionComputer<N, V> {
     for (int u = 1; u <= n; u++) {
       for (int w = u; w <= n; w++) {
         IRegEx<V> reg = table.get(u, w);
-        if (!(reg instanceof EmptySet)) {
+        if (!(reg instanceof EmptySet) && !(reg instanceof Epsilon)) {
           list.add(new PathExpression<V>(reg, u, w));
         }
       }
@@ -116,23 +114,24 @@ public class PathExpressionComputer<N, V> {
     int numberOfNodes = graph.getNodes().size();
     for (int v = 1; v <= numberOfNodes; v++) {
       for (int w = 1; w <= numberOfNodes; w++) {
-        updateTable(v, w, emptyRegEx);
+        if (v == w) {
+          updateTable(v, w, new Epsilon());
+        } else {
+          updateTable(v, w, emptyRegEx);
+        }
       }
     }
     for (Edge<N, V> e : graph.getEdges()) {
       Integer head = getIntegerFor(e.getStart());
       Integer tail = getIntegerFor(e.getTarget());
       IRegEx<V> pht = table.get(head, tail);
-      if (e.getLabel() == graph.epsilon() || e.getLabel().equals(graph.epsilon())) {
-        pht = RegEx.<V>union(new Epsilon(e.getLabel()), pht);
-      } else {
-        pht = RegEx.<V>union(new RegEx.Plain<V>(e.getLabel()), pht);
-      }
+      pht = RegEx.<V>union(new RegEx.Plain<V>(e.getLabel()), pht);
       updateTable(head, tail, pht);
     }
     for (int v = 1; v <= numberOfNodes; v++) {
       IRegEx<V> pvv = table.get(v, v);
-      updateTable(v, v, RegEx.<V>star(pvv));
+      pvv = RegEx.<V>star(pvv);
+      updateTable(v, v, pvv);
       for (int u = v + 1; u <= numberOfNodes; u++) {
         IRegEx<V> puv = table.get(u, v);
         if (puv instanceof EmptySet) {
@@ -153,6 +152,7 @@ public class PathExpressionComputer<N, V> {
         }
       }
     }
+    System.out.println();
   }
 
 
