@@ -22,7 +22,6 @@ public class IntGraph implements LabeledGraph<Integer, String> {
 
   private Set<Edge<Integer, String>> edges = Sets.newHashSet();
   private Set<Integer> nodes = Sets.newHashSet();
-  private String eps = "EPS";
 
   public void addEdge(int start, String label, int target) {
     nodes.add(start);
@@ -38,11 +37,6 @@ public class IntGraph implements LabeledGraph<Integer, String> {
   @Override
   public Set<Integer> getNodes() {
     return nodes;
-  }
-
-  @Override
-  public String epsilon() {
-    return eps;
   }
 
 }

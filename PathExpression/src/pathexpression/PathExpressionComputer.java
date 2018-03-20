@@ -27,11 +27,9 @@ public class PathExpressionComputer<N, V> {
   private BiMap<N, Integer> nodeToIntMap = HashBiMap.create();
   private Table<Integer, Integer, IRegEx<V>> table = HashBasedTable.create();
   private IRegEx<V> emptyRegEx = new RegEx.EmptySet<V>();
-  private Epsilon<V> eps;
 
   public PathExpressionComputer(LabeledGraph<N, V> graph) {
     this.graph = graph;
-    eps = new Epsilon<V>(graph.epsilon());
     initNodesToIntMap();
   }
 
@@ -57,10 +55,6 @@ public class PathExpressionComputer<N, V> {
     return allExpr.get(getIntegerFor(b) - 1);
   }
 
-  public Epsilon<V> getEpsilon() {
-    return eps;
-  }
-
   private List<IRegEx<V>> computeAllPathFrom(N a) {
     assert graph.getNodes().contains(a);
     eliminate();
@@ -69,7 +63,7 @@ public class PathExpressionComputer<N, V> {
     for (int i = 0; i < graph.getNodes().size(); i++) {
       regEx.add(emptyRegEx);
     }
-    regEx.set(getIntegerFor(a) - 1, eps);
+    regEx.set(getIntegerFor(a) - 1, new Epsilon<V>());
     for (int i = 0; i < extractPathSequence.size(); i++) {
       PathExpression<V> tri = extractPathSequence.get(i);
       if (tri.getSource() == tri.getTarget()) {
@@ -121,7 +115,7 @@ public class PathExpressionComputer<N, V> {
     for (int v = 1; v <= numberOfNodes; v++) {
       for (int w = 1; w <= numberOfNodes; w++) {
         if (v == w) {
-          updateTable(v, w, new Epsilon<V>(graph.epsilon()));
+          updateTable(v, w, new Epsilon());
         } else {
           updateTable(v, w, emptyRegEx);
         }
@@ -131,16 +125,13 @@ public class PathExpressionComputer<N, V> {
       Integer head = getIntegerFor(e.getStart());
       Integer tail = getIntegerFor(e.getTarget());
       IRegEx<V> pht = table.get(head, tail);
-      if (e.getLabel() == graph.epsilon() || e.getLabel().equals(graph.epsilon())) {
-        pht = RegEx.<V>union(new Epsilon(e.getLabel()), pht);
-      } else {
-        pht = RegEx.<V>union(new RegEx.Plain<V>(e.getLabel()), pht);
-      }
+      pht = RegEx.<V>union(new RegEx.Plain<V>(e.getLabel()), pht);
       updateTable(head, tail, pht);
     }
     for (int v = 1; v <= numberOfNodes; v++) {
       IRegEx<V> pvv = table.get(v, v);
-      updateTable(v, v, RegEx.<V>star(pvv));
+      pvv = RegEx.<V>star(pvv);
+      updateTable(v, v, pvv);
       for (int u = v + 1; u <= numberOfNodes; u++) {
         IRegEx<V> puv = table.get(u, v);
         if (puv instanceof EmptySet) {

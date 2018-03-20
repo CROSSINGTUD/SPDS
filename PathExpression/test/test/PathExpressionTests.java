@@ -3,7 +3,7 @@
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -199,6 +199,62 @@ public class PathExpressionTests {
     IRegEx<String> expected = a("a", "v");
     assertEquals(expected, expressionBetween);
   }
+
+  @Test
+  public void loop() {
+    IntGraph g = new IntGraph();
+    g.addEdge(1, "12", 2);
+    g.addEdge(2, "23", 3);
+    g.addEdge(3, "34", 4);
+    g.addEdge(4, "43", 3);
+    PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
+    IRegEx<String> expressionBetween = expr.getExpressionBetween(1, 3);
+    IRegEx<String> expected = u(a("12", "23"),a(a(a(a("12","23"),"34"), star(a("43","34"))),"43"));
+    assertEquals(expected, expressionBetween);
+  }
+
+
+  @Test
+  public void loop2() {
+    IntGraph g = new IntGraph();
+    g.addEdge(1, "12", 2);
+    g.addEdge(2,"21",1);
+    g.addEdge(2, "23", 3);
+    g.addEdge(3, "34", 4);
+    g.addEdge(4, "43", 3);
+    PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
+    IRegEx<String> expressionBetween = expr.getExpressionBetween(1, 3);
+    IRegEx<String> expected = u(a(a("12", star(a("21", "12"))), "23"), a(a(a(a(a("12", star(a("21", "12"))), "23"), "34"), star(a("43", "34"))), "43"));
+    assertEquals(expected, expressionBetween);
+  }
+
+  @Test
+  public void loop3() {
+    IntGraph g = new IntGraph();
+    g.addEdge(1, "12", 2);
+    g.addEdge(2, "23", 3);
+    g.addEdge(3, "32", 2);
+    g.addEdge(3, "34", 4);
+    g.addEdge(4, "41", 1);
+    PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
+    IRegEx<String> expressionBetween = expr.getExpressionBetween(1, 1);
+    IRegEx<String> expected = a(a(a(a(a("12", "23"), star(a("32", "23"))), "34"), star(a(a(a(a("41", "12"), "23"), star(a("32", "23"))), "34"))), "41");
+    assertEquals(expected, expressionBetween);
+  }
+
+  @Test
+  public void loop4() {
+    IntGraph g = new IntGraph();
+    g.addEdge(1, "13", 3);
+    g.addEdge(3, "31", 1);
+    g.addEdge(3, "34", 4);
+    g.addEdge(4, "41", 1);
+    PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
+    IRegEx<String> expressionBetween = expr.getExpressionBetween(1, 1);
+    IRegEx<String> expected = u(a(a(a(a("13", star(a("31", "13"))), "34"), star(a(a(a("41", "13"), star(a("31", "13"))), "34"))), "41"), a(u(a("13", star(a("31", "13"))), a(a(a(a("13", star(a("31", "13"))), "34"), star(a(a(a("41", "13"), star(a("31", "13"))), "34"))), a(a("41", "13"), star(a("31", "13"))))), "31"));
+    assertEquals(expected, expressionBetween);
+  }
+
   private static IRegEx<String> e(String e) {
     return new RegEx.Plain<String>(e);
   }
@@ -243,4 +299,23 @@ public class PathExpressionTests {
   private static IRegEx<String> star(String a) {
     return star(e(a));
   }
+
+  private static String toTestString(IRegEx<String> regEx){
+     if(regEx instanceof RegEx.EmptySet){
+       return "";
+     } else if(regEx instanceof RegEx.Plain){
+       return String.format("\"%s\"",((RegEx.Plain) regEx).v);
+     } else if(regEx instanceof RegEx.Concatenate){
+       RegEx.Concatenate concat = (RegEx.Concatenate) regEx;
+       return String.format("a(%s, %s)",toTestString(concat.a), toTestString(concat.b));
+     } else if(regEx instanceof RegEx.Union){
+       RegEx.Union union = (RegEx.Union) regEx;
+       return String.format("u(%s, %s)", toTestString(union.a), toTestString(union.b));
+     } else if(regEx instanceof RegEx.Star){
+       return String.format("star(%s)", toTestString(((RegEx.Star) regEx).a));
+     } else{
+       throw new IllegalArgumentException("Unhandled regex: " + regEx);
+     }
+  }
+
 }
