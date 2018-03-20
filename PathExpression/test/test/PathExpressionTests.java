@@ -150,61 +150,14 @@ public class PathExpressionTests {
    IRegEx<String> expected = new RegEx.EmptySet<String>();
    assertEquals(expected, expressionBetween);
    }
-   @Test
-   public void epsilon() {
-   IntGraph g = new IntGraph();
-   g.addEdge(1, g.epsilon(), 3);
-   PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
-   IRegEx<String> expressionBetween = expr.getExpressionBetween(1, 3);
-   IRegEx<String> expected = expr.getEpsilon();
-   assertEquals(expected, expressionBetween);
-   }
-
-   @Test
-   public void epsilon2() {
-   IntGraph g = new IntGraph();
-   g.addEdge(1, g.epsilon(), 2);
-   g.addEdge(2, g.epsilon(), 3);
-   PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
-   IRegEx<String> expressionBetween = expr.getExpressionBetween(1, 3);
-   IRegEx<String> expected = expr.getEpsilon();
-   assertEquals(expected, expressionBetween);
-   }
-
-   @Test
-   public void epsilon3() {
-   IntGraph g = new IntGraph();
-   g.addEdge(1, g.epsilon(), 2);
-   g.addEdge(2, g.epsilon(), 3);
-   g.addEdge(1, g.epsilon(), 4);
-   g.addEdge(4, g.epsilon(), 3);
-   PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
-   IRegEx<String> expressionBetween = expr.getExpressionBetween(1, 3);
-   IRegEx<String> expected = expr.getEpsilon();
-   assertEquals(expected, expressionBetween);
-   }
-
-   @Test
-   public void epsilon5() {
-   IntGraph g = new IntGraph();
-   g.addEdge(1, g.epsilon(), 2);
-   g.addEdge(2, g.epsilon(), 3);
-   g.addEdge(1, g.epsilon(), 4);
-   g.addEdge(4, g.epsilon(), 3);
-   g.addEdge(3, "a", 5);
-   PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
-   IRegEx<String> expressionBetween = expr.getExpressionBetween(1, 5);
-   IRegEx<String> expected = new RegEx.Plain<String>("a");
-   assertEquals(expected, expressionBetween);
-   }
 
    @Test
    public void branchWithEps() {
    IntGraph g = new IntGraph();
    g.addEdge(1, "a", 2);
-   g.addEdge(2, "v", 3);
+   g.addEdge(2, "v", 4);
    g.addEdge(1, "c", 3);
-   g.addEdge(3, g.epsilon(), 4);
+   g.addEdge(1, "c", 4);
    PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
    IRegEx<String> expressionBetween = expr.getExpressionBetween(1, 4);
    IRegEx<String> expected = u("c", a("a", "v"));
@@ -217,7 +170,7 @@ public class PathExpressionTests {
     g.addEdge(1, "a", 2);
     g.addEdge(2, "v", 4);
     g.addEdge(1, "c", 3);
-    g.addEdge(3, g.epsilon(), 4);
+    g.addEdge(1, "c", 4);
     PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
     IRegEx<String> expressionBetween = expr.getExpressionBetween(1, 4);
     IRegEx<String> expected = u("c", a("a", "v"));
@@ -229,8 +182,7 @@ public class PathExpressionTests {
     IntGraph g = new IntGraph();
     g.addEdge(1, "a", 2);
     g.addEdge(2, "v", 3);
-    g.addEdge(1, "c", 4);
-    g.addEdge(4, g.epsilon(), 3);
+    g.addEdge(1, "c", 3);
     PathExpressionComputer<Integer, String> expr = new PathExpressionComputer<Integer, String>(g);
     IRegEx<String> expressionBetween = expr.getExpressionBetween(1, 3);
     IRegEx<String> expected = u("c", a("a", "v"));

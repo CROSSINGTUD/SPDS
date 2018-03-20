@@ -100,7 +100,7 @@ public class PathExpressionComputer<N, V> {
     for (int u = 1; u <= n; u++) {
       for (int w = u; w <= n; w++) {
         IRegEx<V> reg = table.get(u, w);
-        if (!(reg instanceof EmptySet)) {
+        if (!(reg instanceof EmptySet) && !(reg instanceof Epsilon)) {
           list.add(new PathExpression<V>(reg, u, w));
         }
       }
