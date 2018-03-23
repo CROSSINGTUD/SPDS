@@ -53,11 +53,11 @@ public class ContextTypesTest extends AbstractBoomerangTest{
 	@Test
 	public void openContextWithField() {
 		A a = new A();
+		Alloc alloc = new Alloc();
+		a.b = alloc;
 		call(a);
 	}
 	private void call(A a) {
-		Alloc alloc = new Alloc();
-		a.b = alloc;
 		Object t = a.b;
 		queryFor(t);
 	}
@@ -65,5 +65,30 @@ public class ContextTypesTest extends AbstractBoomerangTest{
 	public static class A {
 		Object b = null;
 		Object c = null;
+	}
+	
+	
+	@Test
+	public void threeStackedOpenContexts() {
+		Alloc alloc = new Alloc();
+		wrappedWrappedCall(alloc);
+	}
+	private void wrappedWrappedCall(Alloc alloc) {
+		wrappedCall(alloc);
+	}
+	private void wrappedCall(Alloc alloc) {
+		call(alloc);
+	}
+	
+	
+	@Test
+	public void recursionOpenCallStack() {
+		Alloc start = new Alloc();
+		recursionStart(start);
+	}
+	private void recursionStart(Alloc rec) {
+		if(staticallyUnknown())
+			recursionStart(rec);
+		call(rec);
 	}
 }

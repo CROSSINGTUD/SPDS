@@ -37,7 +37,6 @@ public class PathExpressionComputer<N, V> {
   private void initNodesToIntMap() {
     int size = nodeToIntMap.size();
     for (N node : graph.getNodes()) {
-      System.out.println(node);
       nodeToIntMap.put(node, (++size));
     }
   }
@@ -152,7 +151,6 @@ public class PathExpressionComputer<N, V> {
         }
       }
     }
-    System.out.println();
   }
 
 

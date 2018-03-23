@@ -92,7 +92,7 @@ import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedBoomerang<W extends Weight> {
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
 	private IBoomerangStats<W> stats;
@@ -165,8 +165,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 								Node<Statement, Val> returnedVal = new Node<Statement, Val>(returnSite,
 										returningFact.fact());
 								solver.setCallingContextReachable(returnedVal);
-								solver.getCallAutomaton().addWeightForTransition(new Transition<Statement,INode<Val>>(returningFact,returnSite,solver.getCallAutomaton().getInitialState()), weight);
-
+								solver.getCallAutomaton().addWeightForTransition(new Transition<Statement,INode<Val>>(new AllocNode<Val>(returningFact.fact()),returnSite,solver.getCallAutomaton().getInitialState()), weight);
+								solver.getCallAutomaton().addWeightForTransition(new Transition<Statement,INode<Val>>(returningFact,returnSite,new AllocNode<Val>(returningFact.fact())), weight);
+								
 								final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
 										.getOrCreate(new ForwardCallSitePOI(callStatement));
 								callSitePoi.returnsFromCall(key, returnedVal);
@@ -205,9 +206,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			return solver;
 		}
 	};
-    private void setupScope(Query query) {
-         
-    }
 
 
 	private BackwardsInterproceduralCFG bwicfg;
@@ -602,9 +600,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			final FieldWritePOI fieldWritePoi, final ForwardQuery sourceQuery) {
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(), fieldWritePoi.getBaseVar());
 		if (node.fact().equals(fieldWritePoi.getStoredVar())) {
-//			if(sourceQuery instanceof WeightedForwardQuery) //Additional logic for IDEal
-			
+			if(sourceQuery instanceof WeightedForwardQuery || options.computeAllAliases()) {//Additional logic for IDEal
 				backwardSolveUnderScope(backwardQuery,sourceQuery);
+				//TODO or All AliasQuery
+			}
 			fieldWritePoi.addFlowAllocation(sourceQuery);
 		}
 		if (node.fact().equals(fieldWritePoi.getBaseVar())) {
@@ -1327,13 +1326,120 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	
 
 	public Set<ForwardQuery> getAllocationSites(final BackwardQuery query){
+
 		final Set<ForwardQuery> results = Sets.newHashSet();
 		for (final Entry<Query, AbstractBoomerangSolver<W>> fw : queryToSolvers.entrySet()) {
-			if(fw.getKey() instanceof ForwardQuery){
-				fw.getValue().getFieldAutomaton().registerListener(new ExtractAllocationSiteStateListener(fw.getValue().getFieldAutomaton().getInitialState(), query, (ForwardQuery) fw.getKey(), results));
+			if(!(fw.getKey() instanceof ForwardQuery)) {
+				continue;
+			}
+			int size = results.size();
+			fw.getValue().getFieldAutomaton().registerListener(new ExtractAllocationSiteStateListener(fw.getValue().getFieldAutomaton().getInitialState(), query, (ForwardQuery) fw.getKey(), results));
+			if(results.size() > size) {
+				LabeledGraph<INode<Val>, Statement> g = flattenGraph(fw.getValue());
+				PathExpressionComputer<INode<Val>, Statement> comp = new PathExpressionComputer<>(g);
+				IRegEx<Statement> expressionBetween = comp.getExpressionBetween(new SingleNode<Val>(query.asNode().fact()),new SingleNode<Val>(fw.getKey().asNode().fact()));
+				System.out.println("EXPRESSION: " + new SingleNode<Val>(query.asNode().fact()) + new SingleNode<Val>(fw.getKey().asNode().fact()));
+				System.out.println("EXPRESSION: " + expressionBetween);
 			}
 		}
 		return results;
+	}
+	
+	private LabeledGraph<INode<Val>, Statement> flattenGraph(AbstractBoomerangSolver<W> solver) {
+		WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = solver.getCallAutomaton();
+		final Set<INode<Val>> nodes = callAutomaton .getNodes();
+		final Set<Edge<INode<Val>,Statement>> edges = Sets.newHashSet();
+		for(Edge<INode<Val>, Statement> e : callAutomaton.getEdges()) {
+//			if(e.getLabel().getMethod() != null) {
+				if(!e.getStart().fact().m().equals(e.getTarget().fact().m())) {
+					Set<Statement> succsOf = solver.getPredsOf(e.getLabel());
+					for(Statement s : succsOf) {
+						edges.add(new FEdge(e.getStart(),s,e.getTarget()));
+					}
+				} else {
+					edges.add(new FEdge(e.getStart(),Statement.epsilon(),e.getTarget()));
+				}
+//			}
+		}
+		return new LabeledGraph<INode<Val>, Statement>() {
+
+			@Override
+			public Set<Edge<INode<Val>, Statement>> getEdges() {
+				return edges;
+			}
+
+			@Override
+			public Set<INode<Val>> getNodes() {
+				return nodes;
+			}
+		};
+	}
+
+	private static class FEdge implements Edge<INode<Val>,Statement>{
+
+		private INode<Val> start;
+		private Statement stmt;
+		private INode<Val> target;
+
+		public FEdge(INode<Val> start, Statement stmt, INode<Val> target) {
+			this.start = start;
+			this.stmt = stmt;
+			this.target = target;
+		}
+
+		@Override
+		public INode<Val> getStart() {
+			return start;
+		}
+
+		@Override
+		public INode<Val> getTarget() {
+			return target;
+		}
+
+		@Override
+		public Statement getLabel() {
+			return stmt;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
+			result = prime * result + ((start == null) ? 0 : start.hashCode());
+			result = prime * result + ((target == null) ? 0 : target.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			FEdge other = (FEdge) obj;
+			if (stmt == null) {
+				if (other.stmt != null)
+					return false;
+			} else if (!stmt.equals(other.stmt))
+				return false;
+			if (start == null) {
+				if (other.start != null)
+					return false;
+			} else if (!start.equals(other.start))
+				return false;
+			if (target == null) {
+				if (other.target != null)
+					return false;
+			} else if (!target.equals(other.target))
+				return false;
+			return true;
+		}
+
+		
 	}
 	
 	private class ExtractAllocationSiteStateListener extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
