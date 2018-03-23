@@ -45,4 +45,6 @@ public interface BoomerangOptions {
 	public IBoomerangStats statsFactory();
 
 	public boolean aliasing();
+	
+	public boolean computeAllAliases();
 }

@@ -11,6 +11,7 @@
  *******************************************************************************/
 package test.cases.statics;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.cases.fields.Alloc;
@@ -20,6 +21,7 @@ public class Singleton extends AbstractBoomerangTest {
 	private static Alloc instance;
 	
 	@Test
+	@Ignore
 	public void doubleSingleton(){
 		Alloc singleton = Singleton.i();
 		Object alias = singleton;

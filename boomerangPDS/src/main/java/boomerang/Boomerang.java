@@ -15,6 +15,7 @@ import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.ForwardQuery;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import wpds.impl.Weight.NoWeight;

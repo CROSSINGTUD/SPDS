@@ -484,7 +484,16 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		}
 		return res;
 	}
-
+	public Set<Statement> getPredsOf(Statement stmt) {
+		Set<Statement> res = Sets.newHashSet();
+		if (!stmt.getUnit().isPresent())
+			return res;
+		Stmt curr = stmt.getUnit().get();
+		for (Unit succ : icfg.getPredsOf(curr)) {
+			res.add(new Statement((Stmt) succ, icfg.getMethodOf(succ)));
+		}
+		return res;
+	}
 	@Override
 	public String toString() {
 		return "Solver for: " + query.toString();

@@ -172,4 +172,9 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		return true;
 	}
 
+	@Override
+	public boolean computeAllAliases() {
+		return false;
+	}
+
 }
