@@ -14,6 +14,7 @@ import com.google.common.collect.Sets;
 import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
 import boomerang.Query;
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -29,6 +30,7 @@ import pathexpression.RegEx;
 import soot.PointsToSet;
 import soot.Type;
 import soot.jimple.ClassConstant;
+import soot.jimple.NewExpr;
 import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
@@ -430,23 +432,51 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 	}
 	@Override
 	public boolean hasNonEmptyIntersection(PointsToSet other) {
-		// TODO Auto-generated method stub
-		return false;
+		if(other == this)
+			return true;
+		if(!(other instanceof BackwardBoomerangResults)) {
+			throw new RuntimeException("Expected a points-to set of type " + BackwardBoomerangResults.class.getName());
+		}
+		BackwardBoomerangResults<W> otherRes = (BackwardBoomerangResults<W>) other;
+		Map<ForwardQuery, IRegEx<Statement>> otherAllocs = otherRes.getAllocationSites();
+		boolean intersection = false;
+		for(Entry<ForwardQuery, IRegEx<Statement>> a : getAllocationSites().entrySet()) {
+			for(Entry<ForwardQuery, IRegEx<Statement>> b : otherAllocs.entrySet()) {
+				if(a.getKey().equals(b.getKey()) && contextMatch(a.getValue(),b.getValue())) {
+					intersection = true;
+				}
+			}	
+		}
+		return intersection;
 	}
+	
+	private boolean contextMatch(IRegEx<Statement> value, IRegEx<Statement> value2) {
+		return true;
+	}
+	
 	@Override
 	public Set<Type> possibleTypes() {
-		// TODO Auto-generated method stub
-		return null;
+		computeAllocations();
+		Set<Type> res = Sets.newHashSet();
+		for(ForwardQuery q : allocationSites.keySet()) {
+			Val fact = q.asNode().fact();
+			if(fact.isNewExpr()) {
+				AllocVal alloc = (AllocVal) fact;
+				NewExpr expr = (NewExpr) alloc.allocationValue();
+				res.add(expr.getType());
+			} else {
+				res.add(fact.value().getType());
+			}
+		}
+		return res;
 	}
 	@Override
 	public Set<String> possibleStringConstants() {
-		// TODO Auto-generated method stub
-		return null;
+		throw new RuntimeException("Not implemented!");
 	}
 	@Override
 	public Set<ClassConstant> possibleClassConstants() {
-		// TODO Auto-generated method stub
-		return null;
+		throw new RuntimeException("Not implemented!");
 	}
 	
 }
