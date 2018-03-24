@@ -11,7 +11,6 @@
  *******************************************************************************/
 package ideal;
 
-import boomerang.BoomerangTimeoutException;
 import boomerang.WeightedBoomerang;
 import wpds.impl.Weight;
 
@@ -21,12 +20,10 @@ import wpds.impl.Weight;
 public class IDEALSeedTimeout extends RuntimeException {
     private final IDEALSeedSolver<? extends Weight> solver;
     private WeightedBoomerang<? extends Weight> timedoutSolver;
-    private final BoomerangTimeoutException boomerangTimeoutException;
 
-    public <W extends Weight> IDEALSeedTimeout(IDEALSeedSolver<W> solver, WeightedBoomerang<W> timedoutSolver, BoomerangTimeoutException boomerangTimeoutException) {
+    public <W extends Weight> IDEALSeedTimeout(IDEALSeedSolver<W> solver, WeightedBoomerang<W> timedoutSolver) {
         this.solver = solver;
         this.timedoutSolver = timedoutSolver;
-        this.boomerangTimeoutException = boomerangTimeoutException;
     }
 
     public IDEALSeedSolver<? extends Weight> getSolver() {
@@ -39,6 +36,6 @@ public class IDEALSeedTimeout extends RuntimeException {
 
     @Override
     public String toString() {
-        return "IDEAL Seed TimeoutException \n"+boomerangTimeoutException.toString();
+        return "IDEAL Seed TimeoutException \n";
     }
 }

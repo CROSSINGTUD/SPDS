@@ -13,11 +13,17 @@ package boomerang.stats;
 
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
+import boomerang.jimple.Statement;
+import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import soot.SootMethod;
+import sync.pds.solver.nodes.Node;
 import wpds.impl.Weight;
 
+import java.util.Collection;
 import java.util.Set;
+
+import com.google.common.base.Stopwatch;
 
 /**
  * Created by johannesspath on 06.12.17.
@@ -32,4 +38,7 @@ public interface IBoomerangStats<W extends Weight> {
     void registerFieldReadPOI(WeightedBoomerang<W>.FieldReadPOI key);
 
     Set<SootMethod> getCallVisitedMethods();
+    
+    Collection<? extends Node<Statement, Val>> getForwardReachesNodes();
+
 }

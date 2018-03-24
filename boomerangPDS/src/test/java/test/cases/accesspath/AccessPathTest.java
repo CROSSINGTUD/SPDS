@@ -11,6 +11,7 @@
  *******************************************************************************/
 package test.cases.accesspath;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.AbstractBoomerangTest;
@@ -85,6 +86,14 @@ public class AccessPathTest extends AbstractBoomerangTest {
 	}
 	
 	@Test
+	@Ignore
+	public void doubleIndirect(){
+		C b = new C();
+		B alloc = new B();
+		b.attr.b = alloc;
+		accessPathQueryFor(alloc,"b[attr,b]");
+	}
+	@Test
 	public void contextQuery(){
 		B a = new B();
 		B b = a;
@@ -112,11 +121,13 @@ public class AccessPathTest extends AbstractBoomerangTest {
 	}
 
 	@Test
+	@Ignore
 	public void twoLevelTest() {
 		C b = new C();
 		taintMe(b);
 	}
 	@Test
+	@Ignore
 	public void threeLevelTest() {
 		C b = new C();
 		taintOnNextLevel(b);

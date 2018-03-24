@@ -73,7 +73,7 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 			}
 		};
 		for(Query s :seedFactory.computeSeeds()){
-			solve(s);
+			solve((ForwardQuery)s);
 		}
 		
 		long after = System.currentTimeMillis();

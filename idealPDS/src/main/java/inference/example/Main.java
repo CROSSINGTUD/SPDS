@@ -27,6 +27,7 @@ import boomerang.WeightedForwardQuery;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.results.ForwardBoomerangResults;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
 import ideal.IDEALSeedSolver;
@@ -131,9 +132,9 @@ public class Main {
 					}
 				});
 				
-				Map<WeightedForwardQuery<InferenceWeight>, IDEALSeedSolver<InferenceWeight>> res = solver.run();
-				for(Entry<WeightedForwardQuery<InferenceWeight>, IDEALSeedSolver<InferenceWeight>> e : res.entrySet()){
-					Table<Statement, Val, InferenceWeight> results = e.getValue().getPhase2Solver().getResults(e.getKey());
+				Map<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>> res = solver.run();
+				for(Entry<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>> e : res.entrySet()){
+					Table<Statement, Val, InferenceWeight> results = e.getValue().getResults();
 					System.out.println(Joiner.on("\n").join(results.cellSet()));
 				}
 			}

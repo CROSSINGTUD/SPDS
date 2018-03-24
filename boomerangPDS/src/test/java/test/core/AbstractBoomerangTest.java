@@ -40,6 +40,7 @@ import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.util.AccessPath;
@@ -104,7 +105,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	protected AnalysisMode[] getAnalyses() {
 		return new AnalysisMode[] {
 //				 AnalysisMode.WholeProgram,
-//				 AnalysisMode.DemandDrivenForward,
 				AnalysisMode.DemandDrivenBackward
 				};
 	}
@@ -176,9 +176,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					case DemandDrivenBackward:
 						runDemandDrivenBackward();
 						break;
-					case DemandDrivenForward:
-						runDemandDrivenForward();
-						break;
 					}
 				}
 				if(resultsMustNotBeEmpty)
@@ -199,12 +196,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			throw new RuntimeException("Found more than one backward query to execute!");
 		Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
 		compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
-	}
-
-	private void runDemandDrivenForward() {
-		// Run forward analysis
-		Set<Node<Statement, Val>> results = runQuery(allocationSites);
-		compareQuery(queryForCallSites, results, AnalysisMode.DemandDrivenForward);
 	}
 
 	private class AllocationSiteOf implements ValueOfInterestInUnit {
@@ -339,32 +330,16 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 			};
 			if(query instanceof BackwardQuery){
-				solver.solve(query);
-				for(ForwardQuery q : solver.getAllocationSites((BackwardQuery) query)){
+				BackwardBoomerangResults<NoWeight> res = solver.solve((BackwardQuery) query);
+				for(ForwardQuery q : res.getAllocationSites().keySet()){
 					results.add(q.asNode());
 				}
 				solver.debugOutput();
 				if(accessPathQuery){
-					checkContainsAllExpectedAccessPath(solver.getAllAliases((BackwardQuery) query));
+					checkContainsAllExpectedAccessPath(res.getAllAliases());
 				}
 
-			}else{
-				solver.solve(query);
-				for(Node<Statement, Val> s : solver.getForwardReachableStates()){
-					if(s.stmt().getUnit().isPresent()){
-						Stmt stmt = s.stmt().getUnit().get();
-						if(stmt.toString().contains("queryFor")){
-							if(stmt.containsInvokeExpr()){
-								InvokeExpr invokeExpr = stmt.getInvokeExpr();
-								if(invokeExpr.getArg(0).equals(s.fact().value()))
-									results.add(s);
-							}
-						}
-					}
-				}
 			}
-			solver.debugOutput();
-			
 		}
 		return results;
 	}

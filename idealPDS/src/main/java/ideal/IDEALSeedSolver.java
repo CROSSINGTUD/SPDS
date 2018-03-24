@@ -18,6 +18,7 @@ import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 
@@ -38,7 +39,7 @@ import wpds.impl.WeightedPAutomaton;
 public class IDEALSeedSolver<W extends Weight> {
 
 	private final IDEALAnalysisDefinition<W> analysisDefinition;
-	private final Query seed;
+	private final ForwardQuery seed;
 	private final IDEALWeightFunctions<W> idealWeightFunctions;
 	private final W zero;
 	private final W one;
@@ -53,7 +54,7 @@ public class IDEALSeedSolver<W extends Weight> {
 		ObjectFlow, ValueFlow
 	};
 
-	public IDEALSeedSolver(IDEALAnalysisDefinition<W> analysisDefinition, Query seed,  SeedFactory<W> seedFactory) {
+	public IDEALSeedSolver(IDEALAnalysisDefinition<W> analysisDefinition, ForwardQuery seed,  SeedFactory<W> seedFactory) {
 		this.analysisDefinition = analysisDefinition;
 		this.seed = seed;
 		this.seedFactory = seedFactory;
@@ -71,23 +72,20 @@ public class IDEALSeedSolver<W extends Weight> {
 		};
 	}
 
-	public WeightedBoomerang<W> run() {
-		try{
-			runPhase(this.phase1Solver,Phases.ObjectFlow);
-		} catch(BoomerangTimeoutException e){
-			System.err.println(e);
+	public ForwardBoomerangResults<W> run() {
+		ForwardBoomerangResults<W> resultPhase1 = runPhase(this.phase1Solver,Phases.ObjectFlow);
+		if(resultPhase1.isTimedout()) {
 			analysisStopwatch.stop();
 			timedoutSolver = this.phase1Solver;
-			throw new IDEALSeedTimeout(this,this.phase1Solver,e);
+			throw new IDEALSeedTimeout(this,this.phase1Solver);
 		}
-		try{
-			return runPhase(this.phase2Solver,Phases.ValueFlow);
-		} catch(BoomerangTimeoutException e){
-			System.err.println(e);
+		ForwardBoomerangResults<W> resultPhase2 = runPhase(this.phase2Solver,Phases.ValueFlow);
+		if(resultPhase2.isTimedout()) {
 			analysisStopwatch.stop();
 			timedoutSolver = this.phase2Solver;
-			throw new IDEALSeedTimeout(this,this.phase2Solver,e);
+			throw new IDEALSeedTimeout(this,this.phase2Solver);
 		}
+		return resultPhase2;
 	}
 
 	private WeightedBoomerang<W> createSolver() {
@@ -131,7 +129,7 @@ public class IDEALSeedSolver<W extends Weight> {
 		};
 	}
 
-	private WeightedBoomerang<W> runPhase(final WeightedBoomerang<W> boomerang, final Phases phase) {
+	private ForwardBoomerangResults<W> runPhase(final WeightedBoomerang<W> boomerang, final Phases phase) {
 		analysisStopwatch.start();
 		idealWeightFunctions.setPhase(phase);
 		final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = boomerang.getSolvers().getOrCreate(seed).getCallAutomaton();
@@ -148,7 +146,7 @@ public class IDEALSeedSolver<W extends Weight> {
 				}
 			}
 		});
-		boomerang.solve(seed);
+		ForwardBoomerangResults<W> res = boomerang.solve((ForwardQuery) seed);
 		idealWeightFunctions.registerListener(new NonOneFlowListener<W>() {
 			@Override
 			public void nonOneFlow(final Node<Statement, Val> curr, final W weight) {
@@ -161,8 +159,8 @@ public class IDEALSeedSolver<W extends Weight> {
 //				} catch (BoomerangTimeoutException e){
 //					idealWeightFunctions.weakUpdate(curr.stmt());
 //				}
-				if(!boomerang.getAnalysisStopwatch().isRunning()) {
-					boomerang.getAnalysisStopwatch().start();
+				if(!res.getAnalysisWatch().isRunning()) {
+					res.getAnalysisWatch().start();
 				}
 				for(final Entry<Query, AbstractBoomerangSolver<NoWeight>> e : boomerangSolver.getSolvers().entrySet()){
 					if(e.getKey() instanceof ForwardQuery){
@@ -180,7 +178,7 @@ public class IDEALSeedSolver<W extends Weight> {
 		});
 		boomerang.debugOutput();
 		analysisStopwatch.stop();
-		return boomerang;
+		return res;
 	}
 
 	public WeightedBoomerang<W> getPhase1Solver() {

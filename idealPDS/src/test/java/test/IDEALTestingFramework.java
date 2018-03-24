@@ -15,6 +15,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import boomerang.WeightedForwardQuery;
@@ -26,6 +27,7 @@ import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.results.ForwardBoomerangResults;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
 import ideal.IDEALSeedSolver;
@@ -86,11 +88,9 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				System.out.println(sootTestMethod.getActiveBody());
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				
-				Map<WeightedForwardQuery<TransitionFunction>, IDEALSeedSolver<TransitionFunction>> seedToSolvers = executeAnalysis();
-				for(WeightedForwardQuery<TransitionFunction> seed : seedToSolvers.keySet()){
-					for(Query q : seedToSolvers.get(seed).getPhase2Solver().getSolvers().keySet()){
-						testingResultReporter.onSeedFinished(q.asNode(), seedToSolvers.get(seed).getPhase2Solver().getSolvers().getOrCreate(q));
-					}
+				Map<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> seedToSolvers = executeAnalysis();
+				for(Entry<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> e : seedToSolvers.entrySet()){
+					testingResultReporter.onSeedFinished(e.getKey().asNode(), e.getValue());
 				}
 				List<Assertion> unsound = Lists.newLinkedList();
 				List<Assertion> imprecise = Lists.newLinkedList();
@@ -113,7 +113,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		};
 	}
 
-	protected Map<WeightedForwardQuery<TransitionFunction>, IDEALSeedSolver<TransitionFunction>> executeAnalysis() {
+	protected Map<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> executeAnalysis() {
 		return IDEALTestingFramework.this.createAnalysis().run();
 	}
 

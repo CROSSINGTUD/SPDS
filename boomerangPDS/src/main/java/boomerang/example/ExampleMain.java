@@ -24,6 +24,7 @@ import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import soot.G;
 import soot.MethodOrMethodContext;
@@ -116,13 +117,13 @@ public class ExampleMain {
 				};
 				System.out.println("Solving query: " + query);
 				//2. Submit a query to the solver.
-				solver.solve(query);
-
+				BackwardBoomerangResults<NoWeight> backwardQueryResults = solver.solve(query);
+				solver.debugOutput();
 				System.out.println("All allocation sites of the query variable are:");
-				System.out.println(solver.getAllocationSites(query));
+				System.out.println(backwardQueryResults.getAllocationSites());
 
 				System.out.println("All aliasing access path of the query variable are:");
-				System.out.println(solver.getAllAliases(query));
+				System.out.println(backwardQueryResults.getAllAliases());
 			}
 
 			private BackwardQuery createQuery(JimpleBasedInterproceduralCFG icfg) {
