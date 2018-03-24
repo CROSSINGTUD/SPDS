@@ -605,7 +605,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
     private void backwardSolveUnderScope(BackwardQuery backwardQuery, ForwardQuery forwardQuery) {
 		backwardSolve(backwardQuery);
-		AbstractBoomerangSolver<W> bwSolver = queryToSolvers.getOrCreate(backwardQuery);
+		final AbstractBoomerangSolver<W> bwSolver = queryToSolvers.getOrCreate(backwardQuery);
 		AbstractBoomerangSolver<W> fwSolver = queryToSolvers.getOrCreate(forwardQuery);
 		fwSolver.registerReachableMethodListener(new ReachableMethodListener<W>() {
 			@Override
