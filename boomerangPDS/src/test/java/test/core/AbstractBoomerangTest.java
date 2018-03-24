@@ -99,7 +99,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	protected int analysisTimeout = 300 *1000;
 
 	private enum AnalysisMode {
-		WholeProgram, DemandDrivenForward, DemandDrivenBackward;
+		WholeProgram, DemandDrivenBackward;
 	}
 
 	protected AnalysisMode[] getAnalyses() {

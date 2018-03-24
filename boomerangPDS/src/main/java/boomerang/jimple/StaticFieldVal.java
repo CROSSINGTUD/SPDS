@@ -41,6 +41,11 @@ public class StaticFieldVal extends Val {
 				return false;
 		} else if (!field.equals(other.field))
 			return false;
+		if (m == null) {
+			if (other.m != null)
+				return false;
+		} else if (!m.equals(other.m))
+			return false;
 		return true;
 	}
 

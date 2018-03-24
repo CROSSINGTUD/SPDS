@@ -16,7 +16,7 @@ import soot.SootMethod;
 import soot.Value;
 
 public class Val {
-	private final SootMethod m;
+	protected final SootMethod m;
 	private final Value v;
 	private final String rep; 
 
@@ -66,14 +66,10 @@ public class Val {
 			return true;
 		if (obj == null)
 			return false;
+		//Removed this as AllocVal.equals(Val)
 //		if (getClass() != obj.getClass())
 //			return false;
 		Val other = (Val) obj;
-//		if (m == null) {
-//			if (other.m != null)
-//				return false;
-//		} else if (!m.equals(other.m))
-//			return false;
 		if (rep == null) {
 			if (other.rep != null)
 				return false;
