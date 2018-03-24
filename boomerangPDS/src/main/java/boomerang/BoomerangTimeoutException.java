@@ -14,12 +14,12 @@ package boomerang;
 import boomerang.stats.AdvancedBoomerangStats;
 import boomerang.stats.IBoomerangStats;
 
-public class BoomerangTimeoutException extends RuntimeException {
+class BoomerangTimeoutException extends RuntimeException {
 
 	private IBoomerangStats stats;
 	private long elapsed;
 
-	public BoomerangTimeoutException(long elapsed, IBoomerangStats stats) {
+	BoomerangTimeoutException(long elapsed, IBoomerangStats stats) {
 		this.elapsed = elapsed;
 		this.stats = stats;
 	}

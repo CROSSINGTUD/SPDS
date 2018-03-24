@@ -154,11 +154,7 @@ public class IDEALSeedSolver<W extends Weight> {
 					return;
 				}
 				idealWeightFunctions.potentialStrongUpdate(curr.stmt(), weight);
-//				try{
 				boomerangSolver.solve(new BackwardQuery(curr.stmt(),curr.fact()));
-//				} catch (BoomerangTimeoutException e){
-//					idealWeightFunctions.weakUpdate(curr.stmt());
-//				}
 				if(!res.getAnalysisWatch().isRunning()) {
 					res.getAnalysisWatch().start();
 				}
