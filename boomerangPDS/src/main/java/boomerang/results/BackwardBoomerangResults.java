@@ -96,25 +96,15 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 			} else {
 				context = expr;
 			}
+			System.out.println("Call stack: " + expr);
 			allocationSites.put(q, context);
 		}
 	}
 	private LabeledGraph<INode<Val>, Statement> flattenGraph(AbstractBoomerangSolver<W> solver) {
 		WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = solver.getCallAutomaton();
-		final Set<INode<Val>> nodes = callAutomaton .getNodes();
+		final Set<INode<Val>> nodes = Sets.newHashSet();
 		final Set<Edge<INode<Val>,Statement>> edges = Sets.newHashSet();
-		for(Edge<INode<Val>, Statement> e : callAutomaton.getEdges()) {
-			if(e.getLabel().getMethod() != null) {
-				if(e.getStart() instanceof GeneratedState) {
-					Set<Statement> succsOf = solver.getPredsOf(e.getLabel());
-					for(Statement s : succsOf) {
-						edges.add(new FEdge(e.getStart(),s,e.getTarget()));
-					}
-				} else {
-					edges.add(new FEdge(e.getStart(),Statement.epsilon(),e.getTarget()));
-				}
-			}
-		}
+		callAutomaton.registerListener(new CallStackExtracter(new SingleNode<Val>(query.asNode().fact()),new SingleNode<Val>(query.asNode().fact()),nodes,edges, solver));
 		return new LabeledGraph<INode<Val>, Statement>() {
 
 			@Override
@@ -128,6 +118,81 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 			}
 		};
 	}
+	
+	private class CallStackExtracter extends WPAStateListener<Statement, INode<Val>, W>{
+
+		private Set<INode<Val>> nodes;
+		private Set<Edge<INode<Val>, Statement>> edges;
+		private AbstractBoomerangSolver<W> solver;
+		private INode<Val> source;
+
+		public CallStackExtracter(INode<Val> state, INode<Val> source, Set<INode<Val>> nodes, Set<Edge<INode<Val>, Statement>> edges, AbstractBoomerangSolver<W> solver) {
+			super(state);
+			this.source = source;
+			this.nodes = nodes;
+			this.edges = edges;
+			this.solver = solver;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Statement, INode<Val>> t, W w,
+				WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {
+			if(t.getLabel().getMethod() != null) {
+				if(t.getStart() instanceof GeneratedState) {
+					Set<Statement> succsOf = solver.getPredsOf(t.getLabel());
+					for(Statement s : succsOf) {
+						nodes.add(source);
+						nodes.add(t.getTarget());
+						edges.add(new FEdge(source,s,t.getTarget()));
+					}
+				} else {
+					weightedPAutomaton.registerListener(new CallStackExtracter(t.getTarget(),source, nodes, edges, solver));
+					return;
+				}
+			}
+			weightedPAutomaton.registerListener(new CallStackExtracter(t.getTarget(),t.getTarget(), nodes, edges, solver));
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<Statement, INode<Val>> t, W w,
+				WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {
+			
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((source == null) ? 0 : source.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			CallStackExtracter other = (CallStackExtracter) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (source == null) {
+				if (other.source != null)
+					return false;
+			} else if (!source.equals(other.source))
+				return false;
+			return true;
+		}
+
+		private BackwardBoomerangResults getOuterType() {
+			return BackwardBoomerangResults.this;
+		}
+		
+	}
+	
 
 	private static class FEdge implements Edge<INode<Val>,Statement>{
 
