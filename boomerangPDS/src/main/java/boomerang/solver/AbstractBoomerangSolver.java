@@ -33,6 +33,7 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
+import pathexpression.IRegEx;
 import soot.RefType;
 import soot.Scene;
 import soot.SootMethod;
@@ -61,6 +62,7 @@ import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.State;
+import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {
@@ -571,6 +573,23 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				reachableMethodListener.reachable(m);
 			}
 		}
+	}
+
+	public void debugFieldAutomaton(final Statement stmt) {
+		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
+
+			@Override
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+				if(t.getStart() instanceof GeneratedState) {
+					return;
+				}
+				if(t.getStart().fact().stmt().equals(stmt)) {
+					IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
+					System.out.println(t.getStart().fact().fact() +" " + regEx);
+				}
+			}
+		});
 	}
 	
 }
