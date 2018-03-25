@@ -1,11 +1,12 @@
 package boomerang.poi;
 
+import javax.security.auth.callback.Callback;
+
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import boomerang.poi.ExecuteImportFieldStmtPOI.CopyTargets;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.StatementBasedFieldTransitionListener;
 import sync.pds.solver.nodes.GeneratedState;
@@ -19,62 +20,8 @@ import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Statement, Val, Field> {
-	public class CopyTargets extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
-
-		private INode<Node<Statement, Val>> newStart;
-
-		public CopyTargets(INode<Node<Statement, Val>> start, INode<Node<Statement, Val>> newStart) {
-			super(start);
-			this.newStart = newStart;
-		}
-
-		@Override
-		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement, Val>>>(newStart, t.getLabel(),t.getTarget()));
-		}
-
-		@Override
-		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((newStart == null) ? 0 : newStart.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			CopyTargets other = (CopyTargets) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (newStart == null) {
-				if (other.newStart != null)
-					return false;
-			} else if (!newStart.equals(other.newStart))
-				return false;
-			return true;
-		}
-
-		private ExecuteImportFieldStmtPOI getOuterType() {
-			return ExecuteImportFieldStmtPOI.this;
-		}
-
-	}
-
 	private AbstractBoomerangSolver<W> baseSolver;
-	private AbstractBoomerangSolver<W> flowSolver;
+	AbstractBoomerangSolver<W> flowSolver;
 
 	public ExecuteImportFieldStmtPOI(final AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
 			AbstractPOI<Statement, Val, Field> poi) {
@@ -84,42 +31,90 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 	}
 
 	public void execute(ForwardQuery baseAllocation, Query flowAllocation) {
-		
+
 	}
+
 	public void solve() {
 		assert !flowSolver.getSuccsOf(getStmt()).isEmpty();
 
 		for (final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())) {
-		baseSolver.registerStatementFieldTransitionListener(new StatementBasedFieldTransitionListener<W>(succOfWrite) {
+			baseSolver.registerStatementFieldTransitionListener(
+					new StatementBasedFieldTransitionListener<W>(succOfWrite) {
 
-			@Override
-			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-				final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-				if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
-					Val alias = aliasedVariableAtStmt.fact().fact();
-					if (alias.equals(getBaseVar()) && t.getLabel().equals(Field.empty())) {
-						// t.getTarget is the allocation site
-						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
-								.getFieldAutomaton();
-						baseAutomaton.registerListener(new ImportBackwards(t.getTarget()) {
+						@Override
+						public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+							final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
+							if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
+								Val alias = aliasedVariableAtStmt.fact().fact();
+								if (alias.equals(getBaseVar()) && t.getLabel().equals(Field.empty())) {
+									// t.getTarget is the allocation site
+									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
+											.getFieldAutomaton();
+									baseAutomaton.registerListener(new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
+								}
 
-							@Override
-							public void trigger(Transition<Field, INode<Node<Statement, Val>>> triggerTrans) {
-								 flowSolver.getFieldAutomaton().registerListener(new CopyTargets(t.getStart(),triggerTrans.getStart()));
 							}
-						});
-					}
-
-				}
-			}
-		});
+						}
+					});
 		}
 	}
+	
+	private class DirectCallback implements Callback{
 
-	abstract class ImportBackwards extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+		private INode<Node<Statement, Val>> start;
 
-		public ImportBackwards(INode<Node<Statement, Val>> iNode) {
+		public DirectCallback(INode<Node<Statement, Val>> start) {
+			this.start = start;
+		}
+
+		@Override
+		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t) {
+			flowSolver.getFieldAutomaton().registerListener(
+					new ImportToAutomatonWithNewStart<W>(flowSolver.getFieldAutomaton(), start, t.getStart()));
+			
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((start == null) ? 0 : start.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			DirectCallback other = (DirectCallback) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (start == null) {
+				if (other.start != null)
+					return false;
+			} else if (!start.equals(other.start))
+				return false;
+			return true;
+		}
+
+		private ExecuteImportFieldStmtPOI getOuterType() {
+			return ExecuteImportFieldStmtPOI.this;
+		}
+		
+	}
+
+	private class ImportBackwards extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+
+		private Callback callback;
+
+		public ImportBackwards(INode<Node<Statement, Val>> iNode, Callback callback) {
 			super(iNode);
+			this.callback = callback;
 		}
 
 		@Override
@@ -136,36 +131,109 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 				for (final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())) {
 					Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succOfWrite, alias);
 					Node<Statement, Val> rightOpNode = new Node<Statement, Val>(getStmt(), getStoredVar());
-					trigger(new Transition<Field, INode<Node<Statement, Val>>>(
+					callback.trigger(new Transition<Field, INode<Node<Statement, Val>>>(
 							new SingleNode<Node<Statement, Val>>(aliasedVarAtSucc), t.getLabel(), t.getTarget()));
 					flowSolver.setFieldContextReachable(aliasedVarAtSucc);
 					flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
 				}
 			}
 			if (t.getStart() instanceof GeneratedState) {
-				baseSolver.getFieldAutomaton().registerListener(new ImportBackwards(t.getStart()) {
-
-					@Override
-					public void trigger(Transition<Field, INode<Node<Statement, Val>>> innerT) {
-						flowSolver.getFieldAutomaton().addTransition(innerT);
-						ImportBackwards.this.trigger(t);
-					}
-				});
+				baseSolver.getFieldAutomaton().registerListener(new ImportBackwards(t.getStart(),new TransitiveCallback(callback, t)));
 			}
 		}
 
-		public abstract void trigger(Transition<Field, INode<Node<Statement, Val>>> t);
-
 		@Override
 		public int hashCode() {
-			return System.identityHashCode(this);
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((callback == null) ? 0 : callback.hashCode());
+			return result;
 		}
 
 		@Override
 		public boolean equals(Object obj) {
-			return this == obj;
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ImportBackwards other = (ImportBackwards) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (callback == null) {
+				if (other.callback != null)
+					return false;
+			} else if (!callback.equals(other.callback))
+				return false;
+			return true;
 		}
+
+		private ExecuteImportFieldStmtPOI getOuterType() {
+			return ExecuteImportFieldStmtPOI.this;
+		}
+
 	}
 	
+	private class TransitiveCallback implements Callback{
+
+		private Callback parent;
+		private Transition<Field, INode<Node<Statement, Val>>> t;
+
+		public TransitiveCallback(Callback callback, Transition<Field, INode<Node<Statement, Val>>> t) {
+			this.parent = callback;
+			this.t = t;
+		}
+
+		@Override
+		public void trigger(Transition<Field, INode<Node<Statement, Val>>> innerT) {
+			flowSolver.getFieldAutomaton().addTransition(innerT);
+			parent.trigger(t);
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+//			result = prime * result + ((parent == null) ? 0 : parent.hashCode());
+			result = prime * result + ((t == null) ? 0 : t.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			TransitiveCallback other = (TransitiveCallback) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+//			if (parent == null) {
+//				if (other.parent != null)
+//					return false;
+//			} else if (!parent.equals(other.parent))
+//				return false;
+			if (t == null) {
+				if (other.t != null)
+					return false;
+			} else if (!t.equals(other.t))
+				return false;
+			return true;
+		}
+
+		private ExecuteImportFieldStmtPOI getOuterType() {
+			return ExecuteImportFieldStmtPOI.this;
+		}
+		
+	}
 	
+	private interface Callback{
+		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t);
+	}
+
 }

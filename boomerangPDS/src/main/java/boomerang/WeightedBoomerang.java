@@ -33,6 +33,7 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.StaticFieldVal;
 import boomerang.jimple.Val;
 import boomerang.poi.AbstractPOI;
+import boomerang.poi.ExecuteImportCallStmtPOI;
 import boomerang.poi.ExecuteImportFieldStmtPOI;
 import boomerang.poi.PointOfIndirection;
 import boomerang.results.BackwardBoomerangResults;
@@ -915,77 +916,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 	}
 	
-	private class OnReturnNodeReachle extends SyncStatePDSUpdateListener<Statement, Val, Field> {
-		private final ForwardQuery byPassing;
-		private final Query flowQuery;
-		private final Node<Statement, Val> returnedNode;
-		private Statement callSite;
-
-		public OnReturnNodeReachle(WitnessNode<Statement, Val, Field> node, ForwardQuery byPassing,Query flowQuery, Statement callSite) {
-			super(node);
-			this.byPassing = byPassing;
-			this.flowQuery = flowQuery;
-			this.returnedNode = node.asNode();
-			this.callSite = callSite;
-		}
-
-		@Override
-		public void reachable() {
-			queryToSolvers.get(byPassing).registerStatementFieldTransitionListener(
-					new ImportFlowAtReturn(returnedNode, byPassing,flowQuery, callSite));
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((byPassing == null) ? 0 : byPassing.hashCode());
-			result = prime * result + ((flowQuery == null) ? 0 : flowQuery.hashCode());
-			result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
-			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			OnReturnNodeReachle other = (OnReturnNodeReachle) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (byPassing == null) {
-				if (other.byPassing != null)
-					return false;
-			} else if (!byPassing.equals(other.byPassing))
-				return false;
-			if (flowQuery == null) {
-				if (other.flowQuery != null)
-					return false;
-			} else if (!flowQuery.equals(other.flowQuery))
-				return false;
-			if (returnedNode == null) {
-				if (other.returnedNode != null)
-					return false;
-			} else if (!returnedNode.equals(other.returnedNode))
-				return false;
-			if (callSite == null) {
-				if (other.callSite != null)
-					return false;
-			} else if (!callSite.equals(other.callSite))
-				return false;
-			return true;
-		}
-
-		private WeightedBoomerang getOuterType() {
-			return WeightedBoomerang.this;
-		}
-		
-	}
+	
 
 	public class ForwardCallSitePOI {
 		private Statement callSite;
@@ -1003,6 +934,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				return;
 			if (returnsFromCall.add(new QueryWithVal(flowQuery, returnedNode))) {
 				for (final ForwardQuery byPassing : Lists.newArrayList(byPassingAllocations)) {
+					
 					eachPair(byPassing, flowQuery, returnedNode);
 				}
 			}
@@ -1012,8 +944,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				final Node<Statement, Val> returnedNode) {
 			if (byPassing.equals(flowQuery))
 				return;
-			queryToSolvers.getOrCreate(byPassing)
-					.registerListener(new OnReturnNodeReachle(new WitnessNode<Statement, Val, Field>(returnedNode.stmt(), returnedNode.fact()), byPassing, flowQuery, callSite));
+			ExecuteImportCallStmtPOI<W> exec = new ExecuteImportCallStmtPOI<W>(queryToSolvers.get(byPassing), queryToSolvers.get(flowQuery), callSite, returnedNode);
+			exec.solve();
 		}
 
 
@@ -1060,93 +992,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		}
 
 	}
-	private class ImportFlowAtReturn extends StatementBasedFieldTransitionListener<W> {
-		private Node<Statement, Val> returnedNode;
-		private Query byPassingQuery;
-		private Query flowQuery;
-		private Statement callSite;
-
-		public ImportFlowAtReturn(Node<Statement, Val> returnedNode,
-				Query byPassingSolver,
-				Query flowSolver, Statement callSite) {
-			super(returnedNode.stmt());
-			this.returnedNode = returnedNode;
-			this.byPassingQuery = byPassingSolver;
-			this.flowQuery = flowSolver;
-			this.callSite = callSite;
-		}
-
-		@Override
-		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-			if(t.getLabel().equals(Field.epsilon()))
-				return;
-			if (!(t.getStart() instanceof GeneratedState)) {
-				Val byPassing = t.getStart().fact().fact();
-				System.out.println(byPassing);
-//				if(byPassing.equals(returnedNode.fact())){
-//					return;
-//				}
-				insertTransition(queryToSolvers.get(flowQuery).getFieldAutomaton(),
-						new Transition<Field, INode<Node<Statement, Val>>>(
-								new AllocNode<Node<Statement, Val>>(
-												byPassingQuery.asNode()),
-								Field.epsilon(), new SingleNode<Node<Statement, Val>>(
-										returnedNode)));
-
-				queryToSolvers.get(byPassingQuery).getFieldAutomaton().registerListener(
-						new ImportToSolver(t.getStart(), byPassingQuery, flowQuery));
-				queryToSolvers.get(flowQuery).setFieldContextReachable(
-						new Node<Statement, Val>(returnedNode.stmt(), byPassing));
-				queryToSolvers.get(flowQuery).addNormalCallFlow(returnedNode,
-						new Node<Statement, Val>(returnedNode.stmt(), byPassing));
-			}
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((flowQuery == null) ? 0 : flowQuery.hashCode());
-			result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
-			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			ImportFlowAtReturn other = (ImportFlowAtReturn) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (flowQuery == null) {
-				if (other.flowQuery != null)
-					return false;
-			} else if (!flowQuery.equals(other.flowQuery))
-				return false;
-			if (returnedNode == null) {
-				if (other.returnedNode != null)
-					return false;
-			} else if (!returnedNode.equals(other.returnedNode))
-				return false;
-			if (callSite == null) {
-				if (other.callSite != null)
-					return false;
-			} else if (!callSite.equals(other.callSite))
-				return false;
-			return true;
-		}
-
-		private WeightedBoomerang getOuterType() {
-			return WeightedBoomerang.this;
-		}
-
-	}
 
 	public class FieldReadPOI extends AbstractPOI<Statement, Val, Field> {
 		public FieldReadPOI(Statement statement, Val base, Field field, Val stored) {
@@ -1162,67 +1007,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(queryToSolvers.get(baseAllocation),queryToSolvers.get(flowAllocation),FieldReadPOI.this);
 				exec.solve();
 			}
-		}
-	}
-
-	
-
-	class ImportToSolver extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
-		private Query flowSolver;
-		private Query baseSolver;
-
-		public ImportToSolver(INode<Node<Statement, Val>> state, Query baseSolver,
-				Query flowSolver) {
-			super(state);
-			System.out.println("Import " + baseSolver +" to " + flowSolver);
-			this.baseSolver = baseSolver;
-			this.flowSolver = flowSolver;
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			ImportToSolver other = (ImportToSolver) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (flowSolver == null) {
-				if (other.flowSolver != null)
-					return false;
-			} else if (!flowSolver.equals(other.flowSolver))
-				return false;
-			return true;
-		}
-
-		@Override
-		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-			if(t.getLabel() instanceof Empty)
-				return;
-			insertTransition(queryToSolvers.get(flowSolver).getFieldAutomaton(), t);
-			queryToSolvers.get(baseSolver).getFieldAutomaton().registerListener(new ImportToSolver(t.getTarget(), baseSolver, flowSolver));	
-		}
-
-		@Override
-		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-		}
-
-		private WeightedBoomerang getOuterType() {
-			return WeightedBoomerang.this;
 		}
 	}
 
