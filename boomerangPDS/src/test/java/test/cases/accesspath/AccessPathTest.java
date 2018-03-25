@@ -11,9 +11,11 @@
  *******************************************************************************/
 package test.cases.accesspath;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
+import boomerang.example.BoomerangExampleTarget.ClassWithField;
+import boomerang.example.BoomerangExampleTarget.NestedClassWithField;
+import boomerang.example.BoomerangExampleTarget.ObjectOfInterest;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
@@ -82,17 +84,16 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		B alloc = new B();
 		a.b = alloc;
 		accessPathQueryFor(alloc,"a[b];b[b]");
-		use(b);
 	}
 	
 	@Test
-	@Ignore
 	public void doubleIndirect(){
 		C b = new C();
 		B alloc = new B();
 		b.attr.b = alloc;
 		accessPathQueryFor(alloc,"b[attr,b]");
 	}
+	
 	@Test
 	public void contextQuery(){
 		B a = new B();
@@ -115,19 +116,16 @@ public class AccessPathTest extends AbstractBoomerangTest {
 	private void context1(B a, B b) {
 		context(a,b);
 	}
-	static void use(A b) {
-		// TODO Auto-generated method stub
+	static void use(Object b) {
 		
 	}
 
 	@Test
-	@Ignore
 	public void twoLevelTest() {
 		C b = new C();
 		taintMe(b);
 	}
 	@Test
-	@Ignore
 	public void threeLevelTest() {
 		C b = new C();
 		taintOnNextLevel(b);
@@ -141,6 +139,44 @@ public class AccessPathTest extends AbstractBoomerangTest {
 	
 	private void taintOnNextLevel(C b) {
 		taintMe(b);
+	}
+	
+	@Test
+	public void hiddenFieldLoad(){
+		ClassWithField a = new ClassWithField();
+		a.field = new ObjectOfInterest();
+		ClassWithField b = a;
+		NestedClassWithField n = new NestedClassWithField();
+		n.nested = b; 
+		staticCallOnFile(a,n);
+	}
+	private static void staticCallOnFile(ClassWithField x,NestedClassWithField n) {
+		ObjectOfInterest queryVariable = x.field;
+		//The analysis triggers a query for the following variable
+		accessPathQueryFor(queryVariable,"x[field];n[nested,field]");
+	}
+	public static class ClassWithField{
+		public ObjectOfInterest field;
+	}
+	public static class ObjectOfInterest implements AllocatedObject{
+		
+	}
+	public static class NestedClassWithField{
+		public ClassWithField nested;
+	}
+	
+	@Test
+	public void hiddenFieldLoad2() {
+		ObjectOfInterest alloc = new ObjectOfInterest();
+		NestedClassWithField n = new NestedClassWithField();
+		store(n,alloc);
+		accessPathQueryFor(alloc,"n[nested,field]");
+	}
+	private void store(NestedClassWithField o1, ObjectOfInterest oOfInterest) {
+		ClassWithField a = new ClassWithField();
+		a.field = oOfInterest;
+		ClassWithField b = a;
+		o1.nested = b; 
 	}
 	
 }
