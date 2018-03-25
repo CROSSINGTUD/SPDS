@@ -33,6 +33,7 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.StaticFieldVal;
 import boomerang.jimple.Val;
 import boomerang.poi.AbstractPOI;
+import boomerang.poi.ExecuteImportFieldStmtPOI;
 import boomerang.poi.PointOfIndirection;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
@@ -845,7 +846,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		return (stmt instanceof AssignStmt) && ((AssignStmt) stmt).getRightOp() instanceof NewMultiArrayExpr;
 	}
 
-	public class FieldWritePOI extends FieldStmtPOI {
+	public class FieldWritePOI extends AbstractPOI<Statement, Val, Field>{
 		public FieldWritePOI(Statement statement, Val base, Field field, Val stored) {
 			super(statement, base, field, stored);
 		}
@@ -854,7 +855,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
 			if (flowAllocation instanceof BackwardQuery) {
 			} else if (flowAllocation instanceof ForwardQuery) {
-				executeImportAliases(baseAllocation, flowAllocation);
+				ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(queryToSolvers.get(baseAllocation),queryToSolvers.get(flowAllocation),FieldWritePOI.this);
+				exec.solve();
 			}
 		}
 	}
@@ -1146,7 +1148,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 	}
 
-	public class FieldReadPOI extends FieldStmtPOI {
+	public class FieldReadPOI extends AbstractPOI<Statement, Val, Field> {
 		public FieldReadPOI(Statement statement, Val base, Field field, Val stored) {
 			super(statement, base, field, stored);
 		}
@@ -1157,119 +1159,13 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				throw new RuntimeException("should not be invoked!");
 			if (flowAllocation instanceof ForwardQuery) {
 			} else if (flowAllocation instanceof BackwardQuery) {
-				executeImportAliases(baseAllocation, flowAllocation);
+				ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(queryToSolvers.get(baseAllocation),queryToSolvers.get(flowAllocation),FieldReadPOI.this);
+				exec.solve();
 			}
 		}
 	}
 
-	private abstract class FieldStmtPOI extends AbstractPOI<Statement, Val, Field> {
-		public FieldStmtPOI(Statement statement, Val base, Field field, Val storedVar) {
-			super(statement, base, field, storedVar);
-		}
-
-		protected void executeImportAliases(final ForwardQuery baseAllocation, final Query flowAllocation) {
-			final AbstractBoomerangSolver<W> baseSolver = queryToSolvers.get(baseAllocation);
-			final AbstractBoomerangSolver<W> flowSolver = queryToSolvers.get(flowAllocation);
-			assert !flowSolver.getSuccsOf(getStmt()).isEmpty();
-			baseSolver
-					.registerStatementFieldTransitionListener(new StatementBasedFieldTransitionListener<W>(getStmt()) {
-
-						@Override
-						public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-							final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-							if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
-								Val alias = aliasedVariableAtStmt.fact().fact();
-								if(alias.equals(getBaseVar()) && t.getLabel().equals(Field.empty())) {
-									//t.getTarget is the allocation site
-									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver.getFieldAutomaton();
-									baseAutomaton.registerListener(new ImportBackwards(t.getTarget(), baseSolver, flowSolver,FieldStmtPOI.this) 
-									{
-
-										@Override
-										public void trigger(Transition<Field, INode<Node<Statement, Val>>> triggerTrans) {
-											flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement, Val>>>(triggerTrans.getStart(),Field.epsilon(),t.getStart()));	
-										}});
-								}
-//								final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut = baseSolver
-//										.getFieldAutomaton();
-//									aut.registerListener(new ImportToSolver(t.getTarget(), baseAllocation, flowAllocation));
-//
-//								for (final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())) {
-//									Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succOfWrite,
-//											alias);
-//									insertTransition(flowSolver.getFieldAutomaton(),
-//											new Transition<Field, INode<Node<Statement, Val>>>(
-//													new SingleNode<Node<Statement, Val>>(aliasedVarAtSucc),
-//													t.getLabel(), t.getTarget()));
-//									Node<Statement, Val> rightOpNode = new Node<Statement, Val>(getStmt(),
-//											getStoredVar());
-//									flowSolver.setFieldContextReachable(aliasedVarAtSucc);
-//									flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
-//								}
-
-							}
-						}
-					});
-		}
-
-	}
 	
-	abstract class ImportBackwards extends WPAStateListener<Field, INode<Node<Statement, Val>>, W>{
-
-		private AbstractBoomerangSolver<W> flowSolver;
-		private AbstractBoomerangSolver<W> baseSolver;
-		private WeightedBoomerang<W>.FieldStmtPOI fieldStmtPOI;
-
-		public ImportBackwards(INode<Node<Statement, Val>> iNode, AbstractBoomerangSolver<W> baseSolver,
-				AbstractBoomerangSolver<W> flowSolver, WeightedBoomerang<W>.FieldStmtPOI fieldStmtPOI) {
-			super(iNode);
-			this.baseSolver = baseSolver;
-			this.flowSolver = flowSolver;
-			this.fieldStmtPOI = fieldStmtPOI;
-		}
-
-		@Override
-		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-		}
-
-		@Override
-		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if(!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(fieldStmtPOI.getStmt())  && !t.getStart().fact().fact().equals(fieldStmtPOI.getBaseVar())){
-				System.out.println("ASDAS" + t);
-				trigger(t);
-				Val alias = t.getStart().fact().fact();
-				for (final Statement succOfWrite : flowSolver.getSuccsOf(fieldStmtPOI.getStmt())) {
-					Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succOfWrite,
-							alias);
-					Node<Statement, Val> rightOpNode = new Node<Statement, Val>(fieldStmtPOI.getStmt(),
-							fieldStmtPOI.getStoredVar());
-					flowSolver.setFieldContextReachable(aliasedVarAtSucc);
-					flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
-				}
-			}
-			if(t.getStart() instanceof GeneratedState) {
-				baseSolver.getFieldAutomaton().registerListener(new ImportBackwards(t.getStart(), baseSolver,flowSolver,fieldStmtPOI) {
-
-					@Override
-					public void trigger(Transition<Field, INode<Node<Statement, Val>>> innerT) {
-						flowSolver.getFieldAutomaton().addTransition(innerT);
-						ImportBackwards.this.trigger(t);
-					}});
-			}
-		}
-		public abstract void trigger(Transition<Field, INode<Node<Statement, Val>>> t);
-		
-		@Override
-		public int hashCode() {
-			return System.identityHashCode(this);
-		}
-		@Override
-		public boolean equals(Object obj) {
-			return this == obj;
-		}
-	}
 
 	class ImportToSolver extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 		private Query flowSolver;
