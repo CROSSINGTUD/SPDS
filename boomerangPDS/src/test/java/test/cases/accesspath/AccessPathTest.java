@@ -13,9 +13,6 @@ package test.cases.accesspath;
 
 import org.junit.Test;
 
-import boomerang.example.BoomerangExampleTarget.ClassWithField;
-import boomerang.example.BoomerangExampleTarget.NestedClassWithField;
-import boomerang.example.BoomerangExampleTarget.ObjectOfInterest;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
@@ -179,4 +176,14 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		o1.nested = b; 
 	}
 	
+	@Test
+	@Ignore
+	public void hiddenFieldLoad3() {
+		ObjectOfInterest alloc = new ObjectOfInterest();
+		NestedClassWithField n = new NestedClassWithField();
+		NestedClassWithField t = n;
+		store(n,alloc);
+		accessPathQueryFor(alloc,"n[nested,field];t[nested,field]");
+		use(t);
+	}
 }
