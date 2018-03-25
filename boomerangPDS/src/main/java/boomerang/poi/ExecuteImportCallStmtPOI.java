@@ -47,11 +47,8 @@ public class ExecuteImportCallStmtPOI<W extends Weight> {
 				@Override
 				public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 					flowSolver.getFieldAutomaton().registerListener(new ImportToAutomatonWithNewStart<W>(flowSolver.getFieldAutomaton(),new SingleNode<Node<Statement,Val>>(returnedNode),t.getStart()));
-//					t.getStart()
 					flowSolver.setFieldContextReachable(t.getStart().fact());
-//					flowSolver.setCallingContextReachable(t.getStart().fact());
 					flowSolver.addNormalCallFlow(returnedNode,t.getStart().fact());					
-
 				}
 			});
 		}
