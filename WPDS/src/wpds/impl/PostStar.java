@@ -44,7 +44,7 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 		@Override
 		public void onRuleAdded(final Rule<N, D, W> rule) {
 			if(rule instanceof NormalRule){
-				fa.registerListener(new HandleNormalListener((NormalRule)rule));
+				fa.registerListener(new HandleNormalListener(rule.getS1(),(NormalRule)rule));
 			} else if(rule instanceof PushRule){
 				fa.registerListener(new HandlePushListener((PushRule)rule));
 			} else if(rule instanceof PopRule){
@@ -221,8 +221,8 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 	
 	private class HandleNormalListener extends WPAStateListener<N, D, W> {
 		private NormalRule<N, D, W> rule;
-		public HandleNormalListener(NormalRule<N, D, W> rule) {
-			super(rule.getS1());
+		public HandleNormalListener(D d, NormalRule<N, D, W> rule) {
+			super(d);
 			this.rule = rule;
 		}
 
@@ -247,6 +247,10 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 					return;
 				}
 				update(new Transition<N, D>(p, l2, t.getTarget()), newWeight);
+			}
+
+			if(t.getLabel() instanceof Empty){
+				fa.registerListener(new HandleNormalListener(t.getTarget(), rule));
 			}
 		}
 
