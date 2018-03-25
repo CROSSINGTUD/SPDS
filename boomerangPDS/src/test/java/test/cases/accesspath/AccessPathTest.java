@@ -11,6 +11,7 @@
  *******************************************************************************/
 package test.cases.accesspath;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.AbstractBoomerangTest;
@@ -185,5 +186,17 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		store(n,alloc);
 		accessPathQueryFor(alloc,"n[nested,field];t[nested,field]");
 		use(t);
+	}
+
+	@Test
+	public void hiddenFieldLoad4() {
+		ObjectOfInterest alloc = new ObjectOfInterest();
+		NestedClassWithField n = new NestedClassWithField();
+		NestedClassWithField t = n;
+		store(n,alloc);
+		load(t);
+	}
+	private void load(NestedClassWithField t) {
+		queryFor(t.nested.field);
 	}
 }
