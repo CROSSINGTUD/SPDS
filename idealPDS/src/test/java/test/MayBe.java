@@ -28,7 +28,6 @@ public class MayBe extends ExpectedResults<TransitionFunction,Val> {
 	}
 	@Override
 	public void computedResults(TransitionFunction results) {
-		System.out.println(results);
 		for(ITransition t : results.values()){
 //			if(t.equals(Transition.identity()))
 //				continue;

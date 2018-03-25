@@ -104,6 +104,10 @@ public class ExampleMain {
 						//Must be turned of if no SeedFactory is specified.
 						return false;
 					};
+					@Override
+					public boolean computeAllAliases() {
+						return true;
+					}
 				}) {
 					@Override
 					public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {

@@ -112,7 +112,7 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 
 			@Override
 			public Statement epsilon() {
-				throw new RuntimeException("Not implemented");
+				return Statement.epsilon();
 			}
 
 		};

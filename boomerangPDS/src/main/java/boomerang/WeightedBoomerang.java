@@ -13,7 +13,6 @@ package boomerang;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -21,10 +20,8 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
 
 import boomerang.customize.BackwardEmptyCalleeFlow;
 import boomerang.customize.EmptyCalleeFlow;
@@ -48,7 +45,6 @@ import boomerang.solver.ReachableMethodListener;
 import boomerang.solver.StatementBasedFieldTransitionListener;
 import boomerang.stats.IBoomerangStats;
 import heros.utilities.DefaultValueMap;
-import soot.Local;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootField;
