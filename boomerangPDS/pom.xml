@@ -22,7 +22,7 @@
 					<argLine>-Xmx4G</argLine>
 					<argLine>-Xss128m</argLine>
 					<excludes>
-						<exclude>**LongTest.java</exclude>
+						<exclude>**/*LongTest.java</exclude>
 					</excludes>
 				</configuration>
 			</plugin>

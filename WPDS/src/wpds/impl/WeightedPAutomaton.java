@@ -667,6 +667,9 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		return initialAutomaton.equals(aut);
 	}
 
-
+	public IRegEx<N> toRegEx(D start, D end){
+		PathExpressionComputer<D, N> pathExpressionComputer = new PathExpressionComputer<>(this);
+		return pathExpressionComputer.getExpressionBetween(start, end);
+	}
 	
 }

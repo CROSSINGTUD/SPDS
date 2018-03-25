@@ -19,6 +19,13 @@ public class ContextTypesTest extends AbstractBoomerangTest{
 		Alloc a = new Alloc();
 		call(a);
 	}
+	
+	@Test
+	public void twoOpenContextsSameObject() {
+		Alloc alloc = new Alloc();
+		call(alloc);
+		call(alloc);
+	}
 	private void call(Alloc p) {
 		queryFor(p);
 	}
