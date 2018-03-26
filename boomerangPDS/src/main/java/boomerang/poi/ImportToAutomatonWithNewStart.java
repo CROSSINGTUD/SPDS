@@ -15,10 +15,10 @@ public class ImportToAutomatonWithNewStart<W extends Weight> extends WPAStateLis
 	private final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut;
 	private final INode<Node<Statement, Val>> newStart;
 
-	public ImportToAutomatonWithNewStart(WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut, INode<Node<Statement, Val>> start, INode<Node<Statement, Val>> newStart) {
+	public ImportToAutomatonWithNewStart(WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut, INode<Node<Statement, Val>> start, INode<Node<Statement, Val>> replacement) {
 		super(start);
 		this.aut = aut;
-		this.newStart = newStart;
+		this.newStart = replacement;
 	}
 
 	@Override

@@ -335,8 +335,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				for(ForwardQuery q : res.getAllocationSites().keySet()){
 					results.add(q.asNode());
 				}
-				System.out.println(res.getAllocationSites());
 				solver.debugOutput();
+				System.out.println(res.getAllAliases());
 				if(accessPathQuery){
 					checkContainsAllExpectedAccessPath(res.getAllAliases());
 				}

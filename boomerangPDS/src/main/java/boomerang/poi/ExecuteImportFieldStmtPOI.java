@@ -38,28 +38,31 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 		assert !flowSolver.getSuccsOf(getStmt()).isEmpty();
 
 		for (final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())) {
-			baseSolver.registerStatementFieldTransitionListener(
-					new StatementBasedFieldTransitionListener<W>(succOfWrite) {
+			baseSolver.getFieldAutomaton()
+					.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 
 						@Override
-						public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+						public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+								WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 							final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
+							if (!t.getStart().fact().stmt().equals(succOfWrite))
+								return;
 							if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
 								Val alias = aliasedVariableAtStmt.fact().fact();
 								if (alias.equals(getBaseVar()) && t.getLabel().equals(Field.empty())) {
 									// t.getTarget is the allocation site
 									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
 											.getFieldAutomaton();
-									baseAutomaton.registerListener(new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
+									baseAutomaton.registerListener(
+											new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
 								}
-
 							}
 						}
 					});
 		}
 	}
-	
-	private class DirectCallback implements Callback{
+
+	private class DirectCallback implements Callback {
 
 		private INode<Node<Statement, Val>> start;
 
@@ -71,7 +74,7 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t) {
 			flowSolver.getFieldAutomaton().registerListener(
 					new ImportToAutomatonWithNewStart<W>(flowSolver.getFieldAutomaton(), start, t.getStart()));
-			
+
 		}
 
 		@Override
@@ -105,7 +108,7 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 		private ExecuteImportFieldStmtPOI getOuterType() {
 			return ExecuteImportFieldStmtPOI.this;
 		}
-		
+
 	}
 
 	private class ImportBackwards extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
@@ -138,7 +141,8 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 				}
 			}
 			if (t.getStart() instanceof GeneratedState) {
-				baseSolver.getFieldAutomaton().registerListener(new ImportBackwards(t.getStart(),new TransitiveCallback(callback, t)));
+				baseSolver.getFieldAutomaton()
+						.registerListener(new ImportBackwards(t.getStart(), new TransitiveCallback(callback, t)));
 			}
 		}
 
@@ -175,8 +179,8 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 		}
 
 	}
-	
-	private class TransitiveCallback implements Callback{
+
+	private class TransitiveCallback implements Callback {
 
 		private Callback parent;
 		private Transition<Field, INode<Node<Statement, Val>>> t;
@@ -197,7 +201,8 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 			final int prime = 31;
 			int result = 1;
 			result = prime * result + getOuterType().hashCode();
-//			result = prime * result + ((parent == null) ? 0 : parent.hashCode());
+			 result = prime * result + ((parent == null) ? 0 :
+			 parent.hashCode());
 			result = prime * result + ((t == null) ? 0 : t.hashCode());
 			return result;
 		}
@@ -213,11 +218,11 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 			TransitiveCallback other = (TransitiveCallback) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
-//			if (parent == null) {
-//				if (other.parent != null)
-//					return false;
-//			} else if (!parent.equals(other.parent))
-//				return false;
+			 if (parent == null) {
+			 if (other.parent != null)
+			 return false;
+			 } else if (!parent.equals(other.parent))
+			 return false;
 			if (t == null) {
 				if (other.t != null)
 					return false;
@@ -229,10 +234,10 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 		private ExecuteImportFieldStmtPOI getOuterType() {
 			return ExecuteImportFieldStmtPOI.this;
 		}
-		
+
 	}
-	
-	private interface Callback{
+
+	private interface Callback {
 		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t);
 	}
 

@@ -1063,9 +1063,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			System.out.println("========================");
 			queryToSolvers.getOrCreate(q).debugOutput();
 			for (FieldReadPOI p : fieldReads.values()) {
-				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
+//				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
 				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {
-					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
+//					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
 				}
 			}
 //			for (FieldWritePOI p : fieldWrites.values()) {
