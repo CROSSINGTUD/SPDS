@@ -56,54 +56,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 				});
 	}
 
-	private class DirectCallback implements Callback {
-
-		private INode<Node<Statement, Val>> start;
-
-		public DirectCallback(INode<Node<Statement, Val>> start) {
-			this.start = start;
-		}
-
-		@Override
-		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t) {
-			flowSolver.getFieldAutomaton().registerListener(
-					new ImportToAutomatonWithNewStart(start, t.getStart()));
-
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((start == null) ? 0 : start.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			DirectCallback other = (DirectCallback) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (start == null) {
-				if (other.start != null)
-					return false;
-			} else if (!start.equals(other.start))
-				return false;
-			return true;
-		}
-
-		private ExecuteImportFieldStmtPOI getOuterType() {
-			return ExecuteImportFieldStmtPOI.this;
-		}
-
-	}
 
 	private class ImportBackwards extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
@@ -145,7 +97,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((callback == null) ? 0 : callback.hashCode());
 			return result;
 		}
 
@@ -159,11 +110,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 				return false;
 			ImportBackwards other = (ImportBackwards) obj;
 			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (callback == null) {
-				if (other.callback != null)
-					return false;
-			} else if (!callback.equals(other.callback))
 				return false;
 			return true;
 		}

@@ -115,38 +115,6 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t) {
 			flowSolver.getFieldAutomaton().addTransition(new Transition<>(t.getStart(),t.getLabel(),start));
 		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((start == null) ? 0 : start.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			FieldStackCallback other = (FieldStackCallback) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (start == null) {
-				if (other.start != null)
-					return false;
-			} else if (!start.equals(other.start))
-				return false;
-			return true;
-		}
-
-		private ExecuteImportCallStmtPOI getOuterType() {
-			return ExecuteImportCallStmtPOI.this;
-		}
 		
 	}
 	// COPIED 
@@ -190,7 +158,6 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((callback == null) ? 0 : callback.hashCode());
 			return result;
 		}
 
@@ -204,11 +171,6 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 				return false;
 			ImportBackwards other = (ImportBackwards) obj;
 			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (callback == null) {
-				if (other.callback != null)
-					return false;
-			} else if (!callback.equals(other.callback))
 				return false;
 			return true;
 		}
