@@ -46,6 +46,15 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 						// t.getTarget is the allocation site
 						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
 								.getFieldAutomaton();
+						/**
+						 * TODO this is the performance bottleneck. Can we implemented a different solution?
+						 * when we comment out the line below, the test case
+						 * @test.cases.sets.HashMapsLongTest terminated within 110sec.
+						 * otherwise a time out occurs after 300sec.
+						 * Carefully investigate why we need the line below:
+						 * Some of the test cases of 
+						 * @test.cases.fields.ThreeFieldsTest fail.
+						 */
 						baseAutomaton.registerListener(new TransitiveVisitor(t.getTarget()));
 					}
 				}
