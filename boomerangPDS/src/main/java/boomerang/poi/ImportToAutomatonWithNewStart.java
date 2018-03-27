@@ -14,11 +14,13 @@ public class ImportToAutomatonWithNewStart<W extends Weight> extends WPAStateLis
 	
 	private final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut;
 	private final INode<Node<Statement, Val>> newStart;
+	private Object hashObject;
 
-	public ImportToAutomatonWithNewStart(WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut, INode<Node<Statement, Val>> start, INode<Node<Statement, Val>> replacement) {
+	public ImportToAutomatonWithNewStart(WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut, INode<Node<Statement, Val>> start, INode<Node<Statement, Val>> replacement, Object hashObject) {
 		super(start);
 		this.aut = aut;
 		this.newStart = replacement;
+		this.hashObject = hashObject;
 	}
 
 	@Override
@@ -39,6 +41,7 @@ public class ImportToAutomatonWithNewStart<W extends Weight> extends WPAStateLis
 		int result = super.hashCode();
 		result = prime * result + ((aut == null) ? 0 : aut.hashCode());
 		result = prime * result + ((newStart == null) ? 0 : newStart.hashCode());
+		result = prime * result + ((hashObject == null) ? 0 : hashObject.hashCode());
 		return result;
 	}
 
@@ -60,6 +63,11 @@ public class ImportToAutomatonWithNewStart<W extends Weight> extends WPAStateLis
 			if (other.newStart != null)
 				return false;
 		} else if (!newStart.equals(other.newStart))
+			return false;
+		if (hashObject == null) {
+			if (other.hashObject != null)
+				return false;
+		} else if (!hashObject.equals(other.hashObject))
 			return false;
 		return true;
 	}

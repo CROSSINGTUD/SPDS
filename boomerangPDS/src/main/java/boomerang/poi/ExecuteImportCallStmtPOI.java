@@ -19,7 +19,6 @@ import wpds.interfaces.WPAUpdateListener;
 
 public class ExecuteImportCallStmtPOI<W extends Weight> {
 
-	private boolean DBEUG;
 	private AbstractBoomerangSolver<W> baseSolver;
 	private AbstractBoomerangSolver<W> flowSolver;
 	private Statement callSite;
@@ -52,7 +51,13 @@ public class ExecuteImportCallStmtPOI<W extends Weight> {
 									.getFieldAutomaton();
 							baseAutomaton.registerListener(new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
 						}
-
+						if (alias.equals(getBaseVar()) && !t.getLabel().equals(Field.empty()) && !t.getLabel().equals(Field.epsilon())) {
+							// t.getTarget is the allocation site
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
+									.getFieldAutomaton();
+							baseAutomaton.registerListener(new TransitiveVisitor(t.getTarget()));
+//							baseAutomaton.registerListener(new ImportBackwards(t.getTarget(), new Direct2Callback(t.getTarget())));
+						}
 					}
 					
 				}
@@ -69,6 +74,56 @@ public class ExecuteImportCallStmtPOI<W extends Weight> {
 		return returnedNode.fact();
 	}
 	
+	
+	private class TransitiveVisitor extends WPAStateListener<Field, INode<Node<Statement, Val>>, W>{
+
+		public TransitiveVisitor(INode<Node<Statement, Val>> state) {
+			super(state);
+			baseSolver
+				.getFieldAutomaton().registerListener(new ImportBackwards(state, new Direct2Callback(state)));
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+			if(t.getLabel().equals(Field.empty()) || t.getLabel().equals(Field.epsilon()))
+				return;
+			baseSolver.getFieldAutomaton().registerListener(new TransitiveVisitor(t.getTarget()));
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			TransitiveVisitor other = (TransitiveVisitor) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			return true;
+		}
+
+		private ExecuteImportCallStmtPOI getOuterType() {
+			return ExecuteImportCallStmtPOI.this;
+		}
+		
+	}
+	
 	// COPIED 
 
 	private class DirectCallback implements Callback{
@@ -82,7 +137,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> {
 		@Override
 		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t) {
 			flowSolver.getFieldAutomaton().registerListener(
-					new ImportToAutomatonWithNewStart<W>(flowSolver.getFieldAutomaton(), start, t.getStart()));
+					new ImportToAutomatonWithNewStart<W>(flowSolver.getFieldAutomaton(), start, t.getStart(), this));
 			
 		}
 
@@ -137,13 +192,12 @@ public class ExecuteImportCallStmtPOI<W extends Weight> {
 		@Override
 		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+			if(t.getLabel().equals(Field.epsilon()))
+				return;
 			if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(getStmt())
 					&& !t.getStart().fact().fact().equals(getBaseVar())) {
 				Val alias = t.getStart().fact().fact();
 				for (final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())) {
-					if(DBEUG ){
-						System.out.println("");
-					}
 					Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succOfWrite, alias);
 					Node<Statement, Val> rightOpNode = new Node<Statement, Val>(succOfWrite, getBaseVar());
 					callback.trigger(new Transition<Field, INode<Node<Statement, Val>>>(
@@ -162,7 +216,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> {
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((callback == null) ? 0 : callback.hashCode());
+//			result = prime * result + ((callback == null) ? 0 : callback.hashCode());
 			return result;
 		}
 
@@ -177,11 +231,11 @@ public class ExecuteImportCallStmtPOI<W extends Weight> {
 			ImportBackwards other = (ImportBackwards) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
-			if (callback == null) {
-				if (other.callback != null)
-					return false;
-			} else if (!callback.equals(other.callback))
-				return false;
+//			if (callback == null) {
+//				if (other.callback != null)
+//					return false;
+//			} else if (!callback.equals(other.callback))
+//				return false;
 			return true;
 		}
 
@@ -251,4 +305,97 @@ public class ExecuteImportCallStmtPOI<W extends Weight> {
 		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t);
 	}
 
+	
+	private class Direct2Callback implements Callback{
+
+		private INode<Node<Statement, Val>> start;
+
+		public Direct2Callback(INode<Node<Statement, Val>> start) {
+			this.start = start;
+		}
+
+		@Override
+		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t) {
+			flowSolver.getFieldAutomaton().addTransition(new Transition<>(t.getStart(),t.getLabel(),start));
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((start == null) ? 0 : start.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			DirectCallback other = (DirectCallback) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (start == null) {
+				if (other.start != null)
+					return false;
+			} else if (!start.equals(other.start))
+				return false;
+			return true;
+		}
+
+		private ExecuteImportCallStmtPOI getOuterType() {
+			return ExecuteImportCallStmtPOI.this;
+		}
+		
+	}
+
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
+		result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
+		result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
+		result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ExecuteImportCallStmtPOI other = (ExecuteImportCallStmtPOI) obj;
+		if (baseSolver == null) {
+			if (other.baseSolver != null)
+				return false;
+		} else if (!baseSolver.equals(other.baseSolver))
+			return false;
+		if (callSite == null) {
+			if (other.callSite != null)
+				return false;
+		} else if (!callSite.equals(other.callSite))
+			return false;
+		if (flowSolver == null) {
+			if (other.flowSolver != null)
+				return false;
+		} else if (!flowSolver.equals(other.flowSolver))
+			return false;
+		if (returnedNode == null) {
+			if (other.returnedNode != null)
+				return false;
+		} else if (!returnedNode.equals(other.returnedNode))
+			return false;
+		return true;
+	}
+	
+	
 }

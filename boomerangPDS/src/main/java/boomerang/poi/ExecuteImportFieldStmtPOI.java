@@ -1,14 +1,11 @@
 package boomerang.poi;
 
-import javax.security.auth.callback.Callback;
-
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
-import boomerang.solver.StatementBasedFieldTransitionListener;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -21,7 +18,7 @@ import wpds.interfaces.WPAUpdateListener;
 
 public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Statement, Val, Field> {
 	private AbstractBoomerangSolver<W> baseSolver;
-	AbstractBoomerangSolver<W> flowSolver;
+	private AbstractBoomerangSolver<W> flowSolver;
 
 	public ExecuteImportFieldStmtPOI(final AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
 			AbstractPOI<Statement, Val, Field> poi) {
@@ -73,7 +70,7 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 		@Override
 		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t) {
 			flowSolver.getFieldAutomaton().registerListener(
-					new ImportToAutomatonWithNewStart<W>(flowSolver.getFieldAutomaton(), start, t.getStart()));
+					new ImportToAutomatonWithNewStart<W>(flowSolver.getFieldAutomaton(), start, t.getStart(), this));
 
 		}
 
@@ -128,6 +125,8 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 		@Override
 		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+			if(t.getLabel().equals(Field.epsilon()))
+				return;
 			if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(getStmt())
 					&& !t.getStart().fact().fact().equals(getBaseVar())) {
 				Val alias = t.getStart().fact().fact();
@@ -201,9 +200,8 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 			final int prime = 31;
 			int result = 1;
 			result = prime * result + getOuterType().hashCode();
-			 result = prime * result + ((parent == null) ? 0 :
-			 parent.hashCode());
 			result = prime * result + ((t == null) ? 0 : t.hashCode());
+//			result = prime * result + ((parent == null) ? 0 : parent.hashCode());
 			return result;
 		}
 
@@ -218,11 +216,11 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 			TransitiveCallback other = (TransitiveCallback) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
-			 if (parent == null) {
-			 if (other.parent != null)
-			 return false;
-			 } else if (!parent.equals(other.parent))
-			 return false;
+//			 if (parent == null) {
+//			 if (other.parent != null)
+//			 return false;
+//			 } else if (!parent.equals(other.parent))
+//			 return false;
 			if (t == null) {
 				if (other.t != null)
 					return false;
@@ -241,4 +239,37 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t);
 	}
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
+		result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ExecuteImportFieldStmtPOI other = (ExecuteImportFieldStmtPOI) obj;
+		if (baseSolver == null) {
+			if (other.baseSolver != null)
+				return false;
+		} else if (!baseSolver.equals(other.baseSolver))
+			return false;
+		if (flowSolver == null) {
+			if (other.flowSolver != null)
+				return false;
+		} else if (!flowSolver.equals(other.flowSolver))
+			return false;
+		return true;
+	}
+
+	
+	
 }
