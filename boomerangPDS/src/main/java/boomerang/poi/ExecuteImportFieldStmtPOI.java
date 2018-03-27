@@ -67,7 +67,7 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 		@Override
 		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t) {
 			flowSolver.getFieldAutomaton().registerListener(
-					new ImportToAutomatonWithNewStart<W>(flowSolver.getFieldAutomaton(), start, t.getStart(), this));
+					new ImportToAutomatonWithNewStart(start, t.getStart()));
 
 		}
 
@@ -174,65 +174,7 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 
 	}
 
-	private class TransitiveCallback implements Callback {
 
-		private Callback parent;
-		private Transition<Field, INode<Node<Statement, Val>>> t;
-
-		public TransitiveCallback(Callback callback, Transition<Field, INode<Node<Statement, Val>>> t) {
-			this.parent = callback;
-			this.t = t;
-		}
-
-		@Override
-		public void trigger(Transition<Field, INode<Node<Statement, Val>>> innerT) {
-			flowSolver.getFieldAutomaton().addTransition(innerT);
-			parent.trigger(t);
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((t == null) ? 0 : t.hashCode());
-//			result = prime * result + ((parent == null) ? 0 : parent.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			TransitiveCallback other = (TransitiveCallback) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-//			 if (parent == null) {
-//			 if (other.parent != null)
-//			 return false;
-//			 } else if (!parent.equals(other.parent))
-//			 return false;
-			if (t == null) {
-				if (other.t != null)
-					return false;
-			} else if (!t.equals(other.t))
-				return false;
-			return true;
-		}
-
-		private ExecuteImportFieldStmtPOI getOuterType() {
-			return ExecuteImportFieldStmtPOI.this;
-		}
-
-	}
-
-	private interface Callback {
-		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t);
-	}
 
 	@Override
 	public int hashCode() {
