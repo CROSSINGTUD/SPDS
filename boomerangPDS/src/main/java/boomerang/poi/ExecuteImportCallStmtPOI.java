@@ -59,7 +59,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 		public TransitiveVisitor(INode<Node<Statement, Val>> state) {
 			super(state);
 			baseSolver
-				.getFieldAutomaton().registerListener(new ImportBackwards(state, new Direct2Callback(state)));
+				.getFieldAutomaton().registerListener(new ImportBackwards(state, new FieldStackCallback(state)));
 		}
 
 		@Override
@@ -102,21 +102,18 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 		}
 		
 	}
-	
-	// COPIED 
 
-	private class DirectCallback implements Callback{
+	private class FieldStackCallback implements Callback{
 
 		private INode<Node<Statement, Val>> start;
 
-		public DirectCallback(INode<Node<Statement, Val>> start) {
+		public FieldStackCallback(INode<Node<Statement, Val>> start) {
 			this.start = start;
 		}
 
 		@Override
 		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t) {
-			flowSolver.getFieldAutomaton().registerListener(
-					new ImportToAutomatonWithNewStart(start, t.getStart()));
+			flowSolver.getFieldAutomaton().addTransition(new Transition<>(t.getStart(),t.getLabel(),start));
 		}
 
 		@Override
@@ -136,7 +133,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 				return false;
 			if (getClass() != obj.getClass())
 				return false;
-			DirectCallback other = (DirectCallback) obj;
+			FieldStackCallback other = (FieldStackCallback) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
 			if (start == null) {
@@ -152,6 +149,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 		}
 		
 	}
+	// COPIED 
 
 	private class ImportBackwards extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
@@ -192,6 +190,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((callback == null) ? 0 : callback.hashCode());
 			return result;
 		}
 
@@ -206,53 +205,10 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 			ImportBackwards other = (ImportBackwards) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
-			return true;
-		}
-
-		private ExecuteImportCallStmtPOI getOuterType() {
-			return ExecuteImportCallStmtPOI.this;
-		}
-
-	}
-	
-	
-	private class Direct2Callback implements Callback{
-
-		private INode<Node<Statement, Val>> start;
-
-		public Direct2Callback(INode<Node<Statement, Val>> start) {
-			this.start = start;
-		}
-
-		@Override
-		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t) {
-			flowSolver.getFieldAutomaton().addTransition(new Transition<>(t.getStart(),t.getLabel(),start));
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((start == null) ? 0 : start.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			DirectCallback other = (DirectCallback) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (start == null) {
-				if (other.start != null)
+			if (callback == null) {
+				if (other.callback != null)
 					return false;
-			} else if (!start.equals(other.start))
+			} else if (!callback.equals(other.callback))
 				return false;
 			return true;
 		}
@@ -260,8 +216,10 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 		private ExecuteImportCallStmtPOI getOuterType() {
 			return ExecuteImportCallStmtPOI.this;
 		}
-		
+
 	}
+	
+	
 
 
 	@Override
