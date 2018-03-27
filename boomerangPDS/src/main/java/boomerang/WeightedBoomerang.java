@@ -856,8 +856,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
 			if (flowAllocation instanceof BackwardQuery) {
 			} else if (flowAllocation instanceof ForwardQuery) {
-				ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(queryToSolvers.get(baseAllocation),queryToSolvers.get(flowAllocation),FieldWritePOI.this);
-				exec.solve();
+				for(Statement succ : queryToSolvers.get(flowAllocation).getSuccsOf(getStmt())) {
+					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(queryToSolvers.get(baseAllocation),queryToSolvers.get(flowAllocation),FieldWritePOI.this, succ);
+					exec.solve();
+				}
 			}
 		}
 	}
@@ -1004,8 +1006,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				throw new RuntimeException("should not be invoked!");
 			if (flowAllocation instanceof ForwardQuery) {
 			} else if (flowAllocation instanceof BackwardQuery) {
-				ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(queryToSolvers.get(baseAllocation),queryToSolvers.get(flowAllocation),FieldReadPOI.this);
-				exec.solve();
+				for(Statement succ : queryToSolvers.get(flowAllocation).getSuccsOf(getStmt())) {
+					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(queryToSolvers.get(baseAllocation),queryToSolvers.get(flowAllocation),FieldReadPOI.this, succ);
+					exec.solve();
+				}
 			}
 		}
 	}

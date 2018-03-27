@@ -17,63 +17,46 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
-public class ExecuteImportCallStmtPOI<W extends Weight> {
+public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteImportPOI<W>{
 
-	private AbstractBoomerangSolver<W> baseSolver;
-	private AbstractBoomerangSolver<W> flowSolver;
-	private Statement callSite;
-	private Node<Statement, Val> returnedNode;
+	private final Val returningFact;
 
 	public ExecuteImportCallStmtPOI(AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
 			Statement callSite, Node<Statement, Val> returnedNode) {
-		this.baseSolver = baseSolver;
-		this.flowSolver = flowSolver;
-		this.callSite = callSite;
-		this.returnedNode = returnedNode;
+		super(baseSolver, flowSolver, callSite, returnedNode.stmt());
+		this.returningFact = returnedNode.fact();
 	}
 
 	public void solve() {
-		for (final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())) {
-			baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
+		baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 
-				@Override
-				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-					final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-					if(!t.getStart().fact().stmt().equals(succOfWrite))
-						return;
-					
-					if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
-						Val alias = aliasedVariableAtStmt.fact().fact();
-						if (alias.equals(getBaseVar()) && t.getLabel().equals(Field.empty())) {
-							// t.getTarget is the allocation site
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
-									.getFieldAutomaton();
-							baseAutomaton.registerListener(new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
-						}
-						if (alias.equals(getBaseVar()) && !t.getLabel().equals(Field.empty()) && !t.getLabel().equals(Field.epsilon())) {
-							// t.getTarget is the allocation site
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
-									.getFieldAutomaton();
-							baseAutomaton.registerListener(new TransitiveVisitor(t.getTarget()));
-//							baseAutomaton.registerListener(new ImportBackwards(t.getTarget(), new Direct2Callback(t.getTarget())));
-						}
+			@Override
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+				final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
+				if(!t.getStart().fact().stmt().equals(succ))
+					return;
+				
+				if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
+					Val alias = aliasedVariableAtStmt.fact().fact();
+					if (alias.equals(returningFact) && t.getLabel().equals(Field.empty())) {
+						// t.getTarget is the allocation site
+						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
+								.getFieldAutomaton();
+						baseAutomaton.registerListener(new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
 					}
-					
+					if (alias.equals(returningFact) && !t.getLabel().equals(Field.empty()) && !t.getLabel().equals(Field.epsilon())) {
+						// t.getTarget is the allocation site
+						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
+								.getFieldAutomaton();
+						baseAutomaton.registerListener(new TransitiveVisitor(t.getTarget()));
+//							baseAutomaton.registerListener(new ImportBackwards(t.getTarget(), new Direct2Callback(t.getTarget())));
+					}
 				}
-			});
-		}
+				
+			}
+		});
 	}
-
-
-	public Statement getStmt() {
-		return callSite;
-	}
-
-	public Val getBaseVar() {
-		return returnedNode.fact();
-	}
-	
 	
 	private class TransitiveVisitor extends WPAStateListener<Field, INode<Node<Statement, Val>>, W>{
 
@@ -194,17 +177,15 @@ public class ExecuteImportCallStmtPOI<W extends Weight> {
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
 			if(t.getLabel().equals(Field.epsilon()))
 				return;
-			if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(getStmt())
-					&& !t.getStart().fact().fact().equals(getBaseVar())) {
+			if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(curr)
+					&& !t.getStart().fact().fact().equals(returningFact)) {
 				Val alias = t.getStart().fact().fact();
-				for (final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())) {
-					Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succOfWrite, alias);
-					Node<Statement, Val> rightOpNode = new Node<Statement, Val>(succOfWrite, getBaseVar());
-					callback.trigger(new Transition<Field, INode<Node<Statement, Val>>>(
-							new SingleNode<Node<Statement, Val>>(aliasedVarAtSucc), t.getLabel(), t.getTarget()));
-					flowSolver.setFieldContextReachable(aliasedVarAtSucc);
-					flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
-				}
+				Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
+				Node<Statement, Val> rightOpNode = new Node<Statement, Val>(succ, returningFact);
+				callback.trigger(new Transition<Field, INode<Node<Statement, Val>>>(
+						new SingleNode<Node<Statement, Val>>(aliasedVarAtSucc), t.getLabel(), t.getTarget()));
+				flowSolver.setFieldContextReachable(aliasedVarAtSucc);
+				flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
 			}
 			if (t.getStart() instanceof GeneratedState) {
 				baseSolver.getFieldAutomaton().registerListener(new ImportBackwards(t.getStart(),new TransitiveCallback(callback, t)));
@@ -357,11 +338,8 @@ public class ExecuteImportCallStmtPOI<W extends Weight> {
 	@Override
 	public int hashCode() {
 		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
-		result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
-		result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
-		result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
+		int result = super.hashCode();
+		result = prime * result + ((returningFact == null) ? 0 : returningFact.hashCode());
 		return result;
 	}
 
@@ -369,33 +347,17 @@ public class ExecuteImportCallStmtPOI<W extends Weight> {
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;
-		if (obj == null)
+		if (!super.equals(obj))
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
 		ExecuteImportCallStmtPOI other = (ExecuteImportCallStmtPOI) obj;
-		if (baseSolver == null) {
-			if (other.baseSolver != null)
+		if (returningFact == null) {
+			if (other.returningFact != null)
 				return false;
-		} else if (!baseSolver.equals(other.baseSolver))
-			return false;
-		if (callSite == null) {
-			if (other.callSite != null)
-				return false;
-		} else if (!callSite.equals(other.callSite))
-			return false;
-		if (flowSolver == null) {
-			if (other.flowSolver != null)
-				return false;
-		} else if (!flowSolver.equals(other.flowSolver))
-			return false;
-		if (returnedNode == null) {
-			if (other.returnedNode != null)
-				return false;
-		} else if (!returnedNode.equals(other.returnedNode))
+		} else if (!returningFact.equals(other.returningFact))
 			return false;
 		return true;
 	}
-	
 	
 }

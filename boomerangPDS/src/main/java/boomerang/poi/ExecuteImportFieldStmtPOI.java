@@ -16,15 +16,16 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
-public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Statement, Val, Field> {
-	private AbstractBoomerangSolver<W> baseSolver;
-	private AbstractBoomerangSolver<W> flowSolver;
+public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecuteImportPOI<W> {
 
+	private final Val baseVar;
+	private final Val storedVar;
+	
 	public ExecuteImportFieldStmtPOI(final AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
-			AbstractPOI<Statement, Val, Field> poi) {
-		super(poi.getStmt(), poi.getBaseVar(), poi.getField(), poi.getStoredVar());
-		this.baseSolver = baseSolver;
-		this.flowSolver = flowSolver;
+			AbstractPOI<Statement, Val, Field> poi, Statement succ) {
+		super(baseSolver, flowSolver, poi.getStmt(), succ);
+		this.baseVar = poi.getBaseVar();
+		this.storedVar = poi.getStoredVar();
 	}
 
 	public void execute(ForwardQuery baseAllocation, Query flowAllocation) {
@@ -32,31 +33,27 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 	}
 
 	public void solve() {
-		assert !flowSolver.getSuccsOf(getStmt()).isEmpty();
+		baseSolver.getFieldAutomaton()
+				.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 
-		for (final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())) {
-			baseSolver.getFieldAutomaton()
-					.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
-
-						@Override
-						public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-								WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-							final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-							if (!t.getStart().fact().stmt().equals(succOfWrite))
-								return;
-							if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
-								Val alias = aliasedVariableAtStmt.fact().fact();
-								if (alias.equals(getBaseVar()) && t.getLabel().equals(Field.empty())) {
-									// t.getTarget is the allocation site
-									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
-											.getFieldAutomaton();
-									baseAutomaton.registerListener(
-											new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
-								}
+					@Override
+					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+						final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
+						if (!t.getStart().fact().stmt().equals(succ))
+							return;
+						if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
+							Val alias = aliasedVariableAtStmt.fact().fact();
+							if (alias.equals(baseVar) && t.getLabel().equals(Field.empty())) {
+								// t.getTarget is the allocation site
+								WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
+										.getFieldAutomaton();
+								baseAutomaton.registerListener(
+										new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
 							}
 						}
-					});
-		}
+					}
+				});
 	}
 
 	private class DirectCallback implements Callback {
@@ -127,17 +124,15 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
 			if(t.getLabel().equals(Field.epsilon()))
 				return;
-			if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(getStmt())
-					&& !t.getStart().fact().fact().equals(getBaseVar())) {
+			if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(curr)
+					&& !t.getStart().fact().fact().equals(baseVar)) {
 				Val alias = t.getStart().fact().fact();
-				for (final Statement succOfWrite : flowSolver.getSuccsOf(getStmt())) {
-					Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succOfWrite, alias);
-					Node<Statement, Val> rightOpNode = new Node<Statement, Val>(getStmt(), getStoredVar());
-					callback.trigger(new Transition<Field, INode<Node<Statement, Val>>>(
-							new SingleNode<Node<Statement, Val>>(aliasedVarAtSucc), t.getLabel(), t.getTarget()));
-					flowSolver.setFieldContextReachable(aliasedVarAtSucc);
-					flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
-				}
+				Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
+				Node<Statement, Val> rightOpNode = new Node<Statement, Val>(curr, storedVar);
+				callback.trigger(new Transition<Field, INode<Node<Statement, Val>>>(
+						new SingleNode<Node<Statement, Val>>(aliasedVarAtSucc), t.getLabel(), t.getTarget()));
+				flowSolver.setFieldContextReachable(aliasedVarAtSucc);
+				flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
 			}
 			if (t.getStart() instanceof GeneratedState) {
 				baseSolver.getFieldAutomaton()
@@ -243,8 +238,8 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 	public int hashCode() {
 		final int prime = 31;
 		int result = super.hashCode();
-		result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
-		result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
+		result = prime * result + ((baseVar == null) ? 0 : baseVar.hashCode());
+		result = prime * result + ((storedVar == null) ? 0 : storedVar.hashCode());
 		return result;
 	}
 
@@ -257,19 +252,17 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractPOI<Sta
 		if (getClass() != obj.getClass())
 			return false;
 		ExecuteImportFieldStmtPOI other = (ExecuteImportFieldStmtPOI) obj;
-		if (baseSolver == null) {
-			if (other.baseSolver != null)
+		if (baseVar == null) {
+			if (other.baseVar != null)
 				return false;
-		} else if (!baseSolver.equals(other.baseSolver))
+		} else if (!baseVar.equals(other.baseVar))
 			return false;
-		if (flowSolver == null) {
-			if (other.flowSolver != null)
+		if (storedVar == null) {
+			if (other.storedVar != null)
 				return false;
-		} else if (!flowSolver.equals(other.flowSolver))
+		} else if (!storedVar.equals(other.storedVar))
 			return false;
 		return true;
 	}
 
-	
-	
 }
