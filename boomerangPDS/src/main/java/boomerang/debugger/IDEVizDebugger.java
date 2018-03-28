@@ -101,6 +101,9 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			Map<SootMethod,Table<Statement, RegExAccessPath, W>> sootMethodToResults = convert(results);
 			for(Entry<SootMethod, Table<Statement, RegExAccessPath, W>> mToRes : sootMethodToResults.entrySet()){
 				SootMethod m = mToRes.getKey();
+				Table<Statement, RegExAccessPath, W> resTable = mToRes.getValue();
+				if(resTable.isEmpty())
+					continue;
 				int labelYOffset = computeLabelYOffset(mToRes.getValue().columnKeySet());
 				JSONMethod jsonMethod = new JSONMethod(m);
 				IDEVizDebugger<W>.JSONControlFlowGraph cfg = createControlFlowGraph(m, labelYOffset);
