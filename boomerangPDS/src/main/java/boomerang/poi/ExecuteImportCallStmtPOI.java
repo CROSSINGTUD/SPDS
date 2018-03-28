@@ -16,7 +16,7 @@ import wpds.interfaces.WPAUpdateListener;
 
 public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteImportPOI<W>{
 
-	private final Val returningFact;
+	private final Val returningFact;					
 
 	public ExecuteImportCallStmtPOI(AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
 			Statement callSite, Node<Statement, Val> returnedNode) {
@@ -62,21 +62,20 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 			}
 		});
 	}
-	
 	private class TransitiveVisitor extends WPAStateListener<Field, INode<Node<Statement, Val>>, W>{
 
 		public TransitiveVisitor(INode<Node<Statement, Val>> state) {
 			super(state);
-			baseSolver
-				.getFieldAutomaton().registerListener(new ImportBackwards(state, new FieldStackCallback(state)));
 		}
 
 		@Override
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if(t.getLabel().equals(Field.empty()) || t.getLabel().equals(Field.epsilon()))
-				return;
-			baseSolver.getFieldAutomaton().registerListener(new TransitiveVisitor(t.getTarget()));
+			if(t.getLabel().equals(Field.empty())) {
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
+						.getFieldAutomaton();
+				baseAutomaton.registerListener(new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
+			}
 		}
 
 		@Override
