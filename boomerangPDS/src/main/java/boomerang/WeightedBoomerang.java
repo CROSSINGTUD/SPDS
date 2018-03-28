@@ -18,6 +18,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
@@ -1061,13 +1062,18 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			System.out.println("========================");
 			System.out.println(q);
 			System.out.println("========================");
-			queryToSolvers.getOrCreate(q).debugOutput();
+//			queryToSolvers.getOrCreate(q).debugOutput();
 			for (FieldReadPOI p : fieldReads.values()) {
 //				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
 				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {
 //					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
 				}
 			}
+			System.out.println(Joiner.on("\n").join(queryToSolvers.get(q).getResults().cellSet()));
+//			queryToSolvers.getOrCreate(q).debugOutput();
+//			for (FieldReadPOI p : fieldReads.values()) {
+//				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
+//			}
 //			for (FieldWritePOI p : fieldWrites.values()) {
 //				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
 //				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {

@@ -4,6 +4,7 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.solver.BackwardBoomerangSolver;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -74,9 +75,14 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 		@Override
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if(t.getLabel().equals(Field.empty()) || t.getLabel().equals(Field.epsilon()))
+			if(t.getLabel().equals(Field.epsilon()))
 				return;
-			baseSolver.getFieldAutomaton().registerListener(new TransitiveVisitor(t.getTarget()));
+			if(t.getLabel().equals(Field.empty())) {
+				baseSolver
+					.getFieldAutomaton().registerListener(new ImportBackwards(t.getTarget(), new FieldStackCallback(t.getStart())));
+			} else {
+				baseSolver.getFieldAutomaton().registerListener(new TransitiveVisitor(t.getTarget()));
+			}
 		}
 
 		@Override

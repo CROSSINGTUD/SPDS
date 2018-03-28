@@ -96,7 +96,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	private boolean integerQueries;
 	private SeedFactory<NoWeight> seedFactory;
 
-	protected int analysisTimeout = 300 *1000;
+	protected int analysisTimeout = 3000 *1000;
 
 	private enum AnalysisMode {
 		WholeProgram, DemandDrivenBackward;
@@ -104,8 +104,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	protected AnalysisMode[] getAnalyses() {
 		return new AnalysisMode[] {
-				 AnalysisMode.WholeProgram,
-//				AnalysisMode.DemandDrivenBackward
+//				 AnalysisMode.WholeProgram,
+				AnalysisMode.DemandDrivenBackward
 				};
 	}
 
