@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package test.cases.fields;
 
 import org.junit.Test;
@@ -10,6 +21,19 @@ public class WritePOITest extends AbstractBoomerangTest {
 		Object b = null;
 //		Alloc c = null;
 	}
+	
+	private static class I{
+		Object b;// = new Object();
+	}
+	@Test
+	public void overwrite(){
+		I a = new I();
+		a.b = new Object();
+		a.b = new Alloc();
+		Object alias = a.b;
+		queryFor(alias);
+	}
+	
 	@Test
 	public void indirectAllocationSite12(){
 		A a = new A();

@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package typestate.tests;
 
 import org.junit.Test;
@@ -485,7 +496,29 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		}
 		mayBeInErrorState(file);
 	}
+	
+	static File v;
+	
+	@Test
+	public void staticFlow(){
+		File a = new File();
+		v = a;
+		v.open();
+		foo();
+		mustBeInErrorState(v);
+		v.close();
+		mustBeInAcceptingState(v);
+	} 
+	@Test
+	public void staticFlowSimple(){
+		File a = new File();
+		v = a;
+		v.open();
+		mustBeInErrorState(v);
+	} 
 
+	public static void foo() {
+	}
 	@Test
 	public void storedInObject(){
 		InnerObject o = new InnerObject();

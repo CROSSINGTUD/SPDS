@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package test.cases.basic;
 
 import org.junit.Test;
@@ -14,7 +25,16 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 		AllocatedObject alias2 = identity(alias1);
 		queryFor(alias2);
 	}
-
+	@Test
+	public void identityTest1() {
+		Alloc alias1 = new Alloc();
+		Object alias2 = alias1;
+		identity(alias1);
+		otherCall(alias2);
+		queryFor(alias1);
+	}
+	private void otherCall(Object alias2) {
+	}
 	@Test
 	public void summaryReuseTest1() {
 		AllocatedObject alias1 = new AllocatedObject(){}, alias2, alias3, alias4;
@@ -28,7 +48,7 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 	public void failedCast() {
 		Object o = new Object();
 		Object returned = flow(o);
-		AllocatedObject t = (AllocatedObject) returned;
+		String t = (String) returned;
 		queryFor(t);
 	}	
 	
@@ -39,15 +59,33 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 	@Test
 	public void summaryReuseTest4() {
 		Alloc alias2;
-//		if(staticallyUnknown()){
+		if(staticallyUnknown()){
 			Alloc alias1 = new Alloc();
 			alias2 = nestedIdentity(alias1);
-//		}else{
-//			Alloc alias1 = new Alloc();
-//			alias2 = nestedIdentity(alias1);
-//		}
+		}else{
+			Alloc alias1 = new Alloc();
+			alias2 = nestedIdentity(alias1);
+		}
 		queryFor(alias2);
 	}
+	
+	@Test
+	public void branchWithCall(){
+		Alloc a1 = new Alloc();
+		Alloc a2 = new Alloc();
+		Object a = null;
+		if(staticallyUnknown()){
+			a = a1;
+		} else{
+			a = a2;
+		}
+		wrappedFoo(a);
+		queryFor(a);
+	}
+	
+	private void wrappedFoo(Object param) {
+	}
+	
 
 	private Alloc nestedIdentity(Alloc param2) {
 		int shouldNotSeeThis = 1;

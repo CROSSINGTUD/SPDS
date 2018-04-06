@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package typestate.impl.statemachines;
 
 import java.util.Collection;
@@ -7,9 +18,16 @@ import java.util.Set;
 import java.util.Vector;
 
 import boomerang.WeightedForwardQuery;
+import boomerang.jimple.AllocVal;
+import boomerang.jimple.Statement;
+import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
+import soot.Value;
+import soot.jimple.AssignStmt;
+import soot.jimple.NewExpr;
+import soot.jimple.Stmt;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
@@ -64,6 +82,7 @@ public class VectorStateMachine extends TypeStateMachineWeightFunctions {
 		List<SootClass> vectorClasses = getSubclassesOf("java.util.Vector");
 		Set<SootMethod> selectMethodByName = selectMethodByName(vectorClasses,
 				"add|addAll|addElement|insertElementAt|set|setElementAt");
+		selectMethodByName.add(Scene.v().getMethod("<java.util.Vector: void <init>(java.util.Collection)>"));
 		return selectMethodByName;
 	}
 

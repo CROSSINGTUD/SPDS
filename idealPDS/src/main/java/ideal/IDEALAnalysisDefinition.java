@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package ideal;
 
 import java.util.Collection;
@@ -42,9 +53,9 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 
 	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
 
-	public abstract long analysisBudgetInSeconds();
-
-	public abstract boolean enableStrongUpdates();
+	public boolean enableStrongUpdates() {
+		return true;
+	}
 
 	public String toString() {
 		String str = "====== IDEal Analysis Options ======";

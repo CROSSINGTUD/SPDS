@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package boomerang.seedfactory;
 
 import boomerang.Query;
@@ -9,6 +20,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import soot.Scene;
+import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
@@ -63,6 +75,7 @@ public abstract class SeedFactory<W extends Weight> {
         }
     };
 	private Collection<Method> processed = Sets.newHashSet();
+	private Multimap<Query, SootMethod> queryToScope = HashMultimap.create();
 
     public Collection<Query> computeSeeds(){
         List<SootMethod> entryPoints = Scene.v().getEntryPoints();
@@ -77,10 +90,33 @@ public abstract class SeedFactory<W extends Weight> {
             }
         });
         
+        if(analyseClassInitializers()){
+        	Set<SootClass> sootClasses = Sets.newHashSet();
+        	for(Method p : Sets.newHashSet(processed)){
+        		if(sootClasses.add(p.getMethod().getDeclaringClass())){
+        			addStaticInitializerFor(p.getMethod().getDeclaringClass());
+        		}
+        	}
+        }
+        
         return seedToTransition.keySet();
     }
 
-    protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods);
+    private void addStaticInitializerFor(SootClass declaringClass) {
+		for(SootMethod m : declaringClass.getMethods()){
+			if(m.isStaticInitializer()){
+		        for(SootMethod ep : Scene.v().getEntryPoints()){
+		        	addPushRule(new Method(ep), new Method(m));
+		        }
+			}
+		}
+	}
+
+	protected boolean analyseClassInitializers() {
+		return false;
+	}
+
+	protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods);
 	
     private void process(Transition<Method, INode<Reachable>> t) {
         Method curr = t.getLabel();
@@ -117,27 +153,33 @@ public abstract class SeedFactory<W extends Weight> {
 
 	public Collection<SootMethod> getMethodScope(Query query) {
 		Set<SootMethod> scope = Sets.newHashSet();
+		if(queryToScope.containsKey(query)){
+			return queryToScope.get(query);
+		}
 		for(Transition<Method, INode<Reachable>> t : seedToTransition.get(query)){
 			scope.add(t.getLabel().getMethod());
-			automaton.registerListener(new TransitiveClosure(t.getTarget(), scope));
+			automaton.registerListener(new TransitiveClosure(t.getTarget(), scope, query));
 		}
+		queryToScope.putAll(query, scope);
 		return scope;		
 	}
 
 	private class TransitiveClosure extends WPAStateListener<Method, INode<Reachable>, Weight.NoWeight>{
 
 		private final Set<SootMethod> scope;
+		private Query query;
 
-		public TransitiveClosure(INode<Reachable> start, Set<SootMethod> scope) {
+		public TransitiveClosure(INode<Reachable> start, Set<SootMethod> scope, Query query) {
 			super(start);
 			this.scope = scope;
+			this.query = query;
 		}
 
 		@Override
 		public void onOutTransitionAdded(Transition<Method, INode<Reachable>> t, NoWeight w,
 				WeightedPAutomaton<Method, INode<Reachable>, NoWeight> weightedPAutomaton) {
 			scope.add(t.getLabel().getMethod());
-			automaton.registerListener(new TransitiveClosure(t.getTarget(), scope));
+			automaton.registerListener(new TransitiveClosure(t.getTarget(), scope, query));
 		}
 
 		@Override
@@ -151,7 +193,7 @@ public abstract class SeedFactory<W extends Weight> {
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((scope == null) ? 0 : scope.hashCode());
+			result = prime * result + ((query == null) ? 0 : query.hashCode());
 			return result;
 		}
 
@@ -166,10 +208,10 @@ public abstract class SeedFactory<W extends Weight> {
 			TransitiveClosure other = (TransitiveClosure) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
-			if (scope == null) {
-				if (other.scope != null)
+			if (query == null) {
+				if (other.query != null)
 					return false;
-			} else if (!scope.equals(other.scope))
+			} else if (!query.equals(other.query))
 				return false;
 			return true;
 		}

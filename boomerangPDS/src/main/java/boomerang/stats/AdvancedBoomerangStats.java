@@ -1,5 +1,17 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package boomerang.stats;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
@@ -284,6 +296,18 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
 				return false;
 			return true;
 		}
+	}
+
+
+
+	@Override
+	public Collection<? extends Node<Statement, Val>> getForwardReachesNodes() {
+		Set<Node<Statement, Val>> res = Sets.newHashSet();
+		for (Query q : queries.keySet()) {
+			if (q instanceof ForwardQuery)
+				res.addAll(queries.get(q).getReachedStates());
+		}
+		return res;
 	}
 
 }

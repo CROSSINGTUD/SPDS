@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package test.core.selfrunning;
 
 import java.io.File;
@@ -73,38 +84,33 @@ public abstract class AbstractTestingFramework {
 	private void initializeSootWithEntryPoint() {
 		G.v().reset();
 		Options.v().set_whole_program(true);
-		
-		//TODO @Melanie play with Call Graph Options here.
-		//https://soot-build.cs.uni-paderborn.de/public/origin/develop/soot/soot-develop/options/soot_options.htm#phase_5_2
+		Options.v().setPhaseOption("cg.spark", "on");
+		Options.v().setPhaseOption("cg.spark", "verbose:true");
 		Options.v().set_output_format(Options.output_format_none);
 		setCallGraphOptions();
 		String userdir = System.getProperty("user.dir");
 		String sootCp = userdir + "/target/test-classes";
-		if (includeJDK()) {
-			String javaHome = System.getProperty("java.home");
-			if (javaHome == null || javaHome.equals(""))
-				throw new RuntimeException("Could not get property java.home!");
-			sootCp += File.pathSeparator + javaHome + "/lib/rt.jar";
-			Options.v().setPhaseOption("cg", "trim-clinit:false");
-			Options.v().set_no_bodies_for_excluded(true);
-			Options.v().set_allow_phantom_refs(true);
+		String javaHome = System.getProperty("java.home");
+		if (javaHome == null || javaHome.equals(""))
+			throw new RuntimeException("Could not get property java.home!");
+		sootCp += File.pathSeparator + javaHome + "/lib/rt.jar";
+		sootCp += File.pathSeparator + javaHome + "/lib/jce.jar";
+//			Options.v().setPhaseOption("cg", "trim-clinit:false");
+		Options.v().set_no_bodies_for_excluded(true);
+		Options.v().set_allow_phantom_refs(true);
 
-			List<String> includeList = new LinkedList<String>();
-			includeList.add("java.lang.*");
-			includeList.add("java.util.*");
-			includeList.add("java.io.*");
-			includeList.add("sun.misc.*");
-			includeList.add("java.net.*");
-			includeList.add("javax.servlet.*");
-			includeList.add("javax.crypto.*");
+		List<String> includeList = new LinkedList<String>();
+		includeList.add("java.lang.*");
+		includeList.add("java.util.*");
+		includeList.add("java.io.*");
+		includeList.add("sun.misc.*");
+		includeList.add("java.net.*");
+		includeList.add("sun.nio.*");
+		includeList.add("javax.servlet.*");
+//		includeList.add("javax.crypto.*");
 
-			Options.v().set_include(includeList);
+		Options.v().set_include(includeList);
 
-		} else {
-			Options.v().set_no_bodies_for_excluded(true);
-			Options.v().set_allow_phantom_refs(true);
-			// Options.v().setPhaseOption("cg", "all-reachable:true");
-		}
 		Options.v().setPhaseOption("jb", "use-original-names:true");
 
 		Options.v().set_exclude(excludedPackages());
@@ -119,15 +125,27 @@ public abstract class AbstractTestingFramework {
 		if (sootTestMethod == null)
 			throw new RuntimeException(
 					"The method with name " + testMethodName.getMethodName() + " was not found in the Soot Scene.");
+		sootTestMethod.getDeclaringClass().setApplicationClass();
 		Scene.v().addBasicClass(getTargetClass(), SootClass.BODIES);
 		Scene.v().loadNecessaryClasses();
 		SootClass c = Scene.v().forceResolve(getTargetClass(), SootClass.BODIES);
 		if (c != null) {
 			c.setApplicationClass();
 		}
-
 		SootMethod methodByName = c.getMethodByName("main");
 		List<SootMethod> ePoints = new LinkedList<>();
+		for (SootMethod m : sootTestCaseClass.getMethods()) {
+			if (m.isStaticInitializer())
+				ePoints.add(m);
+		}
+		for(SootClass inner : Scene.v().getClasses()){
+			if(inner.getName().contains(sootTestCaseClass.getName())){
+				for (SootMethod m : inner.getMethods()) {
+					if (m.isStaticInitializer())
+						ePoints.add(m);
+				}
+			}
+		}
 		ePoints.add(methodByName);
 		Scene.v().setEntryPoints(ePoints);
 	}
@@ -174,17 +192,13 @@ public abstract class AbstractTestingFramework {
 		return this.getClass().getName().replace("class ", "");
 	}
 
-	protected boolean includeJDK() {
-		return true;
-	}
+    protected String getCallGraphAlgorithm(){
+        return "spark";
+    }
 
-	protected String getCallGraphAlgorithm(){
-		return "spark";
-	}
-
-	protected String[] getCallGraphOptions(){
-		return null;
-	}
+    protected String[] getCallGraphOptions(){
+        return null;
+    }
 
 	public List<String> excludedPackages() {
 		List<String> excludedPackages = new LinkedList<>();

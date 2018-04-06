@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package ideal;
 
 import java.util.Map;
@@ -24,10 +35,12 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	private Map<Statement, W> potentialStrongUpdates = Maps.newHashMap();
 	private Set<Statement> weakUpdates = Sets.newHashSet();
 	private Multimap<Node<Statement,Val>, W> nonOneFlowNodes = HashMultimap.create();
-	private Phases phase; 
+	private Phases phase;
+	private boolean strongUpdates; 
 
-	public IDEALWeightFunctions(WeightFunctions<Statement,Val,Statement,W>  delegate) {
+	public IDEALWeightFunctions(WeightFunctions<Statement,Val,Statement,W>  delegate, boolean strongUpdates) {
 		this.delegate = delegate;
+		this.strongUpdates = strongUpdates;
 	}
 	
 	@Override
@@ -35,6 +48,18 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		W weight = delegate.push(curr, succ, calleeSp);
 		if (isObjectFlowPhase() &&!weight.equals(getOne())){	
 			addOtherThanOneWeight(curr, weight);
+		}
+		if(isValueFlowPhase() && curr.fact().isStatic()){
+			if(potentialStrongUpdates.containsKey(curr.stmt())){
+				W w = potentialStrongUpdates.get(curr.stmt());
+//				System.err.println("Potential strong update "+ curr + "  " + w);
+				if(!weakUpdates.contains(curr.stmt()) && strongUpdates){
+//					System.err.println("Strong update " + curr + w + " was " + weight);
+					return w;
+				}
+				weight = (W) weight.combineWith(w);
+//				System.err.println("No strong update" + weight);
+			}
 		}
 		return weight;
 	}
@@ -49,17 +74,16 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 
 	@Override
 	public W normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
-		
 		W weight = delegate.normal(curr, succ);
 		if (isObjectFlowPhase() && curr.stmt().isCallsite() && !weight.equals(getOne())){
 			addOtherThanOneWeight(curr, weight);
 		}
 		
-		if(isValueFlowPhase() && IDEALAnalysis.ENABLE_STRONG_UPDATES){
+		if(isValueFlowPhase()){
 			if(potentialStrongUpdates.containsKey(curr.stmt())){
 				W w = potentialStrongUpdates.get(curr.stmt());
 //				System.err.println("Potential strong update "+ curr + "  " + w);
-				if(!weakUpdates.contains(curr.stmt())){
+				if(!weakUpdates.contains(curr.stmt()) && strongUpdates){
 //					System.err.println("Strong update " + curr + w + " was " + weight);
 					return w;
 				}
@@ -80,11 +104,7 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	
 	@Override
 	public W pop(Node<Statement, Val> curr, Statement location) {
-		W weight = delegate.pop(curr, location);
-//		if (isObjectFlowPhase() && !weight.equals(getOne())){
-//			addOtherThanOneWeight(curr, weight);
-//		}
-		return weight;
+		return delegate.pop(curr, location);
 	}
 
 	public void registerListener(NonOneFlowListener<W> listener){
@@ -107,16 +127,6 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	}
 
 
-//	@Override
-//	public EdgeFunction<TypestateDomainValue<State>> getCallToReturnEdgeFunction(AccessGraph d1, Unit callSite, AccessGraph d2,
-//			Unit returnSite, AccessGraph d3) {
-//		Set<? extends Transition<State>> trans = func.getCallToReturnTransitionsFor(d1, callSite, d2, returnSite, d3);
-//		if (trans.isEmpty())
-//			return EdgeIdentity.v();
-//		return new TransitionFunction<State>(trans);
-//	}
-
-	
 	@Override
 	public String toString() {
 		return "[IDEAL-Wrapped Weights] " + delegate.toString();

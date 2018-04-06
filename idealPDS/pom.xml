@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.fraunhofer.iem</groupId>
     <artifactId>idealPDS</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <build>
         <plugins>
             <plugin>
@@ -29,17 +29,17 @@
         <dependency>
             <groupId>de.fraunhofer.iem</groupId>
             <artifactId>testCore</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>de.fraunhofer.iem</groupId>
             <artifactId>boomerangPDS</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>de.fraunhofer.iem</groupId>
             <artifactId>WPDS</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -50,7 +50,7 @@
         <dependency>
             <groupId>de.fraunhofer.iem</groupId>
             <artifactId>PathExpression</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -65,7 +65,7 @@
         <dependency>
             <groupId>de.fraunhofer.iem</groupId>
             <artifactId>synchronizedPDS</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>1.0.0</version>
         </dependency>
         <dependency>
             <groupId>junit</groupId>

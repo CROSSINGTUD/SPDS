@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package typestate.impl.statemachines;
 
 import java.util.Collection;
@@ -27,8 +38,8 @@ public class KeyStoreStateMachine extends TypeStateMachineWeightFunctions{
 
 		@Override
 		public boolean isErrorState() {
-			return this == ERROR;
-		}
+			return this == ERROR ;
+		} 
 
 		@Override
 		public boolean isInitialState() {
@@ -61,8 +72,9 @@ public class KeyStoreStateMachine extends TypeStateMachineWeightFunctions{
 		Set<SootMethod> out = new HashSet<>();
 		for (SootClass c : subclasses) {
 			for (SootMethod m : c.getMethods())
-				if (m.isPublic() && !loadMethods.contains(m) && !m.isStatic())
+				if (m.isPublic() && !loadMethods.contains(m) && !m.isStatic()) {
 					out.add(m);
+				}
 		}
 		return out;
 	}

@@ -1,18 +1,33 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package test;
 
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import boomerang.WeightedForwardQuery;
+import com.google.common.collect.Lists;
+
 import boomerang.Query;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
+import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import com.google.common.collect.Lists;
+import boomerang.results.ForwardBoomerangResults;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
 import ideal.IDEALSeedSolver;
@@ -25,6 +40,7 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.WeightFunctions;
+import sync.pds.solver.nodes.Node;
 import test.ExpectedResults.InternalState;
 import test.core.selfrunning.AbstractTestingFramework;
 import test.core.selfrunning.ImprecisionException;
@@ -44,18 +60,6 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			@Override
 			public JimpleBasedInterproceduralCFG icfg() {
 				return icfg;
-			}
-
-
-			@Override
-			public long analysisBudgetInSeconds() {
-				return 0;
-			}
-
-
-			@Override
-			public boolean enableStrongUpdates() {
-				return false;
 			}
 
 			@Override
@@ -81,14 +85,12 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				icfg = new JimpleBasedInterproceduralCFG(true);
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
-
+				System.out.println(sootTestMethod.getActiveBody());
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				
-				Map<WeightedForwardQuery<TransitionFunction>, IDEALSeedSolver<TransitionFunction>> seedToSolvers = executeAnalysis();
-				for(WeightedForwardQuery<TransitionFunction> seed : seedToSolvers.keySet()){
-					for(Query q : seedToSolvers.get(seed).getPhase2Solver().getSolvers().keySet()){
-						testingResultReporter.onSeedFinished(q.asNode(), seedToSolvers.get(seed).getPhase2Solver().getSolvers().getOrCreate(q));
-					}
+				Map<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> seedToSolvers = executeAnalysis();
+				for(Entry<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> e : seedToSolvers.entrySet()){
+					testingResultReporter.onSeedFinished(e.getKey().asNode(), e.getValue());
 				}
 				List<Assertion> unsound = Lists.newLinkedList();
 				List<Assertion> imprecise = Lists.newLinkedList();
@@ -116,7 +118,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		};
 	}
 
-	protected Map<WeightedForwardQuery<TransitionFunction>, IDEALSeedSolver<TransitionFunction>> executeAnalysis() {
+	protected Map<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> executeAnalysis() {
 		return IDEALTestingFramework.this.createAnalysis().run();
 	}
 
@@ -185,7 +187,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 
 	protected static void mustBeInAcceptingState(Object variable) {
 	}
-	
+
 	protected static void shouldNotBeAnalyzed(){
 	}
 

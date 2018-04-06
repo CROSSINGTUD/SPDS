@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package test.cases.fields;
 
 import org.junit.Test;
@@ -10,16 +21,50 @@ public class CallPOITest extends AbstractBoomerangTest {
 		B b = new B();
 	}
 	private static class B{
-		C c = new C();
+		AllocObj c = new AllocObj();
 	}
-	private static class C implements AllocatedObject{
+	private static class AllocObj implements AllocatedObject{
 		
 	}
 
+	@Test
+	public void simpleButDiffer() {
+		Alloc c = new Alloc();
+		T t = new T(c);
+		S s = new S();
+		t.foo(s);
+		Object q = s.get();
+		queryFor(q);
+	}
+
+	public static class T{
+		private Object value;
+
+		T(Object o){
+			this.value = o;
+		}
+		public void foo(S s){
+			Object val = this.value;
+			s.set(val);
+		}
+		
+	}
+
+	public static class S{
+		private Object valueInS;
+
+		public void set(Object val){
+			this.valueInS = val;
+		}
+		public Object get(){
+			Object alias = this.valueInS;
+			return alias;
+		}
+	}
 	private static void allocation(A a) {
 		B intermediate = a.b;
-		C e = new C();
-		C d = e;
+		AllocObj e = new AllocObj();
+		AllocObj d = e;
 		intermediate.c = d;
 	}
 	
@@ -28,16 +73,16 @@ public class CallPOITest extends AbstractBoomerangTest {
 		A a = new A();
 		allocation(a);
 		B load = a.b;
-		C alias = load.c;
+		AllocObj alias = load.c;
 		queryFor(alias);
 	}
 
 	@Test
 	public void indirectAllocationSiteViaParameter(){
 		A a = new A();
-		C alloc = new C();
+		AllocObj alloc = new AllocObj();
 		allocation(a,alloc);
-		C alias = a.b.c;
+		AllocObj alias = a.b.c;
 		queryFor(alias);
 	}
 
@@ -45,15 +90,15 @@ public class CallPOITest extends AbstractBoomerangTest {
 	public void indirectAllocationSiteViaParameterAliased(){
 		A a = new A();
 //		a.b = new B();
-		C alloc = new C();
+		AllocObj alloc = new AllocObj();
 		A b = a;
 		allocation(a,alloc);
 		B loadedFromB = b.b;
-		C alias = loadedFromB.c;
+		AllocObj alias = loadedFromB.c;
 		queryFor(alias);
 	}
 
-	private void allocation(A a, C d) {
+	private void allocation(A a, AllocObj d) {
 		B intermediate = a.b;
 		intermediate.c = d;
 	}
@@ -62,27 +107,58 @@ public class CallPOITest extends AbstractBoomerangTest {
 	public void whyRecursiveCallPOIIsNecessary(){
 		//TODO This test case seems to be non deterministic, why?
 		A a = new A();
-		C alloc = new C();
+		AllocObj alloc = new AllocObj();
 		A b = a;
 		allocationIndirect(a,alloc);
 		B loadedFromB = b.b;
-		C alias = loadedFromB.c;
+		AllocObj alias = loadedFromB.c;
 		queryFor(alias);
 	}
 	@Test
 	public void whyRecursiveCallPOIIsNecessarySimpler(){
 		A a = new A();
-		C alloc = new C();
+		AllocObj alloc = new AllocObj();
 		allocationIndirect(a,alloc);
-		C alias = a.b.c;
+		AllocObj alias = a.b.c;
 		queryFor(alias);
 	}
-	private void allocationIndirect(A a, C d) {
+	private void allocationIndirect(A a, AllocObj d) {
 		B b = new B();
 		A a2 = a;
 		a2.b = b;
 		B intermediate = a2.b;
 		intermediate.c = d;
-		int x=1;
+		AllocObj AndMe = a.b.c;
+	}
+	@Test
+	public void whyRecursiveCallPOIIsNecessarySimpler2(){
+		A a = new A();
+		AllocObj alloc = new AllocObj();
+		allocationIndirect2(a,alloc);
+	}
+	private void allocationIndirect2(A whereAmI, AllocObj d) {
+		B b = new B();
+		A a2 = whereAmI;
+		a2.b = b;
+		B intermediate = a2.b;
+		intermediate.c = d;
+		AllocObj AndMe = whereAmI.b.c;
+		queryFor(AndMe);
+	}
+	@Test
+	public void innerSetFieldOnAlias(){
+		Outer o = new Outer();
+		set(o);
+		Object alias = o.field;
+		queryFor(alias);
+	}
+	private void set(Outer o) {
+		Alloc alloc = new Alloc();
+		Outer alias = o;
+		alias.field = alloc;
+	}
+
+	public static class Outer{
+		Object field;
 	}
 }

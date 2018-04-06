@@ -1,13 +1,22 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package test.cases.sets;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 
 
-@Ignore
 public class CustomMapTest extends AbstractBoomerangTest {
 	@Test
 	public void storeAndLoad(){
@@ -35,7 +44,7 @@ public class CustomMapTest extends AbstractBoomerangTest {
 		queryFor(alias);
 	}
 	public static class Map{
-		InnerMap m = new InnerMap();
+		public InnerMap m = new InnerMap();
 		public void add(Object o){
 			InnerMap map = this.m;
 			map.innerAdd(o);
@@ -48,7 +57,7 @@ public class CustomMapTest extends AbstractBoomerangTest {
 		}
 	}
 	public static class InnerMap{
-		private Object content= null;
+		public Object content = null;
 		public void innerAdd(Object o) {
 			content = o;
 		}

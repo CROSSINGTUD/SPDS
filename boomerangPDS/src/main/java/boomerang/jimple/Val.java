@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package boomerang.jimple;
 
 import soot.Local;
@@ -5,7 +16,7 @@ import soot.SootMethod;
 import soot.Value;
 
 public class Val {
-	private final SootMethod m;
+	protected final SootMethod m;
 	private final Value v;
 	private final String rep; 
 
@@ -55,14 +66,10 @@ public class Val {
 			return true;
 		if (obj == null)
 			return false;
+		//Removed this as AllocVal.equals(Val)
 //		if (getClass() != obj.getClass())
 //			return false;
 		Val other = (Val) obj;
-//		if (m == null) {
-//			if (other.m != null)
-//				return false;
-//		} else if (!m.equals(other.m))
-//			return false;
 		if (rep == null) {
 			if (other.rep != null)
 				return false;

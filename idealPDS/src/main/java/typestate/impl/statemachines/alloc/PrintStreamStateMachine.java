@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package typestate.impl.statemachines.alloc;
 
 import java.util.Collection;
@@ -23,7 +34,7 @@ public class PrintStreamStateMachine extends TypeStateMachineWeightFunctions {
 
 		@Override
 		public boolean isErrorState() {
-			return this == ERROR;
+			return this == ERROR || this == OPEN;
 		}
 
 		@Override
@@ -50,6 +61,14 @@ public class PrintStreamStateMachine extends TypeStateMachineWeightFunctions {
 				Type.OnReturn));
 		addTransition(new MatcherTransition(States.ERROR, closeMethods(), Parameter.This, States.ERROR,
 				Type.OnReturn));
+
+
+		addTransition(new MatcherTransition(States.OPEN, closeMethods(), Parameter.This, States.CLOSED,
+				Type.OnCallToReturn));
+		addTransition(new MatcherTransition(States.ERROR, closeMethods(), Parameter.This, States.ERROR,
+				Type.OnCallToReturn));
+		addTransition(new MatcherTransition(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED,
+				Type.OnCallToReturn));
 	}
 
 	private Set<SootMethod> closeMethods() {

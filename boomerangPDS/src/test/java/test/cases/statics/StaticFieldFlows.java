@@ -1,29 +1,60 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package test.cases.statics;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 
-@Ignore
 public class StaticFieldFlows extends AbstractBoomerangTest {
 	private static Object alloc;
 	private static Alloc instance;
+	private static Alloc i;
 	@Test
 	public void simple(){
 		alloc = new Alloc();
 		Object alias = alloc;
 		queryFor(alias);
 	}
+	
+	@Test
+	public void simple2(){
+		alloc = new Alloc();
+		Object sr = new Object();
+		Object r = new String();
+		queryFor(alloc);
+	}
+
 	@Test
 	public void singleton(){
 		Alloc singleton = StaticFieldFlows.v();
 		Object alias = singleton;
 		queryFor(alias);
 	}
-	
 
+	@Test
+	public void getAndSet(){
+		setStatic();
+		Object alias = getStatic();
+		queryFor(alias);
+	}
+	
+	private Object getStatic() {
+		return i;
+	}
+	private void setStatic() {
+		i = new Alloc();
+	}
 	@Test
 	public void doubleUnbalancedSingleton(){
 		Alloc singleton = returns();
@@ -32,6 +63,7 @@ public class StaticFieldFlows extends AbstractBoomerangTest {
 	}
 	
 	private static Alloc returns() {
+		System.out.println();
 		return StaticFieldFlows.v();
 	}
 	

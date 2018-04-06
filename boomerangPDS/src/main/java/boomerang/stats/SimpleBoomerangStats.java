@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package boomerang.stats;
 
 import boomerang.ForwardQuery;
@@ -17,6 +28,7 @@ import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAUpdateListener;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -85,6 +97,15 @@ public class SimpleBoomerangStats<W extends Weight> implements IBoomerangStats<W
     }
 
 
+	@Override
+	public Collection<? extends Node<Statement, Val>> getForwardReachesNodes() {
+		Set<Node<Statement, Val>> res = Sets.newHashSet();
+		for (Query q : queries.keySet()) {
+			if (q instanceof ForwardQuery)
+				res.addAll(queries.get(q).getReachedStates());
+		}
+		return res;
+	}
 
     @Override
     public Set<SootMethod> getCallVisitedMethods() {

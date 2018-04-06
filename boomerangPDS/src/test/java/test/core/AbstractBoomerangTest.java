@@ -1,14 +1,29 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package test.core;
 
-import java.util.*;
-import java.util.Map.Entry;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import boomerang.seedfactory.SeedFactory;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -25,7 +40,11 @@ import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.results.BackwardBoomerangResults;
+import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.util.AccessPath;
+import boomerang.util.AccessPathParser;
 import heros.utilities.DefaultValueMap;
 import soot.Body;
 import soot.Local;
@@ -33,7 +52,9 @@ import soot.RefType;
 import soot.Scene;
 import soot.SceneTransformer;
 import soot.SootClass;
+import soot.SootField;
 import soot.SootMethod;
+import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.AssignStmt;
@@ -42,9 +63,10 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
+import soot.jimple.StringConstant;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
-import sync.pds.solver.EmptyStackWitnessListener;
+import soot.util.Chain;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
@@ -52,7 +74,6 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import test.core.selfrunning.AbstractTestingFramework;
 import wpds.impl.Transition;
-import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
@@ -68,19 +89,24 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	protected Collection<? extends Query> queryForCallSites;
 	protected Collection<Error> unsoundErrors = Sets.newHashSet();
 	protected Collection<Error> imprecisionErrors = Sets.newHashSet();
+	protected boolean resultsMustNotBeEmpty = false;
+	private boolean accessPathQuery = false;
+	private Set<AccessPath> expectedAccessPaths = Sets.newHashSet();
 
 	private boolean integerQueries;
 	private SeedFactory<NoWeight> seedFactory;
 
+	protected int analysisTimeout = 300 *1000;
+
 	private enum AnalysisMode {
-		WholeProgram, DemandDrivenForward, DemandDrivenBackward;
+		WholeProgram, DemandDrivenBackward;
 	}
 
 	protected AnalysisMode[] getAnalyses() {
 		return new AnalysisMode[] {
-				// AnalysisMode.WholeProgram,
-				// AnalysisMode.DemandDrivenForward,
-				AnalysisMode.DemandDrivenBackward };
+				 AnalysisMode.WholeProgram,
+				AnalysisMode.DemandDrivenBackward
+				};
 	}
 
 	protected SceneTransformer createAnalysisTransformer() {
@@ -89,6 +115,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				icfg = new JimpleBasedInterproceduralCFG(true);
 				seedFactory = new SeedFactory<NoWeight>(){
+
+
 					@Override
 					public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 						return icfg;
@@ -101,13 +129,37 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						if(query.isPresent()){
 							return Collections.singleton(query.get());
 						}
+						query = new FirstArgumentOf("queryForAndNotEmpty").test(u);
+
+						if(query.isPresent()){
+							resultsMustNotBeEmpty = true;
+							return Collections.singleton(query.get());
+						}
 						query = new FirstArgumentOf("intQueryFor").test(u);
 						if(query.isPresent()){
 							integerQueries = true;
 							return Collections.singleton(query.get());
 						}
+						
+						query = new FirstArgumentOf("accessPathQueryFor").test(u);
+						if(query.isPresent()){
+							accessPathQuery = true;
+							getAllExpectedAccessPath(u, method);
+							return Collections.singleton(query.get());
+						}
 						return Collections.emptySet();
 					}
+
+					private void getAllExpectedAccessPath(Stmt u, SootMethod m) {
+						Value arg = u.getInvokeExpr().getArg(1);
+						if(arg instanceof StringConstant){
+							StringConstant stringConstant = (StringConstant) arg;
+							String value = stringConstant.value;
+							expectedAccessPaths.addAll(AccessPathParser.parseAllFromString(value,m));
+						}
+					}
+
+					
 				};
 				queryForCallSites = seedFactory.computeSeeds();
 				if(integerQueries){
@@ -118,16 +170,16 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				for (AnalysisMode analysis : getAnalyses()) {
 					switch (analysis) {
 					case WholeProgram:
-						runWholeProgram();
+						if(!integerQueries)
+							runWholeProgram();
 						break;
 					case DemandDrivenBackward:
 						runDemandDrivenBackward();
 						break;
-					case DemandDrivenForward:
-						runDemandDrivenForward();
-						break;
 					}
 				}
+				if(resultsMustNotBeEmpty)
+					return;
 				if (!unsoundErrors.isEmpty()) {
 					throw new RuntimeException(Joiner.on("\n").join(unsoundErrors));
 				}
@@ -143,14 +195,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		if (queryForCallSites.size() > 1)
 			throw new RuntimeException("Found more than one backward query to execute!");
 		Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
-		System.out.println(backwardResults);
 		compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
-	}
-
-	private void runDemandDrivenForward() {
-		// Run forward analysis
-		Set<Node<Statement, Val>> results = runQuery(allocationSites);
-		compareQuery(queryForCallSites, results, AnalysisMode.DemandDrivenForward);
 	}
 
 	private class AllocationSiteOf implements ValueOfInterestInUnit {
@@ -243,6 +288,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		}
 		if (!falsePositiveAllocationSites.isEmpty())
 			imprecisionErrors.add(new Error(analysis + " Imprecise results for:" + answer));
+		
+		if(resultsMustNotBeEmpty && results.isEmpty()){
+			throw new RuntimeException("Expected some results, but Boomerang returned no allocation sites.");
+		}
 	}
 
 	private Set<Node<Statement, Val>> runQuery(Collection<? extends Query> queries) {
@@ -252,6 +301,16 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				@Override
 				public boolean arrayFlows() {
 					return true;
+				}
+				
+				@Override
+				public int analysisTimeoutMS() {
+					return analysisTimeout;
+				}
+				
+				@Override
+				public boolean computeAllAliases() {
+					return accessPathQuery;
 				}
 			});
 			Boomerang solver = new Boomerang(options) {
@@ -271,44 +330,36 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 			};
 			if(query instanceof BackwardQuery){
-				solver.solve(query);
-				
-                for (final Entry<Query, AbstractBoomerangSolver<NoWeight>> fw : solver.getSolvers().entrySet()) {
-                    if(fw.getKey() instanceof ForwardQuery){
-                        fw.getValue().synchedEmptyStackReachable(query.asNode(),new EmptyStackWitnessListener<Statement, Val>() {
-                           
-                            @Override
-                            public void witnessFound(Node<Statement, Val> allocation) {
-                                results.add(fw.getKey().asNode());    
-                         }
-                        
-                    });}}
-                        
-
-			}else{
-				solver.solve(query);
-				for(Node<Statement, Val> s : solver.getForwardReachableStates()){
-					if(s.stmt().getUnit().isPresent()){
-						Stmt stmt = s.stmt().getUnit().get();
-						if(stmt.toString().contains("queryFor")){
-							if(stmt.containsInvokeExpr()){
-								InvokeExpr invokeExpr = stmt.getInvokeExpr();
-								if(invokeExpr.getArg(0).equals(s.fact().value()))
-									results.add(s);
-							}
-						}
-					}
+				BackwardBoomerangResults<NoWeight> res = solver.solve((BackwardQuery) query);
+				for(ForwardQuery q : res.getAllocationSites().keySet()){
+					results.add(q.asNode());
 				}
+				solver.debugOutput();
+				if(accessPathQuery){
+					checkContainsAllExpectedAccessPath(res.getAllAliases());
+				}
+
 			}
-			solver.debugOutput();
-			
 		}
 		return results;
 	}
 
+	private void checkContainsAllExpectedAccessPath(Set<AccessPath> allAliases) {
+		HashSet<AccessPath> expected = Sets.newHashSet(expectedAccessPaths);
+		expected.removeAll(allAliases);
+		if(!expected.isEmpty()){
+			throw new RuntimeException("Did not find all access path! " +expected);
+		}
+	}
+
 	private void runWholeProgram() {
 		final Set<Node<Statement, Val>> results = Sets.newHashSet();
-		WholeProgramBoomerang<NoWeight> solver = new WholeProgramBoomerang<NoWeight>() {
+		WholeProgramBoomerang<NoWeight> solver = new WholeProgramBoomerang<NoWeight>(new DefaultBoomerangOptions() {
+			@Override
+			public int analysisTimeoutMS() {
+				return analysisTimeout;
+			}
+		}) {
 			@Override
 			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 				return icfg;
@@ -433,10 +484,16 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	 * Code.
 	 */
 
-	protected void queryFor(Object variable) {
+	public static void queryFor(Object variable) {
 
 	}
 
+	public static void accessPathQueryFor(Object variable, String aliases) {
+
+	}
+	protected void queryForAndNotEmpty(Object variable) {
+
+	}
 	protected void intQueryFor(int variable) {
 
 	}

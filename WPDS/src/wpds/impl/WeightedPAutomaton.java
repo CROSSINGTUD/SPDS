@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package wpds.impl;
 
 import java.util.Collection;
@@ -131,12 +142,12 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 				List<String> labels = Lists.newLinkedList();
 				for (Transition<N, D> t : collection) {
 					if (t.getTarget().equals(target)) {
-						labels.add(t.getString().toString()+ " W: "+ transitionToWeights.get(t));
+						labels.add(escapeQuotes(t.getString().toString())+ " W: "+ transitionToWeights.get(t));
 					}
 				}
 				if (!labels.isEmpty()) {
-					String v = "\t\"" + wrapIfInitialOrFinalState(source) + "\"";
-					v += " -> \"" + wrapIfInitialOrFinalState(target) + "\"";
+					String v = "\t\"" + escapeQuotes(wrapIfInitialOrFinalState(source)) + "\"";
+					v += " -> \"" + escapeQuotes(wrapIfInitialOrFinalState(target)) + "\"";
 					v += "[label=\"" + Joiner.on("\\n").join(labels) + "\"];\n";
 					trans.add(v);
 				}
@@ -153,6 +164,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		s += "End nesting\n";
 		return s;
 	}
+	private String escapeQuotes(String string) {
+		return string.replace("\"", "");
+	}
+
 	public String toLabelGroupedDotString() {
 		HashBasedTable<D, N, Collection<D>> groupedByTargetAndLabel = HashBasedTable.create();
 		for(Transition<N, D> t : transitions){
@@ -656,6 +671,9 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		return initialAutomaton.equals(aut);
 	}
 
-
+	public IRegEx<N> toRegEx(D start, D end){
+		PathExpressionComputer<D, N> pathExpressionComputer = new PathExpressionComputer<>(this);
+		return pathExpressionComputer.getExpressionBetween(start, end);
+	}
 	
 }

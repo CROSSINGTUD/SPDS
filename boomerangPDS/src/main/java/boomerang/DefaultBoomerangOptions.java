@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package boomerang;
 
 import com.google.common.base.Optional;
@@ -46,7 +57,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 	}
 
 	private boolean isThrowableAllocationType(Type type) {
-		return Scene.v().getFastHierarchy().canStoreType(type, Scene.v().getType("java.lang.Throwable"));
+		return Scene.v().getOrMakeFastHierarchy().canStoreType(type, Scene.v().getType("java.lang.Throwable"));
 	}
 
 	private boolean isStringAllocationType(Type type) {
@@ -72,12 +83,12 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 
 	@Override
 	public boolean arrayFlows() {
-		return false;
+		return true;
 	}
 
 	@Override
 	public boolean fastForwardFlows() {
-		return true;
+		return false;
 	}
 
 	@Override
@@ -148,7 +159,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 
 	@Override
 	public int analysisTimeoutMS() {
-		return 30000;
+		return 60000;
 	}
 
 	@Override
@@ -156,5 +167,14 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		return new SimpleBoomerangStats();
 	}
 
+	@Override
+	public boolean aliasing() {
+		return true;
+	}
+
+	@Override
+	public boolean computeAllAliases() {
+		return false;
+	}
 
 }

@@ -1,40 +1,38 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package ideal;
 
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
-import boomerang.WeightedForwardQuery;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
 
+import boomerang.ForwardQuery;
 import boomerang.Query;
-import boomerang.jimple.AllocVal;
-import boomerang.jimple.Statement;
+import boomerang.WeightedForwardQuery;
+import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
-import heros.InterproceduralCFG;
-import soot.MethodOrMethodContext;
-import soot.Scene;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.callgraph.ReachableMethods;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-import soot.util.queue.QueueReader;
-import sync.pds.solver.nodes.Node;
-import typestate.TransitionFunction;
 import wpds.impl.Weight;
 
 public class IDEALAnalysis<W extends Weight> {
 
-	public static boolean ENABLE_STRONG_UPDATES = true;
 	public static boolean SEED_IN_APPLICATION_CLASS_METHOD = false;
 	public static boolean PRINT_OPTIONS = false;
 
-	private final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final IDEALAnalysisDefinition<W> analysisDefinition;
 	private final SeedFactory<W> seedFactory;
 	private int timeoutCount;
@@ -42,7 +40,6 @@ public class IDEALAnalysis<W extends Weight> {
 
 	public IDEALAnalysis(final IDEALAnalysisDefinition<W> analysisDefinition) {
 		this.analysisDefinition = analysisDefinition;
-		this.icfg = analysisDefinition.icfg();
 		this.seedFactory = new SeedFactory<W>(){
 
 			@Override
@@ -57,18 +54,18 @@ public class IDEALAnalysis<W extends Weight> {
 		};
 	}
 
-	public Map<WeightedForwardQuery<W>, IDEALSeedSolver<W>> run() {
+	public Map<WeightedForwardQuery<W>, ForwardBoomerangResults<W>> run() {
 		printOptions();
 		Stopwatch watch = Stopwatch.createStarted();
 		Collection<Query> initialSeeds = seedFactory.computeSeeds();
-		System.out.println("Computed seeds in: "+ watch.elapsed() );
+//		System.out.println("Computed seeds in: "+ watch.elapsed() );
 		watch.reset();
 		watch.start();
 		if (initialSeeds.isEmpty())
 			System.err.println("No seeds found!");
 		else
 			System.err.println("Analysing " + initialSeeds.size() + " seeds!");
-		Map<WeightedForwardQuery<W>, IDEALSeedSolver<W>> seedToSolver = Maps.newHashMap();
+		Map<WeightedForwardQuery<W>, ForwardBoomerangResults<W>> seedToSolver = Maps.newHashMap();
 		for (Query s : initialSeeds) {
 			if(!(s instanceof WeightedForwardQuery))
 				continue;
@@ -76,22 +73,21 @@ public class IDEALAnalysis<W extends Weight> {
 			seedCount++;
 			System.err.println("Analyzing "+ seed);
 			try {
-				IDEALSeedSolver<W> solver = run(seed);
+				ForwardBoomerangResults<W> solver = run(seed);
 				seedToSolver.put(seed, solver);
-				System.err.println(String.format("Seed Analysis finished in ms (Solver1/Solver2):  %s/%s", solver.getPhase1Solver().getAnalysisStopwatch().elapsed(), solver.getPhase2Solver().getAnalysisStopwatch().elapsed()));
+//				System.err.println(String.format("Seed Analysis finished in ms (Solver1/Solver2):  %s/%s", solver.getPhase1Solver().getAnalysisStopwatch().elapsed(), solver.getPhase2Solver().getAnalysisStopwatch().elapsed()));
 			} catch(IDEALSeedTimeout e){
-				seedToSolver.put(seed, (IDEALSeedSolver<W>) e.getSolver());
+//				seedToSolver.put(seed, (IDEALSeedSolver<W>) e.getSolver());
 				timeoutCount++;
 			}
 			System.err.println("Analyzed (finished,timedout): \t (" + (seedCount -timeoutCount)+ "," + timeoutCount + ") of "+ initialSeeds.size() + " seeds! ");
 		}
-		System.out.println("Analysis time for all seeds: "+ watch.elapsed());
+//		System.out.println("Analysis time for all seeds: "+ watch.elapsed());
 		return seedToSolver;
 	}
-	public IDEALSeedSolver<W> run(Query seed) {
+	public ForwardBoomerangResults<W> run(ForwardQuery seed) {
 		IDEALSeedSolver<W> idealAnalysis = new IDEALSeedSolver<W>(analysisDefinition, seed, seedFactory);
-		idealAnalysis.run();
-		return idealAnalysis;
+		return idealAnalysis.run();
 	}
 	private void printOptions() {
 		if(PRINT_OPTIONS)

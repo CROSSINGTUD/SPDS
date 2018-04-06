@@ -1,7 +1,24 @@
+/*******************************************************************************
+ * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0.
+ *  
+ * SPDX-License-Identifier: EPL-2.0
+ *
+ * Contributors:
+ *     Johannes Spaeth - initial API and implementation
+ *******************************************************************************/
 package boomerang.solver;
 
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultimap;
@@ -9,15 +26,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
-import boomerang.WeightedBoomerang;
 import boomerang.BoomerangOptions;
-import boomerang.MethodReachableQueue;
 import boomerang.Query;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
+import pathexpression.IRegEx;
 import soot.RefType;
 import soot.Scene;
 import soot.SootMethod;
@@ -31,17 +47,22 @@ import soot.jimple.NewExpr;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import sync.pds.solver.SyncPDSSolver;
-import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.AllocNode;
-import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.*;
-import wpds.interfaces.ReachabilityListener;
+import wpds.impl.NestedWeightedPAutomatons;
+import wpds.impl.NormalRule;
+import wpds.impl.PopRule;
+import wpds.impl.Rule;
+import wpds.impl.Transition;
+import wpds.impl.Weight;
+import wpds.impl.WeightedPAutomaton;
+import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.State;
+import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {
@@ -49,8 +70,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
-	private Collection<Node<Statement, Val>> fieldFlows = Sets.newHashSet();
-	private Collection<SootMethod> unbalancedMethod = Sets.newHashSet();
 	private final Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> generatedFieldState;
 	private Multimap<SootMethod, Transition<Field, INode<Node<Statement, Val>>>> perMethodFieldTransitions = HashMultimap
 			.create();
@@ -60,21 +79,20 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			.create();
 	private Multimap<Statement, StatementBasedFieldTransitionListener<W>> perStatementFieldTransitionsListener = HashMultimap
 			.create();
-	private final MethodReachableQueue reachableQueue;
-	private Multimap<SootMethod,Rule<Field,INode<Node<Statement,Val>>,W>> queuedFieldRules = HashMultimap.create();
-	private Set<SootMethod> callReacheableMethods = Sets.newHashSet();
+	private Set<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
+	private Multimap<SootMethod, Runnable> queuedReachableMethod = HashMultimap.create();
+	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
+	private Collection<SootMethod> scopeOpeningReachableMethods = Sets.newHashSet();
 	protected final BoomerangOptions options;
-	public AbstractBoomerangSolver(MethodReachableQueue reachableQueue, InterproceduralCFG<Unit, SootMethod> icfg,
+	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg,
 			Query query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
 			BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
 			 NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries) {
 		super(new SingleNode<Val>(query.asNode().fact()), new AllocNode<Node<Statement, Val>>(query.asNode()),
 				options.callSummaries(), callSummaries, options.fieldSummaries(), fieldSummaries);
-		this.reachableQueue = reachableQueue;
 		this.options = options;
 		this.icfg = icfg;
 		this.query = query;
-		this.unbalancedMethod.add(query.asNode().stmt().getMethod());
 		this.fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 
 			@Override
@@ -88,6 +106,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 		// TODO recap, I assume we can implement this more easily.
 		this.generatedFieldState = genField;
+		addReachable(query.asNode().stmt().getMethod());
+		scopeOpeningReachableMethods.add(query.asNode().stmt().getMethod());
 	}
 	
 	@Override
@@ -95,6 +115,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		if (t.getStart() instanceof GeneratedState)
 			return false;
 		Val fact = t.getStart().fact();
+		if(fact.isStatic())
+			return false;
 		SootMethod m = fact.m();
 		SootMethod method = t.getLabel().getMethod();
 		if (m == null || method == null)
@@ -106,10 +128,14 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	@Override
 	public void addCallRule(final Rule<Statement, INode<Val>, W> rule) {
+		if(rule instanceof NormalRule){
+			if(rule.getL1().equals(rule.getL2()) && rule.getS1().equals(rule.getS2()))
+				return;
+		}
 		if(rule instanceof PopRule)
 			super.addCallRule(rule);
 		else
-			reachableQueue.submit(rule.getS2().fact().m(), new Runnable() {
+			submit(rule.getS2().fact().m(), new Runnable() {
 				@Override
 				public void run() {
 					AbstractBoomerangSolver.super.addCallRule(rule);
@@ -119,12 +145,16 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	@Override
 	public void addFieldRule(final Rule<Field, INode<Node<Statement, Val>>, W> rule) {
-		reachableQueue.submit(rule.getS2().fact().stmt().getMethod(), new Runnable() {
+		if(rule instanceof NormalRule){
+			if(rule.getL1().equals(rule.getL2()) && rule.getS1().equals(rule.getS2()))
+				return;
+		}
+		submit(rule.getS2().fact().stmt().getMethod(), new Runnable() {
 				@Override
 				public void run() {
 					AbstractBoomerangSolver.super.addFieldRule(rule);
 		}
-			});
+		});
 	}
 
 	private void addTransitionToMethod(SootMethod method, Transition<Field, INode<Node<Statement, Val>>> t) {
@@ -179,6 +209,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			Stmt curr = unit.get();
 			Val value = node.fact();
 			SootMethod method = icfg.getMethodOf(curr);
+			if(method == null)
+				return Collections.emptySet();
 			if (killFlow(method, curr, value)) {
 				return Collections.emptySet();
 			}
@@ -271,7 +303,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			AssignStmt as = (AssignStmt) curr;
 			if (as.getLeftOp() instanceof InstanceFieldRef) {
 				InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
-				return ifr.getBase().equals(base);
+				return ifr.getBase().equals(base.value());
 			}
 		}
 		return false;
@@ -371,6 +403,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 					out.addAll(res);
 				}
 			}
+			addReachable(callee);
 		}
 		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
 			if (icfg.getCalleesOfCallAt(callSite).isEmpty()) {
@@ -432,7 +465,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	@Override
 	protected void processNode(final WitnessNode<Statement, Val, Field> witnessNode) {
-		reachableQueue.submit(witnessNode.stmt().getMethod(), new Runnable() {
+		submit(witnessNode.stmt().getMethod(), new Runnable() {
 			@Override
 			public void run() {
 				AbstractBoomerangSolver.super.processNode(witnessNode);
@@ -441,13 +474,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	}
 
-	protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
-		if (!res.isEmpty()) {
-			if (callee.isStatic()) {
-//				 addReachableMethod(callee);
-			}
-		}
-	}
+	protected abstract void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res);
 
 	public Set<Statement> getSuccsOf(Statement stmt) {
 		Set<Statement> res = Sets.newHashSet();
@@ -459,7 +486,16 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		}
 		return res;
 	}
-
+	public Set<Statement> getPredsOf(Statement stmt) {
+		Set<Statement> res = Sets.newHashSet();
+		if (!stmt.getUnit().isPresent())
+			return res;
+		Stmt curr = stmt.getUnit().get();
+		for (Unit succ : icfg.getPredsOf(curr)) {
+			res.add(new Statement((Stmt) succ, icfg.getMethodOf(succ)));
+		}
+		return res;
+	}
 	@Override
 	public String toString() {
 		return "Solver for: " + query.toString();
@@ -488,7 +524,9 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		Val source = t.getStart().fact().fact();
 		Value sourceVal = source.value();
 		Value targetVal = target.value();
-		
+		if(sourceVal.getType().equals(targetVal.getType())){
+			return false;
+		}
 		if(source.isStatic()){
 			return false;
 		}
@@ -507,5 +545,51 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(targetType,sourceType) || Scene.v().getOrMakeFastHierarchy().canStoreType(sourceType,targetType);
 		return !castFails;
 	}
+	
 
+	public void addReachable(SootMethod m) {
+		if (reachableMethods.add(m)) {
+//			System.out.println(this + "  " + m);
+			Collection<Runnable> collection = queuedReachableMethod.get(m);
+			for (Runnable runnable : collection) {
+				runnable.run();
+			}
+			for (ReachableMethodListener<W> l : Lists.newArrayList(reachableMethodListeners)) {
+				l.reachable(m);
+			}
+		}
+	}
+	public void submit(SootMethod method, Runnable runnable) {
+		if (reachableMethods.contains(method) || !options.onTheFlyCallGraph()) {
+			runnable.run();
+		} else {
+			queuedReachableMethod.put(method, runnable);
+		}
+	}
+
+	public void registerReachableMethodListener(ReachableMethodListener<W> reachableMethodListener) {
+		if (reachableMethodListeners.add(reachableMethodListener)) {
+			for (SootMethod m : Lists.newArrayList(reachableMethods)) {
+				reachableMethodListener.reachable(m);
+			}
+		}
+	}
+
+	public void debugFieldAutomaton(final Statement stmt) {
+		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
+
+			@Override
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+				if(t.getStart() instanceof GeneratedState) {
+					return;
+				}
+				if(t.getStart().fact().stmt().equals(stmt)) {
+					IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
+					System.out.println(t.getStart().fact().fact() +" " + regEx);
+				}
+			}
+		});
+	}
+	
 }
