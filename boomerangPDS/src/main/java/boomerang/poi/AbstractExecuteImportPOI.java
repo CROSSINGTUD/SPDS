@@ -17,11 +17,15 @@ public abstract class AbstractExecuteImportPOI<W extends Weight> {
 	protected final AbstractBoomerangSolver<W> flowSolver;
 	protected final Statement curr;
 	protected final Statement succ;
+	protected final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton;
+	protected final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> flowAutomaton;
 
 	public AbstractExecuteImportPOI(AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
 			Statement curr, Statement succ) {
 		this.baseSolver = baseSolver;
 		this.flowSolver = flowSolver;
+		this.baseAutomaton = baseSolver.getFieldAutomaton();
+		this.flowAutomaton = flowSolver.getFieldAutomaton();
 		this.curr = curr;
 		this.succ = succ;
 	}
