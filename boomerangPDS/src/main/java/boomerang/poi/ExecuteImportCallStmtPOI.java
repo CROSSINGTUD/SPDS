@@ -82,7 +82,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 								public void trigger(Transition<Field, INode<Node<Statement, Val>>> baseT,
 										Transition<Field, INode<Node<Statement, Val>>> flowT) {
 									//3.
-									baseAutomaton.registerListener(new Import(t.getTarget(),flowT.getTarget()));
+									baseAutomaton.registerListener(new ImportBackwards(t.getTarget(),new DirectCallback(flowT.getTarget())));
 									baseAutomaton.registerListener(new IntersectionListenerNoLabel(t.getTarget(),flowT.getTarget()));
 								}
 							}));
@@ -94,90 +94,6 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 		});
 	}
 	
-	private class Import extends WPAStateListener<Field, INode<Node<Statement, Val>>, W>{
-
-		private INode<Node<Statement, Val>> flowTarget;
-
-		public Import(INode<Node<Statement, Val>> state, INode<Node<Statement, Val>> flowTarget) {
-			super(state);
-			this.flowTarget = flowTarget;
-		}
-
-		@Override
-		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			
-		}
-
-		@Override
-		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if (!(t.getStart() instanceof GeneratedState)/** && t.getStart().fact().stmt().equals(curr)**/
-					&& !t.getStart().fact().fact().equals(returningFact)) {
-				Val alias = t.getStart().fact().fact();
-				Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
-				Node<Statement, Val> rightOpNode = new Node<Statement, Val>(succ, returningFact);
-				flowSolver.setFieldContextReachable(aliasedVarAtSucc);
-				flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
-			}
-			if(t.getLabel().equals(Field.empty())){
-				flowAutomaton.registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>,W>(flowTarget){
-
-					@Override
-					public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> innerT, W w,
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-						flowAutomaton.addTransition(new Transition<Field, INode<Node<Statement,Val>>>(t.getStart(), innerT.getLabel(), innerT.getTarget()));
-					}
-
-					@Override
-					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-						
-					}
-					@Override
-					public int hashCode() {
-						return System.identityHashCode(this);
-					}
-				
-				});
-				return;
-			}
-			flowAutomaton.addTransition(new Transition<Field, INode<Node<Statement,Val>>>(t.getStart(), t.getLabel(), flowTarget));
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((flowTarget == null) ? 0 : flowTarget.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			Import other = (Import) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (flowTarget == null) {
-				if (other.flowTarget != null)
-					return false;
-			} else if (!flowTarget.equals(other.flowTarget))
-				return false;
-			return true;
-		}
-
-		private ExecuteImportCallStmtPOI getOuterType() {
-			return ExecuteImportCallStmtPOI.this;
-		}
-	
-	}
 	
 	private class IntersectionListener extends WPAStateListener<Field, INode<Node<Statement, Val>>, W>{
 
@@ -277,7 +193,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 				public void trigger(Transition<Field, INode<Node<Statement, Val>>> baseT,
 						Transition<Field, INode<Node<Statement, Val>>> flowT) {
 					//3.
-					baseAutomaton.registerListener(new Import(baseT.getTarget(),flowT.getTarget()));
+					baseAutomaton.registerListener(new ImportBackwards(baseT.getTarget(),new DirectCallback(flowT.getTarget())));
 					baseAutomaton.registerListener(new IntersectionListenerNoLabel(baseT.getTarget(), flowT.getTarget()));
 				}
 			};
