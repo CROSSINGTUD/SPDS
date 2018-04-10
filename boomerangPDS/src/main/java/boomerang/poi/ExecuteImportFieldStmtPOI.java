@@ -20,12 +20,24 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 
 	private final Val baseVar;
 	private final Val storedVar;
+	private boolean load;
 	
 	public ExecuteImportFieldStmtPOI(final AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
 			AbstractPOI<Statement, Val, Field> poi, Statement succ) {
 		super(baseSolver, flowSolver, poi.getStmt(), succ);
 		this.baseVar = poi.getBaseVar();
 		this.storedVar = poi.getStoredVar();
+	}
+	
+
+	public ExecuteImportFieldStmtPOI(final AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
+			AbstractPOI<Statement, Val, Field> poi, Statement fieldLoadBwSucc, Statement fieldLoad) {
+		super(baseSolver, flowSolver, fieldLoadBwSucc,fieldLoad);
+		//curr == fieldLoadFwdSucc
+		//succ = fieldLoad
+		this.baseVar = poi.getBaseVar();
+		this.storedVar = poi.getStoredVar();
+		this.load = true;
 	}
 
 	public void execute(ForwardQuery baseAllocation, Query flowAllocation) {
@@ -40,6 +52,7 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 						final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
+						
 						if (!t.getStart().fact().stmt().equals(succ))
 							return;
 						if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
@@ -48,14 +61,27 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 								// t.getTarget is the allocation site
 								WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
 										.getFieldAutomaton();
-								baseAutomaton.registerListener(
-										new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
+								if(!load) {
+									baseAutomaton.registerListener(
+											new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
+								} else {
+									Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(curr, alias);
+									baseAutomaton.registerListener(
+											new ImportBackwards(t.getTarget(), new DirectCallback(new SingleNode<Node<Statement, Val>>(aliasedVarAtSucc))));
+								}
 							}
 						}
+						
 					}
 				});
 	}
 
+
+	@Override
+	protected WPAStateListener<Field, INode<Node<Statement, Val>>, W> createImportBackwards(
+			INode<Node<Statement, Val>> target, Callback callback) {
+		return new ImportBackwards(target,callback);
+	}
 
 	private class ImportBackwards extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
@@ -76,11 +102,12 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
 			if(t.getLabel().equals(Field.epsilon()))
 				return;
-			if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(curr)
+			
+			if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals((!load ? curr : succ))
 					&& !t.getStart().fact().fact().equals(baseVar)) {
 				Val alias = t.getStart().fact().fact();
 				Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
-				Node<Statement, Val> rightOpNode = new Node<Statement, Val>(curr, storedVar);
+				Node<Statement, Val> rightOpNode = new Node<Statement, Val>((!load ? curr : succ), storedVar);
 				callback.trigger(new Transition<Field, INode<Node<Statement, Val>>>(
 						new SingleNode<Node<Statement, Val>>(aliasedVarAtSucc), t.getLabel(), t.getTarget()));
 				flowSolver.setFieldContextReachable(aliasedVarAtSucc);

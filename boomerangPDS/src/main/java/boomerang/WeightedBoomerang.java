@@ -1008,7 +1008,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			if (flowAllocation instanceof ForwardQuery) {
 			} else if (flowAllocation instanceof BackwardQuery) {
 				for(Statement succ : queryToSolvers.get(flowAllocation).getSuccsOf(getStmt())) {
-					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(queryToSolvers.get(baseAllocation),queryToSolvers.get(flowAllocation),FieldReadPOI.this, succ);
+					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(queryToSolvers.get(baseAllocation),queryToSolvers.get(flowAllocation),FieldReadPOI.this, succ, getStmt());
 					exec.solve();
 				}
 			}
@@ -1049,7 +1049,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		// queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
 		// }
 		Debugger<W> debugger = getOrCreateDebugger();
-		debugger.done(queryToSolvers);
+//		debugger.done(queryToSolvers);
 		if (!DEBUG)
 			return;
 
@@ -1062,7 +1062,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			System.out.println("========================");
 			System.out.println(q);
 			System.out.println("========================");
-//			queryToSolvers.getOrCreate(q).debugOutput();
+			queryToSolvers.getOrCreate(q).debugOutput();
 			for (FieldReadPOI p : fieldReads.values()) {
 //				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
 				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {

@@ -4,7 +4,6 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
-import boomerang.solver.ForwardBoomerangSolver;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -35,32 +34,32 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 				if(!t.getStart().fact().stmt().equals(succ))
 					return;
 				
-				if(flowSolver instanceof ForwardBoomerangSolver) {
-					if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
-						Val alias = aliasedVariableAtStmt.fact().fact();
-						if (alias.equals(returningFact) && t.getLabel().equals(Field.empty())) {
-							// t.getTarget is the allocation site
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
-									.getFieldAutomaton();
-							baseAutomaton.registerListener(new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
-						}
-						if (alias.equals(returningFact) && !t.getLabel().equals(Field.empty()) && !t.getLabel().equals(Field.epsilon())) {
-							// t.getTarget is the allocation site
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
-									.getFieldAutomaton();
-							/**
-							 * TODO this is the performance bottleneck. Can we implemented a different solution?
-							 * when we comment out the line below, the test case
-							 * @test.cases.sets.HashMapsLongTest terminated within 110sec.
-							 * otherwise a time out occurs after 300sec.
-							 * Carefully investigate why we need the line below:
-							 * Some of the test cases of 
-							 * @test.cases.fields.ThreeFieldsTest fail.
-							 */
-							baseAutomaton.registerListener(new TransitiveVisitor(t.getTarget()));
-						}
-					}
-				} else {
+//				if(flowSolver instanceof ForwardBoomerangSolver) {
+//					if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
+//						Val alias = aliasedVariableAtStmt.fact().fact();
+//						if (alias.equals(returningFact) && t.getLabel().equals(Field.empty())) {
+//							// t.getTarget is the allocation site
+//							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
+//									.getFieldAutomaton();
+//							baseAutomaton.registerListener(new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
+//						}
+//						if (alias.equals(returningFact) && !t.getLabel().equals(Field.empty()) && !t.getLabel().equals(Field.epsilon())) {
+//							// t.getTarget is the allocation site
+//							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> baseAutomaton = baseSolver
+//									.getFieldAutomaton();
+//							/**
+//							 * TODO this is the performance bottleneck. Can we implemented a different solution?
+//							 * when we comment out the line below, the test case
+//							 * @test.cases.sets.HashMapsLongTest terminated within 110sec.
+//							 * otherwise a time out occurs after 300sec.
+//							 * Carefully investigate why we need the line below:
+//							 * Some of the test cases of 
+//							 * @test.cases.fields.ThreeFieldsTest fail.
+//							 */
+//							baseAutomaton.registerListener(new TransitiveVisitor(t.getTarget()));
+//						}
+//					}
+//				} else {
 					if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
 						Val alias = aliasedVariableAtStmt.fact().fact();
 						if (alias.equals(returningFact) && t.getLabel().equals(Field.empty())) {
@@ -90,272 +89,16 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 					}
 				}
 				
-			}
+//			}
 		});
 	}
 	
-	
-	private class IntersectionListener extends WPAStateListener<Field, INode<Node<Statement, Val>>, W>{
-
-		private INode<Node<Statement, Val>> flowState;
-		private Field label;
-		private IntersectionCallback callback;
-
-		public IntersectionListener(INode<Node<Statement, Val>> baseState, INode<Node<Statement, Val>> flowState, Field label, IntersectionCallback callback) {
-			super(baseState);
-			this.flowState = flowState;
-			this.label = label;
-			this.callback = callback;
-		}
-
-		@Override
-		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> baseT, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if(!baseT.getLabel().equals(label))
-				return;
-			flowAutomaton.registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(flowState) {
-
-				@Override
-				public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> flowT, W w,
-						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-					if(flowT.getLabel().equals(label)) {
-						callback.trigger(baseT,flowT);
-					}
-				}
-
-				@Override
-				public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-				}
-				@Override
-				public int hashCode() {
-					return System.identityHashCode(this);
-				}
-			});
-		}
-
-		@Override
-		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((flowState == null) ? 0 : flowState.hashCode());
-			result = prime * result + ((label == null) ? 0 : label.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			IntersectionListener other = (IntersectionListener) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (flowState == null) {
-				if (other.flowState != null)
-					return false;
-			} else if (!flowState.equals(other.flowState))
-				return false;
-			if (label == null) {
-				if (other.label != null)
-					return false;
-			} else if (!label.equals(other.label))
-				return false;
-			return true;
-		}
-
-		private ExecuteImportCallStmtPOI getOuterType() {
-			return ExecuteImportCallStmtPOI.this;
-		}
+	@Override
+	protected WPAStateListener<Field, INode<Node<Statement, Val>>, W> createImportBackwards(
+			INode<Node<Statement, Val>> target, Callback callback) {
+		return new ImportBackwards(target,callback);
 	}
 	
-	
-	private class IntersectionListenerNoLabel extends WPAStateListener<Field, INode<Node<Statement, Val>>, W>{
-
-		private INode<Node<Statement, Val>> flowState;
-		private IntersectionCallback callback;
-
-		public IntersectionListenerNoLabel(INode<Node<Statement, Val>> baseState, INode<Node<Statement, Val>> flowState) {
-			super(baseState);
-			this.flowState = flowState;
-			this.callback = new IntersectionCallback() {
-				@Override
-				public void trigger(Transition<Field, INode<Node<Statement, Val>>> baseT,
-						Transition<Field, INode<Node<Statement, Val>>> flowT) {
-					//3.
-					baseAutomaton.registerListener(new ImportBackwards(baseT.getTarget(),new DirectCallback(flowT.getTarget())));
-					baseAutomaton.registerListener(new IntersectionListenerNoLabel(baseT.getTarget(), flowT.getTarget()));
-				}
-			};
-		}
-
-		@Override
-		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> baseT, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if(baseT.getLabel().equals(Field.empty())) {
-				flowAutomaton.registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(flowState) {
-
-					@Override
-					public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> flowT, W w,
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-					}
-	
-					@Override
-					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-						callback.trigger(baseT,t);
-					}
-					@Override
-					public int hashCode() {
-						return System.identityHashCode(this);
-					}
-				});
-				return;
-			}
-			flowAutomaton.registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(flowState) {
-
-				@Override
-				public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> flowT, W w,
-						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-					if(flowT.getLabel().equals(baseT.getLabel())) {
-						callback.trigger(baseT,flowT);
-					}
-				}
-
-				@Override
-				public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-				}
-				@Override
-				public int hashCode() {
-					return System.identityHashCode(this);
-				}
-			}
-					);
-		}
-
-		@Override
-		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((flowState == null) ? 0 : flowState.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			IntersectionListenerNoLabel other = (IntersectionListenerNoLabel) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (flowState == null) {
-				if (other.flowState != null)
-					return false;
-			} else if (!flowState.equals(other.flowState))
-				return false;
-			return true;
-		}
-
-		private ExecuteImportCallStmtPOI getOuterType() {
-			return ExecuteImportCallStmtPOI.this;
-		}
-	}
-	
-	private interface IntersectionCallback{
-		void trigger(Transition<Field, INode<Node<Statement, Val>>> baseT,
-				Transition<Field, INode<Node<Statement, Val>>> flowT);	
-	}
-	
-	private class TransitiveVisitor extends WPAStateListener<Field, INode<Node<Statement, Val>>, W>{
-
-		public TransitiveVisitor(INode<Node<Statement, Val>> state) {
-			super(state);
-			baseSolver
-				.getFieldAutomaton().registerListener(new ImportBackwards(state, new FieldStackCallback(state)));
-		}
-
-		@Override
-		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if(t.getLabel().equals(Field.epsilon()))
-				return;
-			if(t.getLabel().equals(Field.empty())) {
-				baseSolver
-					.getFieldAutomaton().registerListener(new ImportBackwards(t.getTarget(), new FieldStackCallback(t.getStart())));
-			} else {
-				baseSolver.getFieldAutomaton().registerListener(new TransitiveVisitor(t.getTarget()));
-			}
-		}
-
-		@Override
-		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			TransitiveVisitor other = (TransitiveVisitor) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			return true;
-		}
-
-		private ExecuteImportCallStmtPOI getOuterType() {
-			return ExecuteImportCallStmtPOI.this;
-		}
-		
-	}
-
-	private class FieldStackCallback implements Callback{
-
-		private INode<Node<Statement, Val>> start;
-
-		public FieldStackCallback(INode<Node<Statement, Val>> start) {
-			this.start = start;
-		}
-
-		@Override
-		public void trigger(Transition<Field, INode<Node<Statement, Val>>> t) {
-			flowSolver.getFieldAutomaton().addTransition(new Transition<>(t.getStart(),t.getLabel(),start));
-		}
-		
-	}
 	// COPIED 
 
 	private class ImportBackwards extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
