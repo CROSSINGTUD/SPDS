@@ -3,7 +3,6 @@ package boomerang.poi;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import boomerang.poi.AbstractExecuteImportPOI.Callback;
 import boomerang.solver.AbstractBoomerangSolver;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -11,7 +10,6 @@ import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
-import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractExecuteImportPOI<W extends Weight> {
 

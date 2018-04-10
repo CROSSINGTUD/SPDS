@@ -13,21 +13,16 @@ package boomerang;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.seedfactory.SeedFactory;
-import boomerang.solver.ReachableMethodListener;
-import soot.Scene;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
-import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import wpds.impl.Weight;
-import wpds.impl.Weight.NoWeight;
 
 public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBoomerang<W>{
 	private int reachableMethodCount;

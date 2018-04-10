@@ -41,7 +41,6 @@ import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.util.RegExAccessPath;
 import heros.InterproceduralCFG;
-import heros.utilities.DefaultValueMap;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;

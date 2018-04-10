@@ -66,7 +66,6 @@ import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.State;
-import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {

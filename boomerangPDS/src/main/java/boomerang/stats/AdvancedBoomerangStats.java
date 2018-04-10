@@ -17,18 +17,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import boomerang.ForwardQuery;
-import boomerang.solver.BackwardBoomerangSolver;
-import boomerang.solver.ForwardBoomerangSolver;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.solver.BackwardBoomerangSolver;
+import boomerang.solver.ForwardBoomerangSolver;
 import soot.SootMethod;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;

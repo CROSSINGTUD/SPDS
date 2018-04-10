@@ -12,17 +12,9 @@
 package boomerang.debugger;
 
 import java.util.Map;
-import java.util.Set;
 
 import boomerang.Query;
-import boomerang.jimple.Statement;
-import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
-import heros.utilities.DefaultValueMap;
-import sync.pds.solver.nodes.INode;
-import sync.pds.solver.nodes.Node;
-import wpds.impl.Rule;
-import wpds.impl.Transition;
 import wpds.impl.Weight;
 
 public class Debugger<W extends Weight> {

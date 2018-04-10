@@ -15,11 +15,16 @@ import com.google.common.base.Optional;
 
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
-import soot.RefType;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
-import soot.jimple.*;
+import soot.jimple.AssignStmt;
+import soot.jimple.IntConstant;
+import soot.jimple.LengthExpr;
+import soot.jimple.NewArrayExpr;
+import soot.jimple.NewMultiArrayExpr;
+import soot.jimple.ReturnStmt;
+import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
