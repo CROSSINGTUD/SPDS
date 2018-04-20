@@ -21,7 +21,6 @@ import com.google.common.collect.Table;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.ForwardBoomerangResults;
-import boomerang.solver.AbstractBoomerangSolver;
 import soot.Unit;
 import soot.jimple.Stmt;
 import sync.pds.solver.nodes.GeneratedState;
@@ -29,8 +28,7 @@ import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
-import wpds.impl.WeightedPAutomaton;
-import wpds.interfaces.WPAUpdateListener;
+
 
 public class TestingResultReporter<W extends Weight>{
 	private Multimap<Unit, Assertion> stmtToResults = HashMultimap.create();
@@ -54,6 +52,7 @@ public class TestingResultReporter<W extends Weight>{
 			//check if any of the methods that should not be analyzed have been analyzed
 			if (e.getValue() instanceof ShouldNotBeAnalyzed){
 				final ShouldNotBeAnalyzed shouldNotBeAnalyzed = (ShouldNotBeAnalyzed) e.getValue();
+				//TODO check if you can do this without seedsolver or get ib ack
 				for(Entry<Transition<Statement, INode<Val>>, W> s : seedSolver.getTransitionsToFinalWeights().entrySet()){
 					Transition<Statement, INode<Val>> t = s.getKey();
 					W w = s.getValue();
