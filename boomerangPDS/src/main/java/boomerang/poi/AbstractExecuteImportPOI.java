@@ -238,9 +238,14 @@ public abstract class AbstractExecuteImportPOI<W extends Weight> {
 			super(baseState);
 			this.flowState = flowState;
 			this.callback = new IntersectionCallback() {
+
+				boolean triggered = false;
 				@Override
 				public void trigger(INode<Node<Statement, Val>> baseT,
 						Transition<Field, INode<Node<Statement, Val>>> flowT) {
+					if(triggered)
+						return;
+					triggered = true;
 					//3.
 					baseAutomaton.registerListener(createImportBackwards(baseT,new DirectCallback(flowT.getTarget())));
 //					baseAutomaton.registerListener(new IntersectionListenerNoLabel(baseT, flowT.getTarget()));

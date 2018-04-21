@@ -4,6 +4,7 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.solver.BackwardBoomerangSolver;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -25,6 +26,10 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 	}
 
 	public void solve() {
+//		if(true)
+//			return;
+//		if(flowSolver instanceof BackwardBoomerangSolver)
+//			return;
 		baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 
 			@Override
@@ -96,6 +101,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 	@Override
 	protected WPAStateListener<Field, INode<Node<Statement, Val>>, W> createImportBackwards(
 			INode<Node<Statement, Val>> target, Callback callback) {
+//		System.out.println("HERE" + here++);
 		return new ImportBackwards(target,callback);
 	}
 
@@ -131,7 +137,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 				flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
 			}
 			if (t.getStart() instanceof GeneratedState) {
-				baseSolver.getFieldAutomaton().registerListener(new ImportBackwards(t.getStart(),new TransitiveCallback(callback, t)));
+//				baseSolver.getFieldAutomaton().registerListener(new ImportBackwards(t.getStart(),new TransitiveCallback(callback, t)));
 			}
 		}
 
