@@ -47,27 +47,11 @@ public abstract class AbstractExecuteImportPOI<W extends Weight> {
 		@Override
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> baseT, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+			if(baseT.getLabel().equals(Field.epsilon()))
+				return;
 			if(!baseT.getLabel().equals(label))
 				return;
-			flowAutomaton.registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(flowState) {
-
-				@Override
-				public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> flowT, W w,
-						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-					if(flowT.getLabel().equals(label)) {
-						callback.trigger(baseT,flowT);
-					}
-				}
-
-				@Override
-				public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-				}
-				@Override
-				public int hashCode() {
-					return System.identityHashCode(this);
-				}
-			});
+			flowAutomaton.registerListener(new HasOutTransitionWithSameLabel(flowState,baseT.getLabel(), baseT.getTarget(), callback));
 		}
 
 		@Override
@@ -114,10 +98,139 @@ public abstract class AbstractExecuteImportPOI<W extends Weight> {
 			return AbstractExecuteImportPOI.this;
 		}
 	}
-	
+
+	private final class HasOutTransitionWithSameLabel extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+		private IntersectionCallback callback;
+		private Field baseLabel;
+		private INode<Node<Statement, Val>> baseT;
+
+		private HasOutTransitionWithSameLabel(INode<Node<Statement, Val>> state,Field label,
+				INode<Node<Statement, Val>> target, IntersectionCallback callback) {
+			super(state);
+			this.baseLabel = label;
+			this.baseT = target;
+			this.callback = callback;
+		}
+
+
+		@Override
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> flowT, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+			if (flowT.getLabel().equals(baseLabel)) {
+				callback.trigger(baseT, flowT);
+			}
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+		}
+
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((baseLabel == null) ? 0 : baseLabel.hashCode());
+			result = prime * result + ((baseT == null) ? 0 : baseT.hashCode());
+			result = prime * result + ((callback == null) ? 0 : callback.hashCode());
+			return result;
+		}
+
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			HasOutTransitionWithSameLabel other = (HasOutTransitionWithSameLabel) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (baseLabel == null) {
+				if (other.baseLabel != null)
+					return false;
+			} else if (!baseLabel.equals(other.baseLabel))
+				return false;
+			if (baseT == null) {
+				if (other.baseT != null)
+					return false;
+			} else if (!baseT.equals(other.baseT))
+				return false;
+			if (callback == null) {
+				if (other.callback != null)
+					return false;
+			} else if (!callback.equals(other.callback))
+				return false;
+			return true;
+		}
+
+
+		private AbstractExecuteImportPOI getOuterType() {
+			return AbstractExecuteImportPOI.this;
+		}
+
+	}
+	private final class CallBackOnInTransition extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+		private final  INode<Node<Statement, Val>> baseT;
+		private IntersectionCallback callback;
+
+		private CallBackOnInTransition(INode<Node<Statement, Val>> state,
+				INode<Node<Statement, Val>> baseT, IntersectionCallback callback) {
+			super(state);
+			this.baseT = baseT;
+			this.callback = callback;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> flowT, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+			callback.trigger(baseT,t);
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((baseT == null) ? 0 : baseT.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			CallBackOnInTransition other = (CallBackOnInTransition) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (baseT == null) {
+				if (other.baseT != null)
+					return false;
+			} else if (!baseT.equals(other.baseT))
+				return false;
+			return true;
+		}
+
+		private AbstractExecuteImportPOI getOuterType() {
+			return AbstractExecuteImportPOI.this;
+		}
+
+	}
 	
 	protected class IntersectionListenerNoLabel extends WPAStateListener<Field, INode<Node<Statement, Val>>, W>{
-
 		private INode<Node<Statement, Val>> flowState;
 		private IntersectionCallback callback;
 
@@ -126,11 +239,11 @@ public abstract class AbstractExecuteImportPOI<W extends Weight> {
 			this.flowState = flowState;
 			this.callback = new IntersectionCallback() {
 				@Override
-				public void trigger(Transition<Field, INode<Node<Statement, Val>>> baseT,
+				public void trigger(INode<Node<Statement, Val>> baseT,
 						Transition<Field, INode<Node<Statement, Val>>> flowT) {
 					//3.
-					baseAutomaton.registerListener(createImportBackwards(baseT.getTarget(),new DirectCallback(flowT.getTarget())));
-					baseAutomaton.registerListener(new IntersectionListenerNoLabel(baseT.getTarget(), flowT.getTarget()));
+					baseAutomaton.registerListener(createImportBackwards(baseT,new DirectCallback(flowT.getTarget())));
+//					baseAutomaton.registerListener(new IntersectionListenerNoLabel(baseT, flowT.getTarget()));
 				}
 			};
 		}
@@ -139,46 +252,13 @@ public abstract class AbstractExecuteImportPOI<W extends Weight> {
 		@Override
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> baseT, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+			if(baseT.getLabel().equals(Field.epsilon()))
+				return;
 			if(baseT.getLabel().equals(Field.empty())) {
-				flowAutomaton.registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(flowState) {
-
-					@Override
-					public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> flowT, W w,
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-					}
-	
-					@Override
-					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-						callback.trigger(baseT,t);
-					}
-					@Override
-					public int hashCode() {
-						return System.identityHashCode(this);
-					}
-				});
+				flowAutomaton.registerListener(new CallBackOnInTransition(flowState, baseT.getTarget(), callback));
 				return;
 			}
-			flowAutomaton.registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(flowState) {
-
-				@Override
-				public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> flowT, W w,
-						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-					if(flowT.getLabel().equals(baseT.getLabel())) {
-						callback.trigger(baseT,flowT);
-					}
-				}
-
-				@Override
-				public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-				}
-				@Override
-				public int hashCode() {
-					return System.identityHashCode(this);
-				}
-			}
-					);
+			flowAutomaton.registerListener(new HasOutTransitionWithSameLabel(flowState, baseT.getLabel(),baseT.getTarget(), callback));
 		}
 
 		@Override
@@ -221,7 +301,7 @@ public abstract class AbstractExecuteImportPOI<W extends Weight> {
 	}
 	
 	protected interface IntersectionCallback{
-		void trigger(Transition<Field, INode<Node<Statement, Val>>> baseT,
+		void trigger(INode<Node<Statement, Val>> baseT,
 				Transition<Field, INode<Node<Statement, Val>>> flowT);	
 	}
 	

@@ -113,21 +113,7 @@ public class PrefixImport<N extends Location, D extends State, W extends Weight>
 				WeightedPAutomaton<N, D, W> weightedPAutomaton) {
 			if(!baseT.getLabel().equals(label))
 				return;
-			flowAutomaton.registerListener(new WPAStateListener<N, D, W>(flowState) {
-
-				@Override
-				public void onOutTransitionAdded(Transition<N, D> flowT, W w,
-						WeightedPAutomaton<N, D, W> weightedPAutomaton) {
-					if(flowT.getLabel().equals(label)) {
-						callback.trigger(baseT,flowT);
-					}
-				}
-
-				@Override
-				public void onInTransitionAdded(Transition<N, D> t, W w,
-						WeightedPAutomaton<N, D, W> weightedPAutomaton) {
-				}
-			});
+			flowAutomaton.registerListener(new HasOutTransWithSameLabel(flowState,baseT,callback));
 		}
 
 		@Override
@@ -175,8 +161,66 @@ public class PrefixImport<N extends Location, D extends State, W extends Weight>
 		}
 	}
 	
-	
+
+	protected final class HasOutTransWithSameLabel extends WPAStateListener<N, D, W> {
+		private final Transition<N, D> baseT;
+		private final IntersectionCallback callback;
+
+		private HasOutTransWithSameLabel(D state, Transition<N, D> baseT, IntersectionCallback callback) {
+			super(state);
+			this.baseT = baseT;
+			this.callback = callback;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<N, D> flowT, W w,
+				WeightedPAutomaton<N, D, W> weightedPAutomaton) {
+			if(flowT.getLabel().equals(baseT.getLabel())) {
+				callback.trigger(baseT,flowT);
+			}
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<N, D> t, W w,
+				WeightedPAutomaton<N, D, W> weightedPAutomaton) 
+		{
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((baseT == null) ? 0 : baseT.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			HasOutTransWithSameLabel other = (HasOutTransWithSameLabel) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (baseT == null) {
+				if (other.baseT != null)
+					return false;
+			} else if (!baseT.equals(other.baseT))
+				return false;
+			return true;
+		}
+
+		private PrefixImport getOuterType() {
+			return PrefixImport.this;
+		}
+		
+	}
 	private class IntersectionListenerNoLabel extends WPAStateListener<N, D, W>{
+
 
 		private D flowState;
 		private IntersectionCallback callback;
@@ -190,21 +234,7 @@ public class PrefixImport<N extends Location, D extends State, W extends Weight>
 		@Override
 		public void onOutTransitionAdded(final Transition<N, D> baseT, W w,
 				WeightedPAutomaton<N, D, W> weightedPAutomaton) {
-			flowAutomaton.registerListener(new WPAStateListener<N, D, W>(flowState) {
-
-				@Override
-				public void onOutTransitionAdded(Transition<N, D> flowT, W w,
-						WeightedPAutomaton<N, D, W> weightedPAutomaton) {
-					if(flowT.getLabel().equals(baseT.getLabel())) {
-						callback.trigger(baseT,flowT);
-					}
-				}
-
-				@Override
-				public void onInTransitionAdded(Transition<N, D> t, W w,
-						WeightedPAutomaton<N, D, W> weightedPAutomaton) {
-				}
-			});
+			flowAutomaton.registerListener(new HasOutTransWithSameLabel(flowState, baseT, callback));
 		}
 
 		@Override

@@ -68,7 +68,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 									.getFieldAutomaton();
 							baseAutomaton.registerListener(new ImportBackwards(t.getTarget(), new DirectCallback(t.getStart())));
 						}
-						if (alias.equals(returningFact) && !t.getLabel().equals(Field.empty())) {
+						if (alias.equals(returningFact) && !t.getLabel().equals(Field.empty()) && !t.getLabel().equals(Field.epsilon())) {
 							//1. Let curr transition be: (s,l,t)
 							//2. Find any transition with (s,l,y) in flowAutomaton
 							//3. Take all incoming transitions (q,m,t) in base and add them to flowAutomaton as (q,m,y)
@@ -78,7 +78,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 							baseAutomaton.registerListener(new IntersectionListener(t.getStart(), t.getStart(), t.getLabel(), new IntersectionCallback() {
 
 								@Override
-								public void trigger(Transition<Field, INode<Node<Statement, Val>>> baseT,
+								public void trigger(INode<Node<Statement, Val>> baseT,
 										Transition<Field, INode<Node<Statement, Val>>> flowT) {
 									//3.
 									baseAutomaton.registerListener(new ImportBackwards(t.getTarget(),new DirectCallback(flowT.getTarget())));
@@ -87,9 +87,9 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 							}));
 						}
 					}
-				}
+//				}
 				
-//			}
+			}
 		});
 	}
 	
@@ -98,7 +98,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 			INode<Node<Statement, Val>> target, Callback callback) {
 		return new ImportBackwards(target,callback);
 	}
-	
+
 	// COPIED 
 
 	private class ImportBackwards extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
