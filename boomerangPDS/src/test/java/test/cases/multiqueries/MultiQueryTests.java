@@ -25,8 +25,8 @@ public class MultiQueryTests extends MultiQueryBoomerangTest {
 		Object alloc1 = new Alloc1();
 		Object alias1 = new Alloc2();
 		Object query = alloc1;
-		queryFor(query,AllocatedObject.class);
-		queryFor(alias1,AllocatedObject2.class);
+		queryFor1(query,AllocatedObject.class);
+		queryFor2(alias1,AllocatedObject2.class);
 	}
 
 	@Test
@@ -36,8 +36,8 @@ public class MultiQueryTests extends MultiQueryBoomerangTest {
 		Alloc1 alias = alloc1;
 		alias.field = alias1;
 		Object query = alloc1.field;
-		queryFor(alias,AllocatedObject.class);
-		queryFor(query,AllocatedObject2.class);
+		queryFor1(alias,AllocatedObject.class);
+		queryFor2(query,AllocatedObject2.class);
 	}
 	
 	

@@ -94,7 +94,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 
 					@Override
 					protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection calledMethods) {
-						Optional<? extends Query> query = new FirstArgumentOf("queryFor").test(u);
+						Optional<? extends Query> query = new FirstArgumentOf("queryFor.*").test(u);
 
 						if(query.isPresent()){
 							ClassConstant arg = (ClassConstant) u.getInvokeExpr().getArg(1);
@@ -283,7 +283,10 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 	 * Code.
 	 */
 
-	public static void queryFor(Object variable, Class interfaceType) {
+	public static void queryFor1(Object variable, Class interfaceType) {
+
+	}
+	public static void queryFor2(Object variable, Class interfaceType) {
 
 	}
 

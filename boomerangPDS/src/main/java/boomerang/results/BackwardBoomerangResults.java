@@ -86,7 +86,7 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		for(ForwardQuery q : results) {
 			PAutomaton<Statement,INode<Val>> context = constructContextGraph(queryToSolvers.get(q));
 			assert allocationSites.get(q) == null;
-			System.out.println(context.toRegEx(new SingleNode<Val>(query.var()), new SingleNode<Val>(q.asNode().fact())));
+//			System.out.println(context.toRegEx(new SingleNode<Val>(query.var()), new SingleNode<Val>(q.asNode().fact())));
 			allocationSites.put(q, context);
 		}
 	}
