@@ -21,10 +21,13 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 
 import boomerang.BoomerangOptions;
 import boomerang.Query;
@@ -32,6 +35,7 @@ import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.util.RegExAccessPath;
 import heros.InterproceduralCFG;
 import pathexpression.IRegEx;
 import soot.RefType;
@@ -574,7 +578,42 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			}
 		}
 	}
+	public Map<RegExAccessPath, W> getResultsAt(final Statement stmt){
+		final Map<RegExAccessPath, W> results = Maps.newHashMap();
+		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 
+			@Override
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+				if(t.getStart() instanceof GeneratedState) {
+					return;
+				}
+				if(t.getStart().fact().stmt().equals(stmt)) {
+					IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
+					results.put(new RegExAccessPath(t.getStart().fact().fact(), regEx),w);
+				}
+			}
+		});
+		return results;
+	}
+	
+	public Table<Statement, RegExAccessPath, W> getResults(){
+		final Table<Statement, RegExAccessPath, W> results = HashBasedTable.create();
+		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
+
+			@Override
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+				if(t.getStart() instanceof GeneratedState) {
+					return;
+				}
+				IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
+				results.put(t.getStart().fact().stmt(), new RegExAccessPath(t.getStart().fact().fact(), regEx),w);
+			}
+		});
+		return results;
+	}
+	
 	public void debugFieldAutomaton(final Statement stmt) {
 		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 

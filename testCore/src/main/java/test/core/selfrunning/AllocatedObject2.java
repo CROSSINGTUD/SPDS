@@ -9,12 +9,8 @@
  * Contributors:
  *     Johannes Spaeth - initial API and implementation
  *******************************************************************************/
-package boomerang.solver;
+package test.core.selfrunning;
 
-import soot.RefType;
-
-public interface AllocationTypeListener {
-
-	void allocationType(RefType m);
+public interface AllocatedObject2 {
 
 }

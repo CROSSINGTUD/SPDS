@@ -19,9 +19,6 @@ import java.util.Map;
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.DefaultBoomerangOptions;
-import boomerang.ForwardQuery;
-import boomerang.debugger.Debugger;
-import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
@@ -122,10 +119,6 @@ public class ExampleMain {
 						//Must be turned of if no SeedFactory is specified.
 						return false;
 					};
-					@Override
-					public boolean computeAllAliases() {
-						return true;
-					}
 				}) {
 					@Override
 					public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {

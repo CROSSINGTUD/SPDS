@@ -11,6 +11,7 @@
  *******************************************************************************/
 package typestate.tests;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
@@ -389,6 +390,7 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 	}
 
 	@Test
+	@Ignore
 	public void fieldStoreAndLoad2() {
 		ObjectWithField container = new ObjectWithField();
 		container.field = new File();

@@ -11,6 +11,13 @@
  *******************************************************************************/
 package boomerang.stats;
 
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
+
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
@@ -18,8 +25,6 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import soot.SootMethod;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -27,10 +32,6 @@ import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAUpdateListener;
-
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Created by johannesspath on 06.12.17.

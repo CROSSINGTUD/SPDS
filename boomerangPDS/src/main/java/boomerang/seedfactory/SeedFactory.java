@@ -11,14 +11,16 @@
  *******************************************************************************/
 package boomerang.seedfactory;
 
-import boomerang.Query;
-import boomerang.WeightedForwardQuery;
-import boomerang.jimple.Statement;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+
+import boomerang.Query;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
@@ -28,16 +30,14 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.*;
+import wpds.impl.PushRule;
+import wpds.impl.Transition;
+import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
-import wpds.interfaces.State;
+import wpds.impl.WeightedPAutomaton;
+import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
-
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 /**
  * Created by johannesspath on 07.12.17.

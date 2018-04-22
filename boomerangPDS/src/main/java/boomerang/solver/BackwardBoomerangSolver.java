@@ -21,15 +21,12 @@ import java.util.Set;
 import com.google.common.collect.Sets;
 
 import boomerang.BackwardQuery;
-import boomerang.WeightedBoomerang;
 import boomerang.BoomerangOptions;
-import boomerang.MethodReachableQueue;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.StaticFieldVal;
 import boomerang.jimple.Val;
 import soot.Body;
-import soot.EquivalentValue;
 import soot.Local;
 import soot.SootMethod;
 import soot.Unit;
@@ -54,7 +51,6 @@ import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import wpds.impl.NestedWeightedPAutomatons;
 import wpds.impl.Weight;
-import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.State;
 
 public abstract class BackwardBoomerangSolver<W extends Weight> extends AbstractBoomerangSolver<W>{

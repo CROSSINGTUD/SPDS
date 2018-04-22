@@ -38,4 +38,28 @@ public class IntraproceduralStrongUpdateTest extends AbstractBoomerangTest{
 	private class A{
 		Object field;
 	}
+	
+	@Test
+	public void innerClass(){
+		A a = new A();
+		A b = a;
+		b.field = new I();
+		Object alias = a.field;
+		queryFor(alias);
+	}
+	private class I implements AllocatedObject{
+	}
+	
+
+	private static class B{
+		Object field;
+	}
+	@Test
+	public void anonymousClass(){
+		B a = new B();
+		B b = a;
+		b.field = new AllocatedObject() {};
+		Object alias = a.field;
+		queryFor(alias);
+	}
 }

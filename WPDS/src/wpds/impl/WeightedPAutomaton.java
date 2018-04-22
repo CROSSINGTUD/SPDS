@@ -228,8 +228,11 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 
 	public Set<Edge<D, N>> getEdges() {
 		Set<Edge<D, N>> trans = Sets.newHashSet();
-		for (Edge<D, N> tran : transitions)
-			trans.add(tran);
+		for (Edge<D, N> tran : transitions){
+			if(!tran.getLabel().equals(epsilon())){
+				trans.add(tran);
+			}
+		}
 		return trans;
 	};
 

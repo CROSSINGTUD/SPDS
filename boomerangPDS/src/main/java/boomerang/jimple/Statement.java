@@ -18,7 +18,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 
 import soot.SootMethod;
-import soot.Value;
 import soot.jimple.AssignStmt;
 import soot.jimple.IdentityStmt;
 import soot.jimple.InstanceFieldRef;

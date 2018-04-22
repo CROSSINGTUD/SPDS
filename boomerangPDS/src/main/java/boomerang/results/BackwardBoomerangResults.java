@@ -22,15 +22,10 @@ import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.stats.IBoomerangStats;
 import boomerang.util.AccessPath;
 import heros.utilities.DefaultValueMap;
-import pathexpression.IRegEx;
-import pathexpression.LabeledGraph;
-import pathexpression.PathExpressionComputer;
-import pathexpression.RegEx;
 import soot.PointsToSet;
 import soot.Type;
 import soot.jimple.ClassConstant;
 import soot.jimple.NewExpr;
-import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -91,7 +86,7 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		for(ForwardQuery q : results) {
 			PAutomaton<Statement,INode<Val>> context = constructContextGraph(queryToSolvers.get(q));
 			assert allocationSites.get(q) == null;
-			System.out.println(context.toRegEx(new SingleNode<Val>(query.var()), new SingleNode<Val>(q.asNode().fact())));
+//			System.out.println(context.toRegEx(new SingleNode<Val>(query.var()), new SingleNode<Val>(q.asNode().fact())));
 			allocationSites.put(q, context);
 		}
 	}

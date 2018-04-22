@@ -44,6 +44,24 @@ public class ReadPOITest extends AbstractBoomerangTest {
 	}
 	
 	@Test
+	public void indirectAllocationSiteTwoFields3Address2(){
+		EmptyNode a = new EmptyNode();
+		a.left = new EmptyNode();
+		EmptyNode firstLoad = a.left;
+		EmptyAllocNode alloc = new EmptyAllocNode();
+		firstLoad.right = alloc;
+		EmptyNode secondLoad = a.left;
+		EmptyNode query = secondLoad.right;
+		queryFor(query);
+	}
+	
+	private static class EmptyNode{
+		EmptyNode left;
+		EmptyNode right;
+	}
+	private static class EmptyAllocNode extends EmptyNode implements AllocatedObject{}
+	
+	@Test
 	public void unbalancedField(){
 		OWithField a = new OWithField();
 		Object query = a.field;

@@ -14,7 +14,6 @@ package test.core;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -23,7 +22,6 @@ import org.junit.rules.Timeout;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -33,6 +31,7 @@ import boomerang.DefaultBoomerangOptions;
 import boomerang.ForwardQuery;
 import boomerang.IntAndStringBoomerangOptions;
 import boomerang.Query;
+import boomerang.WeightedBoomerang;
 import boomerang.WholeProgramBoomerang;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
@@ -43,6 +42,7 @@ import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.stats.IBoomerangStats;
 import boomerang.util.AccessPath;
 import boomerang.util.AccessPathParser;
 import heros.utilities.DefaultValueMap;
@@ -52,9 +52,7 @@ import soot.RefType;
 import soot.Scene;
 import soot.SceneTransformer;
 import soot.SootClass;
-import soot.SootField;
 import soot.SootMethod;
-import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.AssignStmt;
@@ -66,7 +64,6 @@ import soot.jimple.Stmt;
 import soot.jimple.StringConstant;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
-import soot.util.Chain;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
@@ -96,7 +93,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	private boolean integerQueries;
 	private SeedFactory<NoWeight> seedFactory;
 
-	protected int analysisTimeout = 300 *1000;
+	protected int analysisTimeout = 3000 *1000;
 
 	private enum AnalysisMode {
 		WholeProgram, DemandDrivenBackward;
@@ -192,8 +189,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private void runDemandDrivenBackward() {
 		// Run backward analysis
-		if (queryForCallSites.size() > 1)
-			throw new RuntimeException("Found more than one backward query to execute!");
+//		if (queryForCallSites.size() > 1)
+//			throw new RuntimeException("Found more than one backward query to execute!");
 		Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
 		compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
 	}
@@ -296,6 +293,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private Set<Node<Statement, Val>> runQuery(Collection<? extends Query> queries) {
 		final Set<Node<Statement, Val>> results = Sets.newHashSet();
+		
 		for (final Query query : queries) {
 			DefaultBoomerangOptions options = (integerQueries ? new IntAndStringBoomerangOptions() : new DefaultBoomerangOptions(){
 				@Override
@@ -308,10 +306,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					return analysisTimeout;
 				}
 				
-				@Override
-				public boolean computeAllAliases() {
-					return accessPathQuery;
-				}
 			});
 			Boomerang solver = new Boomerang(options) {
 				@Override
@@ -330,11 +324,14 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 			};
 			if(query instanceof BackwardQuery){
+				setupSolver(solver);
 				BackwardBoomerangResults<NoWeight> res = solver.solve((BackwardQuery) query);
 				for(ForwardQuery q : res.getAllocationSites().keySet()){
 					results.add(q.asNode());
 				}
+				
 				solver.debugOutput();
+//				System.out.println(res.getAllAliases());
 				if(accessPathQuery){
 					checkContainsAllExpectedAccessPath(res.getAllAliases());
 				}
@@ -395,12 +392,13 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			}
 
 		};
+		setupSolver(solver);
 		solver.wholeProgramAnalysis();
 		DefaultValueMap<Query, AbstractBoomerangSolver<NoWeight>> solvers = solver.getSolvers();
 		for (final Query q : solvers.keySet()) {
-			if (!(q instanceof ForwardQuery))
-				throw new RuntimeException(
-						"Unexpected solver found, whole program analysis should only trigger forward queries");
+//			if (!(q instanceof ForwardQuery))
+//				throw new RuntimeException(
+//						"Unexpected solver found, whole program analysis should only trigger forward queries");
 			for (final Query queryForCallSite : queryForCallSites) {
 				solvers.get(q).getFieldAutomaton()
 						.registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, NoWeight>(
@@ -434,6 +432,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		solver.debugOutput();
 		compareQuery(allocationSites, results, AnalysisMode.WholeProgram);
 		System.out.println();
+	}
+
+	protected void setupSolver(WeightedBoomerang<NoWeight> solver) {
 	}
 
 	private boolean allocatesObjectOfInterest(NewExpr rightOp) {
