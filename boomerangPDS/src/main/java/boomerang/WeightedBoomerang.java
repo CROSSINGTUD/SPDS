@@ -101,7 +101,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					System.out.println("Forward solving query: " + key);
 				solver = createForwardSolver((ForwardQuery) key);
 			}
-			
 			solver.getCallAutomaton()
 					.registerUnbalancedPopListener(new UnbalancedPopListener<Statement, INode<Val>, W>() {
 
@@ -139,7 +138,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 										final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
 												.getOrCreate(new ForwardCallSitePOI(callStatement));
-										callSitePoi.returnsFromCall(key, returnedVal);
+										if(solver instanceof ForwardBoomerangSolver)
+											callSitePoi.returnsFromCall(key, returnedVal);
 									}
 								});
 							}
@@ -160,7 +160,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 								
 								final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
 										.getOrCreate(new ForwardCallSitePOI(callStatement));
-								callSitePoi.returnsFromCall(key, returnedVal);
+								if(solver instanceof ForwardBoomerangSolver)
+									callSitePoi.returnsFromCall(key, returnedVal);
 							}
 						}
 
@@ -187,6 +188,21 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					}
 				}
 			});
+
+			solver.getCallAutomaton().registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
+
+				@Override
+				public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W returnedWeight) {
+					if(!callSite.getMethod().equals(returnSite.getMethod()))
+						return;
+					if(!returnedFact.fact().isStatic() && !returnedFact.fact().m().equals(callSite.getMethod()))
+						return;
+
+					final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
+					callSitePoi.returnsFromCall(key, new Node<Statement, Val>(returnSite, returnedFact.fact()));
+				}
+			});
+			
 			SeedFactory<W> seedFactory = getSeedFactory();
 	        if(seedFactory != null){
 	        		for(SootMethod m : seedFactory.getMethodScope(key)){
@@ -322,19 +338,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 		});
 
-		solver.getCallAutomaton().registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
-
-			@Override
-			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W returnedWeight) {
-				if(!callSite.getMethod().equals(returnSite.getMethod()))
-					return;
-				if(!returnedFact.fact().isStatic() && !returnedFact.fact().m().equals(callSite.getMethod()))
-					return;
-
-				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
-				callSitePoi.returnsFromCall(backwardQuery, new Node<Statement, Val>(returnSite, returnedFact.fact()));
-			}
-		});
 		return solver;
 	}
 
@@ -441,18 +444,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				}
 			}
 		});
-		solver.getCallAutomaton().registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
 
-			@Override
-			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W returnedWeight) {
-				if(!callSite.getMethod().equals(returnSite.getMethod()))
-					return;
-				if(!returnedFact.fact().isStatic() && !returnedFact.fact().m().equals(callSite.getMethod()))
-					return;
-				final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
-				callSitePoi.returnsFromCall(sourceQuery, new Node<Statement, Val>(returnSite, returnedFact.fact()));
-			}
-		});
 
 		return solver;
 	}
@@ -1007,7 +999,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			if (flowAllocation instanceof ForwardQuery) {
 			} else if (flowAllocation instanceof BackwardQuery) {
 				for(Statement succ : queryToSolvers.get(flowAllocation).getSuccsOf(getStmt())) {
-					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(queryToSolvers.get(baseAllocation),queryToSolvers.get(flowAllocation),FieldReadPOI.this, succ, getStmt());
+					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(queryToSolvers.get(baseAllocation),queryToSolvers.get(flowAllocation),FieldReadPOI.this, succ);
 					exec.solve();
 				}
 			}

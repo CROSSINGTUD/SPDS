@@ -4,6 +4,7 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.solver.BackwardBoomerangSolver;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -51,6 +52,11 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 
 			}
 		});
+	}
+
+	protected boolean debug() {
+		// TODO Auto-generated method stub
+		return flowSolver.toString().contains("ield3Address $r0 = new ThreeFieldsTest$Level4");
 	}
 
 	private class FindNode implements WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> {
@@ -123,8 +129,8 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 			flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement, Val>>>(
 					t.getStart(), aliasTrans.getLabel(), aliasTrans.getTarget()));
 		} else if (!t.getLabel().equals(Field.epsilon())) {
-			flowSolver.getFieldAutomaton().addTransition(t);
-			baseSolver.getFieldAutomaton().registerListener(new ImportToFlowSolver(t.getTarget(), aliasTrans));
+//			flowSolver.getFieldAutomaton().addTransition(t);
+//			baseSolver.getFieldAutomaton().registerListener(new ImportToFlowSolver(t.getTarget(), aliasTrans));
 		}
 	}
 

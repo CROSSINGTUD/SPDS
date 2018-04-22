@@ -1,7 +1,5 @@
 package boomerang.poi;
 
-import boomerang.ForwardQuery;
-import boomerang.Query;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -9,7 +7,6 @@ import boomerang.solver.AbstractBoomerangSolver;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -20,7 +17,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 
 	private final Val baseVar;
 	private final Val storedVar;
-	private boolean load;
 	private boolean activate;
 	
 	public ExecuteImportFieldStmtPOI(final AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
@@ -30,16 +26,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 		this.storedVar = poi.getStoredVar();
 	}
 	
-
-	public ExecuteImportFieldStmtPOI(final AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
-			AbstractPOI<Statement, Val, Field> poi, Statement fieldLoadBwSucc, Statement fieldLoad) {
-		super(baseSolver, flowSolver, fieldLoadBwSucc,fieldLoad);
-		//curr == fieldLoadFwdSucc
-		//succ = fieldLoad
-		this.baseVar = poi.getBaseVar();
-		this.storedVar = poi.getStoredVar();
-		this.load = true;
-	}
 
 	public void solve() {
 		baseSolver.getFieldAutomaton()
@@ -89,11 +75,11 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 			@Override
 			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-				if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals((!load ? succ /*was curr*/ : succ))
+				if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(succ)
 						&& !t.getStart().fact().fact().equals(baseVar)) {
 					Val alias = t.getStart().fact().fact();
 					Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
-					Node<Statement, Val> rightOpNode = new Node<Statement, Val>((!load ? curr : succ), storedVar);
+					Node<Statement, Val> rightOpNode = new Node<Statement, Val>(curr, storedVar);
 					flowSolver.setFieldContextReachable(aliasedVarAtSucc);
 					flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
 					importToFlowSolver(t,aliasTrans);
