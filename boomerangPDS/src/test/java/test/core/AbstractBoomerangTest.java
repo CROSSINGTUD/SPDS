@@ -31,6 +31,7 @@ import boomerang.DefaultBoomerangOptions;
 import boomerang.ForwardQuery;
 import boomerang.IntAndStringBoomerangOptions;
 import boomerang.Query;
+import boomerang.WeightedBoomerang;
 import boomerang.WholeProgramBoomerang;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
@@ -99,8 +100,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	protected AnalysisMode[] getAnalyses() {
 		return new AnalysisMode[] {
-//				 AnalysisMode.WholeProgram,
-				AnalysisMode.DemandDrivenBackward
+				 AnalysisMode.WholeProgram,
+//				AnalysisMode.DemandDrivenBackward
 				};
 	}
 
@@ -326,11 +327,14 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 			};
 			if(query instanceof BackwardQuery){
+				setupSolver(solver);
 				BackwardBoomerangResults<NoWeight> res = solver.solve((BackwardQuery) query);
 				for(ForwardQuery q : res.getAllocationSites().keySet()){
 					results.add(q.asNode());
 				}
+				
 				solver.debugOutput();
+				System.out.println(res.getAllAliases());
 				if(accessPathQuery){
 					checkContainsAllExpectedAccessPath(res.getAllAliases());
 				}
@@ -391,6 +395,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			}
 
 		};
+		setupSolver(solver);
 		solver.wholeProgramAnalysis();
 		DefaultValueMap<Query, AbstractBoomerangSolver<NoWeight>> solvers = solver.getSolvers();
 		for (final Query q : solvers.keySet()) {
@@ -430,6 +435,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		solver.debugOutput();
 		compareQuery(allocationSites, results, AnalysisMode.WholeProgram);
 		System.out.println();
+	}
+
+	protected void setupSolver(WeightedBoomerang<NoWeight> solver) {
 	}
 
 	private boolean allocatesObjectOfInterest(NewExpr rightOp) {

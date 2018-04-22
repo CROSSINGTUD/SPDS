@@ -13,6 +13,7 @@ package boomerang;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -85,6 +86,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
 	private IBoomerangStats<W> stats;
+	private List<SolverCreationListener<W>> solverCreationListeners = Lists.newArrayList();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
 
 		@Override
@@ -191,6 +193,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	        			solver.addReachable(m);
 	        		}
 	        }
+	        onCreateSubSolver(solver);
 			return solver;
 		}
 	};
@@ -1091,5 +1094,14 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 	public IBoomerangStats<W> getStats() {
 		return stats;
+	}
+
+	public void onCreateSubSolver(AbstractBoomerangSolver<W> solver) {
+		for(SolverCreationListener<W> l : solverCreationListeners) {
+			l.onCreatedSolver(solver);
+		}
+	}
+	public void registerSolverCreationListener(SolverCreationListener<W> l) {
+		solverCreationListeners.add(l);
 	}
 }
