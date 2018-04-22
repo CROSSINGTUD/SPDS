@@ -7,6 +7,7 @@ import boomerang.solver.AbstractBoomerangSolver;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -17,10 +18,12 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 
 	private final Val returningFact;
 	private boolean activate;
+	private Node<Statement, Val> returnedNode;
 
 	public ExecuteImportCallStmtPOI(AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
 			Statement callSite, Node<Statement, Val> returnedNode) {
 		super(baseSolver, flowSolver, callSite, returnedNode.stmt());
+		this.returnedNode = returnedNode;
 		this.returningFact = returnedNode.fact();
 	}
 
@@ -42,7 +45,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 					if (alias.equals(returningFact) && !t.getLabel().equals(Field.empty())
 							&& !t.getLabel().equals(Field.epsilon())) {
 						flowAutomaton.registerListener(
-								new HasOutTransitionWithSameLabel(t.getStart(), t.getLabel(), t.getTarget()));
+								new HasOutTransitionWithSameLabel(new SingleNode<Node<Statement,Val>>(returnedNode), t.getLabel(), t.getTarget()));
 					}
 				}
 
