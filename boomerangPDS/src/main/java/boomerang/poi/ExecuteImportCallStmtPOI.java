@@ -5,6 +5,8 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
+import boomerang.solver.MethodBasedFieldTransitionListener;
+import soot.SootMethod;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -29,11 +31,10 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 	}
 
 	public void solve() {
-		baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
+		baseSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(curr.getMethod()) {
 
 			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 				final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 				if (!t.getStart().fact().stmt().equals(curr))
 					return;
@@ -41,7 +42,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 					Val alias = aliasedVariableAtStmt.fact().fact();
 					if (alias.equals(returningFact) && t.getLabel().equals(Field.empty())) {
 						// t.getTarget is the allocation site
-						flowSolver.getFieldAutomaton().registerListener(new FindNode());
+						flowSolver.registerFieldTransitionListener(new FindNode(curr.getMethod()));
 					}
 					if (alias.equals(returningFact) && !t.getLabel().equals(Field.empty())
 							&& !t.getLabel().equals(Field.epsilon())) {
@@ -49,20 +50,18 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 								new HasOutTransitionWithSameLabel(new SingleNode<Node<Statement,Val>>(returnedNode), t.getLabel(), t.getTarget()));
 					}
 				}
-
 			}
 		});
 	}
 
-	protected boolean debug() {
-		// TODO Auto-generated method stub
-		return flowSolver.toString().contains("ield3Address $r0 = new ThreeFieldsTest$Level4");
-	}
+	private class FindNode extends MethodBasedFieldTransitionListener<W> {
 
-	private class FindNode implements WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> {
+		public FindNode(SootMethod method) {
+			super(method);
+		}
+
 		@Override
-		public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 			final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 			if (!t.getStart().fact().stmt().equals(succ))
 				return;

@@ -21,6 +21,9 @@ import wpds.impl.Weight.NoWeight;
 
 public abstract class Boomerang extends WeightedBoomerang<NoWeight> {
 	
+	private OneWeightFunctions<Statement, Val, Field, NoWeight> fieldWeights;
+	private OneWeightFunctions<Statement, Val, Statement, NoWeight> callWeights;
+
 	public Boomerang(){
 		super();
 	}
@@ -30,27 +33,41 @@ public abstract class Boomerang extends WeightedBoomerang<NoWeight> {
 	
 	@Override
 	protected WeightFunctions<Statement, Val, Field, NoWeight> getForwardFieldWeights() {
-		return new OneWeightFunctions<Statement, Val, Field, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
+		return getOrCreateFieldWeights();
 	}
 
+	
 	@Override
 	protected WeightFunctions<Statement, Val, Field, NoWeight> getBackwardFieldWeights() {
-		return new OneWeightFunctions<Statement, Val, Field, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
+		return getOrCreateFieldWeights();
 	}
 
 	@Override
 	protected WeightFunctions<Statement, Val, Statement, NoWeight> getBackwardCallWeights() {
-		return new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
+		return getOrCreateCallWeights();
 	}
 
 	@Override
 	protected WeightFunctions<Statement, Val, Statement, NoWeight> getForwardCallWeights(ForwardQuery sourceQuery) {
-		return new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
+		return getOrCreateCallWeights();
 	}
 
 	@Override
 	public Debugger<NoWeight> createDebugger() {
 		return new Debugger<>();
+	}
+	
+	private WeightFunctions<Statement, Val, Field, NoWeight> getOrCreateFieldWeights() {
+		if(fieldWeights == null) {
+			fieldWeights = new OneWeightFunctions<Statement, Val, Field, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
+		}
+		return fieldWeights;
+	}
+	private WeightFunctions<Statement, Val, Statement, NoWeight> getOrCreateCallWeights() {
+		if(callWeights == null) {
+			callWeights = new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
+		}
+		return callWeights;
 	}
 
 }

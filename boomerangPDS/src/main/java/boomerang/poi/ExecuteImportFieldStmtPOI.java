@@ -4,6 +4,8 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.solver.MethodBasedFieldTransitionListener;
+import soot.SootMethod;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -28,32 +30,34 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 	
 
 	public void solve() {
-		baseSolver.getFieldAutomaton()
-				.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
+		baseSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(curr.getMethod()) {
 
-					@Override
-					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-						final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-						
-						if (!t.getStart().fact().stmt().equals(curr))
-							return;
-						if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
-							Val alias = aliasedVariableAtStmt.fact().fact();
-							if (alias.equals(baseVar) && t.getLabel().equals(Field.empty())) {
-								// t.getTarget is the allocation site
-								flowSolver.getFieldAutomaton().registerListener(new FindNode());
-							}
-						}
-						
+			@Override
+			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+				final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
+				
+				if (!t.getStart().fact().stmt().equals(curr))
+					return;
+				if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
+					Val alias = aliasedVariableAtStmt.fact().fact();
+					if (alias.equals(baseVar) && t.getLabel().equals(Field.empty())) {
+						// t.getTarget is the allocation site
+						flowSolver.getFieldAutomaton().registerListener(new FindNode(curr.getMethod()));
 					}
-				});
+				}
+			}
+		});
 	}
 	
-	private class FindNode implements WPAUpdateListener<Field,INode<Node<Statement,Val>>,W>{
+	private class FindNode extends MethodBasedFieldTransitionListener<W>{
+
+		public FindNode(SootMethod method) {
+			super(method);
+		}
+
 		@Override
-		public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+
 			final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 			if (!t.getStart().fact().stmt().equals(succ))
 				return;
