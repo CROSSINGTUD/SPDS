@@ -35,7 +35,9 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 			@Override
 			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 				final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-				
+
+				if(activate)
+					return;
 				if (!t.getStart().fact().stmt().equals(curr))
 					return;
 				if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
@@ -58,6 +60,8 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 		@Override
 		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 
+			if(activate)
+				return;
 			final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 			if (!t.getStart().fact().stmt().equals(succ))
 				return;

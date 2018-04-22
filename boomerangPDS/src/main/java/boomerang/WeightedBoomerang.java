@@ -138,8 +138,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 										final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
 												.getOrCreate(new ForwardCallSitePOI(callStatement));
-										if(solver instanceof ForwardBoomerangSolver)
-											callSitePoi.returnsFromCall(key, returnedVal);
+										callSitePoi.returnsFromCall(key, returnedVal);
 									}
 								});
 							}
@@ -160,8 +159,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 								
 								final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
 										.getOrCreate(new ForwardCallSitePOI(callStatement));
-								if(solver instanceof ForwardBoomerangSolver)
-									callSitePoi.returnsFromCall(key, returnedVal);
+								callSitePoi.returnsFromCall(key, returnedVal);
 							}
 						}
 

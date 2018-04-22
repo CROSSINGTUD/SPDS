@@ -42,6 +42,7 @@ import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.stats.IBoomerangStats;
 import boomerang.util.AccessPath;
 import boomerang.util.AccessPathParser;
 import heros.utilities.DefaultValueMap;
@@ -101,7 +102,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	protected AnalysisMode[] getAnalyses() {
 		return new AnalysisMode[] {
 				 AnalysisMode.WholeProgram,
-//				AnalysisMode.DemandDrivenBackward
+				AnalysisMode.DemandDrivenBackward
 				};
 	}
 
@@ -330,7 +331,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 				
 				solver.debugOutput();
-				System.out.println(res.getAllAliases());
+//				System.out.println(res.getAllAliases());
 				if(accessPathQuery){
 					checkContainsAllExpectedAccessPath(res.getAllAliases());
 				}

@@ -36,6 +36,8 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 			@Override
 			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 				final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
+				if(activate)
+					return;
 				if (!t.getStart().fact().stmt().equals(curr))
 					return;
 				if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
@@ -63,6 +65,8 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 		@Override
 		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 			final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
+			if(activate)
+				return;
 			if (!t.getStart().fact().stmt().equals(succ))
 				return;
 			if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
@@ -128,8 +132,8 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 			flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement, Val>>>(
 					t.getStart(), aliasTrans.getLabel(), aliasTrans.getTarget()));
 		} else if (!t.getLabel().equals(Field.epsilon())) {
-//			flowSolver.getFieldAutomaton().addTransition(t);
-//			baseSolver.getFieldAutomaton().registerListener(new ImportToFlowSolver(t.getTarget(), aliasTrans));
+			flowSolver.getFieldAutomaton().addTransition(t);
+			baseSolver.getFieldAutomaton().registerListener(new ImportToFlowSolver(t.getTarget(), aliasTrans));
 		}
 	}
 
