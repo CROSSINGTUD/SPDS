@@ -437,7 +437,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					forwardHandleFieldLoad(node, createArrayFieldLoad(node.stmt()), sourceQuery);
 				}
 				if (isBackwardEnterCall(node.stmt())) {
-					if(!(WeightedBoomerang.this instanceof WholeProgramBoomerang) && !options.computeAllAliases()){
+					if(!(WeightedBoomerang.this instanceof WholeProgramBoomerang)){
 						forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(node.stmt()))
 								.addByPassingAllocation(sourceQuery);
 					}
@@ -924,8 +924,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 		public void returnsFromCall(final Query flowQuery, Node<Statement, Val> returnedNode) {
 			if(returnedNode.fact().isStatic())
-				return;
-			if(options.computeAllAliases())
 				return;
 			if (returnsFromCall.add(new QueryWithVal(flowQuery, returnedNode))) {
 				for (final ForwardQuery byPassing : Lists.newArrayList(byPassingAllocations)) {

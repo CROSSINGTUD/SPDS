@@ -172,7 +172,7 @@ public abstract class AbstractExecuteImportPOI<W extends Weight> {
 				activateFrom(flowState);
 				return;
 			}
-			flowAutomaton.registerListener(new HasOutTransitionWithSameLabel(flowState, baseT.getLabel(),baseT.getTarget()));
+//			flowAutomaton.registerListener(new HasOutTransitionWithSameLabel(flowState, baseT.getLabel(),baseT.getTarget()));
 		}
 
 		@Override

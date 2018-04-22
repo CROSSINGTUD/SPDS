@@ -305,10 +305,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					return analysisTimeout;
 				}
 				
-				@Override
-				public boolean computeAllAliases() {
-					return accessPathQuery;
-				}
 			});
 			Boomerang solver = new Boomerang(options) {
 				@Override
