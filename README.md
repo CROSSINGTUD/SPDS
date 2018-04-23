@@ -1,6 +1,6 @@
 # WPDS
 
-[![Run Status](https://api.shippable.com/projects/5a2536b9cf141c0700b92668/badge?branch=master)](https://app.shippable.com/github/johspaeth/WPDS) 
+<!--[![Run Status](https://api.shippable.com/projects/5a2536b9cf141c0700b92668/badge?branch=master)](https://app.shippable.com/github/johspaeth/WPDS) -->
 
 This repository contains a Java implementation of Weighted Pushdown Systems.
 Additionally, it contains an implementation of [Boomerang](boomerangPDS) and [IDEal](idealPDS) based on a Weighted Pushdown System.
