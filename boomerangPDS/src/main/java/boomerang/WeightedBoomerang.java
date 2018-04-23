@@ -869,7 +869,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			final int prime = 31;
 			int result = 1;
 			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((flowSourceQuery == null) ? 0 : flowSourceQuery.hashCode());
+			if(flowSourceQuery instanceof ForwardQuery)
+				result = prime * result + ((flowSourceQuery == null) ? 0 : flowSourceQuery.hashCode());
 			result = prime * result + ((returningFact == null) ? 0 : returningFact.hashCode());
 			return result;
 		}
@@ -885,11 +886,12 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			QueryWithVal other = (QueryWithVal) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
-			if (flowSourceQuery == null) {
-				if (other.flowSourceQuery != null)
+			if(flowSourceQuery instanceof ForwardQuery)
+				if (flowSourceQuery == null) {
+					if (other.flowSourceQuery != null)
+						return false;
+				} else if (!flowSourceQuery.equals(other.flowSourceQuery))
 					return false;
-			} else if (!flowSourceQuery.equals(other.flowSourceQuery))
-				return false;
 			if (returningFact == null) {
 				if (other.returningFact != null)
 					return false;
