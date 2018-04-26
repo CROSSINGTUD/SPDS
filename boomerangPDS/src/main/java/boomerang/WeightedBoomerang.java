@@ -13,6 +13,7 @@ package boomerang;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -22,8 +23,10 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 
 import boomerang.customize.BackwardEmptyCalleeFlow;
 import boomerang.customize.EmptyCalleeFlow;
@@ -48,6 +51,7 @@ import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import boomerang.stats.IBoomerangStats;
 import heros.utilities.DefaultValueMap;
+import soot.Local;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootField;
@@ -1093,5 +1097,80 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 	public void registerSolverCreationListener(SolverCreationListener<W> l) {
 		solverCreationListeners.add(l);
+	}
+
+	public Table<Statement, Val, W> getResults(Query seed) {
+		final Table<Statement,Val, W> results = HashBasedTable.create();
+		WeightedPAutomaton<Statement, INode<Val>, W> fieldAut = queryToSolvers.getOrCreate(seed).getCallAutomaton();
+		for(Entry<Transition<Statement, INode<Val>>, W> e : fieldAut.getTransitionsToFinalWeights().entrySet()){
+			Transition<Statement, INode<Val>> t = e.getKey();
+			W w = e.getValue();
+			if(t.getLabel().equals(Statement.epsilon()))
+				continue;
+			if(t.getStart().fact().value() instanceof Local && !t.getLabel().getMethod().equals(t.getStart().fact().m()))
+				continue;
+			if(t.getLabel().getUnit().isPresent())
+				results.put(t.getLabel(),t.getStart().fact(),w);
+		}
+		return results;
+	}
+
+	public Table<Statement, Val, W> getObjectDestructingStatements(
+			Query query) {
+		AbstractBoomerangSolver<W> solver = queryToSolvers.get(query);
+		if(solver == null)
+			return HashBasedTable.create();
+		Table<Statement, Val, W> res = getResults(query);
+		Set<SootMethod> visitedMethods = Sets.newHashSet();
+		for(Statement s : res.rowKeySet()){
+			visitedMethods.add(s.getMethod());
+		}
+		ForwardBoomerangSolver<W> forwardSolver = (ForwardBoomerangSolver) queryToSolvers.get(query);
+		Table<Statement, Val, W> destructingStatement = HashBasedTable.create();
+		for(SootMethod flowReaches : visitedMethods){
+			for(Unit ep : icfg().getEndPointsOf(flowReaches)){
+				Statement exitStmt = new Statement((Stmt) ep, flowReaches);
+				Set<State> escapes = Sets.newHashSet();
+				for(Unit callSite : icfg().getCallersOf(flowReaches)){
+					SootMethod callee = icfg().getMethodOf(callSite);
+					if(visitedMethods.contains(callee)){
+						for(Entry<Val, W> valAndW : res.row(exitStmt).entrySet()){
+							for(Unit retSite : icfg().getSuccsOf(callSite)){
+								escapes.addAll(forwardSolver.computeReturnFlow(flowReaches, (Stmt) ep, valAndW.getKey(), (Stmt) callSite, (Stmt) retSite));
+							}
+						}
+					}
+				}
+				if(escapes.isEmpty()){
+					Map<Val, W> row = res.row(exitStmt);
+					findLastUsage(exitStmt, row, destructingStatement,forwardSolver);
+				}
+			}
+		}
+
+		return destructingStatement;
+	}	
+	private void findLastUsage(Statement exitStmt, Map<Val, W> row, Table<Statement, Val, W> destructingStatement, ForwardBoomerangSolver<W> forwardSolver) {
+		LinkedList<Statement> worklist = Lists.newLinkedList();
+		worklist.add(exitStmt);
+		Set<Statement> visited = Sets.newHashSet();
+		while(!worklist.isEmpty()){
+			Statement curr = worklist.poll();
+			if(!visited.add(curr)){
+				continue;
+			}
+			boolean valueUsedInStmt = false;
+			for(Entry<Val, W> e : row.entrySet()){
+				if(forwardSolver.valueUsedInStatement(curr.getUnit().get(), e.getKey())){
+					destructingStatement.put(curr, e.getKey(), e.getValue());
+					valueUsedInStmt = true;
+				}
+			}
+			if(!valueUsedInStmt){
+				for(Unit succ : bwicfg.getSuccsOf(curr.getUnit().get())){
+					worklist.add(new Statement((Stmt) succ, curr.getMethod()));
+				}
+			}
+		}
 	}
 }
