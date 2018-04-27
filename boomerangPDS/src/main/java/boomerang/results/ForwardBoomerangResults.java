@@ -58,7 +58,7 @@ public class ForwardBoomerangResults<W extends Weight> {
 		return timedout;
 	}
 	
-	public Table<Statement,Val, W> getResults(){
+	public Table<Statement,Val, W> asStatementValWeightTable(){
 		final Table<Statement,Val, W> results = HashBasedTable.create();
 		WeightedPAutomaton<Statement, INode<Val>, W> fieldAut = queryToSolvers.getOrCreate(query).getCallAutomaton();
 		for(Entry<Transition<Statement, INode<Val>>, W> e : fieldAut.getTransitionsToFinalWeights().entrySet()){
@@ -80,7 +80,7 @@ public class ForwardBoomerangResults<W extends Weight> {
 		AbstractBoomerangSolver<W> solver = queryToSolvers.get(query);
 		if(solver == null)
 			return HashBasedTable.create();
-		Table<Statement, Val, W> res = getResults();
+		Table<Statement, Val, W> res = asStatementValWeightTable();
 		Set<SootMethod> visitedMethods = Sets.newHashSet();
 		for(Statement s : res.rowKeySet()){
 			visitedMethods.add(s.getMethod());
