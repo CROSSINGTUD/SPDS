@@ -61,11 +61,11 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 	}
 	
 	public TransitionFunction pop(Node<Statement,Val> curr, Statement pops) {
-		return getMatchingTransitions(curr.stmt().getMethod(), curr.fact(), Type.OnReturn);
+		return getMatchingTransitions(curr.stmt(), curr.fact(), Type.OnReturn);
 	}
 
 	public TransitionFunction push(Node<Statement,Val> curr, Node<Statement,Val> succ, Statement push) {
-		return getMatchingTransitions(succ.stmt().getMethod(),succ.fact(), Type.OnCall);
+		return getMatchingTransitions(succ.stmt(),succ.fact(), Type.OnCall);
 	}
 	
 	@Override
@@ -92,22 +92,22 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 				}	
 			}
 		}
-		return (res.isEmpty() ? getOne() : new TransitionFunction(res));
+		return (res.isEmpty() ? getOne() : new TransitionFunction(res,Collections.singleton(curr.stmt())));
 	}
 
-	private TransitionFunction getMatchingTransitions(SootMethod method, Val node, Type type) {
+	private TransitionFunction getMatchingTransitions(Statement statement, Val node, Type type) {
 		Set<ITransition> res = new HashSet<>();
 //		if (node.getFieldCount() == 0) { //TODO How do we check this?
 			for (MatcherTransition trans : transition) {
-				if (trans.matches(method) && trans.getType().equals(type)) {
+				if (trans.matches(statement.getMethod()) && trans.getType().equals(type)) {
 					Parameter param = trans.getParam();
-					if (param.equals(Parameter.This) && isThisValue(method, node))
+					if (param.equals(Parameter.This) && isThisValue(statement.getMethod(), node))
 						res.add(new Transition(trans.from(), trans.to()));
 					if (param.equals(Parameter.Param1)
-							&& method.getActiveBody().getParameterLocal(0).equals(node.value()))
+							&& statement.getMethod().getActiveBody().getParameterLocal(0).equals(node.value()))
 						res.add(new Transition(trans.from(), trans.to()));
 					if (param.equals(Parameter.Param2)
-							&& method.getActiveBody().getParameterLocal(1).equals(node.value()))
+							&& statement.getMethod().getActiveBody().getParameterLocal(1).equals(node.value()))
 						res.add(new Transition(trans.from(), trans.to()));
 				}
 //			}
@@ -115,7 +115,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 			
 		if(res.isEmpty())
 			return getOne();
-		return new TransitionFunction(res);
+		return new TransitionFunction(res,Collections.singleton(statement));
 	}
 
 	private boolean isThisValue(SootMethod method, Val node) {
@@ -222,7 +222,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 
 	public abstract Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod);
 	public TransitionFunction initialTransition(){
-		return new TransitionFunction(new Transition(initialState(),initialState()));
+		return new TransitionFunction(new Transition(initialState(),initialState()),Collections.emptySet());
 	}
 
 	protected abstract State initialState();
