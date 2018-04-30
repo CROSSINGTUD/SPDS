@@ -575,7 +575,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			Stmt returnSite = callPopNode.getReturnSite();
 			addNormalFieldFlow(curr, new Node<Stmt,Fact>(returnSite,(Fact)location));
 			if(ContextSensitive){
-				addCallRule(new PopRule<Stmt, INode<Fact>, W>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location),getCallWeights().pop(curr, curr.stmt())));
+				addCallRule(new PopRule<Stmt, INode<Fact>, W>(wrap(curr.fact()), curr.stmt(), wrap((Fact) location),getCallWeights().pop(curr, returnSite)));
 			}else{
 				addNormalCallFlow(curr, new Node<Stmt,Fact>(returnSite,(Fact)location));
 			}

@@ -60,12 +60,12 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 		return TransitionFunction.zero();
 	}
 	
-	public TransitionFunction pop(Node<Statement,Val> curr, Statement pops) {
-		return getMatchingTransitions(curr.stmt(), curr.fact(), Type.OnReturn);
+	public TransitionFunction pop(Node<Statement,Val> curr, Statement returnSite) {
+		return getMatchingTransitions(curr.stmt(), curr.fact(), Type.OnReturn, returnSite);
 	}
 
 	public TransitionFunction push(Node<Statement,Val> curr, Node<Statement,Val> succ, Statement push) {
-		return getMatchingTransitions(succ.stmt(),succ.fact(), Type.OnCall);
+		return getMatchingTransitions(succ.stmt(),succ.fact(), Type.OnCall, curr.stmt());
 	}
 	
 	@Override
@@ -95,7 +95,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 		return (res.isEmpty() ? getOne() : new TransitionFunction(res,Collections.singleton(curr.stmt())));
 	}
 
-	private TransitionFunction getMatchingTransitions(Statement statement, Val node, Type type) {
+	private TransitionFunction getMatchingTransitions(Statement statement, Val node, Type type, Statement transitionStmt) {
 		Set<ITransition> res = new HashSet<>();
 //		if (node.getFieldCount() == 0) { //TODO How do we check this?
 			for (MatcherTransition trans : transition) {
@@ -115,7 +115,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 			
 		if(res.isEmpty())
 			return getOne();
-		return new TransitionFunction(res,Collections.singleton(statement));
+		return new TransitionFunction(res,Collections.singleton(transitionStmt));
 	}
 
 	private boolean isThisValue(SootMethod method, Val node) {

@@ -98,17 +98,8 @@ public abstract class AbstractTestingFramework {
 		Options.v().set_no_bodies_for_excluded(true);
 		Options.v().set_allow_phantom_refs(true);
 
-		List<String> includeList = new LinkedList<String>();
-		includeList.add("java.lang.*");
-		includeList.add("java.util.*");
-		includeList.add("java.io.*");
-		includeList.add("sun.misc.*");
-		includeList.add("java.net.*");
-		includeList.add("sun.nio.*");
-		includeList.add("javax.servlet.*");
-//		includeList.add("javax.crypto.*");
 
-		Options.v().set_include(includeList);
+		Options.v().set_include(getIncludeList());
 
 		Options.v().setPhaseOption("jb", "use-original-names:true");
 
@@ -147,6 +138,19 @@ public abstract class AbstractTestingFramework {
 		}
 		ePoints.add(methodByName);
 		Scene.v().setEntryPoints(ePoints);
+	}
+
+	protected List<String> getIncludeList() {
+		List<String> includeList = new LinkedList<String>();
+		includeList.add("java.lang.*");
+		includeList.add("java.util.*");
+		includeList.add("java.io.*");
+		includeList.add("sun.misc.*");
+		includeList.add("java.net.*");
+		includeList.add("sun.nio.*");
+		includeList.add("javax.servlet.*");
+//		includeList.add("javax.crypto.*");
+		return includeList;
 	}
 
 	private String getTargetClass() {
