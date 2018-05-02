@@ -52,19 +52,9 @@ public class TestingResultReporter<W extends Weight>{
 			//check if any of the methods that should not be analyzed have been analyzed
 			if (e.getValue() instanceof ShouldNotBeAnalyzed){
 				final ShouldNotBeAnalyzed shouldNotBeAnalyzed = (ShouldNotBeAnalyzed) e.getValue();
-				//TODO check if you can do this without seedsolver or get ib ack
-				for(Entry<Transition<Statement, INode<Val>>, W> s : seedSolver.getTransitionsToFinalWeights().entrySet()){
-					Transition<Statement, INode<Val>> t = s.getKey();
-					W w = s.getValue();
-					if((t.getStart() instanceof GeneratedState))
-						continue;
-					if(t.getLabel().getUnit().isPresent()) {
-						//check whether we have an assertion here
-						if(t.getLabel().getUnit().get().equals(e.getKey())){
-							//We have included this in analysis
-							shouldNotBeAnalyzed.hasBeenAnalyzed();
-						}
-					}
+				Unit analyzedUnit = e.getKey();
+				if (analyzedUnit.equals(shouldNotBeAnalyzed.unit)){
+					shouldNotBeAnalyzed.hasBeenAnalyzed();
 				}
 			}
 		}

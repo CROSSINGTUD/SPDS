@@ -4,7 +4,7 @@ import soot.Unit;
 
 
 public class ShouldNotBeAnalyzed implements Assertion{
-    private Unit unit;
+    public Unit unit;
     private boolean isSatisfied = true;
     private boolean isImprecise = false;
 
