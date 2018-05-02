@@ -175,9 +175,8 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 
 	protected Collection<WeightedForwardQuery<TransitionFunction>> getLeftSideOf(SootMethod m, Unit unit) {
 		if (unit instanceof AssignStmt) {
-			Set<AllocVal> out = new HashSet<>();
 			AssignStmt stmt = (AssignStmt) unit;
-			return Collections.singleton(new WeightedForwardQuery<>(new Statement((Stmt) unit,m),new AllocVal(stmt.getLeftOp(), m, stmt.getRightOp()),initialTransition()));
+			return Collections.singleton(new WeightedForwardQuery<>(new Statement((Stmt) unit,m),new AllocVal(stmt.getLeftOp(), m, stmt.getRightOp(),new Statement((Stmt) unit,m)),initialTransition()));
 		}
 		return Collections.emptySet();
 	}
@@ -190,7 +189,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 					if (((Stmt) unit).getInvokeExpr() instanceof InstanceInvokeExpr) {
 						InstanceInvokeExpr iie = (InstanceInvokeExpr) ((Stmt) unit).getInvokeExpr();
 						Local thisLocal = (Local) iie.getBase();
-						return Collections.singleton(new WeightedForwardQuery<>(new Statement((Stmt) unit,m),new AllocVal(thisLocal,m,iie),initialTransition()));
+						return Collections.singleton(new WeightedForwardQuery<>(new Statement((Stmt) unit,m),new AllocVal(thisLocal,m,iie,new Statement((Stmt) unit,m)),initialTransition()));
 					}
 				}
 
@@ -208,7 +207,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 				Value leftOp = assignStmt.getLeftOp();
 				soot.Type type = newExpr.getType();
 				if(Scene.v().getOrMakeFastHierarchy().canStoreType(type, Scene.v().getType(allocationSuperType.getName()))){
-					return Collections.singleton(new WeightedForwardQuery<>(new Statement((Stmt) unit,m),new AllocVal(leftOp,m,assignStmt.getRightOp()),initialTransition()));
+					return Collections.singleton(new WeightedForwardQuery<>(new Statement((Stmt) unit,m),new AllocVal(leftOp,m,assignStmt.getRightOp(),new Statement((Stmt) unit,m)),initialTransition()));
 				}
 			}
 		}

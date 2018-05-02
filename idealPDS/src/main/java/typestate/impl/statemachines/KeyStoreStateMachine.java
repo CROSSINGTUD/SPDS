@@ -24,6 +24,7 @@ import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
+import soot.jimple.Stmt;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
@@ -100,7 +101,7 @@ public class KeyStoreStateMachine extends TypeStateMachineWeightFunctions{
 			AssignStmt stmt = (AssignStmt) unit;
 			if(stmt.containsInvokeExpr()){
 				if(keyStoreConstructor().contains(stmt.getInvokeExpr().getMethod())){
-					return Collections.singleton(new WeightedForwardQuery<>(new Statement(stmt,m),new AllocVal(stmt.getLeftOp(), m, stmt.getRightOp()),initialTransition()));
+					return Collections.singleton(new WeightedForwardQuery<>(new Statement(stmt,m),new AllocVal(stmt.getLeftOp(), m, stmt.getRightOp(),new Statement((Stmt) unit,m)),initialTransition()));
 				}
 			}
 		}

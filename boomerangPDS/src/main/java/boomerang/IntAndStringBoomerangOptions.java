@@ -14,6 +14,7 @@ package boomerang;
 import com.google.common.base.Optional;
 
 import boomerang.jimple.AllocVal;
+import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import soot.SootMethod;
 import soot.Unit;
@@ -51,13 +52,13 @@ public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 			return Optional.absent();
 		}
 		if(as.getRightOp() instanceof LengthExpr){
-			return Optional.of(new AllocVal(as.getLeftOp(), m,as.getRightOp()));
+			return Optional.of(new AllocVal(as.getLeftOp(), m,as.getRightOp(), new Statement(stmt,m)));
 		}
 		if(as.containsInvokeExpr()){
 			for(SootMethod callee : icfg.getCalleesOfCallAt(as)){
 				for(Unit u : icfg.getEndPointsOf(callee)){
 					if(u instanceof ReturnStmt && isAllocationVal(((ReturnStmt) u).getOp())){
-						return Optional.of(new AllocVal(as.getLeftOp(), m,((ReturnStmt) u).getOp()));
+						return Optional.of(new AllocVal(as.getLeftOp(), m,((ReturnStmt) u).getOp(),new Statement((Stmt) u,m)));
 					}
 				}
 			}

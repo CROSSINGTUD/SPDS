@@ -52,7 +52,7 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 				if(u instanceof AssignStmt){
 					AssignStmt assignStmt = (AssignStmt) u;
 					if(options.isAllocationVal(assignStmt.getRightOp())){
-						return Collections.singleton(new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp())));
+						return Collections.singleton(new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp(),new Statement((Stmt) u, method))));
 					}
 				}
 				return Collections.emptySet();
