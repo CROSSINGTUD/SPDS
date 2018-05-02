@@ -22,7 +22,6 @@ import com.google.common.collect.Sets;
 
 import boomerang.BoomerangOptions;
 import boomerang.ForwardQuery;
-import boomerang.MethodReachableQueue;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.StaticFieldVal;

@@ -19,9 +19,6 @@ import java.util.Map;
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.DefaultBoomerangOptions;
-import boomerang.ForwardQuery;
-import boomerang.debugger.Debugger;
-import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
@@ -47,10 +44,28 @@ import wpds.impl.Weight.NoWeight;
 
 public class ExampleMain {
 	public static void main(String... args) {
-		String sootClassPath = System.getProperty("user.dir") + File.separator+"target"+File.separator+"classes";
+		String sootClassPath = getSootClassPath();
 		String mainClass = "boomerang.example.BoomerangExampleTarget";
 		setupSoot(sootClassPath, mainClass);
 		analyze();
+	}
+
+	private static String getSootClassPath(){
+		//Assume target folder to be directly in user dir; this should work in eclipse
+		String sootClassPath = System.getProperty("user.dir") + File.separator+"target"+File.separator+"classes";
+		File classPathDir = new File(sootClassPath);
+		if (!classPathDir.exists()){
+			//We haven't found our target folder
+			//Check if if it is in the boomerangPDS in user dir; this should work in IntelliJ
+			sootClassPath = System.getProperty("user.dir") + File.separator + "boomerangPDS"+ File.separator+
+					"target"+File.separator+"classes";
+			classPathDir = new File(sootClassPath);
+			if (!classPathDir.exists()){
+				//We haven't found our bytecode anyway, notify now instead of starting analysis anyway
+				throw new RuntimeException("Classpath could not be found.");
+			}
+		}
+		return sootClassPath;
 	}
 
 	private static void setupSoot(String sootClassPath, String mainClass) {
@@ -104,10 +119,6 @@ public class ExampleMain {
 						//Must be turned of if no SeedFactory is specified.
 						return false;
 					};
-					@Override
-					public boolean computeAllAliases() {
-						return true;
-					}
 				}) {
 					@Override
 					public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {

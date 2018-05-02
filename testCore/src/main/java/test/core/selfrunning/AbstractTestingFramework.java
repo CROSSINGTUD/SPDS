@@ -3,7 +3,7 @@
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *
+ *  
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -99,17 +99,8 @@ public abstract class AbstractTestingFramework {
 		Options.v().set_no_bodies_for_excluded(true);
 		Options.v().set_allow_phantom_refs(true);
 
-		List<String> includeList = new LinkedList<String>();
-		includeList.add("java.lang.*");
-		includeList.add("java.util.*");
-		includeList.add("java.io.*");
-		includeList.add("sun.misc.*");
-		includeList.add("java.net.*");
-		includeList.add("sun.nio.*");
-		includeList.add("javax.servlet.*");
-//		includeList.add("javax.crypto.*");
 
-		Options.v().set_include(includeList);
+		Options.v().set_include(getIncludeList());
 
 		Options.v().setPhaseOption("jb", "use-original-names:true");
 
@@ -150,17 +141,30 @@ public abstract class AbstractTestingFramework {
 		Scene.v().setEntryPoints(ePoints);
 	}
 
-	private void setCallGraphOptions() {
-		if (getCallGraphAlgorithm() != null){
-			Options.v().setPhaseOption("cg."+getCallGraphAlgorithm(), "on");
-		}
-		if(getCallGraphOptions() != null) {
-			String[] options = getCallGraphOptions();
-			for (String option : options){
-				Options.v().setPhaseOption("cg."+getCallGraphAlgorithm(), option);
-			}
-		}
+	protected List<String> getIncludeList() {
+		List<String> includeList = new LinkedList<String>();
+		includeList.add("java.lang.*");
+		includeList.add("java.util.*");
+		includeList.add("java.io.*");
+		includeList.add("sun.misc.*");
+		includeList.add("java.net.*");
+		includeList.add("sun.nio.*");
+		includeList.add("javax.servlet.*");
+//		includeList.add("javax.crypto.*");
+		return includeList;
 	}
+
+    private void setCallGraphOptions() {
+        if (getCallGraphAlgorithm() != null){
+            Options.v().setPhaseOption("cg."+getCallGraphAlgorithm(), "on");
+        }
+        if(getCallGraphOptions() != null) {
+            String[] options = getCallGraphOptions();
+            for (String option : options){
+                Options.v().setPhaseOption("cg."+getCallGraphAlgorithm(), option);
+            }
+        }
+    }
 
 	private String getTargetClass() {
 		SootClass sootClass = new SootClass("dummyClass");

@@ -1,6 +1,6 @@
 # WPDS
 
-[![Run Status](https://api.shippable.com/projects/5a2536b9cf141c0700b92668/badge?branch=master)](https://app.shippable.com/github/johspaeth/WPDS) 
+<!--[![Run Status](https://api.shippable.com/projects/5a2536b9cf141c0700b92668/badge?branch=master)](https://app.shippable.com/github/johspaeth/WPDS) -->
 
 This repository contains a Java implementation of Weighted Pushdown Systems.
 Additionally, it contains an implementation of [Boomerang](boomerangPDS) and [IDEal](idealPDS) based on a Weighted Pushdown System.
@@ -11,6 +11,11 @@ All projects are maven projects and can be imported in any IDE.
 To build the projects and execute the test cases, run
 
 ``mvn clean test``
+
+# Examples
+
+Boomerang code examples can be found [here](https://github.com/CROSSINGTUD/WPDS/blob/master/boomerangPDS/src/main/java/boomerang/example/ExampleMain.java). Code examples for IDEal are given [here](https://github.com/CROSSINGTUD/WPDS/tree/master/idealPDS/src/main/java/inference/example).
+
 
 # Notes on the Test Cases
 

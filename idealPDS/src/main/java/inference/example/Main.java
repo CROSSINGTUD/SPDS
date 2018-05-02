@@ -134,7 +134,7 @@ public class Main {
 				
 				Map<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>> res = solver.run();
 				for(Entry<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>> e : res.entrySet()){
-					Table<Statement, Val, InferenceWeight> results = e.getValue().getResults();
+					Table<Statement, Val, InferenceWeight> results = e.getValue().asStatementValWeightTable();
 					System.out.println(Joiner.on("\n").join(results.cellSet()));
 				}
 			}

@@ -13,7 +13,6 @@ package test.cases.sets;
 
 import java.util.Iterator;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.AbstractBoomerangTest;

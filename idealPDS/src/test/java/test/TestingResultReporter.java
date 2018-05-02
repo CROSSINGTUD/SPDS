@@ -40,7 +40,7 @@ public class TestingResultReporter<W extends Weight>{
 	}
 
 	public void onSeedFinished(Node<Statement,Val> seed,final ForwardBoomerangResults<W> res) {
-		Table<Statement, Val, W> results = res.getResults();
+		Table<Statement, Val, W> results = res.asStatementValWeightTable();
 		for(final Entry<Unit, Assertion> e : stmtToResults.entries()){
 			if(e.getValue() instanceof ComparableResult){
 				final ComparableResult<W,Val> expectedResults = (ComparableResult) e.getValue();

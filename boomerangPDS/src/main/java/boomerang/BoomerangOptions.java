@@ -11,11 +11,11 @@
  *******************************************************************************/
 package boomerang;
 
-import boomerang.stats.IBoomerangStats;
 import com.google.common.base.Optional;
 
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
+import boomerang.stats.IBoomerangStats;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
@@ -46,5 +46,4 @@ public interface BoomerangOptions {
 
 	public boolean aliasing();
 	
-	public boolean computeAllAliases();
 }

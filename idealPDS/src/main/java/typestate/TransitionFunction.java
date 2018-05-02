@@ -19,6 +19,7 @@ import java.util.Set;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
+import boomerang.jimple.Statement;
 import typestate.finiteautomata.ITransition;
 import typestate.finiteautomata.State;
 import typestate.finiteautomata.Transition;
@@ -34,22 +35,30 @@ public class TransitionFunction extends Weight {
 
 	private static TransitionFunction zero;
 
-	public TransitionFunction(Set<? extends ITransition> trans) {
+	private Set<Statement> stateChangeStatements;
+
+	public TransitionFunction(Set<? extends ITransition> trans, Set<Statement> stateChangeStatements) {
+		this.stateChangeStatements = stateChangeStatements;
 		this.value = new HashSet<>(trans);
 		this.rep = null;
 	}
 
-	public TransitionFunction(ITransition trans) {
-		this(new HashSet<>(Collections.singleton(trans)));
+	public TransitionFunction(ITransition trans, Set<Statement> stateChangeStatements) {
+		this(new HashSet<>(Collections.singleton(trans)),stateChangeStatements);
 	}
 
 	private TransitionFunction(String rep) {
 		this.value = Sets.newHashSet();
 		this.rep = rep;
+		this.stateChangeStatements = Sets.newHashSet();
 	}
 
 	public Collection<ITransition> values(){
 		return Lists.newArrayList(value);
+	}
+	
+	public Set<Statement> getLastStateChangeStatements() {
+		return stateChangeStatements;
 	}
 	
 	@Override
@@ -64,21 +73,25 @@ public class TransitionFunction extends Weight {
 		TransitionFunction func = (TransitionFunction) other;
 		Set<ITransition> otherTransitions = func.value;
 		Set<ITransition> ress = new HashSet<>();
+		Set<Statement> newStateChangeStatements = new HashSet<>();
 		for (ITransition first : value) {
 			for (ITransition second : otherTransitions) {
 				if (second.equals(Transition.identity())) {
 					ress.add(first);
+					newStateChangeStatements.addAll(stateChangeStatements);
 				} else if (first.equals(Transition.identity())) {
 					ress.add(second);
+					newStateChangeStatements.addAll(func.stateChangeStatements);
 				} else if (first.to().equals(second.from())){
 					ress.add(new Transition(first.from(), second.to()));
+					newStateChangeStatements.addAll(func.stateChangeStatements);
 				}
 			}
 		}
 		if(ress.isEmpty()){
 			return zero();
 		}
-		return new TransitionFunction(ress);
+		return new TransitionFunction(ress,newStateChangeStatements);
 	}
 
 	@Override
@@ -96,11 +109,13 @@ public class TransitionFunction extends Weight {
 		if (other.equals(one()) || this.equals(one())) {
 			Set<ITransition> transitions = new HashSet<>((other.equals(one()) ? value : func.value));
 			transitions.add(Transition.identity());
-			return new TransitionFunction(transitions);
+			return new TransitionFunction(transitions,Sets.newHashSet((other.equals(one()) ? stateChangeStatements : func.stateChangeStatements)));
 		}
 		Set<ITransition> transitions = new HashSet<>(func.value);
 		transitions.addAll(value);
-		return new TransitionFunction(transitions);
+		HashSet<Statement> newStateChangeStmts = Sets.newHashSet(stateChangeStatements);
+		newStateChangeStmts.addAll(func.stateChangeStatements);
+		return new TransitionFunction(transitions,newStateChangeStmts);
 	};
 
 	public static TransitionFunction one() {

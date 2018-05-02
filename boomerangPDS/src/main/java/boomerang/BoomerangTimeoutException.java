@@ -11,7 +11,6 @@
  *******************************************************************************/
 package boomerang;
 
-import boomerang.stats.AdvancedBoomerangStats;
 import boomerang.stats.IBoomerangStats;
 
 class BoomerangTimeoutException extends RuntimeException {

@@ -161,4 +161,33 @@ public class CallPOITest extends AbstractBoomerangTest {
 	public static class Outer{
 		Object field;
 	}
+	
+	
+	@Test
+	public void indirectAllocationSiteViaParameterAliasedNoPreAllocs(){
+		A1 a = new A1();
+		a.b = new B1();
+		AllocObj1 alloc = new AllocObj1();
+		A1 b = a;
+		allocation(a,alloc);
+		B1 loadedFromB = b.b;
+		AllocObj1 alias = loadedFromB.c;
+		queryFor(alias);
+	}
+	
+	private void allocation(A1 a, AllocObj1 d) {
+		B1 intermediate = a.b;
+		intermediate.c = d;
+	}
+
+	private static class A1{
+		B1 b;
+	}
+	private static class B1{
+		AllocObj1 c;
+	}
+	private static class AllocObj1 implements AllocatedObject{
+		
+	}
+
 }
