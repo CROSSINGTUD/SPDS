@@ -75,13 +75,17 @@ public class IDEALSeedSolver<W extends Weight> {
 	public ForwardBoomerangResults<W> run() {
 		ForwardBoomerangResults<W> resultPhase1 = runPhase(this.phase1Solver,Phases.ObjectFlow);
 		if(resultPhase1.isTimedout()) {
-			analysisStopwatch.stop();
+			if(analysisStopwatch.isRunning()){
+				analysisStopwatch.stop();
+			}
 			timedoutSolver = this.phase1Solver;
 			throw new IDEALSeedTimeout(this,this.phase1Solver);
 		}
 		ForwardBoomerangResults<W> resultPhase2 = runPhase(this.phase2Solver,Phases.ValueFlow);
 		if(resultPhase2.isTimedout()) {
-			analysisStopwatch.stop();
+			if(analysisStopwatch.isRunning()){
+				analysisStopwatch.stop();
+			}
 			timedoutSolver = this.phase2Solver;
 			throw new IDEALSeedTimeout(this,this.phase2Solver);
 		}
