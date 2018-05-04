@@ -19,6 +19,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import boomerang.callgraph.BackwardsObservableICFG;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
@@ -28,7 +29,6 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 
 import boomerang.callgraph.ObservableICFG;
-import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.customize.BackwardEmptyCalleeFlow;
 import boomerang.customize.EmptyCalleeFlow;
 import boomerang.customize.ForwardEmptyCalleeFlow;
@@ -695,7 +695,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 	private ObservableICFG<Unit, SootMethod> bwicfg() {
 		if (bwicfg == null)
-			bwicfg = new ObservableDynamicICFG(icfg());
+			bwicfg = new BackwardsObservableICFG(icfg());
 		return bwicfg;
 	}
 
