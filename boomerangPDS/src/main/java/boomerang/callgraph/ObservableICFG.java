@@ -30,17 +30,25 @@ public interface ObservableICFG<N,M> {
      */
     List<N> getSuccsOf(N n);
 
-    //TODO Melanie change this one to use listeners
     /**
-     * Returns all callee methods for a given call.
+     * Registers a listener that will be notified whenever a callee is added
      */
-    Collection<M> getCalleesOfCallAt(N n);
+    void addCalleeListener(CalleeListener listener);
 
-    //TODO Melanie change this one to use listeners
     /**
-     * Returns all caller statements/nodes of a given method.
+     * Adds an edge to the call graph from the caller to the callee, {@link CalleeListener} will
+     * be notified
+     * @param m The node to add the callee to
+     * @param n The callee to add
      */
-    Collection<N> getCallersOf(M m);
+    void addCallee(M m, N n);
+
+    /**
+     * Registers a listener that will be notified whenever a caller is added.
+     */
+    void addCallerListener(CallerListener listener);
+
+    void addCaller(M m, N n);
 
     /**
      * Returns all call sites within a given method.
