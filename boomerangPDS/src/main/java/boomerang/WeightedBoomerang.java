@@ -28,7 +28,7 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 
 import boomerang.callgraph.ObservableICFG;
-import boomerang.callgraph.ObservableICFGImpl;
+import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.customize.BackwardEmptyCalleeFlow;
 import boomerang.customize.EmptyCalleeFlow;
 import boomerang.customize.ForwardEmptyCalleeFlow;
@@ -695,7 +695,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 	private ObservableICFG<Unit, SootMethod> bwicfg() {
 		if (bwicfg == null)
-			bwicfg = new ObservableICFGImpl(icfg());
+			bwicfg = new ObservableDynamicICFG(icfg());
 		return bwicfg;
 	}
 

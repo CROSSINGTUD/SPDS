@@ -34,7 +34,7 @@ import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.WholeProgramBoomerang;
 import boomerang.callgraph.ObservableICFG;
-import boomerang.callgraph.ObservableICFGImpl;
+import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
@@ -109,7 +109,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				icfg = new ObservableICFGImpl();
+				icfg = new ObservableDynamicICFG();
 				seedFactory = new SeedFactory<NoWeight>(){
 
 

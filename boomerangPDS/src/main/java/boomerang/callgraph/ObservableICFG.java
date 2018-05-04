@@ -38,17 +38,15 @@ public interface ObservableICFG<N,M> {
     /**
      * Adds an edge to the call graph from the caller to the callee, {@link CalleeListener} will
      * be notified
-     * @param m The node to add the callee to
-     * @param n The callee to add
+     * @param caller The node that acts as a source of the edge
+     * @param callee The node that acts as a target of the edge
      */
-    void addCallee(M m, N n);
+    void addCall(N caller, M callee);
 
     /**
      * Registers a listener that will be notified whenever a caller is added.
      */
     void addCallerListener(CallerListener listener);
-
-    void addCaller(M m, N n);
 
     /**
      * Returns all call sites within a given method.
@@ -106,8 +104,6 @@ public interface ObservableICFG<N,M> {
     boolean isBranchTarget(N stmt, N succ);
 
     Collection<N> getEndPointsOf(M m);
-
-    List<N> getPredsOfCallAt(N u);
 
     Set<N> allNonCallEndNodes();
 

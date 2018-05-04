@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import boomerang.callgraph.ObservableICFGImpl;
+import boomerang.callgraph.ObservableDynamicICFG;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
@@ -67,7 +67,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 
 	@Rule
 	public Timeout timeout = new Timeout(10000000);
-	private ObservableICFGImpl icfg;
+	private ObservableDynamicICFG icfg;
 	private Collection<? extends Query> allocationSites;
 	protected Collection<? extends Query> queryForCallSites;
 	protected Multimap<Query,Query> expectedAllocsForQuery = HashMultimap.create();
@@ -83,7 +83,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				icfg = new ObservableICFGImpl();
+				icfg = new ObservableDynamicICFG();
 				seedFactory = new SeedFactory<NoWeight>(){
 
 

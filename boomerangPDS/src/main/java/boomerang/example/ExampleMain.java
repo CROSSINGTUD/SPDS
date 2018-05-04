@@ -20,7 +20,7 @@ import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.DefaultBoomerangOptions;
 import boomerang.callgraph.ObservableICFG;
-import boomerang.callgraph.ObservableICFGImpl;
+import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
@@ -110,7 +110,7 @@ public class ExampleMain {
 	private static Transformer createAnalysisTransformer() {
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				final ObservableICFG icfg = new ObservableICFGImpl();
+				final ObservableICFG icfg = new ObservableDynamicICFG();
 				BackwardQuery query = createQuery(icfg);
 				
 				//1. Create a Boomerang solver.
