@@ -1,5 +1,5 @@
 package boomerang.callgraph;
 
-public interface CalleeListener<M, N> {
-    void onCalleeAdded(M m, N n);
+public interface CalleeListener<N, M> {
+    void onCalleeAdded(N n, M m);
 }
