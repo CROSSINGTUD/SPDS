@@ -21,12 +21,12 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 import boomerang.Query;
+import boomerang.callgraph.ObservableICFG;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.SingleNode;
@@ -149,7 +149,7 @@ public abstract class SeedFactory<W extends Weight> {
         return new SingleNode<>(r);
     }
 
-    public abstract BiDiInterproceduralCFG<Unit,SootMethod> icfg();
+    public abstract ObservableICFG<Unit,SootMethod> icfg();
 
 	public Collection<SootMethod> getMethodScope(Query query) {
 		Set<SootMethod> scope = Sets.newHashSet();

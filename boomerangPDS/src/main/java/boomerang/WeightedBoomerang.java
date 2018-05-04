@@ -13,7 +13,6 @@ package boomerang;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -28,6 +27,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 
+import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableICFGImpl;
 import boomerang.customize.BackwardEmptyCalleeFlow;
 import boomerang.customize.EmptyCalleeFlow;
 import boomerang.customize.ForwardEmptyCalleeFlow;
@@ -64,8 +65,6 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.NewMultiArrayExpr;
 import soot.jimple.Stmt;
 import soot.jimple.StringConstant;
-import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.WitnessNode;
@@ -217,7 +216,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	};
 
 
-	private BackwardsInterproceduralCFG bwicfg;
+	private ObservableICFG<Unit, SootMethod> bwicfg;
 	private EmptyCalleeFlow forwardEmptyCalleeFlow = new ForwardEmptyCalleeFlow();
 	private EmptyCalleeFlow backwardEmptyCalleeFlow = new BackwardEmptyCalleeFlow();
 	
@@ -694,9 +693,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		return fact.equals(sourceQuery.var());
 	}
 
-	private BiDiInterproceduralCFG<Unit, SootMethod> bwicfg() {
+	private ObservableICFG<Unit, SootMethod> bwicfg() {
 		if (bwicfg == null)
-			bwicfg = new BackwardsInterproceduralCFG(icfg());
+			bwicfg = new ObservableICFGImpl(icfg());
 		return bwicfg;
 	}
 
@@ -1008,7 +1007,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		}
 	}
 
-	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
+	public abstract ObservableICFG<Unit, SootMethod> icfg();
 
 	protected abstract WeightFunctions<Statement, Val, Field, W> getForwardFieldWeights();
 

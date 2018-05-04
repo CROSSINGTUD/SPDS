@@ -13,6 +13,7 @@ package boomerang;
 
 import com.google.common.base.Optional;
 
+import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
 import soot.SootMethod;
@@ -25,7 +26,6 @@ import soot.jimple.NewArrayExpr;
 import soot.jimple.NewMultiArrayExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 
@@ -42,7 +42,7 @@ public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 	}
 
 	@Override
-	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, BiDiInterproceduralCFG<Unit, SootMethod> icfg) {
+	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, ObservableICFG<Unit, SootMethod> icfg) {
 		if (!(stmt instanceof AssignStmt)) {
 			return Optional.absent();
 		}

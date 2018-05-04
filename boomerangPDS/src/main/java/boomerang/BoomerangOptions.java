@@ -13,6 +13,7 @@ package boomerang;
 
 import com.google.common.base.Optional;
 
+import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
 import boomerang.stats.IBoomerangStats;
@@ -20,7 +21,6 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public interface BoomerangOptions {
 	
@@ -39,7 +39,7 @@ public interface BoomerangOptions {
 
 	public boolean isAllocationVal(Value val);
 
-	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, BiDiInterproceduralCFG<Unit, SootMethod> icfg);
+	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, ObservableICFG<Unit, SootMethod> icfg);
 
 	public boolean isIgnoredMethod(SootMethod method);
 	public IBoomerangStats statsFactory();

@@ -34,13 +34,13 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 
+import boomerang.callgraph.ObservableICFG;
 import boomerang.BackwardQuery;
 import boomerang.Query;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.util.RegExAccessPath;
-import heros.InterproceduralCFG;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
@@ -54,13 +54,13 @@ import wpds.impl.Weight;
 public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 
 	private File ideVizFile;
-	private InterproceduralCFG<Unit, SootMethod> icfg;
+	private ObservableICFG<Unit, SootMethod> icfg;
 	private Table<Query, SootMethod, Map<Transition<Statement, INode<Val>>, W>> reachedNodes = HashBasedTable.create();
 	private Table<Query, SootMethod, Set<Rule<Statement, INode<Val>, W>>> rules = HashBasedTable.create();
 	private Map<Object, Integer> objectToInteger = new HashMap<>();
 	private int charSize;
 	
-	public IDEVizDebugger(File ideVizFile, InterproceduralCFG<Unit, SootMethod> icfg) {
+	public IDEVizDebugger(File ideVizFile, ObservableICFG<Unit, SootMethod> icfg) {
 		this.ideVizFile = ideVizFile;
 		this.icfg = icfg;
 	}

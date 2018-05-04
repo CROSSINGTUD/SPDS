@@ -16,12 +16,12 @@ import java.util.Collection;
 import boomerang.BoomerangOptions;
 import boomerang.DefaultBoomerangOptions;
 import boomerang.WeightedForwardQuery;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import soot.SootMethod;
 import soot.Unit;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.WeightFunctions;
 import wpds.impl.Weight;
 
@@ -51,7 +51,7 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 	 */
 	public abstract WeightFunctions<Statement,Val,Statement,W> weightFunctions();
 
-	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
+	public abstract ObservableICFG<Unit, SootMethod> icfg();
 
 	public boolean enableStrongUpdates() {
 		return true;

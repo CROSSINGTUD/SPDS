@@ -36,7 +36,7 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.util.RegExAccessPath;
-import heros.InterproceduralCFG;
+import boomerang.callgraph.ObservableICFG;
 import pathexpression.IRegEx;
 import soot.RefType;
 import soot.Scene;
@@ -71,7 +71,7 @@ import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {
 
-	protected final InterproceduralCFG<Unit, SootMethod> icfg;
+	protected final ObservableICFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
 	private final Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> generatedFieldState;
@@ -88,7 +88,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
 	private Collection<SootMethod> scopeOpeningReachableMethods = Sets.newHashSet();
 	protected final BoomerangOptions options;
-	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg,
+	public AbstractBoomerangSolver(ObservableICFG<Unit, SootMethod> icfg,
 			Query query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
 			BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
 			 NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries) {

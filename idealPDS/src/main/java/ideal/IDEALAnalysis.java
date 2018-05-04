@@ -20,12 +20,12 @@ import com.google.common.collect.Maps;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedForwardQuery;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import wpds.impl.Weight;
 
 public class IDEALAnalysis<W extends Weight> {
@@ -43,7 +43,7 @@ public class IDEALAnalysis<W extends Weight> {
 		this.seedFactory = new SeedFactory<W>(){
 
 			@Override
-			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+			public ObservableICFG<Unit, SootMethod> icfg() {
 				return analysisDefinition.icfg();
 			}
 			@Override

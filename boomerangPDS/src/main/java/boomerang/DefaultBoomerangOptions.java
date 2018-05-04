@@ -13,6 +13,7 @@ package boomerang;
 
 import com.google.common.base.Optional;
 
+import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
 import boomerang.stats.IBoomerangStats;
@@ -31,7 +32,6 @@ import soot.jimple.NullConstant;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.StringConstant;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 public class DefaultBoomerangOptions implements BoomerangOptions {
 	
@@ -134,7 +134,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		return trackAnySubclassOfThrowable() && Scene.v().getFastHierarchy().canStoreType(method.getDeclaringClass().getType(), Scene.v().getType("java.lang.Throwable"));
 	}
 	@Override
-	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, BiDiInterproceduralCFG<Unit, SootMethod> icfg) {
+	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, ObservableICFG<Unit, SootMethod> icfg) {
 		if (!(stmt instanceof AssignStmt)) {
 			return Optional.absent();
 		}

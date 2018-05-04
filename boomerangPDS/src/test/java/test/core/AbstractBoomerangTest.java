@@ -33,6 +33,8 @@ import boomerang.IntAndStringBoomerangOptions;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.WholeProgramBoomerang;
+import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableICFGImpl;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
@@ -42,7 +44,6 @@ import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
-import boomerang.stats.IBoomerangStats;
 import boomerang.util.AccessPath;
 import boomerang.util.AccessPathParser;
 import heros.utilities.DefaultValueMap;
@@ -62,8 +63,6 @@ import soot.jimple.NewExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.StringConstant;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
@@ -81,7 +80,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	@Rule
 	public Timeout timeout = new Timeout(10000000);
-	private JimpleBasedInterproceduralCFG icfg;
+	private ObservableICFG<Unit, SootMethod> icfg;
 	private Collection<? extends Query> allocationSites;
 	protected Collection<? extends Query> queryForCallSites;
 	protected Collection<Error> unsoundErrors = Sets.newHashSet();
@@ -110,12 +109,12 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				icfg = new JimpleBasedInterproceduralCFG(true);
+				icfg = new ObservableICFGImpl();
 				seedFactory = new SeedFactory<NoWeight>(){
 
 
 					@Override
-					public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+					public ObservableICFG<Unit, SootMethod> icfg() {
 						return icfg;
 					}
 
@@ -309,7 +308,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			});
 			Boomerang solver = new Boomerang(options) {
 				@Override
-				public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+				public ObservableICFG<Unit, SootMethod> icfg() {
 					return icfg;
 				}
 				
@@ -358,7 +357,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			}
 		}) {
 			@Override
-			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+			public ObservableICFG<Unit, SootMethod> icfg() {
 				return icfg;
 			}
 

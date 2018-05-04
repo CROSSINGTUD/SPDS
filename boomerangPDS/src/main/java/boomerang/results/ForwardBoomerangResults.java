@@ -14,6 +14,7 @@ import com.google.common.collect.Table;
 
 import boomerang.ForwardQuery;
 import boomerang.Query;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -26,7 +27,6 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -40,13 +40,13 @@ public class ForwardBoomerangResults<W extends Weight> {
 
 	private final ForwardQuery query;
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers;
-	private final BiDiInterproceduralCFG<Unit, SootMethod> bwicfg;
-	private final BiDiInterproceduralCFG<Unit, SootMethod> icfg;
+	private final ObservableICFG<Unit, SootMethod> bwicfg;
+	private final ObservableICFG<Unit, SootMethod> icfg;
 	private final boolean timedout;
 	private final IBoomerangStats<W> stats;
 	private Stopwatch analysisWatch;
 
-	public ForwardBoomerangResults(ForwardQuery query, boolean timedout, DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers, BiDiInterproceduralCFG<Unit, SootMethod> icfg, BiDiInterproceduralCFG<Unit, SootMethod> bwicfg, IBoomerangStats<W> stats, Stopwatch analysisWatch) {
+	public ForwardBoomerangResults(ForwardQuery query, boolean timedout, DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers, ObservableICFG<Unit, SootMethod> icfg, ObservableICFG<Unit, SootMethod> bwicfg, IBoomerangStats<W> stats, Stopwatch analysisWatch) {
 		this.query = query;
 		this.timedout = timedout;
 		this.queryToSolvers = queryToSolvers;

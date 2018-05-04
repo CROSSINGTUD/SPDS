@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import boomerang.callgraph.ObservableICFGImpl;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
@@ -34,6 +35,7 @@ import boomerang.DefaultBoomerangOptions;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
@@ -55,8 +57,6 @@ import soot.jimple.ClassConstant;
 import soot.jimple.InvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.nodes.Node;
 import test.core.selfrunning.AbstractTestingFramework;
 import wpds.impl.Weight.NoWeight;
@@ -67,7 +67,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 
 	@Rule
 	public Timeout timeout = new Timeout(10000000);
-	private JimpleBasedInterproceduralCFG icfg;
+	private ObservableICFGImpl icfg;
 	private Collection<? extends Query> allocationSites;
 	protected Collection<? extends Query> queryForCallSites;
 	protected Multimap<Query,Query> expectedAllocsForQuery = HashMultimap.create();
@@ -83,12 +83,12 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				icfg = new JimpleBasedInterproceduralCFG(true);
+				icfg = new ObservableICFGImpl();
 				seedFactory = new SeedFactory<NoWeight>(){
 
 
 					@Override
-					public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+					public ObservableICFG<Unit, SootMethod> icfg() {
 						return icfg;
 					}
 
@@ -212,7 +212,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 		};
 		solver = new Boomerang(options) {
 			@Override
-			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+			public ObservableICFG<Unit, SootMethod> icfg() {
 				return icfg;
 			}
 			

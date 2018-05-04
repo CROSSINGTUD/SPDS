@@ -14,6 +14,7 @@ package ideal;
 import java.util.Map.Entry;
 
 import boomerang.*;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -25,7 +26,6 @@ import boomerang.solver.AbstractBoomerangSolver;
 import com.google.common.base.Stopwatch;
 import soot.SootMethod;
 import soot.Unit;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
@@ -66,7 +66,7 @@ public class IDEALSeedSolver<W extends Weight> {
 		this.boomerangSolver = new Boomerang() {
 			
 			@Override
-			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+			public ObservableICFG<Unit, SootMethod> icfg() {
 				return analysisDefinition.icfg();
 			}
 		};
@@ -95,7 +95,7 @@ public class IDEALSeedSolver<W extends Weight> {
 	private WeightedBoomerang<W> createSolver() {
 		return new WeightedBoomerang<W>(analysisDefinition.boomerangOptions()) {
 			@Override
-			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+			public ObservableICFG<Unit, SootMethod> icfg() {
 				return analysisDefinition.icfg();
 			}
 
