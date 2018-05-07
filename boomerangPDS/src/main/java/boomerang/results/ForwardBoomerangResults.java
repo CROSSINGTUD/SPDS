@@ -14,6 +14,7 @@ import com.google.common.collect.Table;
 
 import boomerang.ForwardQuery;
 import boomerang.Query;
+import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -97,16 +98,19 @@ public class ForwardBoomerangResults<W extends Weight> {
 			for(Unit ep : icfg.getEndPointsOf(flowReaches)){
 				Statement exitStmt = new Statement((Stmt) ep, flowReaches);
 				Set<State> escapes = Sets.newHashSet();
-				for(Unit callSite : icfg.getCallersOf(flowReaches)){
-					SootMethod callee = icfg.getMethodOf(callSite);
-					if(visitedMethods.contains(callee)){
-						for(Entry<Val, W> valAndW : res.row(exitStmt).entrySet()){
-							for(Unit retSite : icfg.getSuccsOf(callSite)){
-								escapes.addAll(forwardSolver.computeReturnFlow(flowReaches, (Stmt) ep, valAndW.getKey(), (Stmt) callSite, (Stmt) retSite));
+				icfg.addCallerListener((CallerListener<Unit, SootMethod>) (unit, sootMethod) -> {
+					if (sootMethod.equals(flowReaches)){
+						SootMethod callee = icfg.getMethodOf(unit);
+						if(visitedMethods.contains(callee)){
+							for(Entry<Val, W> valAndW : res.row(exitStmt).entrySet()){
+								for(Unit retSite : icfg.getSuccsOf(unit)){
+									escapes.addAll(forwardSolver.computeReturnFlow(flowReaches, (
+											Stmt) ep, valAndW.getKey(), (Stmt) unit, (Stmt) retSite));
+								}
 							}
 						}
 					}
-				}
+				});
 				if(escapes.isEmpty()){
 					Map<Val, W> row = res.row(exitStmt);
 					findLastUsage(exitStmt, row, destructingStatement,forwardSolver);
