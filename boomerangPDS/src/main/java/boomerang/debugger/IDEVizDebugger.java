@@ -34,6 +34,8 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.BackwardQuery;
 import boomerang.Query;
@@ -253,22 +255,27 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			if (icfg.isCallStmt(u)) {
 				label.put("callSite", icfg.isCallStmt(u));
 				JSONArray callees = new JSONArray();
-				for (SootMethod callee : icfg.getCalleesOfCallAt(u)){
-					if(callee != null && callee.toString() != null){
-						callees.add(new JSONMethod(callee));
+				icfg.addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
+					if (unit.equals(u) && sootMethod != null && sootMethod.toString() != null){
+						callees.add(new JSONMethod(sootMethod));
 					}
-				}
+				});
 				label.put("callees", callees);
 			}
 			if (icfg.isExitStmt(u)) {
 				label.put("returnSite", icfg.isExitStmt(u));
 				JSONArray callees = new JSONArray();
 				Set<SootMethod> callers = new HashSet<>();
-				for (Unit callsite : icfg.getCallersOf(icfg.getMethodOf(u)))
-					callers.add(icfg.getMethodOf(callsite));
+				SootMethod callingMethod = icfg.getMethodOf(u);
+				icfg.addCallerListener((CallerListener<Unit,SootMethod>) (unit, sootMethod) -> {
+					if (sootMethod.equals(callingMethod)){
+						callers.add(icfg.getMethodOf(unit));
+					}
+				});
 	
 				for (SootMethod caller : callers)
 					callees.add(new JSONMethod(caller));
+				//TODO check use of callers and callees here, these seem off
 				label.put("callers", callees);
 			}
 			label.put("stmtId", id(u));
