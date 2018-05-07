@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import boomerang.callgraph.BackwardsObservableICFG;
+import boomerang.callgraph.CalleeListener;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
@@ -113,18 +114,21 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					Statement exitStmt = trans.getLabel();
 					SootMethod callee = exitStmt.getMethod();
 					if (!callee.isStaticInitializer()) {
-						for (Unit callSite : WeightedBoomerang.this.icfg().getCallersOf(callee)) {
-							if(!((Stmt) callSite).containsInvokeExpr())
-								continue;
-							
-							final Statement callStatement = new Statement((Stmt) callSite,
-									WeightedBoomerang.this.icfg().getMethodOf(callSite));
+						icfg().addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
+							if (callee.equals(sootMethod)){
+								if(((Stmt) unit).containsInvokeExpr()){
+									final Statement callStatement = new Statement((Stmt) unit,
+											WeightedBoomerang.this.icfg().getMethodOf(unit));
 
-							boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) callSite, returningFact.fact());
-							if(valueUsedInStatement || AbstractBoomerangSolver.assignsValue((Stmt)callSite,returningFact.fact())){
-								unbalancedReturnFlow(callStatement, returningFact, trans, weight);
+									boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) unit,
+											returningFact.fact());
+									if(valueUsedInStatement ||
+											AbstractBoomerangSolver.assignsValue((Stmt) unit,returningFact.fact())){
+										unbalancedReturnFlow(callStatement, returningFact, trans, weight);
+									}
+								}
 							}
-						}
+						});
 					} else {
 						for (SootMethod entryPoint : Scene.v().getEntryPoints()) {
 							for (Unit ep : WeightedBoomerang.this.icfg().getStartPointsOf(entryPoint)) {
