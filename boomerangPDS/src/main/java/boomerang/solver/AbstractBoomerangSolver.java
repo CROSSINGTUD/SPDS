@@ -31,12 +31,13 @@ import com.google.common.collect.Table;
 
 import boomerang.BoomerangOptions;
 import boomerang.Query;
+import boomerang.callgraph.CallerListener;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.util.RegExAccessPath;
-import boomerang.callgraph.ObservableICFG;
 import pathexpression.IRegEx;
 import soot.RefType;
 import soot.Scene;
@@ -381,16 +382,15 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 			}
 		} else{
-			for (Unit callSite : icfg.getCallersOf(method)) {
-				if(!((Stmt)callSite).containsInvokeExpr()){
-					continue;
+			icfg.addCallerListener((CallerListener<Unit, SootMethod>) (unit, sootMethod) -> {
+				if (method.equals(sootMethod) && ((Stmt) unit).containsInvokeExpr()){
+					for (Unit returnSite : icfg.getSuccsOf(unit)) {
+						Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) unit,
+								(Stmt) returnSite);
+						out.addAll(outFlow);
+					}
 				}
-				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-					Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) callSite,
-							(Stmt) returnSite);
-					out.addAll(outFlow);
-				}
-			}
+			});
 		}
 		return out;
 	}
