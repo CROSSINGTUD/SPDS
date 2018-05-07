@@ -20,7 +20,7 @@ import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.DefaultBoomerangOptions;
 import boomerang.callgraph.ObservableICFG;
-import boomerang.callgraph.ObservableDynamicICFG;
+import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
@@ -38,6 +38,8 @@ import soot.Unit;
 import soot.Value;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.callgraph.ReachableMethods;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import soot.options.Options;
 import soot.util.queue.QueueReader;
 import wpds.impl.Weight.NoWeight;
@@ -110,7 +112,8 @@ public class ExampleMain {
 	private static Transformer createAnalysisTransformer() {
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				final ObservableICFG icfg = new ObservableDynamicICFG();
+				final BiDiInterproceduralCFG<Unit, SootMethod> biDiICFG= new JimpleBasedInterproceduralCFG();
+				final ObservableICFG icfg = new ObservableStaticICFG(biDiICFG);
 				BackwardQuery query = createQuery(icfg);
 				
 				//1. Create a Boomerang solver.
