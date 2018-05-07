@@ -31,6 +31,7 @@ import com.google.common.collect.Table;
 
 import boomerang.BoomerangOptions;
 import boomerang.Query;
+import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
@@ -67,7 +68,6 @@ import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.State;
-import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {
@@ -398,17 +398,19 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
-		for (SootMethod callee : icfg.getCalleesOfCallAt(callSite)) {
-			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
-				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-					Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
-							new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
-					onCallFlow(callee, callSite, value, res);
-					out.addAll(res);
+		icfg.addCalleeListener((CalleeListener<Unit, SootMethod>)(unit, sootMethod) -> {
+			if (unit.equals(callSite)){
+				for (Unit calleeSp : icfg.getStartPointsOf(sootMethod)) {
+					for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+						Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
+								new Statement(callSite, caller), invokeExpr, value, sootMethod, (Stmt) calleeSp);
+						onCallFlow(sootMethod, callSite, value, res);
+						out.addAll(res);
+					}
 				}
+				addReachable(sootMethod);
 			}
-			addReachable(callee);
-		}
+		});
 		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
 			if (icfg.getCalleesOfCallAt(callSite).isEmpty()) {
 				out.addAll(computeNormalFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
