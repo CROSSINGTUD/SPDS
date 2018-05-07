@@ -115,18 +115,16 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					SootMethod callee = exitStmt.getMethod();
 					if (!callee.isStaticInitializer()) {
 						icfg().addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
-							if (callee.equals(sootMethod)){
-								if(((Stmt) unit).containsInvokeExpr()){
-									final Statement callStatement = new Statement((Stmt) unit,
-											WeightedBoomerang.this.icfg().getMethodOf(unit));
+							if (callee.equals(sootMethod) && ((Stmt) unit).containsInvokeExpr()){
+                                final Statement callStatement = new Statement((Stmt) unit,
+                                        WeightedBoomerang.this.icfg().getMethodOf(unit));
 
-									boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) unit,
-											returningFact.fact());
-									if(valueUsedInStatement ||
-											AbstractBoomerangSolver.assignsValue((Stmt) unit,returningFact.fact())){
-										unbalancedReturnFlow(callStatement, returningFact, trans, weight);
-									}
-								}
+                                boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) unit,
+                                        returningFact.fact());
+                                if(valueUsedInStatement ||
+                                        AbstractBoomerangSolver.assignsValue((Stmt) unit,returningFact.fact())){
+                                    unbalancedReturnFlow(callStatement, returningFact, trans, weight);
+                                }
 							}
 						});
 					} else {
