@@ -412,9 +412,9 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			}
 		});
 		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-			if (icfg.getCalleesOfCallAt(callSite).isEmpty()) {
-				out.addAll(computeNormalFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
-			}
+		    //TODO Melanie Check if this makes sense when computing demand-driven call graph
+            // typically this is only done when there are no callees, now we just do it every time?
+			out.addAll(computeNormalFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
 			out.addAll(getEmptyCalleeFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
 		}
 		return out;
