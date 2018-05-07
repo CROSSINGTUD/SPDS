@@ -21,6 +21,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 import boomerang.Query;
+import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import soot.Scene;
 import soot.SootClass;
@@ -126,17 +127,24 @@ public abstract class SeedFactory<W extends Weight> {
     	if(!m.hasActiveBody())
     	    return;
     	for(Unit u : m.getActiveBody().getUnits()) {
-            Collection<SootMethod> calledMethods = (icfg().isCallStmt(u) ? icfg().getCalleesOfCallAt(u)
-                    : new HashSet<SootMethod>());
+            Collection<SootMethod> calledMethods = new HashSet<>();
+			if (icfg().isCallStmt(u)) {
+				icfg().addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
+					if (unit.equals(u)) {
+						calledMethods.add(sootMethod);
+					}
+				});
+			}
             for (Query seed : generate(m, (Stmt) u, calledMethods)) {
                 seedToTransition.put(seed, t);
             }
             if (icfg().isCallStmt(u)) {
-                for (SootMethod callee : icfg().getCalleesOfCallAt(u)) {
-                    if (!callee.hasActiveBody())
-                        continue;
-                    addPushRule(new Method(m),new Method(callee));
-                }
+            	icfg().addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
+					if (unit.equals(u) && sootMethod.hasActiveBody()){
+						addPushRule(new Method(m), new Method(sootMethod));
+
+					}
+				});
             }
         }
     }
