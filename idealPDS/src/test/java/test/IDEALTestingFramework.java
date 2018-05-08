@@ -19,6 +19,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import boomerang.WeightedForwardQuery;
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableStaticICFG;
 import com.google.common.collect.Lists;
 
 import boomerang.Query;
@@ -48,7 +51,7 @@ import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
-	protected JimpleBasedInterproceduralCFG icfg;
+	protected ObservableICFG<Unit,SootMethod> icfg;
 	private static final boolean FAIL_ON_IMPRECISE = false;
 
 
@@ -58,7 +61,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		return new IDEALAnalysis<TransitionFunction>(new IDEALAnalysisDefinition<TransitionFunction>() {
 
 			@Override
-			public JimpleBasedInterproceduralCFG icfg() {
+			public ObservableICFG<Unit, SootMethod> icfg() {
 				return icfg;
 			}
 
@@ -83,7 +86,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected SceneTransformer createAnalysisTransformer() throws ImprecisionException {
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				icfg = new JimpleBasedInterproceduralCFG(true);
+				icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(true));
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
 				System.out.println(sootTestMethod.getActiveBody());
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
@@ -129,8 +132,11 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		visited.add(m);
 		Body activeBody = m.getActiveBody();
 		for (Unit callSite : icfg.getCallsFromWithin(m)) {
-			for (SootMethod callee : icfg.getCalleesOfCallAt(callSite))
-				parseExpectedQueryResults(callee, queries, visited);
+			icfg.addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
+				if (unit.equals(callSite)){
+					parseExpectedQueryResults(sootMethod, queries, visited);
+				}
+			});
 		}
 		for (Unit u : activeBody.getUnits()) {
 			if (!(u instanceof Stmt))

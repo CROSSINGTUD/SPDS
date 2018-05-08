@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableStaticICFG;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Table;
 
@@ -99,12 +101,13 @@ public class Main {
 	private static Transformer createAnalysisTransformer() {
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				JimpleBasedInterproceduralCFG icfg = new JimpleBasedInterproceduralCFG(true);
+				JimpleBasedInterproceduralCFG jimpleIcfg = new JimpleBasedInterproceduralCFG(true);
+				ObservableStaticICFG icfg = new ObservableStaticICFG(jimpleIcfg);
 				
 				IDEALAnalysis<InferenceWeight> solver = new IDEALAnalysis<>(new IDEALAnalysisDefinition<InferenceWeight>() {
 
 					@Override
-					public JimpleBasedInterproceduralCFG icfg() {
+					public ObservableICFG icfg() {
 						return icfg;
 					}
 
