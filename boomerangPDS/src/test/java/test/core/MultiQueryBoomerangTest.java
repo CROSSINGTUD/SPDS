@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import boomerang.callgraph.ObservableDynamicICFG;
 import org.junit.Rule;
 import org.junit.rules.Timeout;
 
@@ -35,7 +34,9 @@ import boomerang.DefaultBoomerangOptions;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
+import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
@@ -57,6 +58,7 @@ import soot.jimple.ClassConstant;
 import soot.jimple.InvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.Stmt;
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.nodes.Node;
 import test.core.selfrunning.AbstractTestingFramework;
 import wpds.impl.Weight.NoWeight;
@@ -67,7 +69,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 
 	@Rule
 	public Timeout timeout = new Timeout(10000000);
-	private ObservableDynamicICFG icfg;
+	private ObservableICFG<Unit, SootMethod> icfg;
 	private Collection<? extends Query> allocationSites;
 	protected Collection<? extends Query> queryForCallSites;
 	protected Multimap<Query,Query> expectedAllocsForQuery = HashMultimap.create();
@@ -83,7 +85,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				icfg = new ObservableDynamicICFG();
+				icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
 				seedFactory = new SeedFactory<NoWeight>(){
 
 
@@ -256,8 +258,11 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 		visited.add(new Node<SootMethod, Stmt>(m, callSite));
 		Body activeBody = m.getActiveBody();
 		for (Unit cs : icfg.getCallsFromWithin(m)) {
-			for (SootMethod callee : icfg.getCalleesOfCallAt(cs))
-				extractQuery(callee, predicate, queries, (callSite == null ? (Stmt) cs : callSite), visited);
+			icfg.addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
+				if (unit.equals(cs)){
+					extractQuery(sootMethod, predicate, queries, (callSite == null ? (Stmt) cs : callSite), visited);
+				}
+			});
 		}
 		for (Unit u : activeBody.getUnits()) {
 			if (!(u instanceof Stmt))
