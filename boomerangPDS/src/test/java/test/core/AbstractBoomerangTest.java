@@ -34,7 +34,7 @@ import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.WholeProgramBoomerang;
 import boomerang.callgraph.ObservableICFG;
-import boomerang.callgraph.ObservableDynamicICFG;
+import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
@@ -63,6 +63,7 @@ import soot.jimple.NewExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.StringConstant;
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
@@ -109,7 +110,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				icfg = new ObservableDynamicICFG();
+				icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
 				seedFactory = new SeedFactory<NoWeight>(){
 
 
