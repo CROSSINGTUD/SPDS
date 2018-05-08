@@ -13,6 +13,7 @@ package boomerang;
 
 import com.google.common.base.Optional;
 
+import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
@@ -26,6 +27,8 @@ import soot.jimple.NewArrayExpr;
 import soot.jimple.NewMultiArrayExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 
@@ -54,12 +57,18 @@ public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 			return Optional.of(new AllocVal(as.getLeftOp(), m,as.getRightOp()));
 		}
 		if(as.containsInvokeExpr()){
-			for(SootMethod callee : icfg.getCalleesOfCallAt(as)){
-				for(Unit u : icfg.getEndPointsOf(callee)){
-					if(u instanceof ReturnStmt && isAllocationVal(((ReturnStmt) u).getOp())){
-						return Optional.of(new AllocVal(as.getLeftOp(), m,((ReturnStmt) u).getOp()));
+			AtomicReference<AllocVal> returnValue = new AtomicReference<>();
+			icfg.addCalleeListener((CalleeListener<Unit,SootMethod>) (unit, sootMethod) -> {
+				if (unit.equals(as)){
+					for(Unit u : icfg.getEndPointsOf(sootMethod)){
+						if(u instanceof ReturnStmt && isAllocationVal(((ReturnStmt) u).getOp())){
+							returnValue.set(new AllocVal(as.getLeftOp(), m, ((ReturnStmt) u).getOp()));
+						}
 					}
 				}
+			});
+			if (returnValue.get() != null){
+				return Optional.of(returnValue.get());
 			}
 		}
 		return super.getAllocationVal(m, stmt, fact, icfg);
