@@ -21,7 +21,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 import boomerang.Query;
-import boomerang.callgraph.CallListener;
+import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import soot.Scene;
 import soot.SootClass;
@@ -129,7 +129,7 @@ public abstract class SeedFactory<W extends Weight> {
     	for(Unit u : m.getActiveBody().getUnits()) {
             Collection<SootMethod> calledMethods = new HashSet<>();
 			if (icfg().isCallStmt(u)) {
-				icfg().addCallListener((CallListener<Unit, SootMethod>) (unit, sootMethod) -> {
+				icfg().addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
 					if (unit.equals(u)) {
 						calledMethods.add(sootMethod);
 					}
@@ -139,7 +139,7 @@ public abstract class SeedFactory<W extends Weight> {
                 seedToTransition.put(seed, t);
             }
             if (icfg().isCallStmt(u)) {
-            	icfg().addCallListener((CallListener<Unit, SootMethod>) (unit, sootMethod) -> {
+            	icfg().addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
 					if (unit.equals(u) && sootMethod.hasActiveBody()){
 						addPushRule(new Method(m), new Method(sootMethod));
 

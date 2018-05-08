@@ -36,12 +36,17 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     @Override
+    public void addCalleeListener(CalleeListener listener) {
+        //TODO notify listener about all relevant callees at once
+    }
+
+    @Override
     public void addCall(Unit caller, SootMethod callee) {
         throw new UnsupportedOperationException("Static ICFG should not get new calls");
     }
 
     @Override
-    public void addCallListener(CallListener listener) {
+    public void addCallerListener(CallerListener listener) {
         //TODO notify listener about all relevant callers at once
     }
 

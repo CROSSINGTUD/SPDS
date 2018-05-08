@@ -13,7 +13,7 @@ package boomerang;
 
 import com.google.common.base.Optional;
 
-import boomerang.callgraph.CallListener;
+import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Val;
@@ -58,7 +58,7 @@ public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 		}
 		if(as.containsInvokeExpr()){
 			AtomicReference<AllocVal> returnValue = new AtomicReference<>();
-			icfg.addCallListener((CallListener<Unit,SootMethod>) (unit, sootMethod) -> {
+			icfg.addCalleeListener((CalleeListener<Unit,SootMethod>) (unit, sootMethod) -> {
 				if (unit.equals(as)){
 					for(Unit u : icfg.getEndPointsOf(sootMethod)){
 						if(u instanceof ReturnStmt && isAllocationVal(((ReturnStmt) u).getOp())){

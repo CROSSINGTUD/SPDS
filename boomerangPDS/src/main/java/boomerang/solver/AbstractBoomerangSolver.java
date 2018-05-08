@@ -31,7 +31,8 @@ import com.google.common.collect.Table;
 
 import boomerang.BoomerangOptions;
 import boomerang.Query;
-import boomerang.callgraph.CallListener;
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
@@ -381,7 +382,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 			}
 		} else{
-			icfg.addCallListener((CallListener<Unit, SootMethod>) (unit, sootMethod) -> {
+			icfg.addCallerListener((CallerListener<Unit, SootMethod>) (unit, sootMethod) -> {
 				if (method.equals(sootMethod) && ((Stmt) unit).containsInvokeExpr()){
 					for (Unit returnSite : icfg.getSuccsOf(unit)) {
 						Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) unit,
@@ -397,7 +398,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
-		icfg.addCallListener((CallListener<Unit, SootMethod>)(unit, sootMethod) -> {
+		icfg.addCalleeListener((CalleeListener<Unit, SootMethod>)(unit, sootMethod) -> {
 			if (unit.equals(callSite)){
 				for (Unit calleeSp : icfg.getStartPointsOf(sootMethod)) {
 					for (Unit returnSite : icfg.getSuccsOf(callSite)) {

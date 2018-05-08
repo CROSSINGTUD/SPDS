@@ -19,7 +19,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import boomerang.WeightedForwardQuery;
-import boomerang.callgraph.CallListener;
+import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
 import com.google.common.collect.Lists;
@@ -132,7 +132,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		visited.add(m);
 		Body activeBody = m.getActiveBody();
 		for (Unit callSite : icfg.getCallsFromWithin(m)) {
-			icfg.addCallListener((CallListener<Unit, SootMethod>) (unit, sootMethod) -> {
+			icfg.addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
 				if (unit.equals(callSite)){
 					parseExpectedQueryResults(sootMethod, queries, visited);
 				}

@@ -34,7 +34,7 @@ import boomerang.DefaultBoomerangOptions;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
-import boomerang.callgraph.CallListener;
+import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.debugger.Debugger;
@@ -258,7 +258,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 		visited.add(new Node<SootMethod, Stmt>(m, callSite));
 		Body activeBody = m.getActiveBody();
 		for (Unit cs : icfg.getCallsFromWithin(m)) {
-			icfg.addCallListener((CallListener<Unit, SootMethod>) (unit, sootMethod) -> {
+			icfg.addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
 				if (unit.equals(cs)){
 					extractQuery(sootMethod, predicate, queries, (callSite == null ? (Stmt) cs : callSite), visited);
 				}

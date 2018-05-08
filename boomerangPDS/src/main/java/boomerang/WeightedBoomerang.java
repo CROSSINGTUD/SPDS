@@ -20,7 +20,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import boomerang.callgraph.BackwardsObservableICFG;
-import boomerang.callgraph.CallListener;
+import boomerang.callgraph.CalleeListener;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
@@ -114,7 +114,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					Statement exitStmt = trans.getLabel();
 					SootMethod callee = exitStmt.getMethod();
 					if (!callee.isStaticInitializer()) {
-						icfg().addCallListener((CallListener<Unit, SootMethod>) (unit, sootMethod) -> {
+						icfg().addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
 							if (callee.equals(sootMethod) && ((Stmt) unit).containsInvokeExpr()){
                                 final Statement callStatement = new Statement((Stmt) unit,
                                         WeightedBoomerang.this.icfg().getMethodOf(unit));
