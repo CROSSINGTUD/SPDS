@@ -469,8 +469,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		visited.add(new Node<SootMethod, Stmt>(m, callSite));
 		Body activeBody = m.getActiveBody();
 		for (Unit cs : icfg.getCallsFromWithin(m)) {
-			for (SootMethod callee : icfg.getCalleesOfCallAt(cs))
-				extractQuery(callee, predicate, queries, (callSite == null ? (Stmt) cs : callSite), visited);
+		    icfg.addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
+		        if (unit.equals(cs)){
+		            extractQuery(sootMethod, predicate, queries, (callSite == null ? (Stmt) cs : callSite), visited);
+                }
+            });
 		}
 		for (Unit u : activeBody.getUnits()) {
 			if (!(u instanceof Stmt))
