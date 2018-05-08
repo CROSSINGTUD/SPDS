@@ -20,8 +20,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
     private BackwardBoomerangSolver solver;
 
-    private ArrayList<CalleeListener<Unit, SootMethod>> calleeListeners = new ArrayList<>();
-    private ArrayList<CallerListener<Unit, SootMethod>> callerListeners = new ArrayList<>();
+    private ArrayList<CallListener<Unit, SootMethod>> callListeners = new ArrayList<>();
 
     public ObservableDynamicICFG(BackwardBoomerangSolver solver) {
         this.solver = solver;
@@ -43,14 +42,8 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     @Override
-    public void addCalleeListener(CalleeListener listener) {
-        calleeListeners.add(listener);
-        //TODO: Notify the new one about what we already now?
-    }
-
-    @Override
-    public void addCallerListener(CallerListener listener) {
-        callerListeners.add(listener);
+    public void addCallListener(CallListener listener) {
+        callListeners.add(listener);
         //TODO: Notify the new one about what we already now?
 
     }
@@ -58,11 +51,8 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     @Override
     public void addCall(Unit caller, SootMethod callee) {
         //Notify all listeners
-        for (CalleeListener<Unit, SootMethod> listener : calleeListeners){
-            listener.onCalleeAdded(caller, callee);
-        }
-        for (CallerListener<Unit, SootMethod> listener : callerListeners){
-            listener.onCallerAdded(caller, callee);
+        for (CallListener<Unit, SootMethod> listener : callListeners){
+            listener.onCallAdded(caller, callee);
         }
         //TODO: Check this cast!
         Edge edge = new Edge(getMethodOf(caller), (Stmt)caller, callee);

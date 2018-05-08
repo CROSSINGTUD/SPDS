@@ -14,7 +14,7 @@ import com.google.common.collect.Table;
 
 import boomerang.ForwardQuery;
 import boomerang.Query;
-import boomerang.callgraph.CallerListener;
+import boomerang.callgraph.CallListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -98,7 +98,7 @@ public class ForwardBoomerangResults<W extends Weight> {
 			for(Unit ep : icfg.getEndPointsOf(flowReaches)){
 				Statement exitStmt = new Statement((Stmt) ep, flowReaches);
 				Set<State> escapes = Sets.newHashSet();
-				icfg.addCallerListener((CallerListener<Unit, SootMethod>) (unit, sootMethod) -> {
+				icfg.addCallListener((CallListener<Unit, SootMethod>) (unit, sootMethod) -> {
 					if (sootMethod.equals(flowReaches)){
 						SootMethod callee = icfg.getMethodOf(unit);
 						if(visitedMethods.contains(callee)){

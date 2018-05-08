@@ -31,12 +31,7 @@ public interface ObservableICFG<N,M> {
     List<N> getSuccsOf(N n);
 
     /**
-     * Registers a listener that will be notified whenever a callee is added
-     */
-    void addCalleeListener(CalleeListener listener);
-
-    /**
-     * Adds an edge to the call graph from the caller to the callee, {@link CalleeListener} will
+     * Adds an edge to the call graph from the caller to the callee, {@link CallListener} will
      * be notified
      * @param caller The node that acts as a source of the edge
      * @param callee The node that acts as a target of the edge
@@ -44,9 +39,9 @@ public interface ObservableICFG<N,M> {
     void addCall(N caller, M callee);
 
     /**
-     * Registers a listener that will be notified whenever a caller is added.
+     * Registers a listener that will be notified whenever a call is added.
      */
-    void addCallerListener(CallerListener listener);
+    void addCallListener(CallListener listener);
 
     /**
      * Returns all call sites within a given method.

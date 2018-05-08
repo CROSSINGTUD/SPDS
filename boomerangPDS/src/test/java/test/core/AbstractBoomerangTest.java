@@ -34,7 +34,7 @@ import boomerang.IntAndStringBoomerangOptions;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.WholeProgramBoomerang;
-import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.CallListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.debugger.Debugger;
@@ -228,7 +228,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 					if(as.containsInvokeExpr()){
 						AtomicReference<Query> returnValue = new AtomicReference<>();
-						icfg.addCalleeListener((CalleeListener<Unit,SootMethod>) (unit, sootMethod) -> {
+						icfg.addCallListener((CallListener<Unit,SootMethod>) (unit, sootMethod) -> {
 							if (unit.equals(as)){
 								for(Unit u : icfg.getEndPointsOf(sootMethod)){
 									if(u instanceof ReturnStmt && ((ReturnStmt) u).getOp() instanceof IntConstant){
@@ -469,7 +469,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		visited.add(new Node<SootMethod, Stmt>(m, callSite));
 		Body activeBody = m.getActiveBody();
 		for (Unit cs : icfg.getCallsFromWithin(m)) {
-		    icfg.addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
+		    icfg.addCallListener((CallListener<Unit, SootMethod>) (unit, sootMethod) -> {
 		        if (unit.equals(cs)){
 		            extractQuery(sootMethod, predicate, queries, (callSite == null ? (Stmt) cs : callSite), visited);
                 }
