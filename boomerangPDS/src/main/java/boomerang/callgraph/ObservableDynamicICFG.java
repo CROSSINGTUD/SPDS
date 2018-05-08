@@ -84,11 +84,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     @Override
-    public Collection<Unit> getReturnSitesOfCallAt(Unit unit) {
-        return null;
-    }
-
-    @Override
     public boolean isCallStmt(Unit stmt) {
         return false;
     }
@@ -109,16 +104,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     @Override
-    public boolean isFallThroughSuccessor(Unit stmt, Unit succ) {
-        return false;
-    }
-
-    @Override
-    public boolean isBranchTarget(Unit stmt, Unit succ) {
-        return false;
-    }
-
-    @Override
     public Collection<Unit> getEndPointsOf(SootMethod sootMethod) {
         return null;
     }
@@ -129,18 +114,8 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     @Override
-    public DirectedGraph<Unit> getOrCreateUnitGraph(SootMethod body) {
-        return null;
-    }
-
-    @Override
     public List<Value> getParameterRefs(SootMethod sootMethod) {
         return null;
-    }
-
-    @Override
-    public boolean isReturnSite(Unit unit) {
-        return false;
     }
 
     @Override

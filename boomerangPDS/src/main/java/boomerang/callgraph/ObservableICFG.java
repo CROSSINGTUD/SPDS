@@ -60,14 +60,6 @@ public interface ObservableICFG<N,M> {
     Collection<N> getStartPointsOf(M m);
 
     /**
-     * Returns all statements to which a call could return.
-     * In the RHS paper, for every call there is just one return site.
-     * We, however, use as return site the successor statements, of which
-     * there can be many in case of exceptional flow.
-     */
-    Collection<N> getReturnSitesOfCallAt(N n);
-
-    /**
      * Returns <code>true</code> if the given statement is a call site.
      */
     boolean isCallStmt(N stmt);
@@ -89,33 +81,11 @@ public interface ObservableICFG<N,M> {
      */
     Set<N> allNonCallStartNodes();
 
-    /**
-     * Returns whether succ is the fall-through successor of stmt,
-     * i.e., the unique successor that is be reached when stmt
-     * does not branch.
-     */
-    boolean isFallThroughSuccessor(N stmt, N succ);
-
-    /**
-     * Returns whether succ is a branch target of stmt.
-     */
-    boolean isBranchTarget(N stmt, N succ);
-
     Collection<N> getEndPointsOf(M m);
 
     Set<N> allNonCallEndNodes();
 
-    //also exposed to some clients who need it
-    DirectedGraph<N> getOrCreateUnitGraph(M body);
-
     List<Value> getParameterRefs(M m);
-
-    /**
-     * Gets whether the given statement is a return site of at least one call
-     * @param n The statement to check
-     * @return True if the given statement is a return site, otherwise false
-     */
-    boolean isReturnSite(N n);
 
     /**
      * Checks whether the given statement is reachable from the entry point

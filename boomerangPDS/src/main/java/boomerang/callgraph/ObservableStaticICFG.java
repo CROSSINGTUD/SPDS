@@ -67,11 +67,6 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     @Override
-    public Collection<Unit> getReturnSitesOfCallAt(Unit unit) {
-        return precomputedGraph.getReturnSitesOfCallAt(unit);
-    }
-
-    @Override
     public boolean isCallStmt(Unit stmt) {
         return precomputedGraph.isCallStmt(stmt);
     }
@@ -92,16 +87,6 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     @Override
-    public boolean isFallThroughSuccessor(Unit stmt, Unit succ) {
-        return precomputedGraph.isFallThroughSuccessor(stmt, succ);
-    }
-
-    @Override
-    public boolean isBranchTarget(Unit stmt, Unit succ) {
-        return precomputedGraph.isBranchTarget(stmt, succ);
-    }
-
-    @Override
     public Collection<Unit> getEndPointsOf(SootMethod sootMethod) {
         return precomputedGraph.getEndPointsOf(sootMethod);
     }
@@ -112,18 +97,8 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     @Override
-    public DirectedGraph<Unit> getOrCreateUnitGraph(SootMethod body) {
-        return precomputedGraph.getOrCreateUnitGraph(body);
-    }
-
-    @Override
     public List<Value> getParameterRefs(SootMethod sootMethod) {
         return precomputedGraph.getParameterRefs(sootMethod);
-    }
-
-    @Override
-    public boolean isReturnSite(Unit unit) {
-        return precomputedGraph.isReturnSite(unit);
     }
 
     @Override
