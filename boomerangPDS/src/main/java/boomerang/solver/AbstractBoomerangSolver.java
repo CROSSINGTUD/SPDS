@@ -382,12 +382,20 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 			}
 		} else{
-			icfg.addCallerListener((CallerListener<Unit, SootMethod>) (unit, sootMethod) -> {
-				if (method.equals(sootMethod) && ((Stmt) unit).containsInvokeExpr()){
-					for (Unit returnSite : icfg.getSuccsOf(unit)) {
-						Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) unit,
-								(Stmt) returnSite);
-						out.addAll(outFlow);
+			icfg.addCallerListener(new CallerListener<Unit, SootMethod>(){
+				@Override
+				public SootMethod getObservedCallee() {
+					return method;
+				}
+
+				@Override
+				public void onCallerAdded(Unit unit, SootMethod sootMethod) {
+					if (((Stmt) unit).containsInvokeExpr()){
+						for (Unit returnSite : icfg.getSuccsOf(unit)) {
+							Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) unit,
+									(Stmt) returnSite);
+							out.addAll(outFlow);
+						}
 					}
 				}
 			});
@@ -398,8 +406,15 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
-		icfg.addCalleeListener((CalleeListener<Unit, SootMethod>)(unit, sootMethod) -> {
-			if (unit.equals(callSite)){
+		icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
+
+			@Override
+			public Unit getObservedCaller() {
+				return callSite;
+			}
+
+			@Override
+			public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
 				for (Unit calleeSp : icfg.getStartPointsOf(sootMethod)) {
 					for (Unit returnSite : icfg.getSuccsOf(callSite)) {
 						Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),

@@ -150,8 +150,15 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		}
 		if(as.containsInvokeExpr()){
             AtomicReference<AllocVal> returnValue = new AtomicReference<>();
-			icfg.addCalleeListener((CalleeListener<Unit,SootMethod>) (unit, sootMethod) -> {
-				if (unit.equals(as)){
+			icfg.addCalleeListener( new CalleeListener<Unit,SootMethod>(){
+
+				@Override
+				public Unit getObservedCaller() {
+					return as;
+				}
+
+				@Override
+				public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
 					for(Unit u : icfg.getEndPointsOf(sootMethod)){
 						if(u instanceof ReturnStmt && isAllocationVal(((ReturnStmt) u).getOp())){
 							returnValue.set(new AllocVal(as.getLeftOp(), m, ((ReturnStmt) u).getOp()));

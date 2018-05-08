@@ -255,9 +255,18 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			if (icfg.isCallStmt(u)) {
 				label.put("callSite", icfg.isCallStmt(u));
 				JSONArray callees = new JSONArray();
-				icfg.addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
-					if (unit.equals(u) && sootMethod != null && sootMethod.toString() != null){
-						callees.add(new JSONMethod(sootMethod));
+				icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
+
+					@Override
+					public Unit getObservedCaller() {
+						return u;
+					}
+
+					@Override
+					public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+						if (sootMethod != null && sootMethod.toString() != null){
+							callees.add(new JSONMethod(sootMethod));
+						}
 					}
 				});
 				label.put("callees", callees);
@@ -267,9 +276,16 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 				JSONArray callees = new JSONArray();
 				Set<SootMethod> callers = new HashSet<>();
 				SootMethod callingMethod = icfg.getMethodOf(u);
-				icfg.addCallerListener((CallerListener<Unit,SootMethod>) (unit, sootMethod) -> {
-					if (sootMethod.equals(callingMethod)){
-						callers.add(icfg.getMethodOf(unit));
+				icfg.addCallerListener(new CallerListener<Unit,SootMethod>(){
+
+					@Override
+					public SootMethod getObservedCallee() {
+						return callingMethod;
+					}
+
+					@Override
+					public void onCallerAdded(Unit unit, SootMethod sootMethod) {
+						callers.add(callingMethod);
 					}
 				});
 	

@@ -129,8 +129,15 @@ public abstract class SeedFactory<W extends Weight> {
     	for(Unit u : m.getActiveBody().getUnits()) {
             Collection<SootMethod> calledMethods = new HashSet<>();
 			if (icfg().isCallStmt(u)) {
-				icfg().addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
-					if (unit.equals(u)) {
+				icfg().addCalleeListener(new CalleeListener<Unit, SootMethod>(){
+
+					@Override
+					public Unit getObservedCaller() {
+						return u;
+					}
+
+					@Override
+					public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
 						calledMethods.add(sootMethod);
 					}
 				});
@@ -139,10 +146,19 @@ public abstract class SeedFactory<W extends Weight> {
                 seedToTransition.put(seed, t);
             }
             if (icfg().isCallStmt(u)) {
-            	icfg().addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
-					if (unit.equals(u) && sootMethod.hasActiveBody()){
-						addPushRule(new Method(m), new Method(sootMethod));
+            	icfg().addCalleeListener(new CalleeListener<Unit, SootMethod>(){
 
+					@Override
+					public Unit getObservedCaller() {
+						return u;
+					}
+
+					@Override
+					public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+						if (sootMethod.hasActiveBody()){
+							addPushRule(new Method(m), new Method(sootMethod));
+
+						}
 					}
 				});
             }

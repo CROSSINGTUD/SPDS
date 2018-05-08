@@ -98,8 +98,15 @@ public class ForwardBoomerangResults<W extends Weight> {
 			for(Unit ep : icfg.getEndPointsOf(flowReaches)){
 				Statement exitStmt = new Statement((Stmt) ep, flowReaches);
 				Set<State> escapes = Sets.newHashSet();
-				icfg.addCallerListener((CallerListener<Unit, SootMethod>) (unit, sootMethod) -> {
-					if (sootMethod.equals(flowReaches)){
+				icfg.addCallerListener(new CallerListener<Unit, SootMethod>(){
+
+					@Override
+					public SootMethod getObservedCallee() {
+						return flowReaches;
+					}
+
+					@Override
+					public void onCallerAdded(Unit unit, SootMethod sootMethod) {
 						SootMethod callee = icfg.getMethodOf(unit);
 						if(visitedMethods.contains(callee)){
 							for(Entry<Val, W> valAndW : res.row(exitStmt).entrySet()){

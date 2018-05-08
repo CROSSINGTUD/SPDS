@@ -258,8 +258,15 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 		visited.add(new Node<SootMethod, Stmt>(m, callSite));
 		Body activeBody = m.getActiveBody();
 		for (Unit cs : icfg.getCallsFromWithin(m)) {
-			icfg.addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
-				if (unit.equals(cs)){
+			icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
+
+				@Override
+				public Unit getObservedCaller() {
+					return cs;
+				}
+
+				@Override
+				public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
 					extractQuery(sootMethod, predicate, queries, (callSite == null ? (Stmt) cs : callSite), visited);
 				}
 			});

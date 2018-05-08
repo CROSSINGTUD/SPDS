@@ -132,8 +132,15 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		visited.add(m);
 		Body activeBody = m.getActiveBody();
 		for (Unit callSite : icfg.getCallsFromWithin(m)) {
-			icfg.addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
-				if (unit.equals(callSite)){
+			icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
+
+				@Override
+				public Unit getObservedCaller() {
+					return callSite;
+				}
+
+				@Override
+				public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
 					parseExpectedQueryResults(sootMethod, queries, visited);
 				}
 			});

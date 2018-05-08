@@ -228,14 +228,21 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 					if(as.containsInvokeExpr()){
 						AtomicReference<Query> returnValue = new AtomicReference<>();
-						icfg.addCalleeListener((CalleeListener<Unit,SootMethod>) (unit, sootMethod) -> {
-							if (unit.equals(as)){
+						icfg.addCalleeListener(new CalleeListener<Unit,SootMethod>(){
+
+							@Override
+							public Unit getObservedCaller() {
+								return as;
+							}
+
+							@Override
+							public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
 								for(Unit u : icfg.getEndPointsOf(sootMethod)){
 									if(u instanceof ReturnStmt && ((ReturnStmt) u).getOp() instanceof IntConstant){
 										ForwardQuery forwardQuery = new ForwardQuery(statement,
-																		new AllocVal(as.getLeftOp(),
-																				icfg.getMethodOf(stmt),
-																				((ReturnStmt) u).getOp()));
+												new AllocVal(as.getLeftOp(),
+														icfg.getMethodOf(stmt),
+														((ReturnStmt) u).getOp()));
 										returnValue.set(forwardQuery);
 									}
 								}
@@ -469,10 +476,17 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		visited.add(new Node<SootMethod, Stmt>(m, callSite));
 		Body activeBody = m.getActiveBody();
 		for (Unit cs : icfg.getCallsFromWithin(m)) {
-		    icfg.addCalleeListener((CalleeListener<Unit, SootMethod>) (unit, sootMethod) -> {
-		        if (unit.equals(cs)){
-		            extractQuery(sootMethod, predicate, queries, (callSite == null ? (Stmt) cs : callSite), visited);
-                }
+		    icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
+
+				@Override
+				public Unit getObservedCaller() {
+					return cs;
+				}
+
+				@Override
+				public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+					extractQuery(sootMethod, predicate, queries, (callSite == null ? (Stmt) cs : callSite), visited);
+				}
             });
 		}
 		for (Unit u : activeBody.getUnits()) {
