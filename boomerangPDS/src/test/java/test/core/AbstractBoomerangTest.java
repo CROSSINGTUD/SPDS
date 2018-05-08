@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.Rule;
 import org.junit.rules.Timeout;
@@ -33,6 +34,7 @@ import boomerang.IntAndStringBoomerangOptions;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.WholeProgramBoomerang;
+import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.debugger.Debugger;
@@ -213,25 +215,34 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		}
 	}
 	private class IntegerAllocationSiteOf implements ValueOfInterestInUnit {
-		public Optional<? extends Query> test(Stmt unit) {
-			if (unit instanceof AssignStmt) {
-				AssignStmt as = (AssignStmt) unit;
+		public Optional<? extends Query> test(Stmt stmt) {
+			if (stmt instanceof AssignStmt) {
+				AssignStmt as = (AssignStmt) stmt;
 				if (as.getLeftOp().toString().equals("allocation")) {
-					Statement statement = new Statement(unit, icfg.getMethodOf(unit));
+					Statement statement = new Statement(stmt, icfg.getMethodOf(stmt));
 					if (as.getLeftOp() instanceof Local && as.getRightOp() instanceof IntConstant) {
 						Local local = (Local) as.getLeftOp();
-						ForwardQuery forwardQuery = new ForwardQuery(statement, new AllocVal(local, icfg.getMethodOf(unit), as.getRightOp()));
+						ForwardQuery forwardQuery = new ForwardQuery(statement, new AllocVal(local, icfg.getMethodOf(stmt), as.getRightOp()));
 						return Optional.<Query>of(forwardQuery);
 					}
 
 					if(as.containsInvokeExpr()){
-						for(SootMethod m : icfg.getCalleesOfCallAt(as)){
-							for(Unit u : icfg.getEndPointsOf(m)){
-								if(u instanceof ReturnStmt && ((ReturnStmt) u).getOp() instanceof IntConstant){
-									ForwardQuery forwardQuery = new ForwardQuery(statement, new AllocVal(as.getLeftOp(), icfg.getMethodOf(unit), ((ReturnStmt) u).getOp()));
-									return Optional.<Query>of(forwardQuery);
+						AtomicReference<Query> returnValue = new AtomicReference<>();
+						icfg.addCalleeListener((CalleeListener<Unit,SootMethod>) (unit, sootMethod) -> {
+							if (unit.equals(as)){
+								for(Unit u : icfg.getEndPointsOf(sootMethod)){
+									if(u instanceof ReturnStmt && ((ReturnStmt) u).getOp() instanceof IntConstant){
+										ForwardQuery forwardQuery = new ForwardQuery(statement,
+																		new AllocVal(as.getLeftOp(),
+																				icfg.getMethodOf(stmt),
+																				((ReturnStmt) u).getOp()));
+										returnValue.set(forwardQuery);
+									}
 								}
 							}
+						});
+						if (returnValue.get() != null){
+							return Optional.of(returnValue.get());
 						}
 					}
 				}
