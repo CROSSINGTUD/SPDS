@@ -33,7 +33,7 @@ public interface ObservableICFG<N,M> {
     /**
      * Registers a listener that will be notified whenever a callee is added
      */
-    void addCalleeListener(CalleeListener listener);
+    void addCalleeListener(CalleeListener<N,M> listener);
 
     /**
      * Adds an edge to the call graph from the caller to the callee, {@link CalleeListener} will
@@ -46,21 +46,19 @@ public interface ObservableICFG<N,M> {
     /**
      * Registers a listener that will be notified whenever a caller is added.
      */
-    void addCallerListener(CallerListener listener);
+    void addCallerListener(CallerListener<N,M> listener);
 
     /**
      * Returns all call sites within a given method.
      */
     Set<N> getCallsFromWithin(M m);
 
-    //TODO Find out if this needs to use listeners
     /**
      * Returns all start points of a given method. There may be
      * more than one start point in case of a backward analysis.
      */
     Collection<N> getStartPointsOf(M m);
 
-    //TODO Find out if this needs to use listeners
     /**
      * Returns all statements to which a call could return.
      * In the RHS paper, for every call there is just one return site.

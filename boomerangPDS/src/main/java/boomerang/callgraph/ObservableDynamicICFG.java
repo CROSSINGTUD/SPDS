@@ -43,13 +43,13 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     @Override
-    public void addCalleeListener(CalleeListener listener) {
+    public void addCalleeListener(CalleeListener<Unit, SootMethod> listener) {
         calleeListeners.add(listener);
         //TODO: Notify the new one about what we already now?
     }
 
     @Override
-    public void addCallerListener(CallerListener listener) {
+    public void addCallerListener(CallerListener<Unit, SootMethod> listener) {
         callerListeners.add(listener);
         //TODO: Notify the new one about what we already now?
 
@@ -57,12 +57,16 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
     @Override
     public void addCall(Unit caller, SootMethod callee) {
-        //Notify all listeners
+        //Notify all interested listeners, so ..
+        //.. CalleeListeners interested in callees of the caller or the CallGraphExtractor that is interested in any
         for (CalleeListener<Unit, SootMethod> listener : calleeListeners){
-            listener.onCalleeAdded(caller, callee);
+            if (CallGraphExtractor.ALL_UNITS.equals(caller) || caller.equals(listener.getObservedCaller()))
+                listener.onCalleeAdded(caller, callee);
         }
+        // .. CallerListeners interested in callers of the callee or the CallGraphExtractor that is interested in any
         for (CallerListener<Unit, SootMethod> listener : callerListeners){
-            listener.onCallerAdded(caller, callee);
+            if (CallGraphExtractor.ALL_METHODS.equals(callee) || callee.equals(listener.getObservedCallee()))
+                listener.onCallerAdded(caller, callee);
         }
         //TODO: Check this cast!
         Edge edge = new Edge(getMethodOf(caller), (Stmt)caller, callee);

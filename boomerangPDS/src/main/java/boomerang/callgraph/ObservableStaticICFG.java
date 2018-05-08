@@ -36,8 +36,11 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     @Override
-    public void addCalleeListener(CalleeListener listener) {
-        //TODO notify listener about all relevant callees at once
+    public void addCalleeListener(CalleeListener<Unit, SootMethod> listener) {
+        for (SootMethod method : precomputedGraph.getCalleesOfCallAt(listener.getObservedCaller())){
+            listener.onCalleeAdded(listener.getObservedCaller(), method);
+        }
+        //TODO deal with ALL_UNITS callee
     }
 
     @Override
@@ -46,8 +49,11 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     @Override
-    public void addCallerListener(CallerListener listener) {
-        //TODO notify listener about all relevant callers at once
+    public void addCallerListener(CallerListener<Unit, SootMethod> listener) {
+        for (Unit unit : precomputedGraph.getCallersOf(listener.getObservedCallee())){
+            listener.onCallerAdded(unit, listener.getObservedCallee());
+        }
+        //TODO deal with ALL_METHODS callee
     }
 
     @Override

@@ -100,19 +100,18 @@ public class BackwardsObservableICFG implements ObservableICFG<Unit, SootMethod>
         return this.delegate.isReachable(u);
     }
 
+    @Override
     public void addCalleeListener(CalleeListener listener) {
-        //TODO figure out backward way
+        delegate.addCalleeListener(listener);
     }
 
     @Override
     public void addCall(Unit caller, SootMethod callee) {
-        //TODO figure out backward way
+        delegate.addCall(caller, callee);
     }
 
     @Override
     public void addCallerListener(CallerListener listener) {
-        //TODO figure out backward way
+        delegate.addCallerListener(listener);
     }
-
-
 }
