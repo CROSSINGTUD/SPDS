@@ -148,8 +148,8 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		if(isAllocationVal(as.getRightOp())) {
 			return Optional.of(new AllocVal(as.getLeftOp(), m,as.getRightOp()));
 		}
-		AtomicReference<AllocVal> returnValue = new AtomicReference<>();
 		if(as.containsInvokeExpr()){
+            AtomicReference<AllocVal> returnValue = new AtomicReference<>();
 			icfg.addCalleeListener((CalleeListener<Unit,SootMethod>) (unit, sootMethod) -> {
 				if (unit.equals(as)){
 					for(Unit u : icfg.getEndPointsOf(sootMethod)){
@@ -159,9 +159,9 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 					}
 				}
 			});
-		}
-		if (returnValue.get() != null){
-			return Optional.of(returnValue.get());
+            if (returnValue.get() != null){
+                return Optional.of(returnValue.get());
+            }
 		}
 		return Optional.absent();
 	}
