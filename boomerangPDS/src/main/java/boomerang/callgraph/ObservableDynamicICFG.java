@@ -6,10 +6,7 @@ import com.google.common.cache.LoadingCache;
 import heros.DontSynchronize;
 import heros.SynchronizedBy;
 import heros.solver.IDESolver;
-import soot.Body;
-import soot.SootMethod;
-import soot.Unit;
-import soot.Value;
+import soot.*;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.callgraph.CallGraph;
 import soot.jimple.toolkits.callgraph.Edge;
@@ -18,14 +15,7 @@ import soot.toolkits.graph.BriefUnitGraph;
 import soot.toolkits.graph.DirectedGraph;
 import soot.toolkits.graph.ExceptionalUnitGraph;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
@@ -44,7 +34,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     @SynchronizedBy("by use of synchronized LoadingCache class")
     protected final LoadingCache<Body,DirectedGraph<Unit>> bodyToUnitGraph = IDESolver.DEFAULT_CACHE_BUILDER.build(new CacheLoader<Body,DirectedGraph<Unit>>() {
         @Override
-        public DirectedGraph<Unit> load(Body body) throws Exception {
+        public DirectedGraph<Unit> load(Body body){
             return makeGraph(body);
         }
     });
@@ -52,7 +42,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     @SynchronizedBy("by use of synchronized LoadingCache class")
     protected final LoadingCache<SootMethod,List<Value>> methodToParameterRefs = IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<SootMethod,List<Value>>() {
         @Override
-        public List<Value> load(SootMethod m) throws Exception {
+        public List<Value> load(SootMethod m){
             return m.getActiveBody().getParameterRefs();
         }
     });
@@ -60,7 +50,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     @SynchronizedBy("by use of synchronized LoadingCache class")
     protected final LoadingCache<SootMethod,Set<Unit>> methodToCallsFromWithin = IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<SootMethod,Set<Unit>>() {
         @Override
-        public Set<Unit> load(SootMethod m) throws Exception {
+        public Set<Unit> load(SootMethod m){
             Set<Unit> res = null;
             for(Unit u: m.getActiveBody().getUnits()) {
                 if(isCallStmt(u)) {
@@ -113,14 +103,27 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     @Override
     public void addCalleeListener(CalleeListener<Unit, SootMethod> listener) {
         calleeListeners.add(listener);
-        //TODO: Notify the new one about what we already now?
+        //Notify the new one about what we already now
+        Unit unit = listener.getObservedCaller();
+        Iterator<Edge> edgeIterator = callGraph.edgesOutOf(unit);
+        while (edgeIterator.hasNext()){
+            Edge edge = edgeIterator.next();
+            listener.onCalleeAdded(unit, edge.tgt());
+        }
+        //TODO when do we need the solver?
     }
 
     @Override
     public void addCallerListener(CallerListener<Unit, SootMethod> listener) {
         callerListeners.add(listener);
-        //TODO: Notify the new one about what we already now?
-
+        //Notify the new one about what we already now
+        SootMethod method = listener.getObservedCallee();
+        Iterator<Edge> edgeIterator = callGraph.edgesInto(method);
+        while (edgeIterator.hasNext()){
+            Edge edge = edgeIterator.next();
+            listener.onCallerAdded(edge.srcUnit(), method);
+        }
+        //TODO when do we need the solver?
     }
 
     @Override
