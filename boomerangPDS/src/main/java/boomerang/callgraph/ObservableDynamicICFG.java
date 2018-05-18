@@ -39,6 +39,8 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         }
     });
 
+    //TODO make madp methodToCallers using CHA or second call graph chaCallGraph
+
     @SynchronizedBy("by use of synchronized LoadingCache class")
     protected final LoadingCache<SootMethod,List<Value>> methodToParameterRefs = IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<SootMethod,List<Value>>() {
         @Override
@@ -123,7 +125,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             Edge edge = edgeIterator.next();
             listener.onCallerAdded(edge.srcUnit(), method);
         }
-        //TODO when do we need the solver?
+        //TODO use solver when querying for class variables, not for parameters. How to check that?
     }
 
     @Override
@@ -216,5 +218,38 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         return enableExceptions
                 ? new ExceptionalUnitGraph(body, UnitThrowAnalysis.v() ,true)
                 : new BriefUnitGraph(body);
+    }
+
+    //TODO Are we working with a seed solver?
+    //TODO How and when do we determine what is reachable? Back - CHA, Forward - We know
+    protected void initForMethod(SootMethod m) {
+        assert Scene.v().hasFastHierarchy();
+        Body b;
+        if(m.isConcrete()) {
+            SootClass declaringClass = m.getDeclaringClass();
+            ensureClassHasBodies(declaringClass);
+            synchronized(Scene.v()) {
+                b = m.retrieveActiveBody();
+            }
+            if(b!=null) {
+                for(Unit u: b.getUnits()) {
+                    if(unitToOwner.put(u,b)!=null) {
+                        //if the unit was registered already then so were all units;
+                        //simply skip the rest
+                        break;
+                    }
+                }
+            }
+        }
+        assert Scene.v().hasFastHierarchy();
+    }
+
+    private synchronized void ensureClassHasBodies(SootClass cl) {
+        assert Scene.v().hasFastHierarchy();
+        if(cl.resolvingLevel()<SootClass.BODIES) {
+            Scene.v().forceResolve(cl.getName(), SootClass.BODIES);
+            Scene.v().getOrMakeFastHierarchy();
+        }
+        assert Scene.v().hasFastHierarchy();
     }
 }
