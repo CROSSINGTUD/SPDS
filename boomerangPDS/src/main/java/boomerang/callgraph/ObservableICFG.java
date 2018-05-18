@@ -85,6 +85,12 @@ public interface ObservableICFG<N,M> {
 
     Set<N> allNonCallEndNodes();
 
+    /**
+     * Returns the list of parameter references used in the method's body. The list is as long as
+     * the number of parameters declared in the associated method's signature.
+     * The list may have <code>null</code> entries for parameters not referenced in the body.
+     * The returned list is of fixed size.
+     */
     List<Value> getParameterRefs(M m);
 
     /**
