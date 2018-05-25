@@ -18,10 +18,12 @@ import soot.jimple.NewExpr;
 public class AllocVal extends Val {
 
 	private Value alloc;
+	private Statement s;
 
-	public AllocVal(Value v, SootMethod m, Value alloc) {
+	public AllocVal(Value v, SootMethod m, Value alloc, Statement s) {
 		super(v, m);
 		this.alloc = alloc;
+		this.s = s;
 	}
 
 	@Override
@@ -33,6 +35,11 @@ public class AllocVal extends Val {
 		return alloc;
 	}
 
+
+	public Statement allocationStatement(){
+		return s;
+	}
+	
 	@Override
 	public boolean isNewExpr() {
 		return alloc instanceof NewExpr;

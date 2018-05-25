@@ -206,7 +206,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					if (allocatesObjectOfInterest(expr)) {
 						Local local = (Local) as.getLeftOp();
 						Statement statement = new Statement(unit, icfg.getMethodOf(unit));
-						ForwardQuery forwardQuery = new ForwardQuery(statement, new AllocVal(local, icfg.getMethodOf(unit), as.getRightOp()));
+						ForwardQuery forwardQuery = new ForwardQuery(statement, new AllocVal(local, icfg.getMethodOf(unit), as.getRightOp(),statement));
 						return Optional.<Query>of(forwardQuery);
 					}
 				}
@@ -222,7 +222,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					Statement statement = new Statement(stmt, icfg.getMethodOf(stmt));
 					if (as.getLeftOp() instanceof Local && as.getRightOp() instanceof IntConstant) {
 						Local local = (Local) as.getLeftOp();
-						ForwardQuery forwardQuery = new ForwardQuery(statement, new AllocVal(local, icfg.getMethodOf(stmt), as.getRightOp()));
+						ForwardQuery forwardQuery = new ForwardQuery(statement,
+                                new AllocVal(local, icfg.getMethodOf(stmt), as.getRightOp(),new Statement((Stmt) as,
+                                        icfg.getMethodOf(stmt))));
 						return Optional.<Query>of(forwardQuery);
 					}
 
@@ -240,9 +242,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 								for(Unit u : icfg.getEndPointsOf(sootMethod)){
 									if(u instanceof ReturnStmt && ((ReturnStmt) u).getOp() instanceof IntConstant){
 										ForwardQuery forwardQuery = new ForwardQuery(statement,
-												new AllocVal(as.getLeftOp(),
-														icfg.getMethodOf(stmt),
-														((ReturnStmt) u).getOp()));
+												new AllocVal(as.getLeftOp(), icfg.getMethodOf(stmt), ((ReturnStmt) u).getOp(), new Statement((Stmt) u, sootMethod)));
 										returnValue.set(forwardQuery);
 									}
 								}
