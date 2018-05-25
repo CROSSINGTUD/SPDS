@@ -16,6 +16,7 @@ import com.google.common.base.Optional;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
+import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.stats.IBoomerangStats;
 import boomerang.stats.SimpleBoomerangStats;
@@ -146,7 +147,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 			return Optional.absent();
 		}
 		if(isAllocationVal(as.getRightOp())) {
-			return Optional.of(new AllocVal(as.getLeftOp(), m,as.getRightOp()));
+			return Optional.of(new AllocVal(as.getLeftOp(), m,as.getRightOp(),new Statement(stmt,m)));
 		}
 		if(as.containsInvokeExpr()){
             AtomicReference<AllocVal> returnValue = new AtomicReference<>();
@@ -161,7 +162,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 				public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
 					for(Unit u : icfg.getEndPointsOf(sootMethod)){
 						if(u instanceof ReturnStmt && isAllocationVal(((ReturnStmt) u).getOp())){
-							returnValue.set(new AllocVal(as.getLeftOp(), m, ((ReturnStmt) u).getOp()));
+							returnValue.set(new AllocVal(as.getLeftOp(), m, ((ReturnStmt) u).getOp(), new Statement((Stmt) u,m)));
 						}
 					}
 				}
