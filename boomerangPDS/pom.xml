@@ -106,6 +106,7 @@
 							</includes>
 							<excludes>
 								<exclude>**/*LongTest.java</exclude>
+								<exclude>test.cases.fields.WritePOITest</exclude>
 							</excludes>
 						</configuration>
 					</plugin>
