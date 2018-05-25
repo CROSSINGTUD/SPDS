@@ -102,12 +102,10 @@
 								<include>test.core.**</include>
 								<include>test.cases.basic.**</include>
 								<include>test.cases.context.**</include>
-								<include>test.cases.fields.**</include>
 								<include>test.cases.subclassing.**</include>
 							</includes>
 							<excludes>
 								<exclude>**/*LongTest.java</exclude>
-								<exclude>test.cases.fields.WritePOITest</exclude>
 							</excludes>
 						</configuration>
 					</plugin>
