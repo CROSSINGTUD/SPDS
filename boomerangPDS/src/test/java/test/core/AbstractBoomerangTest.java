@@ -222,7 +222,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					Statement statement = new Statement(stmt, icfg.getMethodOf(stmt));
 					if (as.getLeftOp() instanceof Local && as.getRightOp() instanceof IntConstant) {
 						Local local = (Local) as.getLeftOp();
-						ForwardQuery forwardQuery = new ForwardQuery(statement, new AllocVal(local, icfg.getMethodOf(stmt), as.getRightOp(),new Statement((Stmt) as,icfg.getMethodOf(unit))));
+						ForwardQuery forwardQuery = new ForwardQuery(statement,
+                                new AllocVal(local, icfg.getMethodOf(stmt), as.getRightOp(),new Statement((Stmt) as,
+                                        icfg.getMethodOf(stmt))));
 						return Optional.<Query>of(forwardQuery);
 					}
 
