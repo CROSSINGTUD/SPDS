@@ -97,6 +97,7 @@
 						<configuration>
 							<argLine>-Xmx4G</argLine>
 							<argLine>-Xss128m</argLine>
+							<forkCount>1C</forkCount>
 							<includes>
 								<include>test.core.**</include>
 								<include>test.cases.basic.**</include>
