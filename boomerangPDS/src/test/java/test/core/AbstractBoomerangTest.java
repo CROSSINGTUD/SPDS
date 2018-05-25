@@ -240,10 +240,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 								for(Unit u : icfg.getEndPointsOf(sootMethod)){
 									if(u instanceof ReturnStmt && ((ReturnStmt) u).getOp() instanceof IntConstant){
 										ForwardQuery forwardQuery = new ForwardQuery(statement,
-												new AllocVal(as.getLeftOp(),
-														icfg.getMethodOf(stmt),
-														((ReturnStmt) u).getOp()),
-                                                new Statement((Stmt) u), sootMethod)));
+												new AllocVal(as.getLeftOp(), icfg.getMethodOf(stmt), ((ReturnStmt) u).getOp(), new Statement((Stmt) u, sootMethod)));
 										returnValue.set(forwardQuery);
 									}
 								}
