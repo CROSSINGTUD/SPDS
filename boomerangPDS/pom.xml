@@ -101,9 +101,7 @@
 								<include>test.core.**</include>
 								<include>test.cases.basic.**</include>
 								<include>test.cases.context.**</include>
-								<include>test.cases.exceptions.**</include>
 								<include>test.cases.fields.**</include>
-								<include>test.cases.multiqueries.**</include>
 								<include>test.cases.subclassing.**</include>
 							</includes>
 							<excludes>
