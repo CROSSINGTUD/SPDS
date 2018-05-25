@@ -406,26 +406,28 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
-		icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
+		if (valueUsedInStatement(callSite, value)){
+			icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
 
-			@Override
-			public Unit getObservedCaller() {
-				return callSite;
-			}
-
-			@Override
-			public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-				for (Unit calleeSp : icfg.getStartPointsOf(sootMethod)) {
-					for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-						Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
-								new Statement(callSite, caller), invokeExpr, value, sootMethod, (Stmt) calleeSp);
-						onCallFlow(sootMethod, callSite, value, res);
-						out.addAll(res);
-					}
+				@Override
+				public Unit getObservedCaller() {
+					return callSite;
 				}
-				addReachable(sootMethod);
-			}
-		});
+
+				@Override
+				public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+					for (Unit calleeSp : icfg.getStartPointsOf(sootMethod)) {
+						for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+							Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
+									new Statement(callSite, caller), invokeExpr, value, sootMethod, (Stmt) calleeSp);
+							onCallFlow(sootMethod, callSite, value, res);
+							out.addAll(res);
+						}
+					}
+					addReachable(sootMethod);
+				}
+			});
+		}
 		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
 		    //TODO Melanie Check if this makes sense when computing demand-driven call graph
             // typically this is only done when there are no callees, now we just never do it
