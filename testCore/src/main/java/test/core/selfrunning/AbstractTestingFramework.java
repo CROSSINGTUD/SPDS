@@ -11,34 +11,21 @@
  *******************************************************************************/
 package test.core.selfrunning;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
-
-import soot.ArrayType;
-import soot.G;
-import soot.Local;
-import soot.Modifier;
-import soot.PackManager;
-import soot.RefType;
-import soot.Scene;
-import soot.SceneTransformer;
-import soot.SootClass;
-import soot.SootMethod;
-import soot.Transform;
-import soot.Type;
-import soot.VoidType;
+import soot.*;
 import soot.jimple.Jimple;
 import soot.jimple.JimpleBody;
 import soot.options.Options;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 
 public abstract class AbstractTestingFramework {
 	@Rule
@@ -73,19 +60,22 @@ public abstract class AbstractTestingFramework {
 
 	private void analyze() {
 		Transform transform = new Transform("wjtp.ifds", createAnalysisTransformer());
-		PackManager.v().getPack("wjtp").add(transform);
-		PackManager.v().getPack("cg").apply();
+		PackManager.v().getPack("wjtp").add(transform); //whole programm, jimple, user-defined transformations
+		PackManager.v().getPack("cg").apply(); //call graph package
 		PackManager.v().getPack("wjtp").apply();
 	}
 
-	protected abstract SceneTransformer createAnalysisTransformer() throws ImprecisionException;
+	protected abstract SceneTransformer createAnalysisTransformer();
 
 	@SuppressWarnings("static-access")
 	private void initializeSootWithEntryPoint() {
 		G.v().reset();
 		Options.v().set_whole_program(true);
-		Options.v().setPhaseOption("cg.spark", "on");
-		Options.v().setPhaseOption("cg.spark", "verbose:true");
+
+        //https://soot-build.cs.uni-paderborn.de/public/origin/develop/soot/soot-develop/options/soot_options.htm#phase_5_2
+		Options.v().setPhaseOption("cg.cha", "on");
+		Options.v().setPhaseOption("cg.cha", "verbose:true");
+
 		Options.v().set_output_format(Options.output_format_none);
 		String userdir = System.getProperty("user.dir");
 		String sootCp = userdir + "/target/test-classes";
@@ -94,7 +84,7 @@ public abstract class AbstractTestingFramework {
 			throw new RuntimeException("Could not get property java.home!");
 		sootCp += File.pathSeparator + javaHome + "/lib/rt.jar";
 		sootCp += File.pathSeparator + javaHome + "/lib/jce.jar";
-//			Options.v().setPhaseOption("cg", "trim-clinit:false");
+
 		Options.v().set_no_bodies_for_excluded(true);
 		Options.v().set_allow_phantom_refs(true);
 
@@ -105,7 +95,7 @@ public abstract class AbstractTestingFramework {
 
 		Options.v().set_exclude(excludedPackages());
 		Options.v().set_soot_classpath(sootCp);
-		// Options.v().set_main_class(this.getTargetClass());
+
 		SootClass sootTestCaseClass = Scene.v().forceResolve(getTestCaseClassName(), SootClass.BODIES);
 
 		for (SootMethod m : sootTestCaseClass.getMethods()) {
@@ -141,7 +131,7 @@ public abstract class AbstractTestingFramework {
 	}
 
 	protected List<String> getIncludeList() {
-		List<String> includeList = new LinkedList<String>();
+		List<String> includeList = new LinkedList<>();
 		includeList.add("java.lang.*");
 		includeList.add("java.util.*");
 		includeList.add("java.io.*");
@@ -149,14 +139,13 @@ public abstract class AbstractTestingFramework {
 		includeList.add("java.net.*");
 		includeList.add("sun.nio.*");
 		includeList.add("javax.servlet.*");
-//		includeList.add("javax.crypto.*");
 		return includeList;
 	}
 
 	private String getTargetClass() {
 		SootClass sootClass = new SootClass("dummyClass");
 		Type paramType = ArrayType.v(RefType.v("java.lang.String"), 1);
-		SootMethod mainMethod = new SootMethod("main", Arrays.asList(new Type[] { paramType }), VoidType.v(),
+		SootMethod mainMethod = new SootMethod("main", Collections.singletonList(paramType), VoidType.v(),
 				Modifier.PUBLIC | Modifier.STATIC);
 		sootClass.addMethod(mainMethod);
 		JimpleBody body = Jimple.v().newBody(mainMethod);
