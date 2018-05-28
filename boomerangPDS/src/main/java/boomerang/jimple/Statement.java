@@ -28,6 +28,7 @@ import wpds.interfaces.Empty;
 import wpds.interfaces.Location;
 
 public class Statement implements Location {
+	//Wrapper for stmt so we know the method
 	private static Statement epsilon;
 	private final Stmt delegate;
 	private final SootMethod method;

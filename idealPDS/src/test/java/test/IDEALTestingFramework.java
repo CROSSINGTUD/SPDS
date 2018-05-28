@@ -3,7 +3,7 @@
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -97,6 +97,11 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				}
 				List<Assertion> unsound = Lists.newLinkedList();
 				List<Assertion> imprecise = Lists.newLinkedList();
+				for (Assertion r : expectedResults){
+					if (r instanceof ShouldNotBeAnalyzed){
+						throw new RuntimeException(r.toString());
+					}
+				}
 				for (Assertion r : expectedResults) {
 					if (!r.isSatisfied()) {
 						unsound.add(r);
@@ -154,6 +159,9 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				continue;
 			InvokeExpr invokeExpr = stmt.getInvokeExpr();
 			String invocationName = invokeExpr.getMethod().getName();
+			if (invocationName.equals("shouldNotBeAnalyzed")){
+				queries.add(new ShouldNotBeAnalyzed(stmt));
+			}
 			if (!invocationName.startsWith("mayBeIn") && !invocationName.startsWith("mustBeIn"))
 				continue;
 			Value param = invokeExpr.getArg(0);
@@ -191,6 +199,9 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	}
 
 	protected static void mustBeInAcceptingState(Object variable) {
+	}
+
+	protected static void shouldNotBeAnalyzed(){
 	}
 
 	/**
