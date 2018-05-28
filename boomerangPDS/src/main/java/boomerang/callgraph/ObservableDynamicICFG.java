@@ -19,7 +19,9 @@ import java.util.*;
 
 public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
-    private CallGraph callGraph = new CallGraph();
+    private CallGraph demandDrivenCallGraph = new CallGraph();
+
+    private CallGraph chaCallGraph;
 
     private BackwardBoomerangSolver solver;
 
@@ -38,8 +40,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             return makeGraph(body);
         }
     });
-
-    //TODO make madp methodToCallers using CHA or second call graph chaCallGraph
 
     @SynchronizedBy("by use of synchronized LoadingCache class")
     protected final LoadingCache<SootMethod,List<Value>> methodToParameterRefs = IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<SootMethod,List<Value>>() {
@@ -72,6 +72,10 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     public ObservableDynamicICFG(BackwardBoomerangSolver solver, boolean enableExceptions) {
         this.solver = solver;
         this.enableExceptions = enableExceptions;
+
+        this.chaCallGraph = Scene.v().getCallGraph();
+
+        initializeUnitToOwner();
     }
 
     @Override
@@ -107,7 +111,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         calleeListeners.add(listener);
         //Notify the new one about what we already now
         Unit unit = listener.getObservedCaller();
-        Iterator<Edge> edgeIterator = callGraph.edgesOutOf(unit);
+        Iterator<Edge> edgeIterator = demandDrivenCallGraph.edgesOutOf(unit);
         while (edgeIterator.hasNext()){
             Edge edge = edgeIterator.next();
             listener.onCalleeAdded(unit, edge.tgt());
@@ -120,7 +124,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         callerListeners.add(listener);
         //Notify the new one about what we already now
         SootMethod method = listener.getObservedCallee();
-        Iterator<Edge> edgeIterator = callGraph.edgesInto(method);
+        Iterator<Edge> edgeIterator = demandDrivenCallGraph.edgesInto(method);
         while (edgeIterator.hasNext()){
             Edge edge = edgeIterator.next();
             listener.onCallerAdded(edge.srcUnit(), method);
@@ -143,7 +147,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         }
         //TODO: Check this cast!
         Edge edge = new Edge(getMethodOf(caller), (Stmt)caller, callee);
-        callGraph.addEdge(edge);
+        demandDrivenCallGraph.addEdge(edge);
     }
 
     @Override
@@ -220,36 +224,20 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
                 : new BriefUnitGraph(body);
     }
 
-    //TODO Are we working with a seed solver?
-    //TODO How and when do we determine what is reachable? Back - CHA, Forward - We know
-    protected void initForMethod(SootMethod m) {
-        assert Scene.v().hasFastHierarchy();
-        Body b;
-        if(m.isConcrete()) {
-            SootClass declaringClass = m.getDeclaringClass();
-            ensureClassHasBodies(declaringClass);
-            synchronized(Scene.v()) {
-                b = m.retrieveActiveBody();
-            }
-            if(b!=null) {
-                for(Unit u: b.getUnits()) {
-                    if(unitToOwner.put(u,b)!=null) {
-                        //if the unit was registered already then so were all units;
-                        //simply skip the rest
-                        break;
-                    }
-                }
-            }
+    protected void initializeUnitToOwner() {
+        for (Iterator<MethodOrMethodContext> iter = Scene.v().getReachableMethods().listener(); iter.hasNext();) {
+            SootMethod m = iter.next().method();
+            initializeUnitToOwner(m);
         }
-        assert Scene.v().hasFastHierarchy();
     }
 
-    private synchronized void ensureClassHasBodies(SootClass cl) {
-        assert Scene.v().hasFastHierarchy();
-        if(cl.resolvingLevel()<SootClass.BODIES) {
-            Scene.v().forceResolve(cl.getName(), SootClass.BODIES);
-            Scene.v().getOrMakeFastHierarchy();
+    public void initializeUnitToOwner(SootMethod m) {
+        if (m.hasActiveBody()) {
+            Body b = m.getActiveBody();
+            PatchingChain<Unit> units = b.getUnits();
+            for (Unit unit : units) {
+                unitToOwner.put(unit, b);
+            }
         }
-        assert Scene.v().hasFastHierarchy();
     }
 }
