@@ -109,6 +109,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     @Override
     public void addCalleeListener(CalleeListener<Unit, SootMethod> listener) {
         calleeListeners.add(listener);
+
         //Notify the new one about what we already now
         Unit unit = listener.getObservedCaller();
         Iterator<Edge> edgeIterator = demandDrivenCallGraph.edgesOutOf(unit);
@@ -116,12 +117,18 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             Edge edge = edgeIterator.next();
             listener.onCalleeAdded(unit, edge.tgt());
         }
-        //TODO when do we need the solver?
+
+        //If not all edges from the CHA call graph are covered, there may be more to discover
+        if (allEdgesCovered(chaCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
+            //Therefore we use the solver
+            //TODO use solver to get potentially missing edges
+        }
     }
 
     @Override
     public void addCallerListener(CallerListener<Unit, SootMethod> listener) {
         callerListeners.add(listener);
+
         //Notify the new one about what we already now
         SootMethod method = listener.getObservedCallee();
         Iterator<Edge> edgeIterator = demandDrivenCallGraph.edgesInto(method);
@@ -129,7 +136,36 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             Edge edge = edgeIterator.next();
             listener.onCallerAdded(edge.srcUnit(), method);
         }
-        //TODO use solver when querying for class variables, not for parameters. How to check that?
+
+        //If not all edges from the CHA call graph are covered, there may be more to discover
+        if (allEdgesCovered(chaCallGraph.edgesInto(method), demandDrivenCallGraph.edgesInto(method))){
+            //Therefore we use the solver
+            //TODO use solver to get potentially missing edges
+        }
+    }
+
+    private boolean allEdgesCovered(Iterator<Edge> chaEdgeIterator, Iterator<Edge> knownEdgeIterator){
+        //Make a map checking for every edge in the CHA call graph whether it is in the known edges
+
+        //Start by assuming no edge is covered
+        HashMap<Edge, Boolean> wasEdgeCovered = new HashMap<>();
+        while (chaEdgeIterator.hasNext()){
+            wasEdgeCovered.put(chaEdgeIterator.next(), false);
+        }
+
+        //Put true for all known edges
+        while (knownEdgeIterator.hasNext()){
+            wasEdgeCovered.put(knownEdgeIterator.next(), true);
+        }
+
+        //If any single edge is not covered, return false
+        for (Boolean edgeWasCovered : wasEdgeCovered.values()){
+            if (!edgeWasCovered){
+                return false;
+            }
+        }
+        //All edges were covered
+        return  true;
     }
 
     @Override
