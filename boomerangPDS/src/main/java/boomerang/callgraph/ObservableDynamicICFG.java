@@ -1,6 +1,6 @@
 package boomerang.callgraph;
 
-import boomerang.solver.BackwardBoomerangSolver;
+import boomerang.WeightedBoomerang;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import heros.DontSynchronize;
@@ -19,9 +19,11 @@ import java.util.*;
 
 public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
-    private CallGraph callGraph = new CallGraph();
+    private CallGraph demandDrivenCallGraph = new CallGraph();
 
-    private BackwardBoomerangSolver solver;
+    private CallGraph chaCallGraph;
+
+    private WeightedBoomerang<?> solver;
 
     private ArrayList<CalleeListener<Unit, SootMethod>> calleeListeners = new ArrayList<>();
     private ArrayList<CallerListener<Unit, SootMethod>> callerListeners = new ArrayList<>();
@@ -63,13 +65,17 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         }
     });
 
-    public ObservableDynamicICFG(BackwardBoomerangSolver solver) {
+    public ObservableDynamicICFG(WeightedBoomerang solver) {
         this(solver, true);
     }
 
-    public ObservableDynamicICFG(BackwardBoomerangSolver solver, boolean enableExceptions) {
+    public ObservableDynamicICFG(WeightedBoomerang solver, boolean enableExceptions) {
         this.solver = solver;
         this.enableExceptions = enableExceptions;
+
+        this.chaCallGraph = Scene.v().getCallGraph();
+
+        initializeUnitToOwner();
     }
 
     @Override
@@ -103,27 +109,68 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     @Override
     public void addCalleeListener(CalleeListener<Unit, SootMethod> listener) {
         calleeListeners.add(listener);
+
         //Notify the new one about what we already now
         Unit unit = listener.getObservedCaller();
-        Iterator<Edge> edgeIterator = callGraph.edgesOutOf(unit);
+        Iterator<Edge> edgeIterator = demandDrivenCallGraph.edgesOutOf(unit);
         while (edgeIterator.hasNext()){
             Edge edge = edgeIterator.next();
             listener.onCalleeAdded(unit, edge.tgt());
         }
-        //TODO when do we need the solver?
+
+        //TODO make backward query for value, value can be gotten from invokeExpression in unit
+        //If not all edges from the CHA call graph are covered, there may be more to discover
+        if (allEdgesCovered(chaCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
+            //Therefore we use the solver
+            //solver.solve(new BackwardQuery(...))
+            //TODO use solver to get potentially missing edges
+        }
     }
 
     @Override
     public void addCallerListener(CallerListener<Unit, SootMethod> listener) {
         callerListeners.add(listener);
+
         //Notify the new one about what we already now
         SootMethod method = listener.getObservedCallee();
-        Iterator<Edge> edgeIterator = callGraph.edgesInto(method);
+        Iterator<Edge> edgeIterator = demandDrivenCallGraph.edgesInto(method);
         while (edgeIterator.hasNext()){
             Edge edge = edgeIterator.next();
             listener.onCallerAdded(edge.srcUnit(), method);
         }
-        //TODO when do we need the solver?
+
+        //TODO figure out when to do this, just CHA, CHA plus Queries, which is less expensive?
+
+        //TODO sanity check we should have more edges than cha
+        //If not all edges from the CHA call graph are covered, there may be more to discover
+        if (allEdgesCovered(chaCallGraph.edgesInto(method), demandDrivenCallGraph.edgesInto(method))){
+            //Therefore we use the solver
+            //TODO use solver to get potentially missing edges
+        }
+    }
+
+    private boolean allEdgesCovered(Iterator<Edge> chaEdgeIterator, Iterator<Edge> knownEdgeIterator){
+        //Make a map checking for every edge in the CHA call graph whether it is in the known edges
+
+        //Start by assuming no edge is covered
+        HashMap<Edge, Boolean> wasEdgeCovered = new HashMap<>();
+        while (chaEdgeIterator.hasNext()){
+            wasEdgeCovered.put(chaEdgeIterator.next(), false);
+        }
+
+        //Put true for all known edges
+        while (knownEdgeIterator.hasNext()){
+            wasEdgeCovered.put(knownEdgeIterator.next(), true);
+        }
+
+        //If any single edge is not covered, return false
+        for (Boolean edgeWasCovered : wasEdgeCovered.values()){
+            if (!edgeWasCovered){
+                return false;
+            }
+        }
+        //All edges were covered
+        return  true;
     }
 
     @Override
@@ -141,7 +188,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         }
         //TODO: Check this cast!
         Edge edge = new Edge(getMethodOf(caller), (Stmt)caller, callee);
-        callGraph.addEdge(edge);
+        demandDrivenCallGraph.addEdge(edge);
     }
 
     @Override
@@ -216,5 +263,22 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         return enableExceptions
                 ? new ExceptionalUnitGraph(body, UnitThrowAnalysis.v() ,true)
                 : new BriefUnitGraph(body);
+    }
+
+    protected void initializeUnitToOwner() {
+        for (Iterator<MethodOrMethodContext> iter = Scene.v().getReachableMethods().listener(); iter.hasNext();) {
+            SootMethod m = iter.next().method();
+            initializeUnitToOwner(m);
+        }
+    }
+
+    public void initializeUnitToOwner(SootMethod m) {
+        if (m.hasActiveBody()) {
+            Body b = m.getActiveBody();
+            PatchingChain<Unit> units = b.getUnits();
+            for (Unit unit : units) {
+                unitToOwner.put(unit, b);
+            }
+        }
     }
 }
