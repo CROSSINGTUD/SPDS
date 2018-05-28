@@ -1,6 +1,6 @@
 package boomerang.callgraph;
 
-import boomerang.solver.BackwardBoomerangSolver;
+import boomerang.WeightedBoomerang;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import heros.DontSynchronize;
@@ -23,7 +23,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
     private CallGraph chaCallGraph;
 
-    private BackwardBoomerangSolver solver;
+    private WeightedBoomerang<?> solver;
 
     private ArrayList<CalleeListener<Unit, SootMethod>> calleeListeners = new ArrayList<>();
     private ArrayList<CallerListener<Unit, SootMethod>> callerListeners = new ArrayList<>();
@@ -65,11 +65,11 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         }
     });
 
-    public ObservableDynamicICFG(BackwardBoomerangSolver solver) {
+    public ObservableDynamicICFG(WeightedBoomerang solver) {
         this(solver, true);
     }
 
-    public ObservableDynamicICFG(BackwardBoomerangSolver solver, boolean enableExceptions) {
+    public ObservableDynamicICFG(WeightedBoomerang solver, boolean enableExceptions) {
         this.solver = solver;
         this.enableExceptions = enableExceptions;
 
@@ -118,9 +118,11 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             listener.onCalleeAdded(unit, edge.tgt());
         }
 
+        //TODO make backward query for value, value can be gotten from invokeExpression in unit
         //If not all edges from the CHA call graph are covered, there may be more to discover
         if (allEdgesCovered(chaCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
             //Therefore we use the solver
+            //solver.solve(new BackwardQuery(...))
             //TODO use solver to get potentially missing edges
         }
     }
@@ -137,6 +139,9 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             listener.onCallerAdded(edge.srcUnit(), method);
         }
 
+        //TODO figure out when to do this, just CHA, CHA plus Queries, which is less expensive?
+
+        //TODO sanity check we should have more edges than cha
         //If not all edges from the CHA call graph are covered, there may be more to discover
         if (allEdgesCovered(chaCallGraph.edgesInto(method), demandDrivenCallGraph.edgesInto(method))){
             //Therefore we use the solver
