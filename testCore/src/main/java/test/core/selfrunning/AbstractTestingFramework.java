@@ -77,7 +77,7 @@ public abstract class AbstractTestingFramework {
 		Options.v().setPhaseOption("cg.cha", "verbose:true");
 
 		Options.v().set_output_format(Options.output_format_none);
-		setCallGraphOptions();
+
 		String userdir = System.getProperty("user.dir");
 		String sootCp = userdir + "/target/test-classes";
 		String javaHome = System.getProperty("java.home");
@@ -143,18 +143,6 @@ public abstract class AbstractTestingFramework {
 		return includeList;
 	}
 
-    private void setCallGraphOptions() {
-        if (getCallGraphAlgorithm() != null){
-            Options.v().setPhaseOption("cg."+getCallGraphAlgorithm(), "on");
-        }
-        if(getCallGraphOptions() != null) {
-            String[] options = getCallGraphOptions();
-            for (String option : options){
-                Options.v().setPhaseOption("cg."+getCallGraphAlgorithm(), option);
-            }
-        }
-    }
-
 	private String getTargetClass() {
 		SootClass sootClass = new SootClass("dummyClass");
 		Type paramType = ArrayType.v(RefType.v("java.lang.String"), 1);
@@ -184,14 +172,6 @@ public abstract class AbstractTestingFramework {
 	private String getTestCaseClassName() {
 		return this.getClass().getName().replace("class ", "");
 	}
-
-    protected String getCallGraphAlgorithm(){
-        return "spark";
-    }
-
-    protected String[] getCallGraphOptions(){
-        return null;
-    }
 
 	public List<String> excludedPackages() {
 		List<String> excludedPackages = new LinkedList<>();
