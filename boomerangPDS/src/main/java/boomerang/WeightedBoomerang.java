@@ -179,7 +179,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					if(options.analysisTimeoutMS() > 0){
 						long elapsed = analysisWatch.elapsed(TimeUnit.MILLISECONDS);
 						if(elapsed - lastTick > 15000){
-							System.err.println(stats);
+//							System.err.println(stats);
 							lastTick = elapsed;
 						}
 						if(options.analysisTimeoutMS() < elapsed){
