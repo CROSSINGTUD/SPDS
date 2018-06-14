@@ -11,29 +11,7 @@
  *******************************************************************************/
 package test.core;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.Rule;
-import org.junit.rules.Timeout;
-
-import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-
-import boomerang.BackwardQuery;
-import boomerang.Boomerang;
-import boomerang.DefaultBoomerangOptions;
-import boomerang.ForwardQuery;
-import boomerang.IntAndStringBoomerangOptions;
-import boomerang.Query;
-import boomerang.WeightedBoomerang;
-import boomerang.WholeProgramBoomerang;
+import boomerang.*;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
@@ -48,23 +26,15 @@ import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.util.AccessPath;
 import boomerang.util.AccessPathParser;
+import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import heros.utilities.DefaultValueMap;
-import soot.Body;
-import soot.Local;
-import soot.RefType;
-import soot.Scene;
-import soot.SceneTransformer;
-import soot.SootClass;
-import soot.SootMethod;
-import soot.Unit;
-import soot.Value;
-import soot.jimple.AssignStmt;
-import soot.jimple.IntConstant;
-import soot.jimple.InvokeExpr;
-import soot.jimple.NewExpr;
-import soot.jimple.ReturnStmt;
-import soot.jimple.Stmt;
-import soot.jimple.StringConstant;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
+import soot.*;
+import soot.jimple.*;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
@@ -76,6 +46,9 @@ import wpds.impl.Transition;
 import wpds.impl.Weight.NoWeight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class AbstractBoomerangTest extends AbstractTestingFramework {
 
@@ -323,7 +296,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				public int analysisTimeoutMS() {
 					return analysisTimeout;
 				}
-				
+
+				@Override
+				public boolean onTheFlyCallGraph() {
+					return false;
+				}
 			});
 			Boomerang solver = new Boomerang(options) {
 				@Override
@@ -338,7 +315,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 				@Override
 				public SeedFactory<NoWeight> getSeedFactory() {
-					return seedFactory;
+					return null;
 				}
 			};
 			if(query instanceof BackwardQuery){
@@ -374,6 +351,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			public int analysisTimeoutMS() {
 				return analysisTimeout;
 			}
+			@Override
+			public boolean onTheFlyCallGraph() {
+				return false;
+			}
 		}) {
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
@@ -407,6 +388,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			protected WeightFunctions<Statement, Val, Statement, NoWeight> getForwardCallWeights(ForwardQuery sourceQuery) {
 				return new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO,
 						NoWeight.NO_WEIGHT_ONE);
+			}
+
+			@Override
+			public SeedFactory<NoWeight> getSeedFactory() {
+				return null;
 			}
 
 		};
