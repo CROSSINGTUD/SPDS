@@ -127,7 +127,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     public void addCalleeListener(CalleeListener<Unit, SootMethod> listener) {
         calleeListeners.add(listener);
 
-        //Notify the new one about what we already now
+        //Notify the new listener about edges we already know
         Unit unit = listener.getObservedCaller();
         Iterator<Edge> edgeIterator = demandDrivenCallGraph.edgesOutOf(unit);
         while (edgeIterator.hasNext()){
@@ -138,23 +138,45 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         //If not all edges from the CHA call graph are covered, there may be more to discover
         if (!allEdgesCovered(chaCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
             Stmt stmt = (Stmt) unit;
-            InvokeExpr invokeExpr = stmt.getInvokeExpr();
             //Making a query to see which type of object the method was invoked on only makes sense when it was
             //invoked on an object
-            //TODO do we need to make sure not to use the dummy obj here
-            if (invokeExpr instanceof InstanceInvokeExpr){
-                Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
-                Val val = new Val(value, getMethodOf(stmt));
-                Statement statement = new Statement(stmt, getMethodOf(unit));
-                BackwardQuery query = new BackwardQuery(statement, val);
-                //Therefore we use the solver
-                BackwardBoomerangResults results = solver.solve(query);
-                Map<ForwardQuery, PAutomaton> allocationSites = results.getAllocationSites();
-                for (ForwardQuery forwardQuery : allocationSites.keySet()){
-                    System.out.println("Forward Query found: "+forwardQuery);
-                    //TODO get callee in type
+            //TODO do we need to make sure not to use the dummy obj here?
+            if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr){
+                //Call was invoked on an object
+                queryForCallees(unit);
+            } else {
+                //Call was not invoked on an object. Must be static or special. In this case rely on CHA //TODO for now?
+                Iterator<Edge> chaIterator = chaCallGraph.edgesOutOf(unit);
+                while (chaIterator.hasNext()){
+                    Edge edge = chaIterator.next();
+                    addCall(unit, edge.tgt());
                 }
             }
+        }
+    }
+
+    private void queryForCallees(Unit unit) {
+        Stmt stmt = (Stmt) unit;
+        InvokeExpr invokeExpr = stmt.getInvokeExpr();
+        Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
+        Val val = new Val(value, getMethodOf(stmt));
+        Statement statement = new Statement(stmt, getMethodOf(unit));
+        BackwardQuery query = new BackwardQuery(statement, val);
+        //Therefore we use the solver
+        BackwardBoomerangResults results = solver.solve(query);
+        Map<ForwardQuery, PAutomaton> allocationSites = results.getAllocationSites();
+        for (ForwardQuery forwardQuery : allocationSites.keySet()){
+            System.out.println("Forward Query found: "+forwardQuery);
+            Type type = forwardQuery.getType();
+            Iterator<Edge> edgeIterator1 = chaCallGraph.edgesOutOf(unit);
+            while (edgeIterator1.hasNext()){
+                Edge edge = edgeIterator1.next();
+                if (edge.tgt().getDeclaringClass().getType() == type){
+                    addCall(unit, edge.tgt());
+                    break;
+                }
+            }
+            //TODO get callee in type
         }
     }
 
