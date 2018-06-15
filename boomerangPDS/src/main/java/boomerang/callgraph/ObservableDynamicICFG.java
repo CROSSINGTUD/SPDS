@@ -1,12 +1,18 @@
 package boomerang.callgraph;
 
+import boomerang.BackwardQuery;
 import boomerang.WeightedBoomerang;
+import boomerang.jimple.Statement;
+import boomerang.jimple.Val;
+import boomerang.results.BackwardBoomerangResults;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import heros.DontSynchronize;
 import heros.SynchronizedBy;
 import heros.solver.IDESolver;
 import soot.*;
+import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.callgraph.CallGraph;
 import soot.jimple.toolkits.callgraph.Edge;
@@ -127,12 +133,23 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             listener.onCalleeAdded(unit, edge.tgt());
         }
 
-        //TODO make backward query for value, value can be gotten from invokeExpression in unit
         //If not all edges from the CHA call graph are covered, there may be more to discover
-        if (allEdgesCovered(chaCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
-            //Therefore we use the solver
-            //solver.solve(new BackwardQuery(...))
-            //TODO use solver to get potentially missing edges
+        if (!allEdgesCovered(chaCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
+            Stmt stmt = (Stmt) unit;
+            InvokeExpr invokeExpr = stmt.getInvokeExpr();
+            //Making a query to see which type of object the method was invoked on only makes sense when it was
+            //invoked on an object
+            if (invokeExpr instanceof InstanceInvokeExpr){
+                Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
+                Val val = new Val(value, invokeExpr.getMethod());
+                Statement statement = new Statement(stmt, getMethodOf(unit));
+                BackwardQuery query = new BackwardQuery(statement, val);
+                //Therefore we use the solver
+                BackwardBoomerangResults results = solver.solve(query);
+                for (Type type : results.possibleTypes()){
+                    //TODO get callee in type
+                }
+            }
         }
     }
 
@@ -150,9 +167,8 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
         //TODO figure out when to do this, just CHA, CHA plus Queries, which is less expensive?
 
-        //TODO sanity check we should have more edges than cha
         //If not all edges from the CHA call graph are covered, there may be more to discover
-        if (allEdgesCovered(chaCallGraph.edgesInto(method), demandDrivenCallGraph.edgesInto(method))){
+        if (!allEdgesCovered(chaCallGraph.edgesInto(method), demandDrivenCallGraph.edgesInto(method))){
             //Therefore we use the solver
             //TODO use solver to get potentially missing edges
         }
