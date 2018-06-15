@@ -155,18 +155,23 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     private void queryForCallees(Unit unit) {
+        //Construct BackwardQuery, so we know which types the object might have
         Stmt stmt = (Stmt) unit;
         InvokeExpr invokeExpr = stmt.getInvokeExpr();
         Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
         Val val = new Val(value, getMethodOf(stmt));
         Statement statement = new Statement(stmt, getMethodOf(unit));
         BackwardQuery query = new BackwardQuery(statement, val);
-        //Therefore we use the solver
+
+        //Execute that query
         BackwardBoomerangResults results = solver.solve(query);
+
+        //Go through possible types an add edges to implementations in possible types
         Map<ForwardQuery, PAutomaton> allocationSites = results.getAllocationSites();
         for (ForwardQuery forwardQuery : allocationSites.keySet()){
             System.out.println("Forward Query found: "+forwardQuery);
             Type type = forwardQuery.getType();
+            //TODO find a much cleaner way to do this. How to get method in correct type?
             Iterator<Edge> edgeIterator1 = chaCallGraph.edgesOutOf(unit);
             while (edgeIterator1.hasNext()){
                 Edge edge = edgeIterator1.next();
