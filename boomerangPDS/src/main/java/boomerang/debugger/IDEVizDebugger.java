@@ -174,6 +174,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			data.add(nodeObj);
 		}
 
+		Multimap<Node<Statement,Val>, IRegEx<Field>> esgNodes = HashMultimap.create();
 		// System.out.println("Number of nodes:\t" + esg.getNodes().size());
 		for (Cell<Statement, RegExAccessPath, W> trans : table.cellSet()) {
 			Statement statement = trans.getRowKey();
@@ -199,6 +200,8 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			nodeObj.put("data", additionalData);
 
 			data.add(nodeObj);
+			
+			esgNodes.put(new Node<Statement,Val>(statement,val.getVal()), val.getFields());
 		}
 
 		for (Rule<Statement, INode<Val>, W> rule : rulesInMethod) {
@@ -210,14 +213,18 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			dataEntry.put("id", "e" + id(rule));
 			Node<Statement,Val> start = getStartNode(rule);
 			Node<Statement,Val> target = getTargetNode(rule);
-			dataEntry.put("source", "q"+id(q)+ "n" + id(start));
-			dataEntry.put("target",  "q"+id(q)+"n" + id(target));
-			dataEntry.put("directed", "true");
-			dataEntry.put("direction", (q instanceof BackwardQuery ? "Backward" : "Forward"));
-			nodeObj.put("data", dataEntry);
-			nodeObj.put("classes", "esgEdge  method" + id(m));
-			nodeObj.put("group", "edges");
-			data.add(nodeObj);
+			for(IRegEx<Field> startField: esgNodes.get(start)) {
+				for(IRegEx<Field> targetField: esgNodes.get(target)) {
+					dataEntry.put("source", "q"+id(q)+ "n" + id(new Node<Statement,RegExAccessPath>(start.stmt(),new RegExAccessPath(start.fact(), startField))));
+					dataEntry.put("target",  "q"+id(q)+"n" + id(new Node<Statement,RegExAccessPath>(target.stmt(),new RegExAccessPath(target.fact(), targetField))));
+					dataEntry.put("directed", "true");
+					dataEntry.put("direction", (q instanceof BackwardQuery ? "Backward" : "Forward"));
+					nodeObj.put("data", dataEntry);
+					nodeObj.put("classes", "esgEdge  method" + id(m));
+					nodeObj.put("group", "edges");
+					data.add(nodeObj);
+				}
+			}
 		}
 		dataFlowGraph.put("dataFlowNode", data);
 		return dataFlowGraph;
