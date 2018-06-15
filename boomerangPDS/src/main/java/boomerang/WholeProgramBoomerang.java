@@ -11,10 +11,8 @@
  *******************************************************************************/
 package boomerang;
 
-import java.util.Collection;
-import java.util.Collections;
-
 import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.seedfactory.SeedFactory;
@@ -22,7 +20,11 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
 import soot.jimple.Stmt;
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import wpds.impl.Weight;
+
+import java.util.Collection;
+import java.util.Collections;
 
 public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBoomerang<W>{
 	private int reachableMethodCount;
@@ -60,7 +62,7 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
-				return WholeProgramBoomerang.this.icfg();
+				return new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
 			}
 			@Override
 			protected boolean analyseClassInitializers() {
