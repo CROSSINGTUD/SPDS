@@ -32,7 +32,7 @@ public class Val {
 			if(!m.hasActiveBody())
 				throw new RuntimeException("No active body for method");
 			if(v instanceof Local && !m.getActiveBody().getLocals().contains(v)){
-				throw new RuntimeException("Creating a Local with wrong method." +v + " "+  m);
+				throw new RuntimeException("Creating a Local with wrong method. " +v + " "+  m);
 			}
 		}
 	}

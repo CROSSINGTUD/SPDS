@@ -1,6 +1,7 @@
 package boomerang.callgraph;
 
 import boomerang.BackwardQuery;
+import boomerang.ForwardQuery;
 import boomerang.WeightedBoomerang;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -20,6 +21,7 @@ import soot.toolkits.exceptions.UnitThrowAnalysis;
 import soot.toolkits.graph.BriefUnitGraph;
 import soot.toolkits.graph.DirectedGraph;
 import soot.toolkits.graph.ExceptionalUnitGraph;
+import wpds.impl.PAutomaton;
 
 import java.util.*;
 
@@ -139,14 +141,17 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             InvokeExpr invokeExpr = stmt.getInvokeExpr();
             //Making a query to see which type of object the method was invoked on only makes sense when it was
             //invoked on an object
+            //TODO do we need to make sure not to use the dummy obj here
             if (invokeExpr instanceof InstanceInvokeExpr){
                 Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
-                Val val = new Val(value, invokeExpr.getMethod());
+                Val val = new Val(value, getMethodOf(stmt));
                 Statement statement = new Statement(stmt, getMethodOf(unit));
                 BackwardQuery query = new BackwardQuery(statement, val);
                 //Therefore we use the solver
                 BackwardBoomerangResults results = solver.solve(query);
-                for (Type type : results.possibleTypes()){
+                Map<ForwardQuery, PAutomaton> allocationSites = results.getAllocationSites();
+                for (ForwardQuery forwardQuery : allocationSites.keySet()){
+                    System.out.println("Forward Query found: "+forwardQuery);
                     //TODO get callee in type
                 }
             }
