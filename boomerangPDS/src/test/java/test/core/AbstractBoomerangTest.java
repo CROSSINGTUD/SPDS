@@ -13,6 +13,7 @@ package test.core;
 
 import boomerang.*;
 import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.debugger.Debugger;
@@ -56,7 +57,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	@Rule
 	public Timeout timeout = new Timeout(10000000);
-	private ObservableICFG<Unit, SootMethod> icfg;
+	private ObservableICFG<Unit, SootMethod> dynamicIcfg;
+	private ObservableStaticICFG staticIcfg;
 	private Collection<? extends Query> allocationSites;
 	protected Collection<? extends Query> queryForCallSites;
 	protected Collection<Error> unsoundErrors = Sets.newHashSet();
@@ -85,13 +87,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
+				staticIcfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
 				seedFactory = new SeedFactory<NoWeight>(){
-
-
 					@Override
 					public ObservableICFG<Unit, SootMethod> icfg() {
-						return icfg;
+						return staticIcfg;
 					}
 
 					@Override
@@ -130,8 +130,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 							expectedAccessPaths.addAll(AccessPathParser.parseAllFromString(value,m));
 						}
 					}
-
-					
 				};
 				queryForCallSites = seedFactory.computeSeeds();
 				if(integerQueries){
@@ -164,8 +162,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private void runDemandDrivenBackward() {
 		// Run backward analysis
-//		if (queryForCallSites.size() > 1)
-//			throw new RuntimeException("Found more than one backward query to execute!");
 		Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
 		compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
 	}
@@ -178,8 +174,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					NewExpr expr = ((NewExpr) as.getRightOp());
 					if (allocatesObjectOfInterest(expr)) {
 						Local local = (Local) as.getLeftOp();
-						Statement statement = new Statement(unit, icfg.getMethodOf(unit));
-						ForwardQuery forwardQuery = new ForwardQuery(statement, new AllocVal(local, icfg.getMethodOf(unit), as.getRightOp(),statement));
+						Statement statement = new Statement(unit, staticIcfg.getMethodOf(unit));
+						ForwardQuery forwardQuery = new ForwardQuery(statement, new AllocVal(local, staticIcfg.getMethodOf(unit), as.getRightOp(),statement));
 						return Optional.<Query>of(forwardQuery);
 					}
 				}
@@ -192,18 +188,18 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			if (stmt instanceof AssignStmt) {
 				AssignStmt as = (AssignStmt) stmt;
 				if (as.getLeftOp().toString().equals("allocation")) {
-					Statement statement = new Statement(stmt, icfg.getMethodOf(stmt));
+					Statement statement = new Statement(stmt, staticIcfg.getMethodOf(stmt));
 					if (as.getLeftOp() instanceof Local && as.getRightOp() instanceof IntConstant) {
 						Local local = (Local) as.getLeftOp();
 						ForwardQuery forwardQuery = new ForwardQuery(statement,
-                                new AllocVal(local, icfg.getMethodOf(stmt), as.getRightOp(),new Statement((Stmt) as,
-                                        icfg.getMethodOf(stmt))));
+                                new AllocVal(local, staticIcfg.getMethodOf(stmt), as.getRightOp(),new Statement((Stmt) as,
+                                        staticIcfg.getMethodOf(stmt))));
 						return Optional.<Query>of(forwardQuery);
 					}
 
 					if(as.containsInvokeExpr()){
 						AtomicReference<Query> returnValue = new AtomicReference<>();
-						icfg.addCalleeListener(new CalleeListener<Unit,SootMethod>(){
+						staticIcfg.addCalleeListener(new CalleeListener<Unit,SootMethod>(){
 
 							@Override
 							public Unit getObservedCaller() {
@@ -212,10 +208,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 							@Override
 							public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-								for(Unit u : icfg.getEndPointsOf(sootMethod)){
+								for(Unit u : staticIcfg.getEndPointsOf(sootMethod)){
 									if(u instanceof ReturnStmt && ((ReturnStmt) u).getOp() instanceof IntConstant){
 										ForwardQuery forwardQuery = new ForwardQuery(statement,
-												new AllocVal(as.getLeftOp(), icfg.getMethodOf(stmt), ((ReturnStmt) u).getOp(), new Statement((Stmt) u, sootMethod)));
+												new AllocVal(as.getLeftOp(), staticIcfg.getMethodOf(stmt), ((ReturnStmt) u).getOp(), new Statement((Stmt) u, sootMethod)));
 										returnValue.set(forwardQuery);
 									}
 								}
@@ -241,7 +237,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 		@Override
 		public Optional<? extends Query> test(Stmt unit) {
-			Stmt stmt = (Stmt) unit;
+			Stmt stmt = unit;
 			if (!(stmt.containsInvokeExpr()))
 				return Optional.absent();
 			InvokeExpr invokeExpr = stmt.getInvokeExpr();
@@ -250,8 +246,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			Value param = invokeExpr.getArg(0);
 			if (!(param instanceof Local))
 				return Optional.absent();
-			return Optional.<Query>of(new BackwardQuery(new Statement(unit, icfg.getMethodOf(unit)),
-					new Val(param, icfg.getMethodOf(unit))));
+			SootMethod newMethod = staticIcfg.getMethodOf(unit);
+			Statement newStatement = new Statement(unit, newMethod);
+			Val newVal = new Val(param, newMethod);
+			BackwardQuery newBackwardQuery = new BackwardQuery(newStatement, newVal);
+			return Optional.<Query>of(newBackwardQuery);
 		}
 	}
 
@@ -305,12 +304,15 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			Boomerang solver = new Boomerang(options) {
 				@Override
 				public ObservableICFG<Unit, SootMethod> icfg() {
-					return icfg;
+					if (dynamicIcfg == null){
+						dynamicIcfg = new ObservableDynamicICFG(this);
+					}
+					return dynamicIcfg;
 				}
 				
 				@Override
 				public Debugger createDebugger() {
-					return new IDEVizDebugger(ideVizFile,icfg);
+					return new IDEVizDebugger(ideVizFile, dynamicIcfg);
 				}
 
 				@Override
@@ -358,12 +360,15 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		}) {
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
-				return icfg;
+				if (dynamicIcfg == null){
+					dynamicIcfg = new ObservableDynamicICFG(this);
+				}
+				return dynamicIcfg;
 			}
 
 			@Override
 			public Debugger createDebugger() {
-				return new IDEVizDebugger(ideVizFile, icfg);
+				return new IDEVizDebugger(ideVizFile, dynamicIcfg);
 			}
 
 			@Override
@@ -461,8 +466,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			return;
 		visited.add(new Node<SootMethod, Stmt>(m, callSite));
 		Body activeBody = m.getActiveBody();
-		for (Unit cs : icfg.getCallsFromWithin(m)) {
-		    icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
+		for (Unit cs : staticIcfg.getCallsFromWithin(m)) {
+		    staticIcfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
 
 				@Override
 				public Unit getObservedCaller() {

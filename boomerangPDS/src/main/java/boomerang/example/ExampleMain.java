@@ -11,38 +11,26 @@
  *******************************************************************************/
 package boomerang.example;
 
-import java.io.File;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.DefaultBoomerangOptions;
+import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.callgraph.ObservableICFG;
-import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
-import soot.G;
-import soot.MethodOrMethodContext;
-import soot.PackManager;
-import soot.Scene;
-import soot.SceneTransformer;
-import soot.SootClass;
-import soot.SootMethod;
-import soot.Transform;
-import soot.Transformer;
-import soot.Unit;
-import soot.Value;
+import soot.*;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.callgraph.ReachableMethods;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import soot.options.Options;
 import soot.util.queue.QueueReader;
 import wpds.impl.Weight.NoWeight;
+
+import java.io.File;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 public class ExampleMain {
 	public static void main(String... args) {
@@ -112,17 +100,16 @@ public class ExampleMain {
 	private static Transformer createAnalysisTransformer() {
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				final BiDiInterproceduralCFG<Unit, SootMethod> biDiICFG= new JimpleBasedInterproceduralCFG();
-				final ObservableICFG icfg = new ObservableStaticICFG(biDiICFG);
-				BackwardQuery query = createQuery(icfg);
-				
+
 				//1. Create a Boomerang solver.
 				Boomerang solver = new Boomerang(new DefaultBoomerangOptions(){
+					@Override
 					public boolean onTheFlyCallGraph() {
-						//Must be turned of if no SeedFactory is specified.
+						//Must be turned off if no SeedFactory is specified.
 						return false;
-					};
+					}
 				}) {
+					ObservableICFG<Unit,SootMethod> icfg = new ObservableDynamicICFG(this);
 					@Override
 					public ObservableICFG<Unit, SootMethod> icfg() {
 						return icfg;
@@ -133,8 +120,10 @@ public class ExampleMain {
 						return null;
 					}
 				};
-				System.out.println("Solving query: " + query);
+
 				//2. Submit a query to the solver.
+				BackwardQuery query = createQuery();
+				System.out.println("Solving query: " + query);
 				BackwardBoomerangResults<NoWeight> backwardQueryResults = solver.solve(query);
 				solver.debugOutput();
 				System.out.println("All allocation sites of the query variable are:");
@@ -144,7 +133,7 @@ public class ExampleMain {
 				System.out.println(backwardQueryResults.getAllAliases());
 			}
 
-			private BackwardQuery createQuery(ObservableICFG icfg) {
+			private BackwardQuery createQuery() {
 				ReachableMethods reachableMethods = Scene.v().getReachableMethods();
 				QueueReader<MethodOrMethodContext> l = reachableMethods.listener();
 				while(l.hasNext()){

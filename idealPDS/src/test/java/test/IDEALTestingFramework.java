@@ -11,44 +11,29 @@
  *******************************************************************************/
 package test;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
 import boomerang.WeightedForwardQuery;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
-import boomerang.callgraph.ObservableStaticICFG;
-import com.google.common.collect.Lists;
-
-import boomerang.Query;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
-import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.ForwardBoomerangResults;
+import com.google.common.collect.Lists;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
-import ideal.IDEALSeedSolver;
-import soot.Body;
-import soot.SceneTransformer;
-import soot.SootMethod;
-import soot.Unit;
-import soot.Value;
+import soot.*;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.WeightFunctions;
-import sync.pds.solver.nodes.Node;
 import test.ExpectedResults.InternalState;
 import test.core.selfrunning.AbstractTestingFramework;
 import test.core.selfrunning.ImprecisionException;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
+
+import java.util.*;
+import java.util.Map.Entry;
 
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected ObservableICFG<Unit,SootMethod> icfg;
@@ -86,7 +71,6 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected SceneTransformer createAnalysisTransformer() throws ImprecisionException {
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(true));
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
 				System.out.println(sootTestMethod.getActiveBody());
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);

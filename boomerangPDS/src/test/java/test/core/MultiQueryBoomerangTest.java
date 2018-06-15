@@ -11,32 +11,10 @@
  *******************************************************************************/
 package test.core;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import org.junit.Rule;
-import org.junit.rules.Timeout;
-
-import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
-
-import boomerang.BackwardQuery;
-import boomerang.Boomerang;
-import boomerang.DefaultBoomerangOptions;
-import boomerang.ForwardQuery;
-import boomerang.Query;
-import boomerang.WeightedBoomerang;
+import boomerang.*;
 import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.callgraph.ObservableICFG;
-import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
@@ -44,24 +22,22 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
-import soot.Body;
-import soot.Local;
-import soot.RefType;
-import soot.Scene;
-import soot.SceneTransformer;
-import soot.SootClass;
-import soot.SootMethod;
-import soot.Unit;
-import soot.Value;
-import soot.jimple.AssignStmt;
-import soot.jimple.ClassConstant;
-import soot.jimple.InvokeExpr;
-import soot.jimple.NewExpr;
-import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
+import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
+import soot.*;
+import soot.jimple.*;
 import sync.pds.solver.nodes.Node;
 import test.core.selfrunning.AbstractTestingFramework;
 import wpds.impl.Weight.NoWeight;
+
+import java.util.*;
+import java.util.Map.Entry;
 
 public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 
@@ -85,9 +61,8 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
+				icfg = new ObservableDynamicICFG(solver);
 				seedFactory = new SeedFactory<NoWeight>(){
-
 
 					@Override
 					public ObservableICFG<Unit, SootMethod> icfg() {
@@ -210,6 +185,11 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 			@Override
 			public int analysisTimeoutMS() {
 				return analysisTimeout;
+			}
+
+			@Override
+			public boolean onTheFlyCallGraph(){
+				return false;
 			}
 		};
 		solver = new Boomerang(options) {
