@@ -134,7 +134,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             Edge edge = edgeIterator.next();
             listener.onCalleeAdded(unit, edge.tgt());
         }
-
         //If not all edges from the CHA call graph are covered, there may be more to discover
         if (!allEdgesCovered(chaCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
             Stmt stmt = (Stmt) unit;
@@ -225,8 +224,9 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         return  true;
     }
 
-    @Override
-    public void addCall(Unit caller, SootMethod callee) {
+    private void addCall(Unit caller, SootMethod callee) {
+        Edge edge = new Edge(getMethodOf(caller), (Stmt)caller, callee);
+        demandDrivenCallGraph.addEdge(edge);
         //Notify all interested listeners, so ..
         //.. CalleeListeners interested in callees of the caller or the CallGraphExtractor that is interested in any
         for (CalleeListener<Unit, SootMethod> listener : calleeListeners){
@@ -238,9 +238,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             if (CallGraphExtractor.ALL_METHODS.equals(callee) || callee.equals(listener.getObservedCallee()))
                 listener.onCallerAdded(caller, callee);
         }
-        //TODO: Check this cast!
-        Edge edge = new Edge(getMethodOf(caller), (Stmt)caller, callee);
-        demandDrivenCallGraph.addEdge(edge);
     }
 
     @Override
