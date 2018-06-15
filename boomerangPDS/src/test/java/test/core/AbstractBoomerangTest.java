@@ -55,6 +55,7 @@ import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
+import soot.JastAddJ.VariableScope;
 import soot.jimple.AssignStmt;
 import soot.jimple.IntConstant;
 import soot.jimple.InvokeExpr;
@@ -78,6 +79,7 @@ import wpds.interfaces.WPAStateListener;
 public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private static final boolean FAIL_ON_IMPRECISE = false;
+	private static final boolean VISUALIZATION = false;
 
 	@Rule
 	public Timeout timeout = new Timeout(10000000);
@@ -315,7 +317,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				
 				@Override
 				public Debugger createDebugger() {
-					return new IDEVizDebugger(ideVizFile,icfg);
+					return VISUALIZATION ? new IDEVizDebugger(ideVizFile,icfg) : new Debugger();
 				}
 
 				@Override
@@ -364,7 +366,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 			@Override
 			public Debugger createDebugger() {
-				return new IDEVizDebugger(ideVizFile, icfg);
+				return VISUALIZATION ? new IDEVizDebugger(ideVizFile, icfg) : new Debugger();
 			}
 
 			@Override

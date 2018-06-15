@@ -18,13 +18,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import boomerang.WeightedForwardQuery;
 import com.google.common.collect.Lists;
 
-import boomerang.Query;
+import boomerang.WeightedForwardQuery;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
-import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.ForwardBoomerangResults;
@@ -40,7 +38,6 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.WeightFunctions;
-import sync.pds.solver.nodes.Node;
 import test.ExpectedResults.InternalState;
 import test.core.selfrunning.AbstractTestingFramework;
 import test.core.selfrunning.ImprecisionException;
@@ -73,7 +70,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			}
 			
 			@Override
-			public Debugger<TransitionFunction> debugger() {
+			public Debugger<TransitionFunction> debugger(IDEALSeedSolver<TransitionFunction> solver) {
 				return new IDEVizDebugger<>(ideVizFile,icfg);
 			}
 		});

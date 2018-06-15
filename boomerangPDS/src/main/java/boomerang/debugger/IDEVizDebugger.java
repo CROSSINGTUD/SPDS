@@ -23,26 +23,37 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
 
 import boomerang.BackwardQuery;
 import boomerang.Query;
+import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.util.RegExAccessPath;
 import heros.InterproceduralCFG;
+import pathexpression.IRegEx;
 import soot.SootMethod;
 import soot.Unit;
+import soot.jimple.AssignStmt;
+import soot.jimple.InstanceFieldRef;
+import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.InvokeExpr;
+import soot.jimple.StaticInvokeExpr;
 import soot.jimple.Stmt;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -53,12 +64,14 @@ import wpds.impl.Weight;
 
 public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 
+    private static final Logger logger = LogManager.getLogger();
 	private File ideVizFile;
 	private InterproceduralCFG<Unit, SootMethod> icfg;
 	private Table<Query, SootMethod, Map<Transition<Statement, INode<Val>>, W>> reachedNodes = HashBasedTable.create();
 	private Table<Query, SootMethod, Set<Rule<Statement, INode<Val>, W>>> rules = HashBasedTable.create();
 	private Map<Object, Integer> objectToInteger = new HashMap<>();
 	private int charSize;
+	
 	
 	public IDEVizDebugger(File ideVizFile, InterproceduralCFG<Unit, SootMethod> icfg) {
 		this.ideVizFile = ideVizFile;
@@ -87,12 +100,15 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 
 	@Override
 	public void done(Map<Query, AbstractBoomerangSolver<W>> solvers){
+		logger.info("Starting to compute visualization");
 		Stopwatch watch = Stopwatch.createStarted();
 		JSONArray eventualData = new JSONArray();
 		for (Query q : solvers.keySet()) {
 			callRules(q, solvers.get(q).getCallPDS().getAllRules());
 		}
 		for(Entry<Query, AbstractBoomerangSolver<W>> e : solvers.entrySet()){
+
+			logger.debug("Computing results for {}",e.getKey());
 			Query query = e.getKey();
 			JSONQuery queryJSON = new JSONQuery(query);
 			JSONArray data = new JSONArray();
@@ -105,11 +121,13 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 					continue;
 				int labelYOffset = computeLabelYOffset(mToRes.getValue().columnKeySet());
 				JSONMethod jsonMethod = new JSONMethod(m);
+				logger.debug("Creating control-flow graph for {}",m);
 				IDEVizDebugger<W>.JSONControlFlowGraph cfg = createControlFlowGraph(m, labelYOffset);
 				
 				jsonMethod.put("cfg", cfg);
 
 				Set<Rule<Statement, INode<Val>, W>> rulesInMethod = getOrCreateRuleSet(query,m);
+				logger.debug("Creating data-flow graph for {}",m);
 				DataFlowGraph dfg = createDataFlowGraph(query, mToRes.getValue(),rulesInMethod,cfg,m,labelYOffset);
 				jsonMethod.put("dfg", dfg);
 				data.add(jsonMethod);
@@ -117,12 +135,16 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			queryJSON.put("methods",data);
 			eventualData.add(queryJSON);
 		};
-		System.out.println("Writing IDEViz File took: "+watch.elapsed());
+		logger.info("Computing visualization took: {}", watch.elapsed());
 		try (FileWriter file = new FileWriter(ideVizFile)) {
+			logger.info("Writing visualization to file {}", ideVizFile.getAbsolutePath());
 			file.write(eventualData.toJSONString());
+			logger.info("Visualization available in file {}", ideVizFile.getAbsolutePath());
 		} catch (IOException e) {
 			e.printStackTrace();
+			logger.info("Exception in writing to visualization file {}", ideVizFile.getAbsolutePath());
 		}
+		
 	}
 	
 
@@ -195,6 +217,8 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			additionalData.put("id", "q"+id(q)+"n" + id(new Node<Statement,RegExAccessPath>(statement,val)));
 			additionalData.put("stmtId", id(stmt));
 			additionalData.put("factId", id(val));
+			if (trans.getValue() != null)
+				additionalData.put("ideValue", StringEscapeUtils.escapeHtml4(trans.getValue().toString()));
 			nodeObj.put("classes", classes);
 			nodeObj.put("group", "nodes");
 			nodeObj.put("data", additionalData);
@@ -304,7 +328,32 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 		cfg.put("controlFlowNode", data);
 		return cfg;
 	}
-	public String getShortLabel(Unit u) {
+
+	private String getShortLabel(Unit u) {
+		if (u instanceof AssignStmt) {
+			AssignStmt assignStmt = (AssignStmt) u;
+			if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
+				InstanceFieldRef fr = (InstanceFieldRef) assignStmt.getRightOp();
+				return assignStmt.getLeftOp() + " = " + fr.getBase() + "." + fr.getField().getName();
+			}
+			if (assignStmt.getLeftOp() instanceof InstanceFieldRef) {
+				InstanceFieldRef fr = (InstanceFieldRef) assignStmt.getLeftOp();
+				return fr.getBase() + "." + fr.getField().getName() + " = " + assignStmt.getRightOp();
+			}
+		}
+		if (u instanceof Stmt && ((Stmt) u).containsInvokeExpr()) {
+			InvokeExpr invokeExpr = ((Stmt) u).getInvokeExpr();
+			if (invokeExpr instanceof StaticInvokeExpr)
+				return (u instanceof AssignStmt ? ((AssignStmt) u).getLeftOp() + " = " : "")
+						+ invokeExpr.getMethod().getName() + "("
+						+ invokeExpr.getArgs().toString().replace("[", "").replace("]", "") + ")";
+			if (invokeExpr instanceof InstanceInvokeExpr) {
+				InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
+				return (u instanceof AssignStmt ? ((AssignStmt) u).getLeftOp() + " = " : "") + iie.getBase() + "."
+						+ invokeExpr.getMethod().getName() + "("
+						+ invokeExpr.getArgs().toString().replace("[", "").replace("]", "") + ")";
+			}
+		}
 		return u.toString();
 	}
 
