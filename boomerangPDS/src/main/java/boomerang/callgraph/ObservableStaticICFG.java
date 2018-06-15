@@ -4,12 +4,19 @@ import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-import soot.toolkits.graph.DirectedGraph;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * An interprocedural control-flow graph, for which caller-callee edges can be observed using {@link CalleeListener} and
+ * {@link CallerListener}. This call graph wraps a precomputed call graph and notifies listeners about all
+ * interprocedual edges for the requested relation at once.
+ *
+ *
+ * @author Melanie Bruns on 04.05.2018
+ */
 public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
     /**
      * Wrapped static ICFG. If available, this is used to handle all queries.

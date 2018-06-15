@@ -17,6 +17,15 @@ import soot.toolkits.graph.ExceptionalUnitGraph;
 
 import java.util.*;
 
+/**
+ * An interprocedural control-flow graph, for which caller-callee edges can be observed using {@link CalleeListener} and
+ * {@link CallerListener}. Used for demand-driven call graph generation.
+ *
+ *
+ * Starts with an graph only containing intraprocedual edges and uses a CHA-based call graph to derive callers.
+ *
+ * @author Melanie Bruns on 04.05.2018
+ */
 public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
     private CallGraph demandDrivenCallGraph = new CallGraph();

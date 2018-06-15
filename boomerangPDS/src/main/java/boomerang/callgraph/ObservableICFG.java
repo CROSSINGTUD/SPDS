@@ -3,17 +3,19 @@ package boomerang.callgraph;
 import soot.Unit;
 import soot.Value;
 import soot.toolkits.graph.Block;
-import soot.toolkits.graph.DirectedGraph;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
 /**
- * An interprocedural control-flow graph.
+ * An interprocedural control-flow graph, for which caller-callee edges can be observed using {@link CalleeListener} and
+ * {@link CallerListener}. Can be used for demand-driven call graph generation.
  *
  * @param <N> Nodes in the CFG, typically {@link Unit} or {@link Block}
  * @param <M> Method representation
+ *
+ * @author Melanie Bruns on 04.05.2018
  */
 public interface ObservableICFG<N,M> {
 
