@@ -18,6 +18,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.Set;
 
 import com.google.common.base.Optional;
@@ -71,6 +75,7 @@ import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {
 
+	private static final Logger logger = LogManager.getLogger();
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
@@ -589,7 +594,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 				if(t.getStart().fact().stmt().equals(stmt)) {
 					IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
-					results.put(new RegExAccessPath(t.getStart().fact().fact(), regEx),w);
+					results.put(new RegExAccessPath(t.getStart().fact().fact(),t.getStart(), regEx, fieldAutomaton.getInitialState()),w);
 				}
 			}
 		});
@@ -598,6 +603,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	
 	public Table<Statement, RegExAccessPath, W> getResults(){
 		final Table<Statement, RegExAccessPath, W> results = HashBasedTable.create();
+		logger.debug("Start extracting results from {}", this);
 		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 
 			@Override
@@ -607,9 +613,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 					return;
 				}
 				IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
-				results.put(t.getStart().fact().stmt(), new RegExAccessPath(t.getStart().fact().fact(), regEx),w);
+				results.put(t.getStart().fact().stmt(), new RegExAccessPath(t.getStart().fact().fact(), t.getStart(),regEx,fieldAutomaton.getInitialState()),w);
 			}
 		});
+		logger.debug("End extracted results from {}", this);
 		return results;
 	}
 	

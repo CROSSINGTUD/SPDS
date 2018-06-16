@@ -47,6 +47,7 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected JimpleBasedInterproceduralCFG icfg;
 	private static final boolean FAIL_ON_IMPRECISE = false;
+	private static final boolean VISUALIZATION = false;
 
 
 	protected abstract TypeStateMachineWeightFunctions getStateMachine();
@@ -71,7 +72,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			
 			@Override
 			public Debugger<TransitionFunction> debugger(IDEALSeedSolver<TransitionFunction> solver) {
-				return new IDEVizDebugger<>(ideVizFile,icfg);
+				return VISUALIZATION ? new IDEVizDebugger<>(ideVizFile,icfg) : new Debugger();
 			}
 		});
 	}

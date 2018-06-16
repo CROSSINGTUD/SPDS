@@ -40,13 +40,11 @@ import com.google.common.collect.Table.Cell;
 
 import boomerang.BackwardQuery;
 import boomerang.Query;
-import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.util.RegExAccessPath;
 import heros.InterproceduralCFG;
-import pathexpression.IRegEx;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
@@ -59,7 +57,6 @@ import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.NormalRule;
 import wpds.impl.Rule;
-import wpds.impl.Transition;
 import wpds.impl.Weight;
 
 public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
@@ -67,7 +64,6 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
     private static final Logger logger = LogManager.getLogger();
 	private File ideVizFile;
 	private InterproceduralCFG<Unit, SootMethod> icfg;
-	private Table<Query, SootMethod, Map<Transition<Statement, INode<Val>>, W>> reachedNodes = HashBasedTable.create();
 	private Table<Query, SootMethod, Set<Rule<Statement, INode<Val>, W>>> rules = HashBasedTable.create();
 	private Map<Object, Integer> objectToInteger = new HashMap<>();
 	private int charSize;
@@ -100,7 +96,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 
 	@Override
 	public void done(Map<Query, AbstractBoomerangSolver<W>> solvers){
-		logger.info("Starting to compute visualization");
+		logger.warn("Starting to compute visualization, this requires a large amount of memory, please ensure the VM has enough memory.");
 		Stopwatch watch = Stopwatch.createStarted();
 		JSONArray eventualData = new JSONArray();
 		for (Query q : solvers.keySet()) {
@@ -196,7 +192,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			data.add(nodeObj);
 		}
 
-		Multimap<Node<Statement,Val>, IRegEx<Field>> esgNodes = HashMultimap.create();
+		Multimap<Node<Statement,Val>, RegExAccessPath> esgNodes = HashMultimap.create();
 		// System.out.println("Number of nodes:\t" + esg.getNodes().size());
 		for (Cell<Statement, RegExAccessPath, W> trans : table.cellSet()) {
 			Statement statement = trans.getRowKey();
@@ -225,7 +221,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 
 			data.add(nodeObj);
 			
-			esgNodes.put(new Node<Statement,Val>(statement,val.getVal()), val.getFields());
+			esgNodes.put(new Node<Statement,Val>(statement,val.getVal()), val);
 		}
 
 		for (Rule<Statement, INode<Val>, W> rule : rulesInMethod) {
@@ -237,10 +233,10 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			dataEntry.put("id", "e" + id(rule));
 			Node<Statement,Val> start = getStartNode(rule);
 			Node<Statement,Val> target = getTargetNode(rule);
-			for(IRegEx<Field> startField: esgNodes.get(start)) {
-				for(IRegEx<Field> targetField: esgNodes.get(target)) {
-					dataEntry.put("source", "q"+id(q)+ "n" + id(new Node<Statement,RegExAccessPath>(start.stmt(),new RegExAccessPath(start.fact(), startField))));
-					dataEntry.put("target",  "q"+id(q)+"n" + id(new Node<Statement,RegExAccessPath>(target.stmt(),new RegExAccessPath(target.fact(), targetField))));
+			for(RegExAccessPath startField: esgNodes.get(start)) {
+				for(RegExAccessPath targetField: esgNodes.get(target)) {
+					dataEntry.put("source", "q"+id(q)+ "n" + id(new Node<Statement,RegExAccessPath>(start.stmt(),startField)));
+					dataEntry.put("target",  "q"+id(q)+"n" + id(new Node<Statement,RegExAccessPath>(target.stmt(),targetField)));
 					dataEntry.put("directed", "true");
 					dataEntry.put("direction", (q instanceof BackwardQuery ? "Backward" : "Forward"));
 					nodeObj.put("data", dataEntry);
