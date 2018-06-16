@@ -103,28 +103,24 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			callRules(q, solvers.get(q).getCallPDS().getAllRules());
 		}
 		for(Entry<Query, AbstractBoomerangSolver<W>> e : solvers.entrySet()){
-
 			logger.debug("Computing results for {}",e.getKey());
 			Query query = e.getKey();
 			JSONQuery queryJSON = new JSONQuery(query);
 			JSONArray data = new JSONArray();
-			Table<Statement, RegExAccessPath, W> results = e.getValue().getResults();
-			Map<SootMethod,Table<Statement, RegExAccessPath, W>> sootMethodToResults = convert(results);
-			for(Entry<SootMethod, Table<Statement, RegExAccessPath, W>> mToRes : sootMethodToResults.entrySet()){
-				SootMethod m = mToRes.getKey();
-				Table<Statement, RegExAccessPath, W> resTable = mToRes.getValue();
-				if(resTable.isEmpty())
+			for(SootMethod m : e.getValue().getReachableMethods()) {
+				Table<Statement, RegExAccessPath, W> results = e.getValue().getResults(m);
+				if(results.isEmpty())
 					continue;
-				int labelYOffset = computeLabelYOffset(mToRes.getValue().columnKeySet());
+				int labelYOffset = computeLabelYOffset(results.columnKeySet());
 				JSONMethod jsonMethod = new JSONMethod(m);
 				logger.debug("Creating control-flow graph for {}",m);
-				IDEVizDebugger<W>.JSONControlFlowGraph cfg = createControlFlowGraph(m, labelYOffset);
+				IDEVizDebugger<W>.JSONControlFlowGraph cfg = createControlFlowGraph(m, 9);
 				
 				jsonMethod.put("cfg", cfg);
 
 				Set<Rule<Statement, INode<Val>, W>> rulesInMethod = getOrCreateRuleSet(query,m);
 				logger.debug("Creating data-flow graph for {}",m);
-				DataFlowGraph dfg = createDataFlowGraph(query, mToRes.getValue(),rulesInMethod,cfg,m,labelYOffset);
+				DataFlowGraph dfg = createDataFlowGraph(query, results,rulesInMethod,cfg,m,labelYOffset);
 				jsonMethod.put("dfg", dfg);
 				data.add(jsonMethod);
 			}
@@ -144,20 +140,6 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 	}
 	
 
-	private Map<SootMethod, Table<Statement, RegExAccessPath, W>> convert(
-			Table<Statement, RegExAccessPath, W> results) {
-		HashMap<SootMethod, Table<Statement, RegExAccessPath, W>> res = Maps.newHashMap();
-		for(Cell<Statement, RegExAccessPath, W> c : results.cellSet()){
-			SootMethod method = c.getRowKey().getMethod();
-			Table<Statement, RegExAccessPath, W> table = res.get(method);
-			if(table == null){
-				table = HashBasedTable.create();
-				res.put(method, table);
-			}
-			table.put(c.getRowKey(), c.getColumnKey(), c.getValue());
-		}
-		return res;
-	}
 
 
 	private int computeLabelYOffset(Set<RegExAccessPath> facts) {

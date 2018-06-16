@@ -601,7 +601,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		return results;
 	}
 	
-	public Table<Statement, RegExAccessPath, W> getResults(){
+	public Table<Statement, RegExAccessPath, W> getResults(SootMethod m){
 		final Table<Statement, RegExAccessPath, W> results = HashBasedTable.create();
 		logger.debug("Start extracting results from {}", this);
 		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
@@ -612,8 +612,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				if(t.getStart() instanceof GeneratedState) {
 					return;
 				}
-				IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
-				results.put(t.getStart().fact().stmt(), new RegExAccessPath(t.getStart().fact().fact(), t.getStart(),regEx,fieldAutomaton.getInitialState()),w);
+				if(t.getStart().fact().stmt().getMethod().equals(m)) {
+					IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
+					results.put(t.getStart().fact().stmt(), new RegExAccessPath(t.getStart().fact().fact(), t.getStart(),regEx,fieldAutomaton.getInitialState()),w);
+				}
 			}
 		});
 		logger.debug("End extracted results from {}", this);
@@ -635,6 +637,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 			}
 		});
+	}
+
+	public Collection<SootMethod> getReachableMethods() {
+		return reachableMethods;
 	}
 	
 }
