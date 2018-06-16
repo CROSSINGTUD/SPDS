@@ -10,14 +10,10 @@ import sync.pds.solver.nodes.Node;
 public class RegExAccessPath {
 	private final Val val;
 	private final IRegEx<Field> fields;
-	private final INode<Node<Statement, Val>> start;
-	private final INode<Node<Statement, Val>> target;
 
-	public RegExAccessPath(Val val, INode<Node<Statement, Val>> start, IRegEx<Field> fields, INode<Node<Statement, Val>> target){
+	public RegExAccessPath(Val val, IRegEx<Field> fields){
 		this.val = val;
-		this.start = start;
 		this.fields = fields;
-		this.target = target;
 	}
 
 	public Val getVal(){
@@ -37,8 +33,7 @@ public class RegExAccessPath {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((start == null) ? 0 : start.hashCode());
-		result = prime * result + ((target == null) ? 0 : target.hashCode());
+		result = prime * result + ((fields == null) ? 0 : fields.hashCode());
 		result = prime * result + ((val == null) ? 0 : val.hashCode());
 		return result;
 	}
@@ -52,15 +47,10 @@ public class RegExAccessPath {
 		if (getClass() != obj.getClass())
 			return false;
 		RegExAccessPath other = (RegExAccessPath) obj;
-		if (start == null) {
-			if (other.start != null)
+		if (fields == null) {
+			if (other.fields != null)
 				return false;
-		} else if (!start.equals(other.start))
-			return false;
-		if (target == null) {
-			if (other.target != null)
-				return false;
-		} else if (!target.equals(other.target))
+		} else if (!fields.equals(other.fields))
 			return false;
 		if (val == null) {
 			if (other.val != null)
@@ -69,4 +59,5 @@ public class RegExAccessPath {
 			return false;
 		return true;
 	}
+
 }

@@ -196,7 +196,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			additionalData.put("stmtId", id(stmt));
 			additionalData.put("factId", id(val));
 			if (trans.getValue() != null)
-				additionalData.put("ideValue", StringEscapeUtils.escapeHtml4(trans.getValue().toString()));
+				additionalData.put("ideValue", trans.getValue().toString());
 			nodeObj.put("classes", classes);
 			nodeObj.put("group", "nodes");
 			nodeObj.put("data", additionalData);

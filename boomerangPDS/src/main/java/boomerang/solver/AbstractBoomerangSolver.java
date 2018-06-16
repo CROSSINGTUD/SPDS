@@ -594,7 +594,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 				if(t.getStart().fact().stmt().equals(stmt)) {
 					IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
-					results.put(new RegExAccessPath(t.getStart().fact().fact(),t.getStart(), regEx, fieldAutomaton.getInitialState()),w);
+					results.put(new RegExAccessPath(t.getStart().fact().fact(), regEx),w);
 				}
 			}
 		});
@@ -614,7 +614,16 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 				if(t.getStart().fact().stmt().getMethod().equals(m)) {
 					IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
-					results.put(t.getStart().fact().stmt(), new RegExAccessPath(t.getStart().fact().fact(), t.getStart(),regEx,fieldAutomaton.getInitialState()),w);
+					AbstractBoomerangSolver.this.callAutomaton.registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
+
+						@Override
+						public void onWeightAdded(Transition<Statement, INode<Val>> callT, W w,
+								WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+							if(callT.getStart().fact().equals(t.getStart().fact().fact()) && callT.getLabel().equals(t.getStart().fact().stmt())) {
+								results.put(t.getStart().fact().stmt(), new RegExAccessPath(t.getStart().fact().fact(),regEx),w);
+							}
+						}
+					});
 				}
 			}
 		});
