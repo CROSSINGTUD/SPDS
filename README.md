@@ -7,12 +7,14 @@
 This repository contains a Java implementation of Weighted Pushdown Systems.
 Additionally, it contains an implementation of [Boomerang](boomerangPDS) and [IDEal](idealPDS) based on a Weighted Pushdown System.
 
-# Build
+# Build and Install
 
 All projects are maven projects and can be imported in any IDE. 
-To build the projects and execute the test cases, run
+To build and install WPDS into you local repository, run 
 
-``mvn clean test``
+``mvn clean install -DskipTests``
+
+in the root directory of this git repository. If you do not want to skip the test cases, remove the last flag.
 
 # Examples
 
