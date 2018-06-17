@@ -177,4 +177,22 @@ public class ForwardBoomerangResults<W extends Weight> {
 		});
 		return invokedMethodsOnInstance;
 	}
+	
+	public boolean containsCallRecursion() {
+		for(Entry<Query, AbstractBoomerangSolver<W>> e: queryToSolvers.entrySet()) {
+			if(e.getValue().getCallAutomaton().containsLoop()) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public boolean containsFieldLoop() {
+		for(Entry<Query, AbstractBoomerangSolver<W>> e: queryToSolvers.entrySet()) {
+			if(e.getValue().getFieldAutomaton().containsLoop()) {
+				return true;
+			}
+		}
+		return false;
+	}
 }

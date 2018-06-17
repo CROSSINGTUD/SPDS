@@ -13,6 +13,8 @@ package wpds.impl;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -684,6 +686,25 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		}
 		
 		return RegEx.reverse(pathExpressionComputer.getExpressionBetween(end, start));
+	}
+
+	public boolean containsLoop() {
+		//Performs a backward DFS
+		HashSet<D> visited = Sets.newHashSet();
+		LinkedList<D> worklist = Lists.newLinkedList();
+		worklist.add(initialState);
+		while(!worklist.isEmpty()) {
+			D pop = worklist.pop();
+			visited.add(pop);
+			Collection<Transition<N, D>> inTrans = transitionsInto.get(pop);
+			for(Transition<N, D> t : inTrans) {
+				if(visited.contains(t.getStart())) {
+					return true;
+				}
+				worklist.add(t.getStart());
+			}
+		}
+		return false;
 	}
 	
 }
