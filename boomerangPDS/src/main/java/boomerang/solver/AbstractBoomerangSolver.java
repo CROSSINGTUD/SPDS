@@ -18,6 +18,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.Set;
 
 import com.google.common.base.Optional;
@@ -72,6 +76,7 @@ import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {
 
+	private static final Logger logger = LogManager.getLogger();
 	protected final ObservableICFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
@@ -572,7 +577,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	public void addReachable(SootMethod m) {
 		if (reachableMethods.add(m)) {
-//			System.out.println(this + "  " + m);
 			Collection<Runnable> collection = queuedReachableMethod.get(m);
 			for (Runnable runnable : collection) {
 				runnable.run();
@@ -616,8 +620,9 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		return results;
 	}
 	
-	public Table<Statement, RegExAccessPath, W> getResults(){
+	public Table<Statement, RegExAccessPath, W> getResults(SootMethod m){
 		final Table<Statement, RegExAccessPath, W> results = HashBasedTable.create();
+		logger.debug("Start extracting results from {}", this);
 		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 
 			@Override
@@ -626,10 +631,22 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				if(t.getStart() instanceof GeneratedState) {
 					return;
 				}
-				IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
-				results.put(t.getStart().fact().stmt(), new RegExAccessPath(t.getStart().fact().fact(), regEx),w);
+				if(t.getStart().fact().stmt().getMethod().equals(m)) {
+					IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
+					AbstractBoomerangSolver.this.callAutomaton.registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
+
+						@Override
+						public void onWeightAdded(Transition<Statement, INode<Val>> callT, W w,
+								WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+							if(callT.getStart().fact().equals(t.getStart().fact().fact()) && callT.getLabel().equals(t.getStart().fact().stmt())) {
+								results.put(t.getStart().fact().stmt(), new RegExAccessPath(t.getStart().fact().fact(),regEx),w);
+							}
+						}
+					});
+				}
 			}
 		});
+		logger.debug("End extracted results from {}", this);
 		return results;
 	}
 	
@@ -649,5 +666,9 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			}
 		});
 	}
-	
+
+	public Collection<SootMethod> getReachableMethods() {
+		return reachableMethods;
+	}
+
 }

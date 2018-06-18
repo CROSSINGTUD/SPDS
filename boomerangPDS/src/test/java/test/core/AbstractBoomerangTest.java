@@ -36,6 +36,24 @@ import org.junit.Rule;
 import org.junit.rules.Timeout;
 import soot.*;
 import soot.jimple.*;
+import soot.Body;
+import soot.Local;
+import soot.RefType;
+import soot.Scene;
+import soot.SceneTransformer;
+import soot.SootClass;
+import soot.SootMethod;
+import soot.Unit;
+import soot.Value;
+import soot.JastAddJ.VariableScope;
+import soot.jimple.AssignStmt;
+import soot.jimple.IntConstant;
+import soot.jimple.InvokeExpr;
+import soot.jimple.NewExpr;
+import soot.jimple.ReturnStmt;
+import soot.jimple.Stmt;
+import soot.jimple.StringConstant;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
@@ -54,6 +72,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private static final boolean FAIL_ON_IMPRECISE = false;
+	private static final boolean VISUALIZATION = false;
 
 	@Rule
 	public Timeout timeout = new Timeout(10000000);
@@ -312,7 +331,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				
 				@Override
 				public Debugger createDebugger() {
-					return new IDEVizDebugger(ideVizFile, dynamicIcfg);
+					return VISUALIZATION ? new IDEVizDebugger(ideVizFile, dynamicIcfg) : new Debugger();
 				}
 
 				@Override
@@ -368,7 +387,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 			@Override
 			public Debugger createDebugger() {
-				return new IDEVizDebugger(ideVizFile, dynamicIcfg);
+				return VISUALIZATION ? new IDEVizDebugger(ideVizFile, dynamicIcfg) : new Debugger();
 			}
 
 			@Override

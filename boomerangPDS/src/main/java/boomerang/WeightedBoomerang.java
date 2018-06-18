@@ -19,6 +19,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import boomerang.callgraph.BackwardsObservableICFG;
 import boomerang.callgraph.CallerListener;
 import com.google.common.base.Joiner;
@@ -87,6 +90,7 @@ import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedBoomerang<W extends Weight> {
 	public static final boolean DEBUG = false;
+	private static final Logger logger = LogManager.getLogger();
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
 	private IBoomerangStats<W> stats;
@@ -189,7 +193,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					if(options.analysisTimeoutMS() > 0){
 						long elapsed = analysisWatch.elapsed(TimeUnit.MILLISECONDS);
 						if(elapsed - lastTick > 15000){
-							System.err.println(stats);
+//							System.err.println(stats);
 							lastTick = elapsed;
 						}
 						if(options.analysisTimeoutMS() < elapsed){
@@ -716,9 +720,12 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		}
 		boolean timedout = false;
 		try {
+			logger.debug("Starting forward analysis of: {}", query);
 			forwardSolve(query);
+			logger.debug("Terminated forward analysis of: {}", query);
 		}catch(BoomerangTimeoutException e) {
 			timedout = true;
+			logger.debug("Timeout of query: {}", query);
 		}
 		
 		if(analysisWatch.isRunning()){
@@ -733,9 +740,12 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		}
 		boolean timedout = false;
 		try {
+			logger.debug("Starting backward analysis of: {}", query);
 			backwardSolve(query);
+			logger.debug("Terminated backward analysis of: {}", query);
 		} catch(BoomerangTimeoutException e) {
 			timedout = true;
+			logger.debug("Timeout of query: {}", query);
 		}
 		if(analysisWatch.isRunning()){
 			analysisWatch.stop();
@@ -1052,7 +1062,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		// queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
 		// }
 		Debugger<W> debugger = getOrCreateDebugger();
-//		debugger.done(queryToSolvers);
+		debugger.done(queryToSolvers);
 		if (!DEBUG)
 			return;
 
@@ -1072,7 +1082,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 //					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
 				}
 			}
-			System.out.println(Joiner.on("\n").join(queryToSolvers.get(q).getResults().cellSet()));
+			for(SootMethod m : queryToSolvers.get(q).getReachableMethods()) {
+				System.out.println(m + "\n" + Joiner.on("\n\t").join(queryToSolvers.get(q).getResults(m).cellSet()));
+			}
 //			queryToSolvers.getOrCreate(q).debugOutput();
 //			for (FieldReadPOI p : fieldReads.values()) {
 //				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());

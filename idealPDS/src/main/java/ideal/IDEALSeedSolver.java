@@ -101,7 +101,7 @@ public class IDEALSeedSolver<W extends Weight> {
 
 			@Override
 			public Debugger<W> createDebugger() {
-				return analysisDefinition.debugger();
+				return analysisDefinition.debugger(IDEALSeedSolver.this);
 			}
 
 			@Override

@@ -23,13 +23,17 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringEscapeUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.common.collect.Table.Cell;
@@ -45,23 +49,28 @@ import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.util.RegExAccessPath;
 import soot.SootMethod;
 import soot.Unit;
+import soot.jimple.AssignStmt;
+import soot.jimple.InstanceFieldRef;
+import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.InvokeExpr;
+import soot.jimple.StaticInvokeExpr;
 import soot.jimple.Stmt;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.NormalRule;
 import wpds.impl.Rule;
-import wpds.impl.Transition;
 import wpds.impl.Weight;
 
 public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 
+    private static final Logger logger = LogManager.getLogger();
 	private File ideVizFile;
 	private ObservableICFG<Unit, SootMethod> icfg;
-	private Table<Query, SootMethod, Map<Transition<Statement, INode<Val>>, W>> reachedNodes = HashBasedTable.create();
 	private Table<Query, SootMethod, Set<Rule<Statement, INode<Val>, W>>> rules = HashBasedTable.create();
 	private Map<Object, Integer> objectToInteger = new HashMap<>();
 	private int charSize;
 	
+
 	public IDEVizDebugger(File ideVizFile, ObservableICFG<Unit, SootMethod> icfg) {
 		this.ideVizFile = ideVizFile;
 		this.icfg = icfg;
@@ -89,59 +98,50 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 
 	@Override
 	public void done(Map<Query, AbstractBoomerangSolver<W>> solvers){
+		logger.warn("Starting to compute visualization, this requires a large amount of memory, please ensure the VM has enough memory.");
 		Stopwatch watch = Stopwatch.createStarted();
 		JSONArray eventualData = new JSONArray();
 		for (Query q : solvers.keySet()) {
 			callRules(q, solvers.get(q).getCallPDS().getAllRules());
 		}
 		for(Entry<Query, AbstractBoomerangSolver<W>> e : solvers.entrySet()){
+			logger.debug("Computing results for {}",e.getKey());
 			Query query = e.getKey();
 			JSONQuery queryJSON = new JSONQuery(query);
 			JSONArray data = new JSONArray();
-			Table<Statement, RegExAccessPath, W> results = e.getValue().getResults();
-			Map<SootMethod,Table<Statement, RegExAccessPath, W>> sootMethodToResults = convert(results);
-			for(Entry<SootMethod, Table<Statement, RegExAccessPath, W>> mToRes : sootMethodToResults.entrySet()){
-				SootMethod m = mToRes.getKey();
-				Table<Statement, RegExAccessPath, W> resTable = mToRes.getValue();
-				if(resTable.isEmpty())
+			for(SootMethod m : e.getValue().getReachableMethods()) {
+				Table<Statement, RegExAccessPath, W> results = e.getValue().getResults(m);
+				if(results.isEmpty())
 					continue;
-				int labelYOffset = computeLabelYOffset(mToRes.getValue().columnKeySet());
+				int labelYOffset = computeLabelYOffset(results.columnKeySet());
 				JSONMethod jsonMethod = new JSONMethod(m);
-				IDEVizDebugger<W>.JSONControlFlowGraph cfg = createControlFlowGraph(m, labelYOffset);
+				logger.debug("Creating control-flow graph for {}",m);
+				IDEVizDebugger<W>.JSONControlFlowGraph cfg = createControlFlowGraph(m, 9);
 				
 				jsonMethod.put("cfg", cfg);
 
 				Set<Rule<Statement, INode<Val>, W>> rulesInMethod = getOrCreateRuleSet(query,m);
-				DataFlowGraph dfg = createDataFlowGraph(query, mToRes.getValue(),rulesInMethod,cfg,m,labelYOffset);
+				logger.debug("Creating data-flow graph for {}",m);
+				DataFlowGraph dfg = createDataFlowGraph(query, results,rulesInMethod,cfg,m,labelYOffset);
 				jsonMethod.put("dfg", dfg);
 				data.add(jsonMethod);
 			}
 			queryJSON.put("methods",data);
 			eventualData.add(queryJSON);
 		};
-		System.out.println("Writing IDEViz File took: "+watch.elapsed());
+		logger.info("Computing visualization took: {}", watch.elapsed());
 		try (FileWriter file = new FileWriter(ideVizFile)) {
+			logger.info("Writing visualization to file {}", ideVizFile.getAbsolutePath());
 			file.write(eventualData.toJSONString());
+			logger.info("Visualization available in file {}", ideVizFile.getAbsolutePath());
 		} catch (IOException e) {
 			e.printStackTrace();
+			logger.info("Exception in writing to visualization file {}", ideVizFile.getAbsolutePath());
 		}
+
 	}
 	
 
-	private Map<SootMethod, Table<Statement, RegExAccessPath, W>> convert(
-			Table<Statement, RegExAccessPath, W> results) {
-		HashMap<SootMethod, Table<Statement, RegExAccessPath, W>> res = Maps.newHashMap();
-		for(Cell<Statement, RegExAccessPath, W> c : results.cellSet()){
-			SootMethod method = c.getRowKey().getMethod();
-			Table<Statement, RegExAccessPath, W> table = res.get(method);
-			if(table == null){
-				table = HashBasedTable.create();
-				res.put(method, table);
-			}
-			table.put(c.getRowKey(), c.getColumnKey(), c.getValue());
-		}
-		return res;
-	}
 
 
 	private int computeLabelYOffset(Set<RegExAccessPath> facts) {
@@ -176,6 +176,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			data.add(nodeObj);
 		}
 
+		Multimap<Node<Statement,Val>, RegExAccessPath> esgNodes = HashMultimap.create();
 		// System.out.println("Number of nodes:\t" + esg.getNodes().size());
 		for (Cell<Statement, RegExAccessPath, W> trans : table.cellSet()) {
 			Statement statement = trans.getRowKey();
@@ -196,11 +197,15 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			additionalData.put("id", "q"+id(q)+"n" + id(new Node<Statement,RegExAccessPath>(statement,val)));
 			additionalData.put("stmtId", id(stmt));
 			additionalData.put("factId", id(val));
+			if (trans.getValue() != null)
+				additionalData.put("ideValue", trans.getValue().toString());
 			nodeObj.put("classes", classes);
 			nodeObj.put("group", "nodes");
 			nodeObj.put("data", additionalData);
 
 			data.add(nodeObj);
+
+			esgNodes.put(new Node<Statement,Val>(statement,val.getVal()), val);
 		}
 
 		for (Rule<Statement, INode<Val>, W> rule : rulesInMethod) {
@@ -212,14 +217,18 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			dataEntry.put("id", "e" + id(rule));
 			Node<Statement,Val> start = getStartNode(rule);
 			Node<Statement,Val> target = getTargetNode(rule);
-			dataEntry.put("source", "q"+id(q)+ "n" + id(start));
-			dataEntry.put("target",  "q"+id(q)+"n" + id(target));
-			dataEntry.put("directed", "true");
-			dataEntry.put("direction", (q instanceof BackwardQuery ? "Backward" : "Forward"));
-			nodeObj.put("data", dataEntry);
-			nodeObj.put("classes", "esgEdge  method" + id(m));
-			nodeObj.put("group", "edges");
-			data.add(nodeObj);
+			for(RegExAccessPath startField: esgNodes.get(start)) {
+				for(RegExAccessPath targetField: esgNodes.get(target)) {
+					dataEntry.put("source", "q"+id(q)+ "n" + id(new Node<Statement,RegExAccessPath>(start.stmt(),startField)));
+					dataEntry.put("target",  "q"+id(q)+"n" + id(new Node<Statement,RegExAccessPath>(target.stmt(),targetField)));
+					dataEntry.put("directed", "true");
+					dataEntry.put("direction", (q instanceof BackwardQuery ? "Backward" : "Forward"));
+					nodeObj.put("data", dataEntry);
+					nodeObj.put("classes", "esgEdge  method" + id(m));
+					nodeObj.put("group", "edges");
+					data.add(nodeObj);
+				}
+			}
 		}
 		dataFlowGraph.put("dataFlowNode", data);
 		return dataFlowGraph;
@@ -320,7 +329,32 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 		cfg.put("controlFlowNode", data);
 		return cfg;
 	}
-	public String getShortLabel(Unit u) {
+
+	private String getShortLabel(Unit u) {
+		if (u instanceof AssignStmt) {
+			AssignStmt assignStmt = (AssignStmt) u;
+			if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
+				InstanceFieldRef fr = (InstanceFieldRef) assignStmt.getRightOp();
+				return assignStmt.getLeftOp() + " = " + fr.getBase() + "." + fr.getField().getName();
+			}
+			if (assignStmt.getLeftOp() instanceof InstanceFieldRef) {
+				InstanceFieldRef fr = (InstanceFieldRef) assignStmt.getLeftOp();
+				return fr.getBase() + "." + fr.getField().getName() + " = " + assignStmt.getRightOp();
+			}
+		}
+		if (u instanceof Stmt && ((Stmt) u).containsInvokeExpr()) {
+			InvokeExpr invokeExpr = ((Stmt) u).getInvokeExpr();
+			if (invokeExpr instanceof StaticInvokeExpr)
+				return (u instanceof AssignStmt ? ((AssignStmt) u).getLeftOp() + " = " : "")
+						+ invokeExpr.getMethod().getName() + "("
+						+ invokeExpr.getArgs().toString().replace("[", "").replace("]", "") + ")";
+			if (invokeExpr instanceof InstanceInvokeExpr) {
+				InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
+				return (u instanceof AssignStmt ? ((AssignStmt) u).getLeftOp() + " = " : "") + iie.getBase() + "."
+						+ invokeExpr.getMethod().getName() + "("
+						+ invokeExpr.getArgs().toString().replace("[", "").replace("]", "") + ")";
+			}
+		}
 		return u.toString();
 	}
 

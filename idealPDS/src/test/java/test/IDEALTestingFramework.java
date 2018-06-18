@@ -11,9 +11,21 @@
  *******************************************************************************/
 package test;
 
+import java.io.File;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
 import boomerang.WeightedForwardQuery;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableStaticICFG;
+import com.google.common.collect.Lists;
+
+import boomerang.WeightedForwardQuery;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Statement;
@@ -38,6 +50,7 @@ import java.util.Map.Entry;
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected ObservableICFG<Unit,SootMethod> icfg;
 	private static final boolean FAIL_ON_IMPRECISE = false;
+	private static final boolean VISUALIZATION = false;
 
 
 	protected abstract TypeStateMachineWeightFunctions getStateMachine();
@@ -61,8 +74,8 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			}
 			
 			@Override
-			public Debugger<TransitionFunction> debugger() {
-				return new IDEVizDebugger<>(ideVizFile,icfg);
+			public Debugger<TransitionFunction> debugger(IDEALSeedSolver<TransitionFunction> solver) {
+				return VISUALIZATION ? new IDEVizDebugger<>(new File(ideVizFile.getAbsolutePath().replace(".json", " " + solver.getSeed() +".json")),icfg) : new Debugger();
 			}
 		});
 	}
@@ -72,7 +85,6 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
-				System.out.println(sootTestMethod.getActiveBody());
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				
 				Map<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> seedToSolvers = executeAnalysis();
