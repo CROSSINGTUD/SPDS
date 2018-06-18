@@ -156,6 +156,8 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
     private void queryForCallees(Unit unit) {
         //Construct BackwardQuery, so we know which types the object might have
+
+        //TODO handle other types of invokeExpr, like specialInvoke
         Stmt stmt = (Stmt) unit;
         InvokeExpr invokeExpr = stmt.getInvokeExpr();
         Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
@@ -172,6 +174,8 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             System.out.println("Forward Query found: "+forwardQuery);
             Type type = forwardQuery.getType();
             //TODO find a much cleaner way to do this. How to get method in correct type?
+            //RefType nutzen um über SootClass an SootMethod zu kommen
+            //InvokeExpr has decl
             Iterator<Edge> edgeIterator1 = chaCallGraph.edgesOutOf(unit);
             while (edgeIterator1.hasNext()){
                 Edge edge = edgeIterator1.next();
