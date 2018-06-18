@@ -11,6 +11,8 @@ import com.google.common.cache.LoadingCache;
 import heros.DontSynchronize;
 import heros.SynchronizedBy;
 import heros.solver.IDESolver;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import soot.*;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
@@ -36,9 +38,11 @@ import java.util.*;
  */
 public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
+    private static final Logger logger = LogManager.getLogger();
+
     private CallGraph demandDrivenCallGraph = new CallGraph();
 
-    private CallGraph chaCallGraph;
+    private CallGraph precomputedCallGraph;
 
     private WeightedBoomerang<?> solver;
 
@@ -90,7 +94,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         this.solver = solver;
         this.enableExceptions = enableExceptions;
 
-        this.chaCallGraph = Scene.v().getCallGraph();
+        this.precomputedCallGraph = Scene.v().getCallGraph();
 
         initializeUnitToOwner();
     }
@@ -135,7 +139,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             listener.onCalleeAdded(unit, edge.tgt());
         }
         //If not all edges from the CHA call graph are covered, there may be more to discover
-        if (!allEdgesCovered(chaCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
+        if (!allEdgesCovered(precomputedCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
             Stmt stmt = (Stmt) unit;
             //Making a query to see which type of object the method was invoked on only makes sense when it was
             //invoked on an object
@@ -145,7 +149,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
                 queryForCallees(unit);
             } else {
                 //Call was not invoked on an object. Must be static or special. In this case rely on CHA //TODO for now?
-                Iterator<Edge> chaIterator = chaCallGraph.edgesOutOf(unit);
+                Iterator<Edge> chaIterator = precomputedCallGraph.edgesOutOf(unit);
                 while (chaIterator.hasNext()){
                     Edge edge = chaIterator.next();
                     addCall(unit, edge.tgt());
@@ -171,12 +175,12 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         //Go through possible types an add edges to implementations in possible types
         Map<ForwardQuery, PAutomaton> allocationSites = results.getAllocationSites();
         for (ForwardQuery forwardQuery : allocationSites.keySet()){
-            System.out.println("Forward Query found: "+forwardQuery);
+            logger.info("Found AllocationSite {}.", forwardQuery);
             Type type = forwardQuery.getType();
             //TODO find a much cleaner way to do this. How to get method in correct type?
             //RefType nutzen um über SootClass an SootMethod zu kommen
             //InvokeExpr has decl
-            Iterator<Edge> edgeIterator1 = chaCallGraph.edgesOutOf(unit);
+            Iterator<Edge> edgeIterator1 = precomputedCallGraph.edgesOutOf(unit);
             while (edgeIterator1.hasNext()){
                 Edge edge = edgeIterator1.next();
                 if (edge.tgt().getDeclaringClass().getType() == type){
@@ -204,9 +208,9 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         // Call BackwardQuery for all potential callers?
 
         //If not all edges from the CHA call graph are covered, there may be more to discover
-        if (!allEdgesCovered(chaCallGraph.edgesInto(method), demandDrivenCallGraph.edgesInto(method))){
+        if (!allEdgesCovered(precomputedCallGraph.edgesInto(method), demandDrivenCallGraph.edgesInto(method))){
             //Therefore we use the solver
-            Iterator<Edge> chaIterator = chaCallGraph.edgesInto(method);
+            Iterator<Edge> chaIterator = precomputedCallGraph.edgesInto(method);
             while (chaIterator.hasNext()){
                 Edge edge = chaIterator.next();
                 addCall(edge.srcUnit(), edge.tgt());
