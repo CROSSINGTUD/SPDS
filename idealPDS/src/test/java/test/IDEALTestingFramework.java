@@ -11,6 +11,7 @@
  *******************************************************************************/
 package test;
 
+import java.io.File;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -24,10 +25,9 @@ import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
 import com.google.common.collect.Lists;
 
-import boomerang.Query;
+import boomerang.WeightedForwardQuery;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
-import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.ForwardBoomerangResults;
@@ -43,7 +43,6 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.WeightFunctions;
-import sync.pds.solver.nodes.Node;
 import test.ExpectedResults.InternalState;
 import test.core.selfrunning.AbstractTestingFramework;
 import test.core.selfrunning.ImprecisionException;
@@ -53,6 +52,7 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected ObservableICFG<Unit,SootMethod> icfg;
 	private static final boolean FAIL_ON_IMPRECISE = false;
+	private static final boolean VISUALIZATION = false;
 
 
 	protected abstract TypeStateMachineWeightFunctions getStateMachine();
@@ -76,8 +76,8 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			}
 			
 			@Override
-			public Debugger<TransitionFunction> debugger() {
-				return new IDEVizDebugger<>(ideVizFile,icfg);
+			public Debugger<TransitionFunction> debugger(IDEALSeedSolver<TransitionFunction> solver) {
+				return VISUALIZATION ? new IDEVizDebugger<>(new File(ideVizFile.getAbsolutePath().replace(".json", " " + solver.getSeed() +".json")),icfg) : new Debugger();
 			}
 		});
 	}
@@ -88,7 +88,6 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(true));
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
-				System.out.println(sootTestMethod.getActiveBody());
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				
 				Map<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> seedToSolvers = executeAnalysis();

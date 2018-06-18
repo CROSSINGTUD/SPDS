@@ -20,7 +20,7 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>2.21.0</version>
 				<configuration>
-					<argLine>-Xmx4G</argLine>
+					<argLine>-Xmx2G</argLine>
 					<argLine>-Xss128m</argLine>
 					<excludes>
 						<exclude>**/*LongTest.java</exclude>
@@ -75,6 +75,12 @@
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
 			<version>3.5</version>
+		</dependency>
+		
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>2.11.0</version>
 		</dependency>
 	</dependencies>
 	<repositories>

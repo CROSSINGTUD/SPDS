@@ -16,6 +16,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.apache.logging.log4j.LogManager;
+
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -72,6 +75,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	public int failedAdditions;
 	public int failedDirectAdditions;
 	private WeightedPAutomaton<N, D, W> initialAutomaton;
+	private PathExpressionComputer<D,N> pathExpressionComputer;
 	
 
 	public WeightedPAutomaton(D initialState) {
@@ -230,7 +234,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		Set<Edge<D, N>> trans = Sets.newHashSet();
 		for (Edge<D, N> tran : transitions){
 			if(!tran.getLabel().equals(epsilon())){
-				trans.add(tran);
+				trans.add(new Transition<N, D>(tran.getTarget(), tran.getLabel(), tran.getStart()));
 			}
 		}
 		return trans;
@@ -675,8 +679,11 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public IRegEx<N> toRegEx(D start, D end){
-		PathExpressionComputer<D, N> pathExpressionComputer = new PathExpressionComputer<>(this);
-		return pathExpressionComputer.getExpressionBetween(start, end);
+		if(pathExpressionComputer == null) {
+			pathExpressionComputer = new PathExpressionComputer<D,N>(this);
+		}
+		
+		return RegEx.reverse(pathExpressionComputer.getExpressionBetween(end, start));
 	}
 	
 }

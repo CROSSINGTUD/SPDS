@@ -130,7 +130,7 @@ public class Main {
 					}
 					
 					@Override
-					public Debugger<InferenceWeight> debugger() {
+					public Debugger<InferenceWeight> debugger(IDEALSeedSolver<InferenceWeight> solver) {
 						return new Debugger<>();
 					}
 				});

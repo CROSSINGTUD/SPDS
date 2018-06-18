@@ -133,7 +133,7 @@ public class TransitionFunction extends Weight {
 	public String toString() {
 		if(this.rep != null)
 			return this.rep;
-		return "{Func:" + value.toString() + "}";
+		return "Weight: " + value.toString() + "";
 	}
 
 	@Override

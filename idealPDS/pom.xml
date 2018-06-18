@@ -18,8 +18,9 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.21.0</version>
                 <configuration>
-                    <argLine>-Xmx4G</argLine>
+                    <argLine>-Xmx2G</argLine>
                     <argLine>-Xss128m</argLine>
                 </configuration>
             </plugin>
@@ -67,12 +68,6 @@
             <artifactId>synchronizedPDS</artifactId>
             <version>1.0.0</version>
         </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
     <repositories>
         <repository>
@@ -81,4 +76,27 @@
             <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
         </repository>
     </repositories>
+
+    <profiles>
+        <profile>
+            <id>slimBoomerangPDSTestSet</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>2.21.0</version>
+                        <configuration>
+                            <argLine>-Xmx4G</argLine>
+                            <argLine>-Xss128m</argLine>
+                            <forkCount>1C</forkCount>
+                            <excludes>
+                                <exclude>typestate.tests.PrintStreamTest</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
