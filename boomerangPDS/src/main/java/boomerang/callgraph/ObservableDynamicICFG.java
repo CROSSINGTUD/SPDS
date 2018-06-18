@@ -196,11 +196,17 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             listener.onCallerAdded(edge.srcUnit(), method);
         }
 
-        //TODO figure out when to do this, just CHA, CHA plus Queries, which is less expensive?
+        //TODO figure out when to query: When would we have enough context? How do we know?
+        // Call BackwardQuery for all potential callers?
 
         //If not all edges from the CHA call graph are covered, there may be more to discover
         if (!allEdgesCovered(chaCallGraph.edgesInto(method), demandDrivenCallGraph.edgesInto(method))){
             //Therefore we use the solver
+            Iterator<Edge> chaIterator = chaCallGraph.edgesInto(method);
+            while (chaIterator.hasNext()){
+                Edge edge = chaIterator.next();
+                addCall(edge.srcUnit(), edge.tgt());
+            }
             //TODO use solver to get potentially missing edges
         }
     }
