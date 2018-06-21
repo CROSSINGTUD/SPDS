@@ -11,28 +11,6 @@
  *******************************************************************************/
 package boomerang.solver;
 
-import java.util.AbstractMap;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import java.util.Set;
-
-import com.google.common.base.Optional;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
-
 import boomerang.BoomerangOptions;
 import boomerang.Query;
 import boomerang.callgraph.CalleeListener;
@@ -43,36 +21,22 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.util.RegExAccessPath;
+import com.google.common.base.Optional;
+import com.google.common.collect.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import pathexpression.IRegEx;
-import soot.RefType;
-import soot.Scene;
-import soot.SootMethod;
-import soot.Unit;
-import soot.Value;
-import soot.jimple.AssignStmt;
-import soot.jimple.InstanceFieldRef;
-import soot.jimple.InstanceInvokeExpr;
-import soot.jimple.InvokeExpr;
-import soot.jimple.NewExpr;
-import soot.jimple.StaticFieldRef;
-import soot.jimple.Stmt;
+import soot.*;
+import soot.jimple.*;
 import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.WitnessNode;
-import sync.pds.solver.nodes.AllocNode;
-import sync.pds.solver.nodes.GeneratedState;
-import sync.pds.solver.nodes.INode;
-import sync.pds.solver.nodes.Node;
-import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.NestedWeightedPAutomatons;
-import wpds.impl.NormalRule;
-import wpds.impl.PopRule;
-import wpds.impl.Rule;
-import wpds.impl.Transition;
-import wpds.impl.Weight;
-import wpds.impl.WeightedPAutomaton;
-import wpds.impl.WeightedPushdownSystem;
+import sync.pds.solver.nodes.*;
+import wpds.impl.*;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
+
+import java.util.*;
+import java.util.Map.Entry;
 
 public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {
 
@@ -434,10 +398,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			});
 		}
 		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-		    //TODO Melanie Check if this makes sense when computing demand-driven call graph
-            // typically this is only done when there are no callees, now we just never do it
-			//out.addAll(computeNormalFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
-			out.addAll(getEmptyCalleeFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
+			out.addAll(computeNormalFlow(caller, callSite, value, (Stmt) returnSite));
 		}
 		return out;
 	}
