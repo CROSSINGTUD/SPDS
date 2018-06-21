@@ -32,7 +32,7 @@ import java.util.*;
  * {@link CallerListener}. Used for demand-driven call graph generation.
  *
  *
- * Starts with an graph only containing intraprocedual edges and uses a CHA-based call graph to derive callers.
+ * Starts with an graph only containing intraprocedual edges and uses a precomputed call graph to derive callers.
  *
  * @author Melanie Bruns on 04.05.2018
  */
@@ -160,8 +160,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
     private void queryForCallees(Unit unit) {
         //Construct BackwardQuery, so we know which types the object might have
-
-        //TODO handle other types of invokeExpr, like specialInvoke
         Stmt stmt = (Stmt) unit;
         InvokeExpr invokeExpr = stmt.getInvokeExpr();
         Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
@@ -181,14 +179,13 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             //RefType nutzen um über SootClass an SootMethod zu kommen
             //InvokeExpr has decl
             Iterator<Edge> edgeIterator1 = precomputedCallGraph.edgesOutOf(unit);
-            while (edgeIterator1.hasNext()){
+            while (edgeIterator1.hasNext()) {
                 Edge edge = edgeIterator1.next();
-                if (edge.tgt().getDeclaringClass().getType() == type){
+                if (edge.tgt().getDeclaringClass().getType() == type) {
                     addCall(unit, edge.tgt());
                     break;
                 }
             }
-            //TODO get callee in type
         }
     }
 
