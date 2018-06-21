@@ -32,7 +32,6 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
@@ -63,6 +62,7 @@ import wpds.impl.Weight;
 
 public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 
+	private static boolean ONLY_CFG = false;
     private static final Logger logger = LogManager.getLogger();
 	private File ideVizFile;
 	private ObservableICFG<Unit, SootMethod> icfg;
@@ -70,7 +70,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 	private Map<Object, Integer> objectToInteger = new HashMap<>();
 	private int charSize;
 	
-
+	
 	public IDEVizDebugger(File ideVizFile, ObservableICFG<Unit, SootMethod> icfg) {
 		this.ideVizFile = ideVizFile;
 		this.icfg = icfg;
@@ -101,8 +101,10 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 		logger.warn("Starting to compute visualization, this requires a large amount of memory, please ensure the VM has enough memory.");
 		Stopwatch watch = Stopwatch.createStarted();
 		JSONArray eventualData = new JSONArray();
-		for (Query q : solvers.keySet()) {
-			callRules(q, solvers.get(q).getCallPDS().getAllRules());
+		if(ONLY_CFG) {
+			for (Query q : solvers.keySet()) {
+				callRules(q, solvers.get(q).getCallPDS().getAllRules());
+			}
 		}
 		for(Entry<Query, AbstractBoomerangSolver<W>> e : solvers.entrySet()){
 			logger.debug("Computing results for {}",e.getKey());
@@ -113,17 +115,18 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 				Table<Statement, RegExAccessPath, W> results = e.getValue().getResults(m);
 				if(results.isEmpty())
 					continue;
-				int labelYOffset = computeLabelYOffset(results.columnKeySet());
+				int labelYOffset = ONLY_CFG ? 0 : computeLabelYOffset(results.columnKeySet());
 				JSONMethod jsonMethod = new JSONMethod(m);
 				logger.debug("Creating control-flow graph for {}",m);
-				IDEVizDebugger<W>.JSONControlFlowGraph cfg = createControlFlowGraph(m, 9);
+				IDEVizDebugger<W>.JSONControlFlowGraph cfg = createControlFlowGraph(m, labelYOffset);
 				
 				jsonMethod.put("cfg", cfg);
-
-				Set<Rule<Statement, INode<Val>, W>> rulesInMethod = getOrCreateRuleSet(query,m);
-				logger.debug("Creating data-flow graph for {}",m);
-				DataFlowGraph dfg = createDataFlowGraph(query, results,rulesInMethod,cfg,m,labelYOffset);
-				jsonMethod.put("dfg", dfg);
+				if(ONLY_CFG) {
+					Set<Rule<Statement, INode<Val>, W>> rulesInMethod = getOrCreateRuleSet(query,m);
+					logger.debug("Creating data-flow graph for {}",m);
+					DataFlowGraph dfg = createDataFlowGraph(query, results,rulesInMethod,cfg,m,labelYOffset);
+					jsonMethod.put("dfg", dfg);
+				}
 				data.add(jsonMethod);
 			}
 			queryJSON.put("methods",data);

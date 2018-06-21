@@ -570,6 +570,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(targetType,sourceType);
 			return !castFails;
 		}
+		//TODO this line is necessary as canStoreType does not properly work for interfaces, see Java doc. 
+		if(targetType.getSootClass().isInterface()) {
+			return false;
+		}
 		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(targetType,sourceType) || Scene.v().getOrMakeFastHierarchy().canStoreType(sourceType,targetType);
 		return !castFails;
 	}
