@@ -11,9 +11,6 @@
  *******************************************************************************/
 package boomerang;
 
-import java.util.Collection;
-import java.util.Collections;
-
 import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
@@ -23,6 +20,9 @@ import soot.Unit;
 import soot.jimple.AssignStmt;
 import soot.jimple.Stmt;
 import wpds.impl.Weight;
+
+import java.util.Collection;
+import java.util.Collections;
 
 public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBoomerang<W>{
 	private int reachableMethodCount;
@@ -39,35 +39,38 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 
 	@Override
 	public SeedFactory<W> getSeedFactory() {
+		if (seedFactory == null){
+			seedFactory = new SeedFactory<W>() {
+
+				@Override
+				protected Collection<? extends Query> generate(SootMethod method, Stmt u,
+															   Collection<SootMethod> calledMethods) {
+					if(u instanceof AssignStmt){
+						AssignStmt assignStmt = (AssignStmt) u;
+						if(options.isAllocationVal(assignStmt.getRightOp())){
+							return Collections.singleton(new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp(),new Statement((Stmt) u, method))));
+						}
+					}
+					return Collections.emptySet();
+				}
+
+				@Override
+				public ObservableICFG<Unit, SootMethod> icfg() {
+					return WholeProgramBoomerang.this.icfg();
+				}
+				@Override
+				protected boolean analyseClassInitializers() {
+					return true;
+				}
+			};
+		}
 		return seedFactory;
 	}
-	
+
 	public void wholeProgramAnalysis(){
 		long before = System.currentTimeMillis();
-		seedFactory = new SeedFactory<W>() {
 
-			@Override
-			protected Collection<? extends Query> generate(SootMethod method, Stmt u,
-					Collection<SootMethod> calledMethods) {
-				if(u instanceof AssignStmt){
-					AssignStmt assignStmt = (AssignStmt) u;
-					if(options.isAllocationVal(assignStmt.getRightOp())){
-						return Collections.singleton(new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp(),new Statement((Stmt) u, method))));
-					}
-				}
-				return Collections.emptySet();
-			}
-
-			@Override
-			public ObservableICFG<Unit, SootMethod> icfg() {
-				return WholeProgramBoomerang.this.icfg();
-			}
-			@Override
-			protected boolean analyseClassInitializers() {
-				return true;
-			}
-		};
-		for(Query s :seedFactory.computeSeeds()){
+		for(Query s :getSeedFactory().computeSeeds()){
 			solve((ForwardQuery)s);
 		}
 		
