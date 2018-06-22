@@ -414,7 +414,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 						@Override
 						public ObservableICFG<Unit, SootMethod> icfg() {
-							return icfg;
+							return staticIcfg;
 						}
 						@Override
 						protected boolean analyseClassInitializers() {
