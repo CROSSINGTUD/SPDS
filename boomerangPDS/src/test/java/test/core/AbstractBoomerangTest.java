@@ -36,24 +36,6 @@ import org.junit.Rule;
 import org.junit.rules.Timeout;
 import soot.*;
 import soot.jimple.*;
-import soot.Body;
-import soot.Local;
-import soot.RefType;
-import soot.Scene;
-import soot.SceneTransformer;
-import soot.SootClass;
-import soot.SootMethod;
-import soot.Unit;
-import soot.Value;
-import soot.JastAddJ.VariableScope;
-import soot.jimple.AssignStmt;
-import soot.jimple.IntConstant;
-import soot.jimple.InvokeExpr;
-import soot.jimple.NewExpr;
-import soot.jimple.ReturnStmt;
-import soot.jimple.Stmt;
-import soot.jimple.StringConstant;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
@@ -416,17 +398,35 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 			@Override
 			public SeedFactory<NoWeight> getSeedFactory() {
-				return null;
-			}
+				return new SeedFactory<NoWeight>() {
 
+						@Override
+						protected Collection<? extends Query> generate(SootMethod method, Stmt u,
+																	   Collection<SootMethod> calledMethods) {
+							if(u instanceof AssignStmt){
+								AssignStmt assignStmt = (AssignStmt) u;
+								if(options.isAllocationVal(assignStmt.getRightOp())){
+									return Collections.singleton(new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp(),new Statement((Stmt) u, method))));
+								}
+							}
+							return Collections.emptySet();
+						}
+
+						@Override
+						public ObservableICFG<Unit, SootMethod> icfg() {
+							return icfg;
+						}
+						@Override
+						protected boolean analyseClassInitializers() {
+							return true;
+						}
+					};
+			}
 		};
 		setupSolver(solver);
 		solver.wholeProgramAnalysis();
 		DefaultValueMap<Query, AbstractBoomerangSolver<NoWeight>> solvers = solver.getSolvers();
 		for (final Query q : solvers.keySet()) {
-//			if (!(q instanceof ForwardQuery))
-//				throw new RuntimeException(
-//						"Unexpected solver found, whole program analysis should only trigger forward queries");
 			for (final Query queryForCallSite : queryForCallSites) {
 				solvers.get(q).getFieldAutomaton()
 						.registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, NoWeight>(

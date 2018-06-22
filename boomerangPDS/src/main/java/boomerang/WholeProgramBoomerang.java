@@ -41,35 +41,38 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 
 	@Override
 	public SeedFactory<W> getSeedFactory() {
+		if (seedFactory == null){
+			seedFactory = new SeedFactory<W>() {
+
+				@Override
+				protected Collection<? extends Query> generate(SootMethod method, Stmt u,
+															   Collection<SootMethod> calledMethods) {
+					if(u instanceof AssignStmt){
+						AssignStmt assignStmt = (AssignStmt) u;
+						if(options.isAllocationVal(assignStmt.getRightOp())){
+							return Collections.singleton(new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp(),new Statement((Stmt) u, method))));
+						}
+					}
+					return Collections.emptySet();
+				}
+
+				@Override
+				public ObservableICFG<Unit, SootMethod> icfg() {
+					return new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
+				}
+				@Override
+				protected boolean analyseClassInitializers() {
+					return true;
+				}
+			};
+		}
 		return seedFactory;
 	}
-	
+
 	public void wholeProgramAnalysis(){
 		long before = System.currentTimeMillis();
-		seedFactory = new SeedFactory<W>() {
 
-			@Override
-			protected Collection<? extends Query> generate(SootMethod method, Stmt u,
-					Collection<SootMethod> calledMethods) {
-				if(u instanceof AssignStmt){
-					AssignStmt assignStmt = (AssignStmt) u;
-					if(options.isAllocationVal(assignStmt.getRightOp())){
-						return Collections.singleton(new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp(),new Statement((Stmt) u, method))));
-					}
-				}
-				return Collections.emptySet();
-			}
-
-			@Override
-			public ObservableICFG<Unit, SootMethod> icfg() {
-				return new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
-			}
-			@Override
-			protected boolean analyseClassInitializers() {
-				return true;
-			}
-		};
-		for(Query s :seedFactory.computeSeeds()){
+		for(Query s :getSeedFactory().computeSeeds()){
 			solve((ForwardQuery)s);
 		}
 		
