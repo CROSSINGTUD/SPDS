@@ -41,10 +41,9 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     private static final Logger logger = LogManager.getLogger();
 
     private CallGraph demandDrivenCallGraph = new CallGraph();
-
     private CallGraph precomputedCallGraph;
-
     private WeightedBoomerang<?> solver;
+    private Set<Unit> queriedUnits = new HashSet<>();
 
     private ArrayList<CalleeListener<Unit, SootMethod>> calleeListeners = new ArrayList<>();
     private ArrayList<CallerListener<Unit, SootMethod>> callerListeners = new ArrayList<>();
@@ -133,27 +132,23 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
         //Notify the new listener about edges we already know
         Unit unit = listener.getObservedCaller();
+        Stmt stmt = (Stmt) unit;
         Iterator<Edge> edgeIterator = demandDrivenCallGraph.edgesOutOf(unit);
         while (edgeIterator.hasNext()){
             Edge edge = edgeIterator.next();
             listener.onCalleeAdded(unit, edge.tgt());
         }
-        //If not all edges from the CHA call graph are covered, there may be more to discover
-        if (!allEdgesCovered(precomputedCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
-            Stmt stmt = (Stmt) unit;
-            //Making a query to see which type of object the method was invoked on only makes sense when it was
-            //invoked on an object
-            //TODO do we need to make sure not to use the dummy obj here?
-            if (stmt.getInvokeExpr() instanceof InstanceInvokeExpr){
-                //Call was invoked on an object
+        //Now check if we need to find new edges
+        if ((stmt.getInvokeExpr() instanceof InstanceInvokeExpr) && !queriedUnits.contains(stmt)){
+            if (!allEdgesCovered(precomputedCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
                 queryForCallees(unit);
-            } else {
-                //Call was not invoked on an object. Must be static or special. In this case rely on CHA //TODO for now?
-                Iterator<Edge> chaIterator = precomputedCallGraph.edgesOutOf(unit);
-                while (chaIterator.hasNext()){
-                    Edge edge = chaIterator.next();
-                    addCall(unit, edge.tgt());
-                }
+            }
+        } else {
+            //Call was not invoked on an object. Must be static or special. In this case rely on CHA //TODO for now?
+            Iterator<Edge> chaIterator = precomputedCallGraph.edgesOutOf(unit);
+            while (chaIterator.hasNext()){
+                Edge edge = chaIterator.next();
+                addCall(unit, edge.tgt());
             }
         }
     }
@@ -187,6 +182,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
                 }
             }
         }
+        queriedUnits.add(unit);
     }
 
     @Override
