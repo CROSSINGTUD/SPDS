@@ -375,30 +375,35 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
-		if (valueUsedInStatement(callSite, value)){
-			icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
+		icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
 
-				@Override
-				public Unit getObservedCaller() {
-					return callSite;
-				}
+			@Override
+			public Unit getObservedCaller() {
+				return callSite;
+			}
 
-				@Override
-				public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-					for (Unit calleeSp : icfg.getStartPointsOf(sootMethod)) {
-						for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-							Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
-									new Statement(callSite, caller), invokeExpr, value, sootMethod, (Stmt) calleeSp);
-							onCallFlow(sootMethod, callSite, value, res);
-							out.addAll(res);
-						}
+			@Override
+			public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+				for (Unit calleeSp : icfg.getStartPointsOf(sootMethod)) {
+					for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+						Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
+								new Statement(callSite, caller), invokeExpr, value, sootMethod, (Stmt) calleeSp);
+						onCallFlow(sootMethod, callSite, value, res);
+						out.addAll(res);
 					}
-					addReachable(sootMethod);
 				}
-			});
-		}
+				addReachable(sootMethod);
+			}
+		});
 		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-			out.addAll(computeNormalFlow(caller, callSite, value, (Stmt) returnSite));
+			out.addAll(getEmptyCalleeFlow(caller, callSite, value, (Stmt) returnSite));
+		}
+		//If there is no flow yet, add a normal flow. Note that another call flow might be added later
+		//TODO Melanie: Check if we need to get rid of the extra normal flow later.
+		if (out.isEmpty()){
+			for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+				out.addAll(computeNormalFlow(caller,callSite, value, (Stmt) returnSite));
+			}
 		}
 		return out;
 	}
