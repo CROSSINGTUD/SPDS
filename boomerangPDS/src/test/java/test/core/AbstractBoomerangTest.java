@@ -312,7 +312,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				
 				@Override
 				public Debugger createDebugger() {
-					return VISUALIZATION ? new IDEVizDebugger(ideVizFile, dynamicIcfg) : new Debugger();
+					return VISUALIZATION ? new IDEVizDebugger(ideVizFile, icfg()) : new Debugger();
 				}
 
 				@Override
@@ -474,15 +474,15 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private Collection<? extends Query> extractQuery(ValueOfInterestInUnit predicate) {
 		Set<Query> queries = Sets.newHashSet();
-		extractQuery(sootTestMethod, predicate, queries, null, new HashSet<Node<SootMethod, Stmt>>());
+		extractQuery(sootTestMethod, predicate, queries, null, new HashSet<>());
 		return queries;
 	}
 
 	private void extractQuery(SootMethod m, ValueOfInterestInUnit predicate, Collection<Query> queries, Stmt callSite,
 			Set<Node<SootMethod, Stmt>> visited) {
-		if (!m.hasActiveBody() || visited.contains(new Node<SootMethod, Stmt>(m, callSite)))
+		if (!m.hasActiveBody() || visited.contains(new Node<>(m, callSite)))
 			return;
-		visited.add(new Node<SootMethod, Stmt>(m, callSite));
+		visited.add(new Node<>(m, callSite));
 		Body activeBody = m.getActiveBody();
 		for (Unit cs : staticIcfg.getCallsFromWithin(m)) {
 		    staticIcfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
