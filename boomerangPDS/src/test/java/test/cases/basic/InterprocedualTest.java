@@ -12,7 +12,6 @@
 package test.cases.basic;
 
 import org.junit.Test;
-
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
@@ -225,7 +224,6 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 
 	private Object summary(Allocation inner) {
 		Allocation ret = inner;
-		System.out.println(1);
 		return ret;
 	}
 	
