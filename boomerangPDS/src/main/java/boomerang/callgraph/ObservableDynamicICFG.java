@@ -17,6 +17,7 @@ import org.apache.logging.log4j.Logger;
 import soot.*;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
+import soot.jimple.SpecialInvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.callgraph.CallGraph;
 import soot.jimple.toolkits.callgraph.Edge;
@@ -145,7 +146,9 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             listener.onCalleeAdded(unit, edge.tgt());
         }
         //Now check if we need to find new edges
-        if ((stmt.getInvokeExpr() instanceof InstanceInvokeExpr) && !queriedUnits.contains(stmt)){
+        if ((stmt.getInvokeExpr() instanceof InstanceInvokeExpr)
+                && !(stmt.getInvokeExpr() instanceof SpecialInvokeExpr)
+                && !queriedUnits.contains(stmt)){
             if (potentiallyHasMoreEdges(precomputedCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
                 queryForCallees(unit);
             }
