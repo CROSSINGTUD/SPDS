@@ -8,6 +8,7 @@ import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.Lists;
 import heros.DontSynchronize;
 import heros.SynchronizedBy;
 import heros.solver.IDESolver;
@@ -23,7 +24,7 @@ import soot.toolkits.exceptions.UnitThrowAnalysis;
 import soot.toolkits.graph.BriefUnitGraph;
 import soot.toolkits.graph.DirectedGraph;
 import soot.toolkits.graph.ExceptionalUnitGraph;
-import wpds.impl.PAutomaton;
+import wpds.impl.Weight;
 
 import java.util.*;
 
@@ -42,27 +43,32 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
     private CallGraph demandDrivenCallGraph = new CallGraph();
     private CallGraph precomputedCallGraph;
-    private WeightedBoomerang<?> solver;
+    private WeightedBoomerang<Weight> solver;
     private Set<Unit> queriedUnits = new HashSet<>();
 
     private ArrayList<CalleeListener<Unit, SootMethod>> calleeListeners = new ArrayList<>();
     private ArrayList<CallerListener<Unit, SootMethod>> callerListeners = new ArrayList<>();
 
-    protected final boolean enableExceptions;
+    private final boolean enableExceptions;
 
     @DontSynchronize("written by single thread; read afterwards")
-    protected final Map<Unit,Body> unitToOwner = new HashMap<>();
+    private final Map<Unit,Body> unitToOwner = new HashMap<>();
 
     @SynchronizedBy("by use of synchronized LoadingCache class")
-    protected final LoadingCache<Body,DirectedGraph<Unit>> bodyToUnitGraph = IDESolver.DEFAULT_CACHE_BUILDER.build(new CacheLoader<Body,DirectedGraph<Unit>>() {
+    private final LoadingCache<Body,DirectedGraph<Unit>> bodyToUnitGraph = IDESolver.DEFAULT_CACHE_BUILDER.build(new CacheLoader<Body,DirectedGraph<Unit>>() {
         @Override
         public DirectedGraph<Unit> load(Body body){
             return makeGraph(body);
         }
+        private DirectedGraph<Unit> makeGraph(Body body) {
+            return enableExceptions
+                    ? new ExceptionalUnitGraph(body, UnitThrowAnalysis.v() ,true)
+                    : new BriefUnitGraph(body);
+        }
     });
 
     @SynchronizedBy("by use of synchronized LoadingCache class")
-    protected final LoadingCache<SootMethod,List<Value>> methodToParameterRefs = IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<SootMethod,List<Value>>() {
+    private final LoadingCache<SootMethod,List<Value>> methodToParameterRefs = IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<SootMethod,List<Value>>() {
         @Override
         public List<Value> load(SootMethod m){
             return m.getActiveBody().getParameterRefs();
@@ -70,7 +76,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     });
 
     @SynchronizedBy("by use of synchronized LoadingCache class")
-    protected final LoadingCache<SootMethod,Set<Unit>> methodToCallsFromWithin = IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<SootMethod,Set<Unit>>() {
+    private final LoadingCache<SootMethod,Set<Unit>> methodToCallsFromWithin = IDESolver.DEFAULT_CACHE_BUILDER.build( new CacheLoader<SootMethod,Set<Unit>>() {
         @Override
         public Set<Unit> load(SootMethod m){
             Set<Unit> res = null;
@@ -140,7 +146,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         }
         //Now check if we need to find new edges
         if ((stmt.getInvokeExpr() instanceof InstanceInvokeExpr) && !queriedUnits.contains(stmt)){
-            if (!allEdgesCovered(precomputedCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
+            if (potentiallyHasMoreEdges(precomputedCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
                 queryForCallees(unit);
             }
         } else {
@@ -163,11 +169,10 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         BackwardQuery query = new BackwardQuery(statement, val);
 
         //Execute that query
-        BackwardBoomerangResults results = solver.solve(query);
+        BackwardBoomerangResults<Weight> results = solver.solve(query);
 
         //Go through possible types an add edges to implementations in possible types
-        Map<ForwardQuery, PAutomaton> allocationSites = results.getAllocationSites();
-        for (ForwardQuery forwardQuery : allocationSites.keySet()){
+        for (ForwardQuery forwardQuery : results.getAllocationSites().keySet()){
             logger.info("Found AllocationSite {}.", forwardQuery);
             Type type = forwardQuery.getType();
             //TODO find a much cleaner way to do this. How to get method in correct type?
@@ -201,7 +206,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         // Call BackwardQuery for all potential callers?
 
         //If not all edges from the CHA call graph are covered, there may be more to discover
-        if (!allEdgesCovered(precomputedCallGraph.edgesInto(method), demandDrivenCallGraph.edgesInto(method))){
+        if (potentiallyHasMoreEdges(precomputedCallGraph.edgesInto(method), demandDrivenCallGraph.edgesInto(method))){
             //Therefore we use the solver
             Iterator<Edge> chaIterator = precomputedCallGraph.edgesInto(method);
             while (chaIterator.hasNext()){
@@ -212,7 +217,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         }
     }
 
-    private boolean allEdgesCovered(Iterator<Edge> chaEdgeIterator, Iterator<Edge> knownEdgeIterator){
+    private boolean potentiallyHasMoreEdges(Iterator<Edge> chaEdgeIterator, Iterator<Edge> knownEdgeIterator){
         //Make a map checking for every edge in the CHA call graph whether it is in the known edges
 
         //Start by assuming no edge is covered
@@ -229,11 +234,11 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         //If any single edge is not covered, return false
         for (Boolean edgeWasCovered : wasEdgeCovered.values()){
             if (!edgeWasCovered){
-                return false;
+                return true;
             }
         }
         //All edges were covered
-        return  true;
+        return false;
     }
 
     private void addCall(Unit caller, SootMethod callee) {
@@ -241,12 +246,12 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         demandDrivenCallGraph.addEdge(edge);
         //Notify all interested listeners, so ..
         //.. CalleeListeners interested in callees of the caller or the CallGraphExtractor that is interested in any
-        for (CalleeListener<Unit, SootMethod> listener : calleeListeners){
+        for (CalleeListener<Unit, SootMethod> listener : Lists.newArrayList(calleeListeners)){
             if (CallGraphExtractor.ALL_UNITS.equals(caller) || caller.equals(listener.getObservedCaller()))
                 listener.onCalleeAdded(caller, callee);
         }
         // .. CallerListeners interested in callers of the callee or the CallGraphExtractor that is interested in any
-        for (CallerListener<Unit, SootMethod> listener : callerListeners){
+        for (CallerListener<Unit, SootMethod> listener : Lists.newArrayList(callerListeners)){
             if (CallGraphExtractor.ALL_METHODS.equals(callee) || callee.equals(listener.getObservedCallee()))
                 listener.onCallerAdded(caller, callee);
         }
@@ -320,25 +325,15 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         return unitToOwner.containsKey(u);
     }
 
-    protected DirectedGraph<Unit> makeGraph(Body body) {
-        return enableExceptions
-                ? new ExceptionalUnitGraph(body, UnitThrowAnalysis.v() ,true)
-                : new BriefUnitGraph(body);
-    }
-
-    protected void initializeUnitToOwner() {
+    private void initializeUnitToOwner() {
         for (Iterator<MethodOrMethodContext> iter = Scene.v().getReachableMethods().listener(); iter.hasNext();) {
             SootMethod m = iter.next().method();
-            initializeUnitToOwner(m);
-        }
-    }
-
-    public void initializeUnitToOwner(SootMethod m) {
-        if (m.hasActiveBody()) {
-            Body b = m.getActiveBody();
-            PatchingChain<Unit> units = b.getUnits();
-            for (Unit unit : units) {
-                unitToOwner.put(unit, b);
+            if (m.hasActiveBody()) {
+                Body b = m.getActiveBody();
+                PatchingChain<Unit> units = b.getUnits();
+                for (Unit unit : units) {
+                    unitToOwner.put(unit, b);
+                }
             }
         }
     }
