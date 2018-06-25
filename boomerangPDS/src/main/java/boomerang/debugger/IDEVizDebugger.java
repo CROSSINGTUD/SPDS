@@ -101,7 +101,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 		logger.warn("Starting to compute visualization, this requires a large amount of memory, please ensure the VM has enough memory.");
 		Stopwatch watch = Stopwatch.createStarted();
 		JSONArray eventualData = new JSONArray();
-		if(ONLY_CFG) {
+		if(!ONLY_CFG) {
 			for (Query q : solvers.keySet()) {
 				callRules(q, solvers.get(q).getCallPDS().getAllRules());
 			}
@@ -121,7 +121,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 				IDEVizDebugger<W>.JSONControlFlowGraph cfg = createControlFlowGraph(m, labelYOffset);
 				
 				jsonMethod.put("cfg", cfg);
-				if(ONLY_CFG) {
+				if(!ONLY_CFG) {
 					Set<Rule<Statement, INode<Val>, W>> rulesInMethod = getOrCreateRuleSet(query,m);
 					logger.debug("Creating data-flow graph for {}",m);
 					DataFlowGraph dfg = createDataFlowGraph(query, results,rulesInMethod,cfg,m,labelYOffset);
