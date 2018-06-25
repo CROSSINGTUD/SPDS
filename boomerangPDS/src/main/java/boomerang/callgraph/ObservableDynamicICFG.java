@@ -153,10 +153,11 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
                 queryForCallees(unit);
             }
         } else {
-            //Call was not invoked on an object. Must be static or special. In this case rely on CHA //TODO for now?
-            Iterator<Edge> chaIterator = precomputedCallGraph.edgesOutOf(unit);
-            while (chaIterator.hasNext()){
-                Edge edge = chaIterator.next();
+            //Call was not invoked on an object. Must be static or special. In this case rely on precomputed graph
+            // TODO for now?
+            Iterator<Edge> precomputedGraphIterator = precomputedCallGraph.edgesOutOf(unit);
+            while (precomputedGraphIterator.hasNext()){
+                Edge edge = precomputedGraphIterator.next();
                 addCall(unit, edge.tgt());
             }
         }
@@ -172,6 +173,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         BackwardQuery query = new BackwardQuery(statement, val);
 
         //Execute that query
+        queriedUnits.add(unit);
         BackwardBoomerangResults<Weight> results = solver.solve(query);
 
         //Go through possible types an add edges to implementations in possible types
@@ -190,7 +192,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
                 }
             }
         }
-        queriedUnits.add(unit);
     }
 
     @Override
