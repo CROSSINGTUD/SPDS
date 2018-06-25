@@ -11,54 +11,37 @@
  *******************************************************************************/
 package boomerang.debugger;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
+import boomerang.BackwardQuery;
+import boomerang.Query;
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.CallerListener;
+import boomerang.callgraph.ObservableICFG;
+import boomerang.jimple.Statement;
+import boomerang.jimple.Val;
+import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.util.RegExAccessPath;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.*;
+import com.google.common.collect.Table.Cell;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
-import com.google.common.collect.Table.Cell;
-
-import boomerang.callgraph.CalleeListener;
-import boomerang.callgraph.CallerListener;
-import boomerang.callgraph.ObservableICFG;
-import boomerang.BackwardQuery;
-import boomerang.Query;
-import boomerang.jimple.Statement;
-import boomerang.jimple.Val;
-import boomerang.solver.AbstractBoomerangSolver;
-import boomerang.util.RegExAccessPath;
 import soot.SootMethod;
 import soot.Unit;
-import soot.jimple.AssignStmt;
-import soot.jimple.InstanceFieldRef;
-import soot.jimple.InstanceInvokeExpr;
-import soot.jimple.InvokeExpr;
-import soot.jimple.StaticInvokeExpr;
-import soot.jimple.Stmt;
+import soot.jimple.*;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.NormalRule;
 import wpds.impl.Rule;
 import wpds.impl.Weight;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
 
 public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 
@@ -303,7 +286,6 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 	
 				for (SootMethod caller : callers)
 					callees.add(new JSONMethod(caller));
-				//TODO check use of callers and callees here, these seem off
 				label.put("callers", callees);
 			}
 			label.put("stmtId", id(u));
