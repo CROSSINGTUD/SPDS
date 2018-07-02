@@ -12,7 +12,6 @@
 package test.cases.array;
 
 import org.junit.Test;
-
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
@@ -53,17 +52,6 @@ public class ArrayContainerTest extends AbstractBoomerangTest {
 
 	public static class ArrayContainerWithPublicFields{
 		public AllocatedObject[] array = new AllocatedObject[]{};
-	}
-
-	@Test
-	public void insertAndGet2(){
-		ArrayContainer container = new ArrayContainer();
-		Object o1 = new Object();
-		container.put(o1);
-		AllocatedObject o2 = new Alloc();
-		container.put(o2);
-		AllocatedObject alias = container.get();
-		queryFor(alias);
 	}
 	
 	@Test
