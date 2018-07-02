@@ -45,7 +45,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     private CallGraph demandDrivenCallGraph = new CallGraph();
     private CallGraph precomputedCallGraph;
     private WeightedBoomerang<Weight> solver;
-    private Set<Unit> queriedUnits = new HashSet<>();
 
     private ArrayList<CalleeListener<Unit, SootMethod>> calleeListeners = new ArrayList<>();
     private ArrayList<CallerListener<Unit, SootMethod>> callerListeners = new ArrayList<>();
@@ -147,8 +146,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         }
         //Now check if we need to find new edges
         if ((stmt.getInvokeExpr() instanceof InstanceInvokeExpr)
-                && !(stmt.getInvokeExpr() instanceof SpecialInvokeExpr)
-                && !queriedUnits.contains(stmt)){
+                && !(stmt.getInvokeExpr() instanceof SpecialInvokeExpr)){
             if (potentiallyHasMoreEdges(precomputedCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
                 queryForCallees(unit);
             }
@@ -173,7 +171,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         BackwardQuery query = new BackwardQuery(statement, val);
 
         //Execute that query
-        queriedUnits.add(unit);
         BackwardBoomerangResults<Weight> results = solver.solve(query);
 
         //Go through possible types an add edges to implementations in possible types
