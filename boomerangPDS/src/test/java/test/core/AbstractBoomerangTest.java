@@ -325,6 +325,12 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				BackwardBoomerangResults<NoWeight> res = solver.solve((BackwardQuery) query);
 				for(ForwardQuery q : res.getAllocationSites().keySet()){
 					results.add(q.asNode());
+
+					for (Node<Statement, Val> s : solver.getSolvers().get(q).getReachedStates()) {
+						if (s.stmt().getMethod().toString().contains("unreachable")) {
+							throw new RuntimeException("Propagation within unreachable method found.");
+						}
+					}
 				}
 				
 				solver.debugOutput();
@@ -332,7 +338,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				if(accessPathQuery){
 					checkContainsAllExpectedAccessPath(res.getAllAliases());
 				}
-
 			}
 		}
 		return results;
