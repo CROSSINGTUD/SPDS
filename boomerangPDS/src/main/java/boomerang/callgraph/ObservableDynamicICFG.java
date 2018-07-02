@@ -177,18 +177,21 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         for (ForwardQuery forwardQuery : results.getAllocationSites().keySet()){
             logger.info("Found AllocationSite '{}'.", forwardQuery);
             Type type = forwardQuery.getType();
-            //TODO find a much cleaner way to do this. How to get method in correct type?
-            //RefType nutzen um über SootClass an SootMethod zu kommen
-            //InvokeExpr has decl
-            Iterator<Edge> edgeIterator1 = precomputedCallGraph.edgesOutOf(unit);
-            while (edgeIterator1.hasNext()) {
-                Edge edge = edgeIterator1.next();
-                if (edge.tgt().getDeclaringClass().getType() == type) {
-                    addCallIfNotInGraph(unit, edge.tgt(), edge.kind());
-                    break;
+            SootMethod calleeMethod = getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) type).getSootClass());
+            addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
+        }
+    }
+
+    private SootMethod getMethodFromClassOrFromSuperclass(SootMethod method, SootClass sootClass){
+        while(sootClass != null){
+            for (SootMethod candidate : sootClass.getMethods()){
+                if (candidate.getSubSignature().equals(method.getSubSignature())){
+                    return candidate;
                 }
             }
+            sootClass = sootClass.getSuperclass();
         }
+        throw new RuntimeException("No method found in class or superclasses");
     }
 
     @Override
