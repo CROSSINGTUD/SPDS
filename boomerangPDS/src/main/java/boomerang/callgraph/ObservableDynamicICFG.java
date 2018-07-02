@@ -158,7 +158,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             Iterator<Edge> precomputedGraphIterator = precomputedCallGraph.edgesOutOf(unit);
             while (precomputedGraphIterator.hasNext()){
                 Edge edge = precomputedGraphIterator.next();
-                addCall(unit, edge.tgt(), edge.kind());
+                addCallIfNotInGraph(unit, edge.tgt(), edge.kind());
             }
         }
     }
@@ -178,7 +178,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
         //Go through possible types an add edges to implementations in possible types
         for (ForwardQuery forwardQuery : results.getAllocationSites().keySet()){
-            logger.info("Found AllocationSite {}.", forwardQuery);
+            logger.info("Found AllocationSite '{}'.", forwardQuery);
             Type type = forwardQuery.getType();
             //TODO find a much cleaner way to do this. How to get method in correct type?
             //RefType nutzen um über SootClass an SootMethod zu kommen
@@ -187,7 +187,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             while (edgeIterator1.hasNext()) {
                 Edge edge = edgeIterator1.next();
                 if (edge.tgt().getDeclaringClass().getType() == type) {
-                    addCall(unit, edge.tgt(), edge.kind());
+                    addCallIfNotInGraph(unit, edge.tgt(), edge.kind());
                     break;
                 }
             }
@@ -215,7 +215,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             Iterator<Edge> chaIterator = precomputedCallGraph.edgesInto(method);
             while (chaIterator.hasNext()){
                 Edge edge = chaIterator.next();
-                addCall(edge.srcUnit(), edge.tgt(), edge.kind());
+                addCallIfNotInGraph(edge.srcUnit(), edge.tgt(), edge.kind());
             }
             //TODO use solver to get potentially missing edges
         }
@@ -245,7 +245,11 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         return false;
     }
 
-    private void addCall(Unit caller, SootMethod callee, Kind kind) {
+    private void addCallIfNotInGraph(Unit caller, SootMethod callee, Kind kind) {
+        if (isCallInGraph(caller, callee))
+            return;
+
+        logger.debug("Added call from unit '{}' to method '{}'", caller, callee);
         Edge edge = new Edge(getMethodOf(caller), (Stmt)caller, callee, kind);
         demandDrivenCallGraph.addEdge(edge);
         //Notify all interested listeners, so ..
@@ -259,6 +263,17 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             if (CallGraphExtractor.ALL_METHODS.equals(callee) || callee.equals(listener.getObservedCallee()))
                 listener.onCallerAdded(caller, callee);
         }
+    }
+
+    private boolean isCallInGraph(Unit caller, SootMethod callee) {
+        Iterator<Edge> edgesOutOfCaller = demandDrivenCallGraph.edgesOutOf(caller);
+        while(edgesOutOfCaller.hasNext()){
+            Edge edge = edgesOutOfCaller.next();
+            if (edge.tgt().equals(callee)){
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
