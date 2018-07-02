@@ -323,6 +323,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			if(query instanceof BackwardQuery){
 				setupSolver(solver);
 				BackwardBoomerangResults<NoWeight> res = solver.solve((BackwardQuery) query);
+
+				solver.debugOutput();
+
 				for(ForwardQuery q : res.getAllocationSites().keySet()){
 					results.add(q.asNode());
 
@@ -332,8 +335,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						}
 					}
 				}
-				
-				solver.debugOutput();
+
 //				System.out.println(res.getAllAliases());
 				if(accessPathQuery){
 					checkContainsAllExpectedAccessPath(res.getAllAliases());
