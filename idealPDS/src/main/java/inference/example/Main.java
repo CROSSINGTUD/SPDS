@@ -22,6 +22,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Table;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
+import ideal.IDEALSeedSolver;
 import inference.InferenceWeight;
 import inference.InferenceWeightFunctions;
 import soot.*;
