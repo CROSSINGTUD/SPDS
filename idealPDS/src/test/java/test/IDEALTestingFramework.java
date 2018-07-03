@@ -11,21 +11,10 @@
  *******************************************************************************/
 package test;
 
-import java.io.File;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
 import boomerang.WeightedForwardQuery;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
-import com.google.common.collect.Lists;
-
-import boomerang.WeightedForwardQuery;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Statement;
@@ -34,9 +23,11 @@ import boomerang.results.ForwardBoomerangResults;
 import com.google.common.collect.Lists;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
+import ideal.IDEALSeedSolver;
 import soot.*;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.WeightFunctions;
 import test.ExpectedResults.InternalState;
 import test.core.selfrunning.AbstractTestingFramework;
@@ -44,11 +35,13 @@ import test.core.selfrunning.ImprecisionException;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
+import java.io.File;
 import java.util.*;
 import java.util.Map.Entry;
 
+
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
-	protected ObservableICFG<Unit,SootMethod> icfg;
+	protected ObservableICFG<Unit,SootMethod> staticIcfg;
 	private static final boolean FAIL_ON_IMPRECISE = false;
 	private static final boolean VISUALIZATION = false;
 
@@ -57,11 +50,6 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 
 	protected IDEALAnalysis<TransitionFunction> createAnalysis() {
 		return new IDEALAnalysis<TransitionFunction>(new IDEALAnalysisDefinition<TransitionFunction>() {
-
-			@Override
-			public ObservableICFG<Unit, SootMethod> icfg() {
-				return icfg;
-			}
 
 			@Override
 			public Collection<WeightedForwardQuery<TransitionFunction>> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
@@ -84,6 +72,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected SceneTransformer createAnalysisTransformer() throws ImprecisionException {
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
+				staticIcfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				
@@ -132,8 +121,8 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			return;
 		visited.add(m);
 		Body activeBody = m.getActiveBody();
-		for (Unit callSite : icfg.getCallsFromWithin(m)) {
-			icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
+		for (Unit callSite : staticIcfg.getCallsFromWithin(m)) {
+			staticIcfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
 
 				@Override
 				public Unit getObservedCaller() {

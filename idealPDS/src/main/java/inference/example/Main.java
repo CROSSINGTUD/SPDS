@@ -12,8 +12,6 @@
 package inference.example;
 
 import boomerang.WeightedForwardQuery;
-import boomerang.callgraph.ObservableDynamicICFG;
-import boomerang.callgraph.ObservableICFG;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -92,12 +90,6 @@ public class Main {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				
 				IDEALAnalysis<InferenceWeight> solver = new IDEALAnalysis<>(new IDEALAnalysisDefinition<InferenceWeight>() {
-					ObservableICFG<Unit, SootMethod> icfg = new ObservableDynamicICFG(this);
-
-					@Override
-					public ObservableICFG<Unit, SootMethod> icfg() {
-						return icfg;
-					}
 
 					@Override
 					public Collection<WeightedForwardQuery<InferenceWeight>> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {

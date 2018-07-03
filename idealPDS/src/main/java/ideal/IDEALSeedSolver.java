@@ -11,9 +11,8 @@
  *******************************************************************************/
 package ideal;
 
-import java.util.Map.Entry;
-
 import boomerang.*;
+import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
@@ -22,19 +21,18 @@ import boomerang.jimple.Val;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
-
 import com.google.common.base.Stopwatch;
 import soot.SootMethod;
 import soot.Unit;
-import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import wpds.impl.ConnectPushListener;
 import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
 import wpds.impl.WeightedPAutomaton;
+
+import java.util.Map.Entry;
 
 public class IDEALSeedSolver<W extends Weight> {
 
@@ -58,18 +56,21 @@ public class IDEALSeedSolver<W extends Weight> {
 		this.analysisDefinition = analysisDefinition;
 		this.seed = seed;
 		this.seedFactory = seedFactory;
-		this.idealWeightFunctions = new IDEALWeightFunctions<W>(analysisDefinition.weightFunctions(), analysisDefinition.enableStrongUpdates());
+		this.idealWeightFunctions = new IDEALWeightFunctions<>(analysisDefinition.weightFunctions(), analysisDefinition.enableStrongUpdates());
 		this.zero = analysisDefinition.weightFunctions().getZero();
 		this.one = analysisDefinition.weightFunctions().getOne();
-		this.phase1Solver = createSolver();
-		this.phase2Solver = createSolver();
 		this.boomerangSolver = new Boomerang() {
 			
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
+				if (analysisDefinition.icfg == null){
+					new ObservableDynamicICFG(this);
+				}
 				return analysisDefinition.icfg();
 			}
 		};
+		this.phase1Solver = createSolver();
+		this.phase2Solver = createSolver();
 	}
 
 	public ForwardBoomerangResults<W> run() {
@@ -108,22 +109,22 @@ public class IDEALSeedSolver<W extends Weight> {
 			protected WeightFunctions<Statement, Val, Statement, W> getForwardCallWeights(ForwardQuery sourceQuery) {
 				if(sourceQuery.equals(seed))
 					return idealWeightFunctions;
-				return new OneWeightFunctions<Statement, Val, Statement, W>(zero, one);
+				return new OneWeightFunctions<>(zero, one);
 			}
 
 			@Override
 			protected WeightFunctions<Statement, Val, Field, W> getForwardFieldWeights() {
-				return new OneWeightFunctions<Statement, Val, Field, W>(zero, one);
+				return new OneWeightFunctions<>(zero, one);
 			}
 
 			@Override
 			protected WeightFunctions<Statement, Val, Field, W> getBackwardFieldWeights() {
-				return new OneWeightFunctions<Statement, Val, Field, W>(zero, one);
+				return new OneWeightFunctions<>(zero, one);
 			}
 
 			@Override
 			protected WeightFunctions<Statement, Val, Statement, W> getBackwardCallWeights() {
-				return new OneWeightFunctions<Statement, Val, Statement, W>(zero, one);
+				return new OneWeightFunctions<>(zero, one);
 			}
 			
 			@Override
@@ -137,42 +138,32 @@ public class IDEALSeedSolver<W extends Weight> {
 		analysisStopwatch.start();
 		idealWeightFunctions.setPhase(phase);
 		final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = boomerang.getSolvers().getOrCreate(seed).getCallAutomaton();
-		callAutomaton.registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>,W>() {
-
-			@Override
-			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
-				if(!callSite.getMethod().equals(returnedFact.fact().m()))
-					return;
-				if(!callSite.getMethod().equals(returnSite.getMethod()))
-					return;
-				if(!w.equals(one)){
-					idealWeightFunctions.addOtherThanOneWeight(new Node<Statement,Val>(callSite, returnedFact.fact()), w);
-				}
+		callAutomaton.registerConnectPushListener((callSite, returnSite, returnedFact, w) -> {
+			if(!callSite.getMethod().equals(returnedFact.fact().m()))
+				return;
+			if(!callSite.getMethod().equals(returnSite.getMethod()))
+				return;
+			if(!w.equals(one)){
+				idealWeightFunctions.addOtherThanOneWeight(new Node<Statement,Val>(callSite, returnedFact.fact()), w);
 			}
 		});
-		ForwardBoomerangResults<W> res = boomerang.solve((ForwardQuery) seed);
-		idealWeightFunctions.registerListener(new NonOneFlowListener<W>() {
-			@Override
-			public void nonOneFlow(final Node<Statement, Val> curr, final W weight) {
-				if(phase.equals(Phases.ValueFlow)){
-					return;
-				}
-				idealWeightFunctions.potentialStrongUpdate(curr.stmt(), weight);
-				boomerangSolver.solve(new BackwardQuery(curr.stmt(),curr.fact()));
-				if(!res.getAnalysisWatch().isRunning()) {
-					res.getAnalysisWatch().start();
-				}
-				for(final Entry<Query, AbstractBoomerangSolver<NoWeight>> e : boomerangSolver.getSolvers().entrySet()){
-					if(e.getKey() instanceof ForwardQuery){
-						e.getValue().synchedEmptyStackReachable(curr, new EmptyStackWitnessListener<Statement, Val>() {
-							@Override
-							public void witnessFound(Node<Statement, Val> targetFact) {
-								if(!e.getKey().asNode().equals(seed.asNode())){
-									idealWeightFunctions.weakUpdate(curr.stmt());
-								}
-							}
-						});
-					}
+		ForwardBoomerangResults<W> res = boomerang.solve(seed);
+		idealWeightFunctions.registerListener((curr, weight) -> {
+			if(phase.equals(Phases.ValueFlow)){
+				return;
+			}
+			idealWeightFunctions.potentialStrongUpdate(curr.stmt(), weight);
+			boomerangSolver.solve(new BackwardQuery(curr.stmt(),curr.fact()));
+			if(!res.getAnalysisWatch().isRunning()) {
+				res.getAnalysisWatch().start();
+			}
+			for(final Entry<Query, AbstractBoomerangSolver<NoWeight>> e : boomerangSolver.getSolvers().entrySet()){
+				if(e.getKey() instanceof ForwardQuery){
+					e.getValue().synchedEmptyStackReachable(curr, targetFact -> {
+						if(!e.getKey().asNode().equals(seed.asNode())){
+							idealWeightFunctions.weakUpdate(curr.stmt());
+						}
+					});
 				}
 			}
 		});

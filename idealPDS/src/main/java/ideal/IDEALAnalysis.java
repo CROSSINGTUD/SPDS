@@ -15,6 +15,7 @@ import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedForwardQuery;
 import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import com.google.common.base.Stopwatch;
@@ -24,6 +25,7 @@ import org.apache.logging.log4j.Logger;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import typestate.TransitionFunction;
 import wpds.impl.Weight;
 
@@ -41,15 +43,18 @@ public class IDEALAnalysis<W extends Weight> {
 	private int seedCount;
 	private Map<WeightedForwardQuery<W>, Stopwatch> analysisTime = new HashMap<>();
 	private Set<WeightedForwardQuery<W>> timedoutSeeds = new HashSet<>();
+	private ObservableICFG<Unit,SootMethod> dynamicICFG;
+
 
 	public IDEALAnalysis(final IDEALAnalysisDefinition<W> analysisDefinition) {
 		this.analysisDefinition = analysisDefinition;
 		this.seedFactory = new SeedFactory<W>(){
+            ObservableICFG<Unit, SootMethod> staticICFG = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
 
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
-				return analysisDefinition.icfg();
-			}
+				return staticICFG;
+			};
 			@Override
 			protected Collection<WeightedForwardQuery<W>> generate(SootMethod method, Stmt stmt,
 					Collection<SootMethod> calledMethods) {
