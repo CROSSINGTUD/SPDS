@@ -25,6 +25,8 @@ import ideal.IDEALAnalysisDefinition;
 import ideal.IDEALSeedSolver;
 import inference.InferenceWeight;
 import inference.InferenceWeightFunctions;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import soot.*;
 import soot.jimple.AssignStmt;
 import soot.jimple.NewExpr;
@@ -36,6 +38,9 @@ import java.util.*;
 import java.util.Map.Entry;
 
 public class Main {
+
+	private static final Logger logger = LogManager.getLogger();
+
 	public static void main(String... args) {
 		String sootClassPath = System.getProperty("user.dir") + File.separator+"target"+File.separator+"classes";
 		String mainClass = "inference.example.InferenceExample";
@@ -70,9 +75,9 @@ public class Main {
 		SootClass c = Scene.v().forceResolve(mainClass, SootClass.BODIES);
 		if (c != null) {
 			c.setApplicationClass();
-		}
-		for(SootMethod m : c.getMethods()){
-			System.out.println(m);
+			for (SootMethod m : c.getMethods()) {
+				logger.debug(m);
+			}
 		}
 	}
 	private static void analyze() {
@@ -87,10 +92,10 @@ public class Main {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				
 				IDEALAnalysis<InferenceWeight> solver = new IDEALAnalysis<>(new IDEALAnalysisDefinition<InferenceWeight>() {
-					ObservableICFG icfg = new ObservableDynamicICFG(this);
+					ObservableICFG<Unit, SootMethod> icfg = new ObservableDynamicICFG(this);
 
 					@Override
-					public ObservableICFG icfg() {
+					public ObservableICFG<Unit, SootMethod> icfg() {
 						return icfg;
 					}
 
@@ -120,7 +125,7 @@ public class Main {
 				Map<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>> res = solver.run();
 				for(Entry<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>> e : res.entrySet()){
 					Table<Statement, Val, InferenceWeight> results = e.getValue().asStatementValWeightTable();
-					System.out.println(Joiner.on("\n").join(results.cellSet()));
+					logger.info(Joiner.on("\n").join(results.cellSet()));
 				}
 			}
 		};
