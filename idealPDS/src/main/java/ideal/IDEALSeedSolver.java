@@ -59,18 +59,15 @@ public class IDEALSeedSolver<W extends Weight> {
 		this.idealWeightFunctions = new IDEALWeightFunctions<>(analysisDefinition.weightFunctions(), analysisDefinition.enableStrongUpdates());
 		this.zero = analysisDefinition.weightFunctions().getZero();
 		this.one = analysisDefinition.weightFunctions().getOne();
+		this.phase1Solver = createSolver();
+		this.phase2Solver = createSolver();
 		this.boomerangSolver = new Boomerang() {
-			
+
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
-				if (analysisDefinition.icfg == null){
-					new ObservableDynamicICFG(this);
-				}
 				return analysisDefinition.icfg();
 			}
 		};
-		this.phase1Solver = createSolver();
-		this.phase2Solver = createSolver();
 	}
 
 	public ForwardBoomerangResults<W> run() {
@@ -97,6 +94,9 @@ public class IDEALSeedSolver<W extends Weight> {
 		return new WeightedBoomerang<W>(analysisDefinition.boomerangOptions()) {
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
+				if (analysisDefinition.icfg == null){
+					analysisDefinition.icfg = new ObservableDynamicICFG(this);
+				}
 				return analysisDefinition.icfg();
 			}
 
