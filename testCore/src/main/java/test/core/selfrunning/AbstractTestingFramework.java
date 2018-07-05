@@ -32,11 +32,12 @@ public abstract class AbstractTestingFramework {
 	public TestName testMethodName = new TestName();
 	protected SootMethod sootTestMethod;
 	protected File ideVizFile;
+	protected File dotFile;
 
 	@Before
 	public void beforeTestCaseExecution() {
 		initializeSootWithEntryPoint();
-		createVizFile();
+		createDebugFiles();
 		try {
 			analyze();
 		} catch (ImprecisionException e) {
@@ -46,7 +47,7 @@ public abstract class AbstractTestingFramework {
 		org.junit.Assume.assumeTrue(false);
 	}
 
-	private void createVizFile() {
+	private void createDebugFiles() {
 		ideVizFile = new File(
 				"target/IDEViz/" + getTestCaseClassName() + "/IDEViz-" + testMethodName.getMethodName() + ".json");
 		if (!ideVizFile.getParentFile().exists()) {
@@ -54,6 +55,15 @@ public abstract class AbstractTestingFramework {
 				Files.createDirectories(ideVizFile.getParentFile().toPath());
 			} catch (IOException e) {
 				throw new RuntimeException("Was not able to create directories for IDEViz output!");
+			}
+		}
+		dotFile = new File(
+				"target/dot/" + getTestCaseClassName() + "/Dot-" + testMethodName.getMethodName() + ".dot");
+		if (!dotFile.getParentFile().exists()) {
+			try {
+				Files.createDirectories(dotFile.getParentFile().toPath());
+			} catch (IOException e) {
+				throw new RuntimeException("Was not able to create directories for dot output!");
 			}
 		}
 	}

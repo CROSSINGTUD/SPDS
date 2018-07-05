@@ -255,12 +255,12 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         //Notify all interested listeners, so ..
         //.. CalleeListeners interested in callees of the caller or the CallGraphExtractor that is interested in any
         for (CalleeListener<Unit, SootMethod> listener : Lists.newArrayList(calleeListeners)){
-            if (CallGraphExtractor.ALL_UNITS.equals(caller) || caller.equals(listener.getObservedCaller()))
+            if (caller.equals(listener.getObservedCaller()))
                 listener.onCalleeAdded(caller, callee);
         }
         // .. CallerListeners interested in callers of the callee or the CallGraphExtractor that is interested in any
         for (CallerListener<Unit, SootMethod> listener : Lists.newArrayList(callerListeners)){
-            if (CallGraphExtractor.ALL_METHODS.equals(callee) || callee.equals(listener.getObservedCallee()))
+            if (callee.equals(listener.getObservedCallee()))
                 listener.onCallerAdded(caller, callee);
         }
     }
@@ -355,5 +355,14 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
                 }
             }
         }
+    }
+
+    public CallGraph getCallGraphCopy(){
+        CallGraph copy = new CallGraph();
+        for (Edge edge : demandDrivenCallGraph) {
+            Edge edgeCopy = new Edge(edge.src(), edge.srcUnit(), edge.tgt(), edge.kind());
+            copy.addEdge(edgeCopy);
+        }
+        return copy;
     }
 }

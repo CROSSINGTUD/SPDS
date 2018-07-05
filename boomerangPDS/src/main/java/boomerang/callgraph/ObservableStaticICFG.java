@@ -3,6 +3,7 @@ package boomerang.callgraph;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
+import soot.jimple.toolkits.callgraph.CallGraph;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 import java.util.Collection;
@@ -47,7 +48,6 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
         for (SootMethod method : precomputedGraph.getCalleesOfCallAt(listener.getObservedCaller())){
             listener.onCalleeAdded(listener.getObservedCaller(), method);
         }
-        //TODO deal with ALL_UNITS callee
     }
 
     @Override
@@ -55,7 +55,6 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
         for (Unit unit : precomputedGraph.getCallersOf(listener.getObservedCallee())){
             listener.onCallerAdded(unit, listener.getObservedCallee());
         }
-        //TODO deal with ALL_METHODS callee
     }
 
     @Override
@@ -106,5 +105,11 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
     @Override
     public boolean isReachable(Unit u) {
         return precomputedGraph.isReachable(u);
+    }
+
+    public CallGraph getCallGraphCopy(){
+        CallGraph copy = new CallGraph();
+        //TODO get copy of call graph from BiDiGraph
+        return copy;
     }
 }

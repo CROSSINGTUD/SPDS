@@ -2,6 +2,7 @@ package boomerang.callgraph;
 
 import soot.Unit;
 import soot.Value;
+import soot.jimple.toolkits.callgraph.CallGraph;
 import soot.toolkits.graph.Block;
 
 import java.util.Collection;
@@ -94,4 +95,6 @@ public interface ObservableICFG<N,M> {
      * program to the given statement, otherwise false
      */
     boolean isReachable(N u);
+
+    CallGraph getCallGraphCopy();
 }

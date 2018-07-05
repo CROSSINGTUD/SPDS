@@ -16,6 +16,7 @@ import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
+import boomerang.debugger.CallGraphDebugger;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
@@ -312,7 +313,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				
 				@Override
 				public Debugger createDebugger() {
-					return VISUALIZATION ? new IDEVizDebugger(ideVizFile, icfg()) : new Debugger();
+					return VISUALIZATION ? new IDEVizDebugger(ideVizFile, icfg()) :
+							new CallGraphDebugger(dotFile, dynamicIcfg.getCallGraphCopy());
 				}
 
 				@Override
@@ -375,7 +377,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 			@Override
 			public Debugger createDebugger() {
-				return VISUALIZATION ? new IDEVizDebugger(ideVizFile, dynamicIcfg) : new Debugger();
+				return VISUALIZATION ? new IDEVizDebugger(ideVizFile, dynamicIcfg) : new CallGraphDebugger(dotFile, dynamicIcfg.getCallGraphCopy());
 			}
 
 			@Override

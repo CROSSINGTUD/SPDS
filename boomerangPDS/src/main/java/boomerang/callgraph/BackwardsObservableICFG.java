@@ -3,6 +3,7 @@ package boomerang.callgraph;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
+import soot.jimple.toolkits.callgraph.CallGraph;
 
 import java.util.Collection;
 import java.util.List;
@@ -78,6 +79,11 @@ public class BackwardsObservableICFG implements ObservableICFG<Unit, SootMethod>
     @Override
     public boolean isReachable(Unit u) {
         return this.delegate.isReachable(u);
+    }
+
+    @Override
+    public CallGraph getCallGraphCopy() {
+        return delegate.getCallGraphCopy();
     }
 
     @Override
