@@ -11,6 +11,15 @@
  *******************************************************************************/
 package test.core.selfrunning;
 
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.rules.TestName;
+import soot.*;
+import soot.jimple.Jimple;
+import soot.jimple.JimpleBody;
+import soot.options.Options;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,38 +27,17 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TestName;
-
-import soot.ArrayType;
-import soot.G;
-import soot.Local;
-import soot.Modifier;
-import soot.PackManager;
-import soot.RefType;
-import soot.Scene;
-import soot.SceneTransformer;
-import soot.SootClass;
-import soot.SootMethod;
-import soot.Transform;
-import soot.Type;
-import soot.VoidType;
-import soot.jimple.Jimple;
-import soot.jimple.JimpleBody;
-import soot.options.Options;
-
 public abstract class AbstractTestingFramework {
 	@Rule
 	public TestName testMethodName = new TestName();
 	protected SootMethod sootTestMethod;
 	protected File ideVizFile;
+	protected File dotFile;
 
 	@Before
 	public void beforeTestCaseExecution() {
 		initializeSootWithEntryPoint();
-		createVizFile();
+		createDebugFiles();
 		try {
 			analyze();
 		} catch (ImprecisionException e) {
@@ -59,7 +47,7 @@ public abstract class AbstractTestingFramework {
 		org.junit.Assume.assumeTrue(false);
 	}
 
-	private void createVizFile() {
+	private void createDebugFiles() {
 		ideVizFile = new File(
 				"target/IDEViz/" + getTestCaseClassName() + "/IDEViz-" + testMethodName.getMethodName() + ".json");
 		if (!ideVizFile.getParentFile().exists()) {
@@ -67,6 +55,15 @@ public abstract class AbstractTestingFramework {
 				Files.createDirectories(ideVizFile.getParentFile().toPath());
 			} catch (IOException e) {
 				throw new RuntimeException("Was not able to create directories for IDEViz output!");
+			}
+		}
+		dotFile = new File(
+				"target/dot/" + getTestCaseClassName() + "/Dot-" + testMethodName.getMethodName() + ".dot");
+		if (!dotFile.getParentFile().exists()) {
+			try {
+				Files.createDirectories(dotFile.getParentFile().toPath());
+			} catch (IOException e) {
+				throw new RuntimeException("Was not able to create directories for dot output!");
 			}
 		}
 	}

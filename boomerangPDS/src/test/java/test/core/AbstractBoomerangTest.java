@@ -15,6 +15,7 @@ import boomerang.*;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
+import boomerang.debugger.CallGraphDebugger;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
@@ -131,8 +132,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 							expectedAccessPaths.addAll(AccessPathParser.parseAllFromString(value,m));
 						}
 					}
-
-					
 				};
 				queryForCallSites = seedFactory.computeSeeds();
 				if(integerQueries){
@@ -165,8 +164,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private void runDemandDrivenBackward() {
 		// Run backward analysis
-//		if (queryForCallSites.size() > 1)
-//			throw new RuntimeException("Found more than one backward query to execute!");
 		Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
 		compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
 	}
@@ -251,8 +248,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			Value param = invokeExpr.getArg(0);
 			if (!(param instanceof Local))
 				return Optional.absent();
-			return Optional.<Query>of(new BackwardQuery(new Statement(unit, icfg.getMethodOf(unit)),
-					new Val(param, icfg.getMethodOf(unit))));
+			SootMethod newMethod = icfg.getMethodOf(unit);
+			Statement newStatement = new Statement(unit, newMethod);
+			Val newVal = new Val(param, newMethod);
+			BackwardQuery newBackwardQuery = new BackwardQuery(newStatement, newVal);
+			return Optional.<Query>of(newBackwardQuery);
 		}
 	}
 
@@ -311,7 +311,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				
 				@Override
 				public Debugger createDebugger() {
-					return VISUALIZATION ? new IDEVizDebugger(ideVizFile,icfg) : new Debugger();
+					return VISUALIZATION ? new IDEVizDebugger(ideVizFile, icfg()) :
+							new CallGraphDebugger(dotFile, icfg.getCallGraphCopy());
 				}
 
 				@Override
@@ -322,6 +323,9 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			if(query instanceof BackwardQuery){
 				setupSolver(solver);
 				BackwardBoomerangResults<NoWeight> res = solver.solve((BackwardQuery) query);
+
+				solver.debugOutput();
+
 				for(ForwardQuery q : res.getAllocationSites().keySet()){
 					results.add(q.asNode());
 
@@ -331,8 +335,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						}
 					}
 				}
-				
-				solver.debugOutput();
+
 //				System.out.println(res.getAllAliases());
 				if(accessPathQuery){
 					checkContainsAllExpectedAccessPath(res.getAllAliases());
@@ -369,7 +372,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 			@Override
 			public Debugger createDebugger() {
-				return VISUALIZATION ? new IDEVizDebugger(ideVizFile, icfg) : new Debugger();
+				return VISUALIZATION ? new IDEVizDebugger(ideVizFile, icfg) : new CallGraphDebugger(dotFile, icfg.getCallGraphCopy());
 			}
 
 			@Override
@@ -475,15 +478,15 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private Collection<? extends Query> extractQuery(ValueOfInterestInUnit predicate) {
 		Set<Query> queries = Sets.newHashSet();
-		extractQuery(sootTestMethod, predicate, queries, null, new HashSet<Node<SootMethod, Stmt>>());
+		extractQuery(sootTestMethod, predicate, queries, null, new HashSet<>());
 		return queries;
 	}
 
 	private void extractQuery(SootMethod m, ValueOfInterestInUnit predicate, Collection<Query> queries, Stmt callSite,
 			Set<Node<SootMethod, Stmt>> visited) {
-		if (!m.hasActiveBody() || visited.contains(new Node<SootMethod, Stmt>(m, callSite)))
+		if (!m.hasActiveBody() || visited.contains(new Node<>(m, callSite)))
 			return;
-		visited.add(new Node<SootMethod, Stmt>(m, callSite));
+		visited.add(new Node<>(m, callSite));
 		Body activeBody = m.getActiveBody();
 		for (Unit cs : icfg.getCallsFromWithin(m)) {
 		    icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
