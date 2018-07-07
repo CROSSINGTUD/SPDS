@@ -53,17 +53,20 @@ import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import boomerang.stats.IBoomerangStats;
 import heros.utilities.DefaultValueMap;
+import soot.Body;
 import soot.Local;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootField;
 import soot.SootMethod;
 import soot.Unit;
+import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InvokeExpr;
 import soot.jimple.NewMultiArrayExpr;
+import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.StringConstant;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
@@ -390,7 +393,12 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 	protected void backwardHandleEnterCall(WitnessNode<Statement, Val, Field> node, ForwardCallSitePOI returnSite,
 			BackwardQuery backwardQuery) {
-		returnSite.returnsFromCall(backwardQuery, node.asNode());
+		Statement returnStmt = node.stmt();
+		SootMethod m = returnStmt.getMethod();
+		Val fact = node.fact();
+		if(fact.isStatic() || Util.isParameterLocal(fact, m) || Util.isReturnOperator(fact,returnStmt) || Util.isThisLocal(fact, m)){
+			returnSite.returnsFromCall(backwardQuery, node.asNode());
+		} 
 	}
 
 	protected boolean isBackwardEnterCall(Statement stmt) {
