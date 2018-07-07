@@ -14,10 +14,14 @@ package boomerang.stats;
 import java.util.Collection;
 import java.util.Set;
 
+import boomerang.BackwardQuery;
+import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.results.BackwardBoomerangResults;
+import boomerang.results.ForwardBoomerangResults;
 import boomerang.solver.AbstractBoomerangSolver;
 import soot.SootMethod;
 import sync.pds.solver.nodes.Node;
@@ -38,5 +42,9 @@ public interface IBoomerangStats<W extends Weight> {
     Set<SootMethod> getCallVisitedMethods();
     
     Collection<? extends Node<Statement, Val>> getForwardReachesNodes();
+
+	void terminated(ForwardQuery query, ForwardBoomerangResults<W> forwardBoomerangResults);
+
+	void terminated(BackwardQuery query, BackwardBoomerangResults<W> backwardBoomerangResults);
 
 }

@@ -18,12 +18,15 @@ import java.util.Set;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
+import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.results.BackwardBoomerangResults;
+import boomerang.results.ForwardBoomerangResults;
 import boomerang.solver.AbstractBoomerangSolver;
 import soot.SootMethod;
 import sync.pds.solver.nodes.INode;
@@ -112,4 +115,16 @@ public class SimpleBoomerangStats<W extends Weight> implements IBoomerangStats<W
     public Set<SootMethod> getCallVisitedMethods() {
         return Sets.newHashSet(callVisitedMethods);
     }
+
+	@Override
+	public void terminated(ForwardQuery query, ForwardBoomerangResults<W> forwardBoomerangResults) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void terminated(BackwardQuery query, BackwardBoomerangResults<W> backwardBoomerangResults) {
+		// TODO Auto-generated method stub
+		
+	}
 }

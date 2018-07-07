@@ -113,13 +113,13 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 				if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(succ)
-						&& !t.getStart().fact().fact().equals(returningFact)) {
+						&& !flowSolver.valueUsedInStatement(curr.getUnit().get(), t.getStart().fact().fact())) {
 					Val alias = t.getStart().fact().fact();
 					Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
 					Node<Statement, Val> rightOpNode = new Node<Statement, Val>(succ, returningFact);
 					flowSolver.setFieldContextReachable(aliasedVarAtSucc);
 					flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
-					importToFlowSolver(t, aliasTrans);
+					importToFlowSolver(t, aliasTrans.getLabel(),aliasTrans.getTarget());
 				}
 
 			}
@@ -127,30 +127,33 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 	}
 
 	protected void importToFlowSolver(Transition<Field, INode<Node<Statement, Val>>> t,
-			Transition<Field, INode<Node<Statement, Val>>> aliasTrans) {
+			Field aliasTransLabel,
+			INode<Node<Statement, Val>> aliasTransTarget) {
 		if (t.getLabel().equals(Field.empty())) {
 			flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement, Val>>>(
-					t.getStart(), aliasTrans.getLabel(), aliasTrans.getTarget()));
+					t.getStart(), aliasTransLabel, aliasTransTarget));
 		} else if (!t.getLabel().equals(Field.epsilon())) {
 			flowSolver.getFieldAutomaton().addTransition(t);
-			baseSolver.getFieldAutomaton().registerListener(new ImportToFlowSolver(t.getTarget(), aliasTrans));
+			baseSolver.getFieldAutomaton().registerListener(new ImportToFlowSolver(t.getTarget(), aliasTransLabel,aliasTransTarget));
 		}
 	}
 
 	private class ImportToFlowSolver extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
-		private Transition<Field, INode<Node<Statement, Val>>> aliasTrans;
+		private Field aliasTransLabel;
+		private INode<Node<Statement, Val>> aliasTransTarget;
 
-		public ImportToFlowSolver(INode<Node<Statement, Val>> node,
-				Transition<Field, INode<Node<Statement, Val>>> aliasTrans) {
+		public ImportToFlowSolver(INode<Node<Statement, Val>> node, Field aliasTransLabel,
+				INode<Node<Statement, Val>> aliasTransTarget) {
 			super(node);
-			this.aliasTrans = aliasTrans;
+			this.aliasTransLabel = aliasTransLabel;
+			this.aliasTransTarget = aliasTransTarget;
 		}
 
 		@Override
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			importToFlowSolver(t, aliasTrans);
+			importToFlowSolver(t, aliasTransLabel,aliasTransTarget);
 		}
 
 		@Override
@@ -163,7 +166,8 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((aliasTrans == null) ? 0 : aliasTrans.hashCode());
+			result = prime * result + ((aliasTransLabel == null) ? 0 : aliasTransLabel.hashCode());
+			result = prime * result + ((aliasTransTarget == null) ? 0 : aliasTransTarget.hashCode());
 			return result;
 		}
 
@@ -178,10 +182,15 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 			ImportToFlowSolver other = (ImportToFlowSolver) obj;
 			if (!getOuterType().equals(other.getOuterType()))
 				return false;
-			if (aliasTrans == null) {
-				if (other.aliasTrans != null)
+			if (aliasTransLabel == null) {
+				if (other.aliasTransLabel != null)
 					return false;
-			} else if (!aliasTrans.equals(other.aliasTrans))
+			} else if (!aliasTransLabel.equals(other.aliasTransLabel))
+				return false;
+			if (aliasTransTarget == null) {
+				if (other.aliasTransTarget != null)
+					return false;
+			} else if (!aliasTransTarget.equals(other.aliasTransTarget))
 				return false;
 			return true;
 		}

@@ -11,12 +11,21 @@
  *******************************************************************************/
 package boomerang.stats;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
+import com.beust.jcommander.internal.Lists;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -30,7 +39,6 @@ import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.solver.AbstractBoomerangSolver;
-import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
 import soot.SootMethod;
 import sync.pds.solver.SyncPDSUpdateListener;
@@ -46,7 +54,7 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 import wpds.interfaces.WPDSUpdateListener;
 
-public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats<W> {
+public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStats<W> {
 
 	private Map<Query, AbstractBoomerangSolver<W>> queries = Maps.newHashMap();
 	private Set<WeightedTransition<Field, INode<Node<Statement, Val>>, W>> globalFieldTransitions = Sets.newHashSet();
@@ -69,12 +77,22 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
 	private int callSitePOIs;
 	private int fieldWritePOIs;
 	private int fieldReadPOIs;
-	private boolean COUNT_TOP_METHODS = false;
-	private Map<String,Integer> backwardFieldMethodsRules = new TreeMap<>();
-	private Map<String,Integer> backwardCallMethodsRules = new TreeMap<>();
-
-	private Map<String,Integer> forwardFieldMethodsRules = new TreeMap<>();
-	private Map<String,Integer> forwardCallMethodsRules = new TreeMap<>();
+	
+	private String outputFileName;
+	private static final String CSV_SEPARATOR = ";";
+	private List<String> headers = Lists.newArrayList();
+	private Map<String,String> headersToValues = Maps.newHashMap();
+	private enum Headers{
+		Query,QueryType,FieldTransitions,CallTransitions,CallRules,FieldRules, ReachedForwardNodes, ReachedBackwardNodes, 
+		CallVisitedMethods, FieldVisitedMethods, FieldWritePOIs, FieldReadPOIs, StaticFlows, ArrayFlows, QueryTime, Timeout, 
+	}
+	
+	public CSVBoomerangStatsWriter(String outputFileName) {
+		this.outputFileName = outputFileName;
+		for(Headers h : Headers.values()) {
+			this.headers.add(h.toString());
+		}
+	}
 
 	public static <K> Map<K, Integer> sortByValues(final Map<K, Integer> map) {
 		Comparator<K> valueComparator =  new Comparator<K>() {
@@ -128,9 +146,7 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
 			public void onRuleAdded(Rule<Field, INode<Node<Statement, Val>>, W> rule) {
 				if (!globalFieldRules.add(rule)) {
 					fieldRulesCollisions++;
-				}else if(COUNT_TOP_METHODS) {
-						increaseMethod(rule.getS1().fact().stmt().getMethod().toString(), (solver instanceof BackwardBoomerangSolver ? backwardFieldMethodsRules :forwardFieldMethodsRules));
-					}
+				}
 				}
 		});
 		solver.getCallPDS().registerUpdateListener(new WPDSUpdateListener<Statement, INode<Val>, W>() {
@@ -140,9 +156,7 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
 				if (!globalCallRules.add(rule)) {
 					callRulesCollisions++;
 
-				} else if(COUNT_TOP_METHODS) {
-						increaseMethod(rule.getL1().getMethod().toString(), (solver instanceof BackwardBoomerangSolver ?  backwardCallMethodsRules : forwardCallMethodsRules));
-				}
+				} 
 			}
 		});
 
@@ -163,13 +177,6 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
 		});
 	}
 
-	private void increaseMethod(String method, Map<String, Integer> map) {
-		Integer i = map.get(method);
-		if(i == null) {
-			i = new Integer(0);
-		}
-		map.put(method,++i);
-	}
 
 	@Override
 	public void registerCallSitePOI(WeightedBoomerang<W>.ForwardCallSitePOI key) {
@@ -207,31 +214,11 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
 		s+= String.format("Global Call Rules(Collisions): \t\t %s (%s)\n", globalCallRules.size(),callRulesCollisions);
 		s+= String.format("Global Call Transitions(Collisions): \t\t %s (%s)\n", globalCallTransitions.size(),callTransitionCollisions);
 		s+= String.format("Special Flows (Static/Array): \t\t %s(%s)/%s(%s)\n", staticFlows,globalCallTransitions.size(),arrayFlows,globalFieldTransitions.size());
-		if(COUNT_TOP_METHODS) {
-			s += topMostMethods(forwardFieldMethodsRules, "forward field");
-			s += topMostMethods(forwardCallMethodsRules, "forward call");
-
-			if(!backwardCallMethodsRules.isEmpty()) {
-				s += topMostMethods(backwardFieldMethodsRules, "backward field");
-				s += topMostMethods(backwardCallMethodsRules, "backward call");
-			}
-		}
 		s+= computeMetrics();
 		s+="\n";
 		return s;
 	}
 
-	private String topMostMethods(Map<String, Integer> fieldMethodsRules,String system) {
-		Map<String, Integer> sootMethodIntegerMap = sortByValues(fieldMethodsRules);
-		int i = 0;
-		String s ="";
-		for(Map.Entry<String, Integer> e : sootMethodIntegerMap.entrySet()) {
-			if(++i > 11)
-				break;
-			s += String.format("%s. most %s visited Method(%sx): %s\n",i, system, e.getValue(),e.getKey());
-		}
-		return s;
-	}
 
 	@Override
 	public Set<SootMethod> getCallVisitedMethods() {
@@ -314,15 +301,72 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
 	}
 
 	@Override
-	public void terminated(ForwardQuery query, ForwardBoomerangResults<W> forwardBoomerangResults) {
-		// TODO Auto-generated method stub
-		
+	public void terminated(ForwardQuery query, ForwardBoomerangResults<W> res) {
+		writeToFile(query, res.getAnalysisWatch().elapsed(TimeUnit.MILLISECONDS), res.isTimedout());
 	}
 
 	@Override
-	public void terminated(BackwardQuery query, BackwardBoomerangResults<W> backwardBoomerangResults) {
-		// TODO Auto-generated method stub
-		
+	public void terminated(BackwardQuery query, BackwardBoomerangResults<W> res) {
+		writeToFile(query, res.getAnalysisWatch().elapsed(TimeUnit.MILLISECONDS), res.isTimedout());
 	}
+	
+	private void writeToFile(Query query, long queryTime, boolean timeout) {
+		put(Headers.Query,query.toString());
+		put(Headers.QueryType, (query instanceof BackwardQuery ? "B" : "F"));
+		put(Headers.QueryTime, queryTime);
+		put(Headers.Timeout, (timeout ? "1" : "0"));
+		put(Headers.ArrayFlows, arrayFlows);
+		put(Headers.CallRules, globalCallRules.size());
+		put(Headers.FieldRules, globalFieldRules.size());
+		put(Headers.CallTransitions, globalCallTransitions.size());
+		put(Headers.FieldTransitions, globalFieldTransitions.size());
+		put(Headers.FieldReadPOIs, fieldReadPOIs);
+		put(Headers.FieldWritePOIs, fieldWritePOIs);
+		put(Headers.FieldVisitedMethods,fieldVisitedMethods.size());
+		put(Headers.CallVisitedMethods,callVisitedMethods.size());
+		put(Headers.ReachedForwardNodes,reachedForwardNodes.size());
+		put(Headers.ReachedBackwardNodes,reachedBackwardNodes.size());
+		put(Headers.StaticFlows, staticFlows);
+		
+		try {
+			File reportFile = new File(outputFileName).getAbsoluteFile();
+			if (!reportFile.getParentFile().exists()) {
+				try {
+					Files.createDirectories(reportFile.getParentFile().toPath());
+				} catch (IOException e) {
+					throw new RuntimeException("Was not able to create directories for IDEViz output!");
+				}
+			}
+			boolean fileExisted = reportFile.exists();
+			FileWriter writer = new FileWriter(reportFile, true);
+			if (!fileExisted) {
+				writer.write(Joiner.on(CSV_SEPARATOR).join(headers) + "\n");
+			}
+			List<String> line = Lists.newArrayList();
+			for(String h : headers){
+				String string = headersToValues.get(h);
+				if(string == null){
+					string = "";
+				}
+				line.add(string);
+			}
+			writer.write(Joiner.on(CSV_SEPARATOR).join(line) + "\n");
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void put(String key, Object val) {
+		if (!headers.contains(key)) {
+			System.err.println("Did not create a header to this value " + key);
+		} else {
+			headersToValues.put(key, val.toString());
+		}
+	}
+	private void put(Headers key, Object val) {
+		put(key.toString(),val);
+	}
+
 
 }

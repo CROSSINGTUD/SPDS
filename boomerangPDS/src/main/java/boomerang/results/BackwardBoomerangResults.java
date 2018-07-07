@@ -56,6 +56,7 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		this.timedout = timedout;
 		this.stats = stats;
 		this.analysisWatch = analysisWatch;
+		stats.terminated(query, this);
 	}
 	public Map<ForwardQuery,PAutomaton<Statement, INode<Val>>> getAllocationSites(){
 		computeAllocations();
