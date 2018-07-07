@@ -141,13 +141,13 @@ public abstract class WeightedBoomerang<W extends Weight> {
 										Node<Statement, Val> returnedVal = new Node<Statement, Val>(callStatement,
 												returningFact.fact());
 
-										if(solver.valueUsedInStatement(callStatement.getUnit().get(),returningFact.fact())) {
+										if(!solver.valueUsedInStatement(callStatement.getUnit().get(),returningFact.fact())) {
 											return;
 										}
 										if(!returningFact.fact().isStatic() && !returningFact.fact().m().equals(callStatement.getMethod())) {
 											return;
 										}
-										
+//										
 										
 										solver.setCallingContextReachable(returnedVal);
 										solver.getCallAutomaton().addWeightForTransition(new Transition<Statement,INode<Val>>(returningFact,callStatement,solver.getCallAutomaton().getInitialState()),weight);
@@ -171,9 +171,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 								Node<Statement, Val> returnedVal = new Node<Statement, Val>(returnSite,
 										returningFact.fact());
 
-								if(solver.valueUsedInStatement(callStatement.getUnit().get(),returningFact.fact())) {
-									return;
-								}
 								if(!returningFact.fact().isStatic() && !returningFact.fact().m().equals(callStatement.getMethod())) {
 									return;
 								}
@@ -219,7 +216,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 						return;
 					if(!returnedFact.fact().isStatic() && !returnedFact.fact().m().equals(callSite.getMethod()))
 						return;
-					if(solver.valueUsedInStatement(callSite.getUnit().get(),returnedFact.fact())) {
+					if(!solver.valueUsedInStatement(callSite.getUnit().get(),returnedFact.fact())) {
 						return;
 					}
 
