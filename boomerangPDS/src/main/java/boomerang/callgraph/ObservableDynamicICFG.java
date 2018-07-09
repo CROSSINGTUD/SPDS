@@ -177,8 +177,17 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         for (ForwardQuery forwardQuery : results.getAllocationSites().keySet()){
             logger.info("Found AllocationSite '{}'.", forwardQuery);
             Type type = forwardQuery.getType();
-            SootMethod calleeMethod = getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) type).getSootClass());
-            addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
+            if (type instanceof RefType){
+                SootMethod calleeMethod = getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) type).getSootClass());
+                addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
+            } else if (type instanceof ArrayType){
+                Type base = ((ArrayType) type).baseType;
+                if (base instanceof RefType){
+                    SootMethod calleeMethod = getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) base).getSootClass());
+                    addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
+                }
+            }
+            //TODO handle AnySubType, (pretty sure not handling NullType is fine)
         }
     }
 
@@ -217,7 +226,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
                 Edge edge = chaIterator.next();
                 addCallIfNotInGraph(edge.srcUnit(), edge.tgt(), edge.kind());
             }
-            //TODO use solver to get potentially missing edges
         }
     }
 
