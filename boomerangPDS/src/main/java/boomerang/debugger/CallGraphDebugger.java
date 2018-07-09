@@ -38,7 +38,8 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
         StringBuilder stringBuilder = new StringBuilder();
 
         //Needed to make graph in dot
-        stringBuilder.append("digraph callgraph {");
+        stringBuilder.append("digraph callgraph { \n");
+        stringBuilder.append("node [margin=0, shape=box]; \n");
 
         //Add content of graph
         addMethodsToDotfile(stringBuilder);
