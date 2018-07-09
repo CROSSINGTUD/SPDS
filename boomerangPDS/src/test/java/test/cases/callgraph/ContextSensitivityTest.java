@@ -21,6 +21,7 @@ public class ContextSensitivityTest extends AbstractBoomerangTest {
 
     @Test
     public void testOnlyCorrectContextInCallGraph(){
+        wrongContext();
         SuperClass type = new CorrectSubclass();
         Object alloc = method(type);
         queryFor(alloc);
