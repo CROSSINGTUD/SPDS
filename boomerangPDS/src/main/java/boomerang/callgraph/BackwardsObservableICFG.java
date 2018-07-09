@@ -92,11 +92,6 @@ public class BackwardsObservableICFG implements ObservableICFG<Unit, SootMethod>
     }
 
     @Override
-    public void addCall(Unit caller, SootMethod callee) {
-        delegate.addCall(caller, callee);
-    }
-
-    @Override
     public void addCallerListener(CallerListener listener) {
         delegate.addCallerListener(listener);
     }

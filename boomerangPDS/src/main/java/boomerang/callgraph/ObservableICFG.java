@@ -36,14 +36,6 @@ public interface ObservableICFG<N,M> {
     void addCalleeListener(CalleeListener<N,M> listener);
 
     /**
-     * Adds an edge to the call graph from the caller to the callee, {@link CalleeListener} will
-     * be notified
-     * @param caller The node that acts as a source of the edge
-     * @param callee The node that acts as a target of the edge
-     */
-    void addCall(N caller, M callee);
-
-    /**
      * Registers a listener that will be notified whenever a caller is added.
      */
     void addCallerListener(CallerListener<N,M> listener);

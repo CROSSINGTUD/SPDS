@@ -47,11 +47,6 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     @Override
-    public void addCall(Unit caller, SootMethod callee) {
-        throw new UnsupportedOperationException("Static ICFG should not get new calls");
-    }
-
-    @Override
     public void addCallerListener(CallerListener<Unit, SootMethod> listener) {
         for (Unit unit : precomputedGraph.getCallersOf(listener.getObservedCallee())){
             listener.onCallerAdded(unit, listener.getObservedCallee());
