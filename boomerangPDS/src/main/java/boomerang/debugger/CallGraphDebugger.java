@@ -14,6 +14,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Map;
 
+/**
+ * Can be used to obtain a dot file which can be plotted into a graphical representation of the call graph.
+ * Call graph includes all edges and all methods which have edges incoming or outgoing.
+ */
 public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
 
     private static final Logger logger = LogManager.getLogger();
@@ -29,11 +33,20 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
     @Override
     public void done(Map<Query, AbstractBoomerangSolver<W>> queryToSolvers) {
         logger.info("Starting to compute visualization.");
+
+        //Use string builder to get text for call graph
         StringBuilder stringBuilder = new StringBuilder();
+
+        //Needed to make graph in dot
         stringBuilder.append("digraph callgraph {");
+
+        //Add content of graph
         addMethodsToDotfile(stringBuilder);
+
+        //End graph
         stringBuilder.append("}");
 
+        //Write out what was gathered in the string builder
         try (FileWriter file = new FileWriter(dotFile)) {
             logger.info("Writing visualization to file {}", dotFile.getAbsolutePath());
             file.write(stringBuilder.toString());
@@ -43,8 +56,11 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
         }
     }
 
+    /**
+     * Add all edges to string builder. The nodes between which edges run will be included, other
+     * methods will not.
+     */
     private void addMethodsToDotfile(StringBuilder stringBuilder) {
-        //Add connections if present
         for (Edge edge : callGraph) {
             addMethodToDotFile(stringBuilder, edge.src());
             stringBuilder.append(" -> ");
@@ -53,6 +69,10 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
         }
     }
 
+    /**
+     * Appends escaped method name to string builder, otherwise symbols like spaces
+     * mess with the dot syntax
+     */
     private void addMethodToDotFile(StringBuilder stringBuilder, SootMethod method){
         stringBuilder.append('"');
         stringBuilder.append(method);
