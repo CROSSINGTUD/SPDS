@@ -23,6 +23,7 @@ public class ContextSpecificListTypeTest extends AbstractBoomerangTest {
 
         @Test
         public void testListType(){
+            wrongContext();
             List list = new ArrayList();
             Object query = method(list);
             queryFor(query);
