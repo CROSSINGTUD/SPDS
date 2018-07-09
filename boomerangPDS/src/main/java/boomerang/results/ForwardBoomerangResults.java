@@ -14,6 +14,7 @@ import com.google.common.collect.Table;
 
 import boomerang.ForwardQuery;
 import boomerang.Query;
+import boomerang.Util;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -45,6 +46,7 @@ public class ForwardBoomerangResults<W extends Weight> {
 	private final boolean timedout;
 	private final IBoomerangStats<W> stats;
 	private Stopwatch analysisWatch;
+	private long maxMemory;
 
 	public ForwardBoomerangResults(ForwardQuery query, boolean timedout, DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers, BiDiInterproceduralCFG<Unit, SootMethod> icfg, BiDiInterproceduralCFG<Unit, SootMethod> bwicfg, IBoomerangStats<W> stats, Stopwatch analysisWatch) {
 		this.query = query;
@@ -54,6 +56,8 @@ public class ForwardBoomerangResults<W extends Weight> {
 		this.bwicfg = bwicfg;
 		this.stats = stats;
 		this.analysisWatch = analysisWatch;
+		stats.terminated(query, this);
+		this.maxMemory = Util.getReallyUsedMemory();
 	}
 	
 	public Stopwatch getAnalysisWatch() {
@@ -194,5 +198,9 @@ public class ForwardBoomerangResults<W extends Weight> {
 			}
 		}
 		return false;
+	}
+	
+	public long getMaxMemory() {
+		return maxMemory;
 	}
 }

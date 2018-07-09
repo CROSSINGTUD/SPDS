@@ -46,5 +46,5 @@ public interface IBoomerangStats<W extends Weight> {
 	void terminated(ForwardQuery query, ForwardBoomerangResults<W> forwardBoomerangResults);
 
 	void terminated(BackwardQuery query, BackwardBoomerangResults<W> backwardBoomerangResults);
-
+	
 }

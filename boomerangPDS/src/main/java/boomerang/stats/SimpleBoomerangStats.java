@@ -118,13 +118,11 @@ public class SimpleBoomerangStats<W extends Weight> implements IBoomerangStats<W
 
 	@Override
 	public void terminated(ForwardQuery query, ForwardBoomerangResults<W> forwardBoomerangResults) {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void terminated(BackwardQuery query, BackwardBoomerangResults<W> backwardBoomerangResults) {
-		// TODO Auto-generated method stub
-		
 	}
+	
+
 }

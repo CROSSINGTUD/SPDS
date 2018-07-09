@@ -82,6 +82,7 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 	private static final String CSV_SEPARATOR = ";";
 	private List<String> headers = Lists.newArrayList();
 	private Map<String,String> headersToValues = Maps.newHashMap();
+	private long maxMemory;
 	private enum Headers{
 		Query,QueryType,FieldTransitions,CallTransitions,CallRules,FieldRules, ReachedForwardNodes, ReachedBackwardNodes, 
 		CallVisitedMethods, FieldVisitedMethods, FieldWritePOIs, FieldReadPOIs, StaticFlows, ArrayFlows, QueryTime, Timeout, 
@@ -367,6 +368,7 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 	private void put(Headers key, Object val) {
 		put(key.toString(),val);
 	}
+
 
 
 }

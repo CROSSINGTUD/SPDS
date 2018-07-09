@@ -97,8 +97,9 @@ public class IDEALAnalysis<W extends Weight> {
 		return idealAnalysis.run();
 	}
 	private void printOptions() {
-		if(PRINT_OPTIONS)
+		if(PRINT_OPTIONS) {
 			System.out.println(analysisDefinition);
+		}
 	}
 
 	public Collection<Query> computeSeeds() {

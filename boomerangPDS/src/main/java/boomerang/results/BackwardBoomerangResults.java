@@ -16,6 +16,7 @@ import com.google.common.collect.Table;
 import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
 import boomerang.Query;
+import boomerang.Util;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -49,6 +50,7 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 	private final boolean timedout;
 	private final IBoomerangStats<W> stats;
 	private Stopwatch analysisWatch;
+	private long maxMemory;
 
 	public BackwardBoomerangResults(BackwardQuery query, boolean timedout, DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers, IBoomerangStats<W> stats, Stopwatch analysisWatch) {
 		this.query = query;
@@ -57,6 +59,7 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		this.stats = stats;
 		this.analysisWatch = analysisWatch;
 		stats.terminated(query, this);
+		maxMemory = Util.getReallyUsedMemory();
 	}
 	public Map<ForwardQuery,PAutomaton<Statement, INode<Val>>> getAllocationSites(){
 		computeAllocations();
@@ -402,5 +405,8 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 	public Set<ClassConstant> possibleClassConstants() {
 		throw new RuntimeException("Not implemented!");
 	}
-	
+
+	public long getMaxMemory() {
+		return maxMemory;
+	}
 }

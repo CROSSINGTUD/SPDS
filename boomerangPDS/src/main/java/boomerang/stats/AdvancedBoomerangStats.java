@@ -75,6 +75,7 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
 
 	private Map<String,Integer> forwardFieldMethodsRules = new TreeMap<>();
 	private Map<String,Integer> forwardCallMethodsRules = new TreeMap<>();
+	private long maxMemory;
 
 	public static <K> Map<K, Integer> sortByValues(final Map<K, Integer> map) {
 		Comparator<K> valueComparator =  new Comparator<K>() {
