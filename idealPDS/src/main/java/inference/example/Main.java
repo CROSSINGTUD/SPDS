@@ -30,7 +30,9 @@ import boomerang.jimple.Val;
 import boomerang.results.ForwardBoomerangResults;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
+import ideal.IDEALResultHandler;
 import ideal.IDEALSeedSolver;
+import ideal.StoreIDEALResultHandler;
 import inference.InferenceWeight;
 import inference.InferenceWeightFunctions;
 import soot.G;
@@ -101,6 +103,8 @@ public class Main {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				JimpleBasedInterproceduralCFG icfg = new JimpleBasedInterproceduralCFG(true);
 				
+				StoreIDEALResultHandler<InferenceWeight> resultHandler = new StoreIDEALResultHandler<>();
+				
 				IDEALAnalysis<InferenceWeight> solver = new IDEALAnalysis<>(new IDEALAnalysisDefinition<InferenceWeight>() {
 
 					@Override
@@ -130,9 +134,13 @@ public class Main {
 					public Debugger<InferenceWeight> debugger(IDEALSeedSolver<InferenceWeight> solver) {
 						return new Debugger<>();
 					}
+					@Override
+					public IDEALResultHandler<InferenceWeight> getResultHandler() {
+						return resultHandler;
+					}
 				});
-				
-				Map<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>> res = solver.run();
+				solver.run();
+				Map<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>> res = resultHandler.getResults();
 				for(Entry<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>> e : res.entrySet()){
 					Table<Statement, Val, InferenceWeight> results = e.getValue().asStatementValWeightTable();
 					System.out.println(Joiner.on("\n").join(results.cellSet()));
