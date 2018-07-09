@@ -1,12 +1,16 @@
 package boomerang.callgraph;
 
+import soot.Scene;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
+import soot.jimple.Stmt;
 import soot.jimple.toolkits.callgraph.CallGraph;
+import soot.jimple.toolkits.callgraph.Edge;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -109,7 +113,26 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
 
     public CallGraph getCallGraphCopy(){
         CallGraph copy = new CallGraph();
-        //TODO get copy of call graph from BiDiGraph
+        HashSet<SootMethod> visited = new HashSet<>();
+        for (SootMethod entryPoint : Scene.v().getEntryPoints()){
+            if (visited.contains(entryPoint)){
+                addEdgesForCallees(entryPoint, visited, copy);
+            }
+        }
         return copy;
     }
+
+    private void addEdgesForCallees(SootMethod sootMethod, HashSet<SootMethod> visited, CallGraph copy) {
+        visited.add(sootMethod);
+        for (Unit callsite : precomputedGraph.getCallsFromWithin(sootMethod)){
+            for (SootMethod callee : precomputedGraph.getCalleesOfCallAt(callsite)){
+                copy.addEdge(new Edge(sootMethod, (Stmt)callsite, callee));
+                if (visited.contains(callee)){
+                    addEdgesForCallees(callee, visited, copy);
+                }
+            }
+        }
+    }
+
+
 }
