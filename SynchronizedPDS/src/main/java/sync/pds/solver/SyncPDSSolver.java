@@ -11,38 +11,18 @@
  *******************************************************************************/
 package sync.pds.solver;
 
-import java.util.AbstractMap;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
+import com.google.common.collect.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
-
-import sync.pds.solver.nodes.CallPopNode;
-import sync.pds.solver.nodes.CastNode;
-import sync.pds.solver.nodes.ExclusionNode;
-import sync.pds.solver.nodes.GeneratedState;
-import sync.pds.solver.nodes.INode;
-import sync.pds.solver.nodes.Node;
-import sync.pds.solver.nodes.NodeWithLocation;
-import sync.pds.solver.nodes.PopNode;
-import sync.pds.solver.nodes.PushNode;
-import sync.pds.solver.nodes.SingleNode;
+import sync.pds.solver.nodes.*;
 import wpds.impl.*;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
+
+import java.util.*;
+import java.util.Map.Entry;
 
 public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends Location, W extends Weight> {
 	
@@ -429,7 +409,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			return;
 		Node<Stmt, Fact> curr = witnessNode.asNode();
 		Collection<? extends State> successors = computeSuccessor(curr);
-		for (State s : successors) {
+		for (State s : Lists.newArrayList(successors)) {
 			if (s instanceof Node) {
 				Node<Stmt, Fact> succ = (Node<Stmt, Fact>) s;
 				if (succ instanceof PushNode) {
