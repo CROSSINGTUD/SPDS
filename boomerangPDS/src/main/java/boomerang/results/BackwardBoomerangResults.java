@@ -1,18 +1,5 @@
 package boomerang.results;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
-
 import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
 import boomerang.Query;
@@ -23,8 +10,11 @@ import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.stats.IBoomerangStats;
 import boomerang.util.AccessPath;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import heros.utilities.DefaultValueMap;
-import soot.Local;
 import soot.PointsToSet;
 import soot.Type;
 import soot.jimple.ClassConstant;
@@ -40,6 +30,12 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.Empty;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 
@@ -186,47 +182,6 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 			return BackwardBoomerangResults.this;
 		}
 		
-	}
-	
-
-	
-	private class ExtractAllocationSiteStateListener extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
-		
-		private ForwardQuery query;
-		private Set<ForwardQuery> results;
-		private BackwardQuery bwQuery;
-
-		public ExtractAllocationSiteStateListener(INode<Node<Statement, Val>> state,  BackwardQuery bwQuery,ForwardQuery query, Set<ForwardQuery> results) {
-			super(state);
-			this.bwQuery = bwQuery;
-			this.query = query;
-			this.results = results;
-		}
-
-		@Override
-		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-		}
-		
-		@Override
-		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if(t.getLabel().equals(Field.empty()) && t.getStart().fact().equals(bwQuery.asNode())){
-				results.add(query);
-			}
-		}
-
-		@Override
-		public int hashCode() {
-			//Otherwise we cannot register this listener twice.
-			return System.identityHashCode(this);
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			//Otherwise we cannot register this listener twice.
-			return this == obj;
-		}
 	}
 	
 	public Set<AccessPath> getAllAliases() {
