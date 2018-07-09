@@ -243,7 +243,6 @@ public class InterprocedualTest extends AbstractBoomerangTest {
 
 	private Object nestedSummary(Allocation inner) {
 		Object ret = summary(inner);
-		System.out.println(1);
 		return ret;
 	}
 }

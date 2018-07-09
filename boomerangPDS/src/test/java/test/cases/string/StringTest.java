@@ -12,7 +12,6 @@
 package test.cases.string;
 
 import org.junit.Test;
-
 import test.core.AbstractBoomerangTest;
 
 public class StringTest extends AbstractBoomerangTest {
@@ -21,7 +20,6 @@ public class StringTest extends AbstractBoomerangTest {
 		Object query = "a" + "b";
 		if(staticallyUnknown())
 			query += "c";
-		System.out.println(query);
 		queryFor(query);
 	}
 	@Test
