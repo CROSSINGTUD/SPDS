@@ -198,7 +198,11 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
                     return candidate;
                 }
             }
-            sootClass = sootClass.getSuperclass();
+            if (sootClass.hasSuperclass()){
+                sootClass = sootClass.getSuperclass();
+            } else {
+                sootClass = null; //No further class to look in, will throw exception
+            }
         }
         throw new RuntimeException("No method found in class or superclasses");
     }
