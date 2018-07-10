@@ -107,7 +107,7 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
         CallGraph copy = new CallGraph();
         HashSet<SootMethod> visited = new HashSet<>();
         for (SootMethod entryPoint : Scene.v().getEntryPoints()){
-            if (visited.contains(entryPoint)){
+            if (!visited.contains(entryPoint)){
                 addEdgesForCallees(entryPoint, visited, copy);
             }
         }
@@ -119,7 +119,7 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
         for (Unit callsite : precomputedGraph.getCallsFromWithin(sootMethod)){
             for (SootMethod callee : precomputedGraph.getCalleesOfCallAt(callsite)){
                 copy.addEdge(new Edge(sootMethod, (Stmt)callsite, callee));
-                if (visited.contains(callee)){
+                if (!visited.contains(callee)){
                     addEdgesForCallees(callee, visited, copy);
                 }
             }
