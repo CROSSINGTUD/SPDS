@@ -6,6 +6,7 @@ import boomerang.WeightedBoomerang;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
+import boomerang.seedfactory.SeedFactory;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
@@ -38,13 +39,15 @@ import java.util.*;
  *
  * @author Melanie Bruns on 04.05.2018
  */
-public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
+public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<Unit, SootMethod>{
 
     private static final Logger logger = LogManager.getLogger();
 
     private CallGraph demandDrivenCallGraph = new CallGraph();
     private CallGraph precomputedCallGraph;
-    private WeightedBoomerang<Weight> solver;
+    private WeightedBoomerang<W> solver;
+    private SeedFactory<W> seedFactory;
+    private Set<SootMethod> methodsWithKnownCallers = new HashSet<>();
 
     private ArrayList<CalleeListener<Unit, SootMethod>> calleeListeners = new ArrayList<>();
     private ArrayList<CallerListener<Unit, SootMethod>> callerListeners = new ArrayList<>();
@@ -91,13 +94,18 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         }
     });
 
-    public ObservableDynamicICFG(WeightedBoomerang solver) {
-        this(solver, true);
+    public ObservableDynamicICFG(WeightedBoomerang<W> solver) {
+        this(solver, null);
     }
 
-    public ObservableDynamicICFG(WeightedBoomerang solver, boolean enableExceptions) {
+    public ObservableDynamicICFG(WeightedBoomerang<W> solver, SeedFactory<W> seedFactory){
+        this(solver, true, seedFactory);
+    }
+
+    public ObservableDynamicICFG(WeightedBoomerang<W> solver, boolean enableExceptions, SeedFactory<W> seedFactory) {
         this.solver = solver;
         this.enableExceptions = enableExceptions;
+        this.seedFactory = seedFactory;
 
         this.precomputedCallGraph = Scene.v().getCallGraph();
 
@@ -174,7 +182,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         BackwardQuery query = new BackwardQuery(statement, val);
 
         //Execute that query
-        BackwardBoomerangResults<Weight> results = solver.solve(query);
+        BackwardBoomerangResults<W> results = solver.solve(query);
 
         //Go through possible types an add edges to implementations in possible types
         for (ForwardQuery forwardQuery : results.getAllocationSites().keySet()){
@@ -221,16 +229,42 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             listener.onCallerAdded(edge.srcUnit(), method);
         }
 
-        //TODO figure out when to query: When would we have enough context? How do we know?
-        // Call BackwardQuery for all potential callers?
+        if (!methodsWithKnownCallers.contains(method)){
+            determineCallers(method);
+        }
+    }
 
-        //If not all edges from the CHA call graph are covered, there may be more to discover
-        if (potentiallyHasMoreEdges(precomputedCallGraph.edgesInto(method), demandDrivenCallGraph.edgesInto(method))){
-            //Therefore we use the solver
-            Iterator<Edge> chaIterator = precomputedCallGraph.edgesInto(method);
-            while (chaIterator.hasNext()){
-                Edge edge = chaIterator.next();
-                addCallIfNotInGraph(edge.srcUnit(), edge.tgt(), edge.kind());
+    private void determineCallers(SootMethod method) {
+        methodsWithKnownCallers.add(method);
+        List<Edge> incomingEdges = new ArrayList<>();
+        Iterator<Edge> chaIterator = precomputedCallGraph.edgesInto(method);
+        while (chaIterator.hasNext()){
+            Edge edge = chaIterator.next();
+            incomingEdges.add(edge);
+        }
+
+        for (Edge incomingEdge : incomingEdges){
+            //Construct BackwardQuery, so we know which types the object might have
+            Stmt stmt = (Stmt) incomingEdge.srcUnit();
+            InvokeExpr invokeExpr = stmt.getInvokeExpr();
+            if (invokeExpr instanceof  InstanceInvokeExpr){
+                if (invokeExpr instanceof SpecialInvokeExpr){
+                    //This is a special invoke expression, such as an init
+                    addCallIfNotInGraph(incomingEdge.srcUnit(), method, incomingEdge.kind());
+                }
+                Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
+                Val val = new Val(value, getMethodOf(stmt));
+                Statement statement = new Statement(stmt, getMethodOf(stmt));
+                BackwardQuery query = new BackwardQuery(statement, val);
+
+                Collection<SootMethod> methodScope = seedFactory.getMethodScope(query);
+                if (methodScope.contains(method)){
+                    addCallIfNotInGraph(incomingEdge.srcUnit(), method, incomingEdge.kind());
+                }
+
+            } else {
+                //This is a static call, the edge can be added
+                addCallIfNotInGraph(incomingEdge.srcUnit(), method, incomingEdge.kind());
             }
         }
     }
@@ -264,7 +298,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             return;
 
         logger.debug("Added call from unit '{}' to method '{}'", caller, callee);
-        Edge edge = new Edge(getMethodOf(caller), (Stmt)caller, callee, kind);
+        Edge edge = new Edge(getMethodOf(caller), caller, callee, kind);
         demandDrivenCallGraph.addEdge(edge);
         //Notify all interested listeners, so ..
         //.. CalleeListeners interested in callees of the caller or the CallGraphExtractor that is interested in any

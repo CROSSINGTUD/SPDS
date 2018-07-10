@@ -85,6 +85,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	}
 
 	protected SceneTransformer createAnalysisTransformer() {
+		HashSet<SootMethod> printedMethods = new HashSet<>();
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
@@ -97,6 +98,12 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 					@Override
 					protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection calledMethods) {
+						if (!printedMethods.contains(method)){
+							System.out.println(method.getActiveBody());
+							printedMethods.add(method);
+						}
+
+
 						Optional<? extends Query> query = new FirstArgumentOf("queryFor").test(u);
 
 						if(query.isPresent()){
@@ -306,7 +313,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				@Override
 				public ObservableICFG<Unit, SootMethod> icfg() {
 					if (dynamicIcfg == null){
-						dynamicIcfg = new ObservableDynamicICFG(this);
+						dynamicIcfg = new ObservableDynamicICFG<>(this, seedFactory);
 					}
 					return dynamicIcfg;
 				}
@@ -370,7 +377,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
 				if (dynamicIcfg == null){
-					dynamicIcfg = new ObservableDynamicICFG(this);
+					dynamicIcfg = new ObservableDynamicICFG<>(this, getSeedFactory());
 				}
 				return dynamicIcfg;
 			}
