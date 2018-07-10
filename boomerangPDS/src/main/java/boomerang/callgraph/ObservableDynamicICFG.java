@@ -144,20 +144,23 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
             Edge edge = edgeIterator.next();
             listener.onCalleeAdded(unit, edge.tgt());
         }
+
+        InvokeExpr ie = stmt.getInvokeExpr();
         //Now check if we need to find new edges
-        if ((stmt.getInvokeExpr() instanceof InstanceInvokeExpr)
-                && !(stmt.getInvokeExpr() instanceof SpecialInvokeExpr)){
-            if (potentiallyHasMoreEdges(precomputedCallGraph.edgesOutOf(unit), demandDrivenCallGraph.edgesOutOf(unit))){
+        if ((ie instanceof InstanceInvokeExpr)){
+            //If it was invoked on an object we might find new instances
+            if (ie instanceof SpecialInvokeExpr){
+                //If it was a special invoke, there is a single target
+                addCallIfNotInGraph(unit, ie.getMethod(), Kind.SPECIAL);
+                //If the precomputed graph has more edges than our graph, there may be more edges to find
+            } else if (potentiallyHasMoreEdges(precomputedCallGraph.edgesOutOf(unit),
+                    demandDrivenCallGraph.edgesOutOf(unit))){
+                //Query for callees of the unit and add edges to the graph
                 queryForCallees(unit);
             }
         } else {
-            //Call was not invoked on an object. Must be static or special. In this case rely on precomputed graph
-            // TODO for now?
-            Iterator<Edge> precomputedGraphIterator = precomputedCallGraph.edgesOutOf(unit);
-            while (precomputedGraphIterator.hasNext()){
-                Edge edge = precomputedGraphIterator.next();
-                addCallIfNotInGraph(unit, edge.tgt(), edge.kind());
-            }
+            //Call was not invoked on an object. Must be static
+            addCallIfNotInGraph(unit, ie.getMethod(), Kind.STATIC);
         }
     }
 
