@@ -187,7 +187,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
                     addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
                 }
             }
-            //TODO handle AnySubType, (pretty sure not handling NullType is fine)
         }
     }
 
