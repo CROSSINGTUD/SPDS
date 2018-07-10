@@ -11,7 +11,7 @@ import java.util.List;
 public class ContextSpecificListTypeTest extends AbstractBoomerangTest {
 
         public void wrongContext(){
-            List list = new LinkedList();
+            List list = new WrongList();
             method(list);
         }
 
@@ -28,4 +28,12 @@ public class ContextSpecificListTypeTest extends AbstractBoomerangTest {
             Object query = method(list);
             queryFor(query);
         }
+
+    private class WrongList extends LinkedList {
+            @Override
+            public boolean add(Object e){
+                unreachable(e);
+                return false;
+            }
+    }
 }
