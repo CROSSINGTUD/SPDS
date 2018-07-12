@@ -375,26 +375,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
-		icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
-
-			@Override
-			public Unit getObservedCaller() {
-				return callSite;
-			}
-
-			@Override
-			public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-				for (Unit calleeSp : icfg.getStartPointsOf(sootMethod)) {
-					for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-						Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
-								new Statement(callSite, caller), invokeExpr, value, sootMethod, (Stmt) calleeSp);
-						onCallFlow(sootMethod, callSite, value, res);
-						out.addAll(res);
-					}
-				}
-				addReachable(sootMethod);
-			}
-		});
+		icfg.addCalleeListener(new CallFlowCalleeListener(callSite, caller, invokeExpr, out, value));
 		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
 			out.addAll(getEmptyCalleeFlow(caller, callSite, value, (Stmt) returnSite));
 		}
@@ -406,6 +387,58 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			}
 		}
 		return out;
+	}
+
+	private class CallFlowCalleeListener implements CalleeListener<Unit, SootMethod>{
+		Stmt callSite;
+		SootMethod caller;
+		InvokeExpr invokeExpr;
+		Set<State> out;
+		Val value;
+
+		CallFlowCalleeListener(Stmt callSite, SootMethod caller, InvokeExpr invokeExpr, Set<State> out, Val value){
+			this.callSite = callSite;
+			this.caller = caller;
+			this.invokeExpr = invokeExpr;
+			this.out = out;
+			this.value = value;
+		}
+
+		@Override
+		public Unit getObservedCaller() {
+			return callSite;
+		}
+
+		@Override
+		public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+			for (Unit calleeSp : icfg.getStartPointsOf(sootMethod)) {
+				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+					Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
+							new Statement(callSite, caller), invokeExpr, value, sootMethod, (Stmt) calleeSp);
+					onCallFlow(sootMethod, callSite, value, res);
+					out.addAll(res);
+				}
+			}
+			addReachable(sootMethod);
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			CallFlowCalleeListener that = (CallFlowCalleeListener) o;
+			return Objects.equals(callSite, that.callSite) &&
+					Objects.equals(caller, that.caller) &&
+					Objects.equals(invokeExpr, that.invokeExpr) &&
+					Objects.equals(out, that.out) &&
+					Objects.equals(value, that.value);
+		}
+
+		@Override
+		public int hashCode() {
+
+			return Objects.hash(callSite, caller, invokeExpr, out, value);
+		}
 	}
 
 	protected abstract Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,

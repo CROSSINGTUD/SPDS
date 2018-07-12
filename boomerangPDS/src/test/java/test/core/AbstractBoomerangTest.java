@@ -74,6 +74,32 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	protected int analysisTimeout = 3000 *1000;
 
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		AbstractBoomerangTest that = (AbstractBoomerangTest) o;
+		return resultsMustNotBeEmpty == that.resultsMustNotBeEmpty &&
+				accessPathQuery == that.accessPathQuery &&
+				integerQueries == that.integerQueries &&
+				analysisTimeout == that.analysisTimeout &&
+				Objects.equals(timeout, that.timeout) &&
+				Objects.equals(dynamicIcfg, that.dynamicIcfg) &&
+				Objects.equals(staticIcfg, that.staticIcfg) &&
+				Objects.equals(allocationSites, that.allocationSites) &&
+				Objects.equals(queryForCallSites, that.queryForCallSites) &&
+				Objects.equals(unsoundErrors, that.unsoundErrors) &&
+				Objects.equals(imprecisionErrors, that.imprecisionErrors) &&
+				Objects.equals(expectedAccessPaths, that.expectedAccessPaths) &&
+				Objects.equals(seedFactory, that.seedFactory);
+	}
+
+	@Override
+	public int hashCode() {
+
+		return Objects.hash(timeout, dynamicIcfg, staticIcfg, allocationSites, queryForCallSites, unsoundErrors, imprecisionErrors, resultsMustNotBeEmpty, accessPathQuery, expectedAccessPaths, integerQueries, seedFactory, analysisTimeout);
+	}
+
 	private enum AnalysisMode {
 		WholeProgram, DemandDrivenBackward;
 	}
@@ -207,24 +233,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 					if(as.containsInvokeExpr()){
 						AtomicReference<Query> returnValue = new AtomicReference<>();
-						staticIcfg.addCalleeListener(new CalleeListener<Unit,SootMethod>(){
-
-							@Override
-							public Unit getObservedCaller() {
-								return as;
-							}
-
-							@Override
-							public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-								for(Unit u : staticIcfg.getEndPointsOf(sootMethod)){
-									if(u instanceof ReturnStmt && ((ReturnStmt) u).getOp() instanceof IntConstant){
-										ForwardQuery forwardQuery = new ForwardQuery(statement,
-												new AllocVal(as.getLeftOp(), staticIcfg.getMethodOf(stmt), ((ReturnStmt) u).getOp(), new Statement((Stmt) u, sootMethod)));
-										returnValue.set(forwardQuery);
-									}
-								}
-							}
-						});
+						staticIcfg.addCalleeListener(new IntegerAllocationSiteCalleeListener(returnValue, as, statement, stmt));
 						if (returnValue.get() != null){
 							return Optional.of(returnValue.get());
 						}
@@ -235,6 +244,54 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			return Optional.absent();
 		}
 	}
+
+	private class IntegerAllocationSiteCalleeListener implements CalleeListener<Unit, SootMethod>{
+		private AtomicReference<Query> p_returnValue;
+		private AssignStmt p_as;
+		private Statement p_statement;
+		private Stmt p_stmt;
+
+		IntegerAllocationSiteCalleeListener(AtomicReference<Query> returnValue, AssignStmt as, Statement statement, Stmt stmt){
+			p_returnValue = returnValue;
+			p_as = as;
+			p_statement = statement;
+			p_stmt = stmt;
+		}
+
+		@Override
+		public Unit getObservedCaller() {
+			return p_as;
+		}
+
+		@Override
+		public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+			for(Unit u : staticIcfg.getEndPointsOf(sootMethod)){
+				if(u instanceof ReturnStmt && ((ReturnStmt) u).getOp() instanceof IntConstant){
+					ForwardQuery forwardQuery = new ForwardQuery(p_statement,
+							new AllocVal(p_as.getLeftOp(), staticIcfg.getMethodOf(p_stmt), ((ReturnStmt) u).getOp(), new Statement((Stmt) u, sootMethod)));
+					p_returnValue.set(forwardQuery);
+				}
+			}
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			IntegerAllocationSiteCalleeListener that = (IntegerAllocationSiteCalleeListener) o;
+			return Objects.equals(p_returnValue, that.p_returnValue) &&
+					Objects.equals(p_as, that.p_as) &&
+					Objects.equals(p_statement, that.p_statement) &&
+					Objects.equals(p_stmt, that.p_stmt);
+		}
+
+		@Override
+		public int hashCode() {
+
+			return Objects.hash(p_returnValue, p_as, p_statement, p_stmt);
+		}
+	}
+
 	private class FirstArgumentOf implements ValueOfInterestInUnit {
 
 		private String methodNameMatcher;
@@ -501,18 +558,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		visited.add(new Node<>(m, callSite));
 		Body activeBody = m.getActiveBody();
 		for (Unit cs : staticIcfg.getCallsFromWithin(m)) {
-		    staticIcfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
-
-				@Override
-				public Unit getObservedCaller() {
-					return cs;
-				}
-
-				@Override
-				public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-					extractQuery(sootMethod, predicate, queries, (callSite == null ? (Stmt) cs : callSite), visited);
-				}
-            });
+		    staticIcfg.addCalleeListener(new ExtractQueryCalleeListener(cs, predicate, queries, callSite, visited));
 		}
 		for (Unit u : activeBody.getUnits()) {
 			if (!(u instanceof Stmt))
@@ -521,6 +567,49 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			if (optOfVal.isPresent()) {
 				queries.add(optOfVal.get());
 			}
+		}
+	}
+
+	private class ExtractQueryCalleeListener implements CalleeListener<Unit,SootMethod> {
+		Unit p_cs;
+		ValueOfInterestInUnit p_predicate;
+		Collection<Query> p_queries;
+		Stmt p_callsite;
+		Set<Node<SootMethod, Stmt>> p_visited;
+
+		ExtractQueryCalleeListener(Unit cs, ValueOfInterestInUnit predicate, Collection<Query> queries, Stmt callsite,
+								   Set<Node<SootMethod, Stmt>> visited){
+			this.p_cs=cs;
+			this.p_predicate=predicate;
+			this.p_queries=queries;
+			this.p_callsite=callsite;
+			this.p_visited=visited;
+		}
+
+		public Unit getObservedCaller() {
+			return p_cs;
+		}
+
+		public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+			extractQuery(sootMethod, p_predicate, p_queries, (p_callsite == null ? (Stmt) p_cs : p_callsite), p_visited);
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			ExtractQueryCalleeListener that = (ExtractQueryCalleeListener) o;
+			return Objects.equals(p_cs, that.p_cs) &&
+					Objects.equals(p_predicate, that.p_predicate) &&
+					Objects.equals(p_queries, that.p_queries) &&
+					Objects.equals(p_callsite, that.p_callsite) &&
+					Objects.equals(p_visited, that.p_visited);
+		}
+
+		@Override
+		public int hashCode() {
+
+			return Objects.hash(p_cs, p_predicate, p_queries, p_callsite, p_visited);
 		}
 	}
 

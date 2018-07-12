@@ -49,8 +49,8 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
     private SeedFactory<W> seedFactory;
     private Set<SootMethod> methodsWithKnownCallers = new HashSet<>();
 
-    private ArrayList<CalleeListener<Unit, SootMethod>> calleeListeners = new ArrayList<>();
-    private ArrayList<CallerListener<Unit, SootMethod>> callerListeners = new ArrayList<>();
+    private HashSet<CalleeListener<Unit, SootMethod>> calleeListeners = new HashSet<>();
+    private HashSet<CallerListener<Unit, SootMethod>> callerListeners = new HashSet<>();
 
     private final boolean enableExceptions;
 
