@@ -246,6 +246,8 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
         for (Edge incomingEdge : incomingEdges){
             //Construct BackwardQuery, so we know which types the object might have
             Stmt stmt = (Stmt) incomingEdge.srcUnit();
+            if(!stmt.containsInvokeExpr())
+            		continue;
             InvokeExpr invokeExpr = stmt.getInvokeExpr();
             if (invokeExpr instanceof  InstanceInvokeExpr){
                 if (invokeExpr instanceof SpecialInvokeExpr){
@@ -257,7 +259,7 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
                     Statement statement = new Statement(stmt, getMethodOf(stmt));
                     BackwardQuery query = new BackwardQuery(statement, val);
 
-                    Collection<SootMethod> methodScope = seedFactory.getMethodScope(query);
+                    Collection<SootMethod> methodScope = seedFactory.getAnyMethodScope();
                     if (methodScope.contains(method)){
                         addCallIfNotInGraph(incomingEdge.srcUnit(), method, incomingEdge.kind());
                     }

@@ -29,11 +29,15 @@ public class ContextSpecificListTypeTest extends AbstractBoomerangTest {
             queryFor(query);
         }
 
-    private class WrongList extends LinkedList {
+    private static class WrongList extends LinkedList {
             @Override
             public boolean add(Object e){
-                unreachable(e);
+                unreachable();
                 return false;
             }
+
+			public void unreachable() {
+				
+			}
     }
 }

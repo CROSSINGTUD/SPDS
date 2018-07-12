@@ -286,5 +286,13 @@ public abstract class SeedFactory<W extends Weight> {
 		}
 	}
 
+	public Collection<SootMethod> getAnyMethodScope() {
+		Set<SootMethod> out = Sets.newHashSet();
+		for(Query q : seedToTransition.keySet()) {
+			out.addAll(getMethodScope(q));
+		}
+		return out;
+	}
+
 
 }
