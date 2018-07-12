@@ -251,17 +251,17 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
                 if (invokeExpr instanceof SpecialInvokeExpr){
                     //This is a special invoke expression, such as an init
                     addCallIfNotInGraph(incomingEdge.srcUnit(), method, incomingEdge.kind());
-                }
-                Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
-                Val val = new Val(value, getMethodOf(stmt));
-                Statement statement = new Statement(stmt, getMethodOf(stmt));
-                BackwardQuery query = new BackwardQuery(statement, val);
+                } else {
+                    Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
+                    Val val = new Val(value, getMethodOf(stmt));
+                    Statement statement = new Statement(stmt, getMethodOf(stmt));
+                    BackwardQuery query = new BackwardQuery(statement, val);
 
-                Collection<SootMethod> methodScope = seedFactory.getMethodScope(query);
-                if (methodScope.contains(method)){
-                    addCallIfNotInGraph(incomingEdge.srcUnit(), method, incomingEdge.kind());
+                    Collection<SootMethod> methodScope = seedFactory.getMethodScope(query);
+                    if (methodScope.contains(method)){
+                        addCallIfNotInGraph(incomingEdge.srcUnit(), method, incomingEdge.kind());
+                    }
                 }
-
             } else {
                 //This is a static call, the edge can be added
                 addCallIfNotInGraph(incomingEdge.srcUnit(), method, incomingEdge.kind());
