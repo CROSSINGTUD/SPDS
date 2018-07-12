@@ -250,40 +250,14 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			if (icfg.isCallStmt(u)) {
 				label.put("callSite", icfg.isCallStmt(u));
 				JSONArray callees = new JSONArray();
-				icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
-
-					@Override
-					public Unit getObservedCaller() {
-						return u;
-					}
-
-					@Override
-					public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-						if (sootMethod != null && sootMethod.toString() != null){
-							callees.add(new JSONMethod(sootMethod));
-						}
-					}
-				});
+				icfg.addCalleeListener(new JsonCalleeListener(u, callees));
 				label.put("callees", callees);
 			}
 			if (icfg.isExitStmt(u)) {
 				label.put("returnSite", icfg.isExitStmt(u));
 				JSONArray callees = new JSONArray();
 				Set<SootMethod> callers = new HashSet<>();
-				SootMethod callingMethod = icfg.getMethodOf(u);
-				icfg.addCallerListener(new CallerListener<Unit,SootMethod>(){
-
-					@Override
-					public SootMethod getObservedCallee() {
-						return callingMethod;
-					}
-
-					@Override
-					public void onCallerAdded(Unit unit, SootMethod sootMethod) {
-						callers.add(callingMethod);
-					}
-				});
-	
+				icfg.addCallerListener(new JsonCallerListener(u, callers));
 				for (SootMethod caller : callers)
 					callees.add(new JSONMethod(caller));
 				label.put("callers", callees);
@@ -313,6 +287,77 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 		}
 		cfg.put("controlFlowNode", data);
 		return cfg;
+	}
+
+	private class JsonCalleeListener implements CalleeListener<Unit, SootMethod>{
+		Unit u;
+		JSONArray callees;
+
+		JsonCalleeListener(Unit u, JSONArray callees){
+			this.u = u;
+			this.callees = callees;
+		}
+
+		@Override
+		public Unit getObservedCaller() {
+			return u;
+		}
+
+		@Override
+		public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+			if (sootMethod != null && sootMethod.toString() != null){
+				callees.add(new JSONMethod(sootMethod));
+			}
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			JsonCalleeListener that = (JsonCalleeListener) o;
+			return Objects.equals(u, that.u) &&
+					Objects.equals(callees, that.callees);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(u, callees);
+		}
+	}
+
+	private class JsonCallerListener implements CallerListener<Unit,SootMethod>{
+		Unit u;
+		Set<SootMethod> callers;
+
+		JsonCallerListener(Unit u, Set<SootMethod> callers){
+			this.u = u;
+			this.callers = callers;
+		}
+
+		@Override
+		public SootMethod getObservedCallee() {
+			return icfg.getMethodOf(u);
+		}
+
+		@Override
+		public void onCallerAdded(Unit unit, SootMethod sootMethod) {
+			callers.add(icfg.getMethodOf(unit));
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			JsonCallerListener that = (JsonCallerListener) o;
+			return Objects.equals(u, that.u) &&
+					Objects.equals(callers, that.callers);
+		}
+
+		@Override
+		public int hashCode() {
+
+			return Objects.hash(u, callers);
+		}
 	}
 
 	private String getShortLabel(Unit u) {
