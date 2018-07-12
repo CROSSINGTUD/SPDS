@@ -243,18 +243,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 		visited.add(new Node<>(m, callSite));
 		Body activeBody = m.getActiveBody();
 		for (Unit cs : staticIcfg.getCallsFromWithin(m)) {
-			staticIcfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
-
-				@Override
-				public Unit getObservedCaller() {
-					return cs;
-				}
-
-				@Override
-				public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-					extractQuery(sootMethod, predicate, queries, (callSite == null ? (Stmt) cs : callSite), visited);
-				}
-			});
+			staticIcfg.addCalleeListener(new ExtractQueryCalleeListener(cs, predicate, queries, callSite, visited));
 		}
 		for (Unit u : activeBody.getUnits()) {
 			if (!(u instanceof Stmt))
@@ -263,6 +252,48 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 			if (optOfVal.isPresent()) {
 				queries.add(optOfVal.get());
 			}
+		}
+	}
+
+	private class ExtractQueryCalleeListener implements CalleeListener<Unit,SootMethod> {
+		Unit p_cs;
+		ValueOfInterestInUnit p_predicate;
+		Collection<Query> p_queries;
+		Stmt p_callsite;
+		Set<Node<SootMethod, Stmt>> p_visited;
+
+		ExtractQueryCalleeListener(Unit cs, ValueOfInterestInUnit predicate, Collection<Query> queries, Stmt callsite,
+								   Set<Node<SootMethod, Stmt>> visited){
+			this.p_cs=cs;
+			this.p_predicate=predicate;
+			this.p_queries=queries;
+			this.p_callsite=callsite;
+			this.p_visited=visited;
+		}
+
+		public Unit getObservedCaller() {
+			return p_cs;
+		}
+
+		public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+			extractQuery(sootMethod, p_predicate, p_queries, (p_callsite == null ? (Stmt) p_cs : p_callsite), p_visited);
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			ExtractQueryCalleeListener that = (ExtractQueryCalleeListener) o;
+			return Objects.equals(p_cs, that.p_cs) &&
+					Objects.equals(p_predicate, that.p_predicate) &&
+					Objects.equals(p_queries, that.p_queries) &&
+					Objects.equals(p_callsite, that.p_callsite) &&
+					Objects.equals(p_visited, that.p_visited);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(p_cs, p_predicate, p_queries, p_callsite, p_visited);
 		}
 	}
 
