@@ -147,7 +147,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		return Optional.absent();
 	}
 
-	private class AllocationValCalleeListener implements CalleeListener<Unit,SootMethod>{
+	protected class AllocationValCalleeListener implements CalleeListener<Unit,SootMethod>{
 		AtomicReference<AllocVal> returnValue;
 		AssignStmt as;
 		ObservableICFG<Unit, SootMethod> icfg;
