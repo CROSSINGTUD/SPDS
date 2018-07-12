@@ -11,8 +11,6 @@
  *******************************************************************************/
 package boomerang;
 
-import com.google.common.base.Optional;
-
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
@@ -20,21 +18,11 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.stats.IBoomerangStats;
 import boomerang.stats.SimpleBoomerangStats;
-import soot.RefType;
-import soot.Scene;
-import soot.SootMethod;
-import soot.Type;
-import soot.Unit;
-import soot.Value;
-import soot.jimple.AssignStmt;
-import soot.jimple.NewArrayExpr;
-import soot.jimple.NewExpr;
-import soot.jimple.NewMultiArrayExpr;
-import soot.jimple.NullConstant;
-import soot.jimple.ReturnStmt;
-import soot.jimple.Stmt;
-import soot.jimple.StringConstant;
+import com.google.common.base.Optional;
+import soot.*;
+import soot.jimple.*;
 
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class DefaultBoomerangOptions implements BoomerangOptions {
@@ -151,27 +139,56 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		}
 		if(as.containsInvokeExpr()){
             AtomicReference<AllocVal> returnValue = new AtomicReference<>();
-			icfg.addCalleeListener( new CalleeListener<Unit,SootMethod>(){
-
-				@Override
-				public Unit getObservedCaller() {
-					return as;
-				}
-
-				@Override
-				public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-					for(Unit u : icfg.getEndPointsOf(sootMethod)){
-						if(u instanceof ReturnStmt && isAllocationVal(((ReturnStmt) u).getOp())){
-							returnValue.set(new AllocVal(as.getLeftOp(), m, ((ReturnStmt) u).getOp(), new Statement((Stmt) u,m)));
-						}
-					}
-				}
-			});
+			icfg.addCalleeListener(new AllocationValCalleeListener(returnValue, as, icfg, m));
             if (returnValue.get() != null){
                 return Optional.of(returnValue.get());
             }
 		}
 		return Optional.absent();
+	}
+
+	private class AllocationValCalleeListener implements CalleeListener<Unit,SootMethod>{
+		AtomicReference<AllocVal> returnValue;
+		AssignStmt as;
+		ObservableICFG<Unit, SootMethod> icfg;
+		SootMethod m;
+
+		AllocationValCalleeListener(AtomicReference<AllocVal> returnValue, AssignStmt as,
+									ObservableICFG<Unit, SootMethod> icfg, SootMethod m){
+			this.returnValue = returnValue;
+			this.as = as;
+			this.icfg = icfg;
+			this.m = m;
+		}
+		@Override
+		public Unit getObservedCaller() {
+			return as;
+		}
+
+		@Override
+		public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+			for(Unit u : icfg.getEndPointsOf(sootMethod)){
+				if(u instanceof ReturnStmt && isAllocationVal(((ReturnStmt) u).getOp())){
+					returnValue.set(new AllocVal(as.getLeftOp(), m, ((ReturnStmt) u).getOp(), new Statement((Stmt) u,m)));
+				}
+			}
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			AllocationValCalleeListener that = (AllocationValCalleeListener) o;
+			return Objects.equals(returnValue, that.returnValue) &&
+					Objects.equals(as, that.as) &&
+					Objects.equals(m, that.m);
+		}
+
+		@Override
+		public int hashCode() {
+
+			return Objects.hash(returnValue, as, m);
+		}
 	}
 
 	@Override
