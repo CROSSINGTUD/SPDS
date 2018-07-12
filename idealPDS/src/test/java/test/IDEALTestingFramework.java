@@ -122,18 +122,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		visited.add(m);
 		Body activeBody = m.getActiveBody();
 		for (Unit callSite : staticIcfg.getCallsFromWithin(m)) {
-			staticIcfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
-
-				@Override
-				public Unit getObservedCaller() {
-					return callSite;
-				}
-
-				@Override
-				public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-					parseExpectedQueryResults(sootMethod, queries, visited);
-				}
-			});
+			staticIcfg.addCalleeListener(new ParseExpectedQueryResultCalleeListener(queries, visited, callSite));
 		}
 		for (Unit u : activeBody.getUnits()) {
 			if (!(u instanceof Stmt))
@@ -162,6 +151,43 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 				else
 					queries.add(new MustBe(stmt, val, InternalState.ACCEPTING));
 			}
+		}
+	}
+
+	private class ParseExpectedQueryResultCalleeListener implements CalleeListener<Unit, SootMethod>{
+		Set<Assertion> queries;
+		Set<SootMethod> visited;
+		Unit callSite;
+
+		ParseExpectedQueryResultCalleeListener(Set<Assertion> queries, Set<SootMethod> visited, Unit callSite){
+			this.queries = queries;
+			this.visited = visited;
+			this.callSite = callSite;
+		}
+
+		@Override
+		public Unit getObservedCaller() {
+			return callSite;
+		}
+
+		@Override
+		public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+			parseExpectedQueryResults(sootMethod, queries, visited);
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			ParseExpectedQueryResultCalleeListener that = (ParseExpectedQueryResultCalleeListener) o;
+			return Objects.equals(queries, that.queries) &&
+					Objects.equals(visited, that.visited) &&
+					Objects.equals(callSite, that.callSite);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(queries, visited, callSite);
 		}
 	}
 
