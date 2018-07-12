@@ -84,7 +84,6 @@ public abstract class AbstractTestingFramework {
 		Options.v().setPhaseOption("cg.spark", "on");
 		Options.v().setPhaseOption("cg.spark", "verbose:true");
 		Options.v().set_output_format(Options.output_format_none);
-		setCallGraphOptions();
 		String userdir = System.getProperty("user.dir");
 		String sootCp = userdir + "/target/test-classes";
 		String javaHome = System.getProperty("java.home");
