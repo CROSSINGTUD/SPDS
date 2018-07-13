@@ -6,7 +6,6 @@ import boomerang.WeightedBoomerang;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
-import boomerang.seedfactory.SeedFactory;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
@@ -46,7 +45,6 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
     private CallGraph demandDrivenCallGraph = new CallGraph();
     private CallGraph precomputedCallGraph;
     private WeightedBoomerang<W> solver;
-    private SeedFactory<W> seedFactory;
     private Set<SootMethod> methodsWithKnownCallers = new HashSet<>();
 
     private HashSet<CalleeListener<Unit, SootMethod>> calleeListeners = new HashSet<>();
@@ -94,18 +92,14 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
         }
     });
 
-    public ObservableDynamicICFG(WeightedBoomerang<W> solver) {
-        this(solver, null);
+
+    public ObservableDynamicICFG(WeightedBoomerang<W> solver){
+        this(solver, true);
     }
 
-    public ObservableDynamicICFG(WeightedBoomerang<W> solver, SeedFactory<W> seedFactory){
-        this(solver, true, seedFactory);
-    }
-
-    public ObservableDynamicICFG(WeightedBoomerang<W> solver, boolean enableExceptions, SeedFactory<W> seedFactory) {
+    public ObservableDynamicICFG(WeightedBoomerang<W> solver, boolean enableExceptions) {
         this.solver = solver;
         this.enableExceptions = enableExceptions;
-        this.seedFactory = seedFactory;
 
         this.precomputedCallGraph = Scene.v().getCallGraph();
 
@@ -221,55 +215,31 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
     public void addCallerListener(CallerListener<Unit, SootMethod> listener) {
         callerListeners.add(listener);
 
-        //Notify the new one about what we already now
         SootMethod method = listener.getObservedCallee();
+
+        //Add all CHA edges if we haven't already
+        if (!methodsWithKnownCallers.contains(method)){
+            Iterator<Edge> precomputedEdges = precomputedCallGraph.edgesInto(method);
+            while (precomputedEdges.hasNext()){
+                Edge edge = precomputedEdges.next();
+                addCallIfNotInGraph(edge.srcUnit(), method, edge.kind());
+            }
+            methodsWithKnownCallers.add(method);
+        }
+
+        //Notify the new listener about what we already now
         Iterator<Edge> edgeIterator = demandDrivenCallGraph.edgesInto(method);
         while (edgeIterator.hasNext()){
             Edge edge = edgeIterator.next();
             listener.onCallerAdded(edge.srcUnit(), method);
         }
 
-        if (!methodsWithKnownCallers.contains(method)){
-            determineCallers(method);
-        }
+
+
+
     }
 
-    private void determineCallers(SootMethod method) {
-        methodsWithKnownCallers.add(method);
-        List<Edge> incomingEdges = new ArrayList<>();
-        Iterator<Edge> chaIterator = precomputedCallGraph.edgesInto(method);
-        while (chaIterator.hasNext()){
-            Edge edge = chaIterator.next();
-            incomingEdges.add(edge);
-        }
 
-        for (Edge incomingEdge : incomingEdges){
-            //Construct BackwardQuery, so we know which types the object might have
-            Stmt stmt = (Stmt) incomingEdge.srcUnit();
-            if(!stmt.containsInvokeExpr())
-            		continue;
-            InvokeExpr invokeExpr = stmt.getInvokeExpr();
-            if (invokeExpr instanceof  InstanceInvokeExpr){
-                if (invokeExpr instanceof SpecialInvokeExpr){
-                    //This is a special invoke expression, such as an init
-                    addCallIfNotInGraph(incomingEdge.srcUnit(), method, incomingEdge.kind());
-                } else {
-                    Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
-                    Val val = new Val(value, getMethodOf(stmt));
-                    Statement statement = new Statement(stmt, getMethodOf(stmt));
-                    BackwardQuery query = new BackwardQuery(statement, val);
-
-                    Collection<SootMethod> methodScope = seedFactory.getAnyMethodScope();
-                    if (methodScope.contains(method)){
-                        addCallIfNotInGraph(incomingEdge.srcUnit(), method, incomingEdge.kind());
-                    }
-                }
-            } else {
-                //This is a static call, the edge can be added
-                addCallIfNotInGraph(incomingEdge.srcUnit(), method, incomingEdge.kind());
-            }
-        }
-    }
 
     private boolean potentiallyHasMoreEdges(Iterator<Edge> chaEdgeIterator, Iterator<Edge> knownEdgeIterator){
         //Make a map checking for every edge in the CHA call graph whether it is in the known edges

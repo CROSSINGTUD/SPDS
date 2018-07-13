@@ -27,14 +27,10 @@ import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.util.AccessPath;
-import boomerang.util.AccessPathParser;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import heros.utilities.DefaultValueMap;
-import org.junit.Rule;
-import org.junit.rules.Timeout;
 import soot.*;
 import soot.jimple.*;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
@@ -57,20 +53,14 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	private static final boolean FAIL_ON_IMPRECISE = false;
 	private static final boolean VISUALIZATION = false;
 
-	@Rule
-	public Timeout timeout = new Timeout(10000000);
 	private ObservableICFG<Unit, SootMethod> dynamicIcfg;
 	private ObservableStaticICFG staticIcfg;
+	private QueryForCallSiteDetector queryDetector;
 	private Collection<? extends Query> allocationSites;
 	protected Collection<? extends Query> queryForCallSites;
 	protected Collection<Error> unsoundErrors = Sets.newHashSet();
 	protected Collection<Error> imprecisionErrors = Sets.newHashSet();
-	protected boolean resultsMustNotBeEmpty = false;
-	private boolean accessPathQuery = false;
-	private Set<AccessPath> expectedAccessPaths = Sets.newHashSet();
 
-	private boolean integerQueries;
-	private SeedFactory<NoWeight> seedFactory;
 
 	protected int analysisTimeout = 3000 *1000;
 
@@ -89,58 +79,13 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
+
 				staticIcfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
-				seedFactory = new SeedFactory<NoWeight>(){
-					@Override
-					public ObservableICFG<Unit, SootMethod> icfg() {
-						return staticIcfg;
-					}
-
-					@Override
-					protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection calledMethods) {
-						if (!printedMethods.contains(method)){
-							System.out.println(method.getActiveBody());
-							printedMethods.add(method);
-						}
+				queryDetector = new QueryForCallSiteDetector(staticIcfg);
+				queryForCallSites = queryDetector.computeSeeds();
 
 
-						Optional<? extends Query> query = new FirstArgumentOf("queryFor").test(u);
-
-						if(query.isPresent()){
-							return Collections.singleton(query.get());
-						}
-						query = new FirstArgumentOf("queryForAndNotEmpty").test(u);
-
-						if(query.isPresent()){
-							resultsMustNotBeEmpty = true;
-							return Collections.singleton(query.get());
-						}
-						query = new FirstArgumentOf("intQueryFor").test(u);
-						if(query.isPresent()){
-							integerQueries = true;
-							return Collections.singleton(query.get());
-						}
-						
-						query = new FirstArgumentOf("accessPathQueryFor").test(u);
-						if(query.isPresent()){
-							accessPathQuery = true;
-							getAllExpectedAccessPath(u, method);
-							return Collections.singleton(query.get());
-						}
-						return Collections.emptySet();
-					}
-
-					private void getAllExpectedAccessPath(Stmt u, SootMethod m) {
-						Value arg = u.getInvokeExpr().getArg(1);
-						if(arg instanceof StringConstant){
-							StringConstant stringConstant = (StringConstant) arg;
-							String value = stringConstant.value;
-							expectedAccessPaths.addAll(AccessPathParser.parseAllFromString(value,m));
-						}
-					}
-				};
-				queryForCallSites = seedFactory.computeSeeds();
-				if(integerQueries){
+				if(queryDetector.integerQueries){
 					allocationSites = extractQuery(new IntegerAllocationSiteOf());
 				} else{
 					allocationSites = extractQuery(new AllocationSiteOf());
@@ -148,7 +93,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				for (AnalysisMode analysis : getAnalyses()) {
 					switch (analysis) {
 					case WholeProgram:
-						if(!integerQueries)
+						if(!queryDetector.integerQueries)
 							runWholeProgram();
 						break;
 					case DemandDrivenBackward:
@@ -156,7 +101,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						break;
 					}
 				}
-				if(resultsMustNotBeEmpty)
+				if(queryDetector.resultsMustNotBeEmpty)
 					return;
 				if (!unsoundErrors.isEmpty()) {
 					throw new RuntimeException(Joiner.on("\n").join(unsoundErrors));
@@ -188,7 +133,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					}
 				}
 			}
-			return Optional.absent();
+			return Optional.empty();
 		}
 	}
 	private class IntegerAllocationSiteOf implements ValueOfInterestInUnit {
@@ -200,7 +145,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					if (as.getLeftOp() instanceof Local && as.getRightOp() instanceof IntConstant) {
 						Local local = (Local) as.getLeftOp();
 						ForwardQuery forwardQuery = new ForwardQuery(statement,
-                                new AllocVal(local, staticIcfg.getMethodOf(stmt), as.getRightOp(),new Statement((Stmt) as,
+                                new AllocVal(local, staticIcfg.getMethodOf(stmt), as.getRightOp(),new Statement(as,
                                         staticIcfg.getMethodOf(stmt))));
 						return Optional.<Query>of(forwardQuery);
 					}
@@ -215,7 +160,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 			}
 			
-			return Optional.absent();
+			return Optional.empty();
 		}
 	}
 
@@ -266,32 +211,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		}
 	}
 
-	private class FirstArgumentOf implements ValueOfInterestInUnit {
 
-		private String methodNameMatcher;
-
-		public FirstArgumentOf(String methodNameMatcher) {
-			this.methodNameMatcher = methodNameMatcher;
-		}
-
-		@Override
-		public Optional<? extends Query> test(Stmt unit) {
-			Stmt stmt = unit;
-			if (!(stmt.containsInvokeExpr()))
-				return Optional.absent();
-			InvokeExpr invokeExpr = stmt.getInvokeExpr();
-			if (!invokeExpr.getMethod().getName().matches(methodNameMatcher))
-				return Optional.absent();
-			Value param = invokeExpr.getArg(0);
-			if (!(param instanceof Local))
-				return Optional.absent();
-			SootMethod newMethod = staticIcfg.getMethodOf(unit);
-			Statement newStatement = new Statement(unit, newMethod);
-			Val newVal = new Val(param, newMethod);
-			BackwardQuery newBackwardQuery = new BackwardQuery(newStatement, newVal);
-			return Optional.<Query>of(newBackwardQuery);
-		}
-	}
 
 	private void compareQuery(Collection<? extends Query> expectedResults,
 			Collection<? extends Node<Statement, Val>> results, AnalysisMode analysis) {
@@ -315,7 +235,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		if (!falsePositiveAllocationSites.isEmpty())
 			imprecisionErrors.add(new Error(analysis + " Imprecise results for:" + answer));
 		
-		if(resultsMustNotBeEmpty && results.isEmpty()){
+		if(queryDetector.resultsMustNotBeEmpty && results.isEmpty()){
 			throw new RuntimeException("Expected some results, but Boomerang returned no allocation sites.");
 		}
 	}
@@ -324,12 +244,12 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		final Set<Node<Statement, Val>> results = Sets.newHashSet();
 		
 		for (final Query query : queries) {
-			DefaultBoomerangOptions options = (integerQueries ? new IntAndStringBoomerangOptions() : new DefaultBoomerangOptions(){
+			DefaultBoomerangOptions options = (queryDetector.integerQueries ? new IntAndStringBoomerangOptions() : new DefaultBoomerangOptions(){
 				@Override
 				public boolean arrayFlows() {
 					return true;
 				}
-				
+
 				@Override
 				public int analysisTimeoutMS() {
 					return analysisTimeout;
@@ -344,7 +264,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				@Override
 				public ObservableICFG<Unit, SootMethod> icfg() {
 					if (dynamicIcfg == null){
-						dynamicIcfg = new ObservableDynamicICFG<>(this, seedFactory);
+						dynamicIcfg = new ObservableDynamicICFG<>(this);
 					}
 					return dynamicIcfg;
 				}
@@ -377,7 +297,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 
 //				System.out.println(res.getAllAliases());
-				if(accessPathQuery){
+				if(queryDetector.accessPathQuery){
 					checkContainsAllExpectedAccessPath(res.getAllAliases());
 				}
 			}
@@ -386,7 +306,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	}
 
 	private void checkContainsAllExpectedAccessPath(Set<AccessPath> allAliases) {
-		HashSet<AccessPath> expected = Sets.newHashSet(expectedAccessPaths);
+		HashSet<AccessPath> expected = Sets.newHashSet(queryDetector.expectedAccessPaths);
 		expected.removeAll(allAliases);
 		if(!expected.isEmpty()){
 			throw new RuntimeException("Did not find all access path! " +expected);
@@ -408,7 +328,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
 				if (dynamicIcfg == null){
-					dynamicIcfg = new ObservableDynamicICFG<>(this, getSeedFactory());
+					dynamicIcfg = new ObservableDynamicICFG<>(this);
 				}
 				return dynamicIcfg;
 			}
@@ -635,7 +555,4 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		return true;
 	}
 
-	private interface ValueOfInterestInUnit {
-		Optional<? extends Query> test(Stmt unit);
-	}
 }

@@ -95,7 +95,7 @@ public class IDEALSeedSolver<W extends Weight> {
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
 				if (analysisDefinition.icfg == null){
-					analysisDefinition.icfg = new ObservableDynamicICFG<W>(this, seedFactory);
+					analysisDefinition.icfg = new ObservableDynamicICFG<W>(this);
 				}
 				return analysisDefinition.icfg();
 			}
