@@ -74,32 +74,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	protected int analysisTimeout = 3000 *1000;
 
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
-		AbstractBoomerangTest that = (AbstractBoomerangTest) o;
-		return resultsMustNotBeEmpty == that.resultsMustNotBeEmpty &&
-				accessPathQuery == that.accessPathQuery &&
-				integerQueries == that.integerQueries &&
-				analysisTimeout == that.analysisTimeout &&
-				Objects.equals(timeout, that.timeout) &&
-				Objects.equals(dynamicIcfg, that.dynamicIcfg) &&
-				Objects.equals(staticIcfg, that.staticIcfg) &&
-				Objects.equals(allocationSites, that.allocationSites) &&
-				Objects.equals(queryForCallSites, that.queryForCallSites) &&
-				Objects.equals(unsoundErrors, that.unsoundErrors) &&
-				Objects.equals(imprecisionErrors, that.imprecisionErrors) &&
-				Objects.equals(expectedAccessPaths, that.expectedAccessPaths) &&
-				Objects.equals(seedFactory, that.seedFactory);
-	}
-
-	@Override
-	public int hashCode() {
-
-		return Objects.hash(timeout, dynamicIcfg, staticIcfg, allocationSites, queryForCallSites, unsoundErrors, imprecisionErrors, resultsMustNotBeEmpty, accessPathQuery, expectedAccessPaths, integerQueries, seedFactory, analysisTimeout);
-	}
-
 	private enum AnalysisMode {
 		WholeProgram, DemandDrivenBackward;
 	}
