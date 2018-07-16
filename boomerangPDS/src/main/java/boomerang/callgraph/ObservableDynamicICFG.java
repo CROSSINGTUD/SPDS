@@ -217,6 +217,8 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 
         SootMethod method = listener.getObservedCallee();
 
+        logger.info("Queried for callers of {}", method);
+
         //Add all CHA edges if we haven't already
         if (!methodsWithKnownCallers.contains(method)){
             Iterator<Edge> precomputedEdges = precomputedCallGraph.edgesInto(method);
