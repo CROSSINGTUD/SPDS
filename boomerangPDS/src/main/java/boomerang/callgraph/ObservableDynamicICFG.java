@@ -168,6 +168,7 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 
     private void queryForCallees(Unit unit) {
         //Construct BackwardQuery, so we know which types the object might have
+        logger.debug("Queried for callees of '{}'.", unit);
         Stmt stmt = (Stmt) unit;
         InvokeExpr invokeExpr = stmt.getInvokeExpr();
         Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
@@ -180,7 +181,7 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 
         //Go through possible types an add edges to implementations in possible types
         for (ForwardQuery forwardQuery : results.getAllocationSites().keySet()){
-            logger.info("Found AllocationSite '{}'.", forwardQuery);
+            logger.debug("Found AllocationSite '{}'.", forwardQuery);
             Type type = forwardQuery.getType();
             if (type instanceof RefType){
                 SootMethod calleeMethod = getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) type).getSootClass());
@@ -217,7 +218,7 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 
         SootMethod method = listener.getObservedCallee();
 
-        logger.info("Queried for callers of {}", method);
+        logger.debug("Queried for callers of {}.", method);
 
         //Add all CHA edges if we haven't already
         if (!methodsWithKnownCallers.contains(method)){
