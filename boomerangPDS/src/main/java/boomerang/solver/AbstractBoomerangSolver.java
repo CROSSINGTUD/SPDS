@@ -407,7 +407,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
-		icfg.addCalleeListener(new CallFlowCalleeListener(callSite, caller, invokeExpr, out, value));
+		if (!value.isStatic()){
+			icfg.addCalleeListener(new CallFlowCalleeListener(callSite, caller, invokeExpr, out, value));
+		}
+		//TODO Melanie: Revisited and check if the callFlow also needs to be added for static values
 		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
 			out.addAll(getEmptyCalleeFlow(caller, callSite, value, (Stmt) returnSite));
 		}
