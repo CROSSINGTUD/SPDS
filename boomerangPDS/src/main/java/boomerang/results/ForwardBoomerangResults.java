@@ -1,17 +1,5 @@
 package boomerang.results;
 
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
-
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.callgraph.CallerListener;
@@ -22,6 +10,8 @@ import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
 import boomerang.stats.IBoomerangStats;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.*;
 import heros.utilities.DefaultValueMap;
 import soot.Local;
 import soot.SootMethod;
@@ -36,6 +26,12 @@ import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
+
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
 
 public class ForwardBoomerangResults<W extends Weight> {
 
@@ -98,26 +94,8 @@ public class ForwardBoomerangResults<W extends Weight> {
 			for(Unit ep : icfg.getEndPointsOf(flowReaches)){
 				Statement exitStmt = new Statement((Stmt) ep, flowReaches);
 				Set<State> escapes = Sets.newHashSet();
-				icfg.addCallerListener(new CallerListener<Unit, SootMethod>(){
-
-					@Override
-					public SootMethod getObservedCallee() {
-						return flowReaches;
-					}
-
-					@Override
-					public void onCallerAdded(Unit unit, SootMethod sootMethod) {
-						SootMethod callee = icfg.getMethodOf(unit);
-						if(visitedMethods.contains(callee)){
-							for(Entry<Val, W> valAndW : res.row(exitStmt).entrySet()){
-								for(Unit retSite : icfg.getSuccsOf(unit)){
-									escapes.addAll(forwardSolver.computeReturnFlow(flowReaches, (
-											Stmt) ep, valAndW.getKey(), (Stmt) unit, (Stmt) retSite));
-								}
-							}
-						}
-					}
-				});
+				icfg.addCallerListener(new DestructingStatementCallerListener(flowReaches, visitedMethods, exitStmt,
+						escapes, res, forwardSolver, ep));
 				if(escapes.isEmpty()){
 					Map<Val, W> row = res.row(exitStmt);
 					findLastUsage(exitStmt, row, destructingStatement,forwardSolver);
@@ -127,6 +105,67 @@ public class ForwardBoomerangResults<W extends Weight> {
 
 		return destructingStatement;
 	}
+
+	private class DestructingStatementCallerListener implements CallerListener<Unit,SootMethod>{
+		SootMethod flowReaches;
+		Set<SootMethod> visitedMethods;
+		Statement exitStmt;
+		Set<State> escapes;
+		Table<Statement, Val, W> res;
+		ForwardBoomerangSolver<W> forwardSolver;
+		Unit ep;
+
+		DestructingStatementCallerListener(SootMethod flowReaches, Set<SootMethod> visitedMethods, Statement exitStmt,
+										   Set<State> escapes, Table<Statement, Val, W> res,
+										   ForwardBoomerangSolver<W> forwardSolver, Unit ep){
+			this.flowReaches = flowReaches;
+			this.visitedMethods = visitedMethods;
+			this.exitStmt = exitStmt;
+			this.escapes = escapes;
+			this.res = res;
+			this.forwardSolver = forwardSolver;
+			this.ep = ep;
+		}
+
+		@Override
+		public SootMethod getObservedCallee() {
+			return flowReaches;
+		}
+
+		@Override
+		public void onCallerAdded(Unit unit, SootMethod sootMethod) {
+			SootMethod callee = icfg.getMethodOf(unit);
+			if(visitedMethods.contains(callee)){
+				for(Entry<Val, W> valAndW : res.row(exitStmt).entrySet()){
+					for(Unit retSite : icfg.getSuccsOf(unit)){
+						escapes.addAll(forwardSolver.computeReturnFlow(flowReaches, (
+								Stmt) ep, valAndW.getKey(), (Stmt) unit, (Stmt) retSite));
+					}
+				}
+			}
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			DestructingStatementCallerListener that = (DestructingStatementCallerListener) o;
+			return Objects.equals(flowReaches, that.flowReaches) &&
+					Objects.equals(visitedMethods, that.visitedMethods) &&
+					Objects.equals(exitStmt, that.exitStmt) &&
+					Objects.equals(escapes, that.escapes) &&
+					Objects.equals(res, that.res) &&
+					Objects.equals(forwardSolver, that.forwardSolver) &&
+					Objects.equals(ep, that.ep);
+		}
+
+		@Override
+		public int hashCode() {
+
+			return Objects.hash(flowReaches, visitedMethods, exitStmt, escapes, res, forwardSolver, ep);
+		}
+	}
+
 	
 	private void findLastUsage(Statement exitStmt, Map<Val, W> row, Table<Statement, Val, W> destructingStatement, ForwardBoomerangSolver<W> forwardSolver) {
 		LinkedList<Statement> worklist = Lists.newLinkedList();
