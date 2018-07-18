@@ -267,6 +267,17 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
         return false;
     }
 
+    @Override
+    public Collection<Unit> getAllPrecomputedCallers(SootMethod sootMethod) {
+        Set<Unit> callers = new HashSet<>();
+        Iterator<Edge> precomputedCallers = precomputedCallGraph.edgesInto(sootMethod);
+        while (precomputedCallers.hasNext()){
+            Edge methodCall = precomputedCallers.next();
+            callers.add(methodCall.srcUnit());
+        }
+        return callers;
+    }
+
     private void addCallIfNotInGraph(Unit caller, SootMethod callee, Kind kind) {
         if (isCallInGraph(caller, callee))
             return;
