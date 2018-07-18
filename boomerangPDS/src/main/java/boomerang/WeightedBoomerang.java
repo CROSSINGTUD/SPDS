@@ -172,13 +172,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					callSitePoi.returnsFromCall(key, new Node<Statement, Val>(returnSite, returnedFact.fact()));
 				}
 			});
-			
-			SeedFactory<W> seedFactory = getSeedFactory();
-	        if(seedFactory != null){
-	        		for(SootMethod m : seedFactory.getMethodScope(key)){
-	        			solver.addReachable(m);
-	        		}
-	        }
+
 	        onCreateSubSolver(solver);
 			return solver;
 		}
@@ -1057,7 +1051,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			this.debugger = createDebugger();
 		return debugger;
 	}
-	
+
 	public SeedFactory<W> getSeedFactory(){
 		return null;
 	}
