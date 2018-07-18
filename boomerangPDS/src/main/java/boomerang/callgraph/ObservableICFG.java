@@ -41,6 +41,12 @@ public interface ObservableICFG<N,M> {
     void addCallerListener(CallerListener<N,M> listener);
 
     /**
+     * Returns all precomputed callers for a given method.
+     * Behaviour from {@link #addCalleeListener(CalleeListener)} only differs when using dynamic call graph.
+     */
+    Collection<N> getAllPrecomputedCallers(M m);
+
+    /**
      * Returns all call sites within a given method.
      */
     Set<N> getCallsFromWithin(M m);
