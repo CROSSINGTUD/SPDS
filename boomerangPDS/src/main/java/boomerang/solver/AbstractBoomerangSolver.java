@@ -351,25 +351,57 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 			}
 		} else{
-			icfg.addCallerListener(new CallerListener<Unit, SootMethod>(){
-				@Override
-				public SootMethod getObservedCallee() {
-					return method;
-				}
-
-				@Override
-				public void onCallerAdded(Unit unit, SootMethod sootMethod) {
-					if (((Stmt) unit).containsInvokeExpr()){
-						for (Unit returnSite : icfg.getSuccsOf(unit)) {
-							Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) unit,
-									(Stmt) returnSite);
-							out.addAll(outFlow);
-						}
-					}
-				}
-			});
+			icfg.addCallerListener(new ReturnFlowCallerListener(method, curr, value, out));
 		}
 		return out;
+	}
+
+	private class ReturnFlowCallerListener implements CallerListener<Unit, SootMethod>{
+		SootMethod method;
+		Stmt curr;
+		Val value;
+		Set<State> out;
+
+		ReturnFlowCallerListener(SootMethod method, Stmt curr, Val value, Set<State> out){
+			this.method = method;
+			this.curr = curr;
+			this.value = value;
+			this.out = out;
+		}
+
+
+		@Override
+		public SootMethod getObservedCallee() {
+			return method;
+		}
+
+		@Override
+		public void onCallerAdded(Unit unit, SootMethod sootMethod) {
+			if (((Stmt) unit).containsInvokeExpr()){
+				for (Unit returnSite : icfg.getSuccsOf(unit)) {
+					Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) unit,
+							(Stmt) returnSite);
+					out.addAll(outFlow);
+				}
+			}
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			ReturnFlowCallerListener that = (ReturnFlowCallerListener) o;
+			return Objects.equals(method, that.method) &&
+					Objects.equals(curr, that.curr) &&
+					Objects.equals(value, that.value) &&
+					Objects.equals(out, that.out);
+		}
+
+		@Override
+		public int hashCode() {
+
+			return Objects.hash(method, curr, value, out);
+		}
 	}
 
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
