@@ -11,37 +11,13 @@
  *******************************************************************************/
 package boomerang;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import boomerang.callgraph.BackwardsObservableICFG;
-import boomerang.callgraph.CallerListener;
-import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
-
 import boomerang.callgraph.ObservableICFG;
 import boomerang.customize.BackwardEmptyCalleeFlow;
 import boomerang.customize.EmptyCalleeFlow;
 import boomerang.customize.ForwardEmptyCalleeFlow;
 import boomerang.debugger.Debugger;
-import boomerang.jimple.AllocVal;
-import boomerang.jimple.Field;
-import boomerang.jimple.Statement;
-import boomerang.jimple.StaticFieldVal;
-import boomerang.jimple.Val;
+import boomerang.jimple.*;
 import boomerang.poi.AbstractPOI;
 import boomerang.poi.ExecuteImportCallStmtPOI;
 import boomerang.poi.ExecuteImportFieldStmtPOI;
@@ -49,44 +25,32 @@ import boomerang.poi.PointOfIndirection;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
-import boomerang.solver.AbstractBoomerangSolver;
-import boomerang.solver.BackwardBoomerangSolver;
-import boomerang.solver.ForwardBoomerangSolver;
-import boomerang.solver.MethodBasedFieldTransitionListener;
-import boomerang.solver.ReachableMethodListener;
+import boomerang.solver.*;
 import boomerang.stats.IBoomerangStats;
+import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 import heros.utilities.DefaultValueMap;
-import soot.Local;
-import soot.Scene;
-import soot.SootClass;
-import soot.SootField;
-import soot.SootMethod;
-import soot.Unit;
-import soot.jimple.ArrayRef;
-import soot.jimple.AssignStmt;
-import soot.jimple.InstanceFieldRef;
-import soot.jimple.InvokeExpr;
-import soot.jimple.NewMultiArrayExpr;
-import soot.jimple.Stmt;
-import soot.jimple.StringConstant;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import soot.*;
+import soot.jimple.*;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.WitnessNode;
-import sync.pds.solver.nodes.AllocNode;
-import sync.pds.solver.nodes.GeneratedState;
-import sync.pds.solver.nodes.INode;
-import sync.pds.solver.nodes.Node;
-import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.ConnectPushListener;
-import wpds.impl.NestedWeightedPAutomatons;
-import wpds.impl.SummaryNestedWeightedPAutomatons;
-import wpds.impl.Transition;
-import wpds.impl.UnbalancedPopListener;
-import wpds.impl.Weight;
-import wpds.impl.WeightedPAutomaton;
+import sync.pds.solver.nodes.*;
+import wpds.impl.*;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
+
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 public abstract class WeightedBoomerang<W extends Weight> {
 	public static final boolean DEBUG = false;
@@ -118,28 +82,18 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					Statement exitStmt = trans.getLabel();
 					SootMethod callee = exitStmt.getMethod();
 					if (!callee.isStaticInitializer()) {
-						icfg().addCallerListener(new CallerListener<Unit, SootMethod>(){
+						for (Unit callSite : WeightedBoomerang.this.icfg().getAllPrecomputedCallers(callee)) {
+							if(!((Stmt) callSite).containsInvokeExpr())
+								continue;
 
-							@Override
-							public SootMethod getObservedCallee() {
-								return callee;
+							final Statement callStatement = new Statement((Stmt) callSite,
+									WeightedBoomerang.this.icfg().getMethodOf(callSite));
+
+							boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) callSite, returningFact.fact());
+							if(valueUsedInStatement || AbstractBoomerangSolver.assignsValue((Stmt)callSite,returningFact.fact())){
+								unbalancedReturnFlow(callStatement, returningFact, trans, weight);
 							}
-
-							@Override
-							public void onCallerAdded(Unit unit, SootMethod sootMethod) {
-								if (((Stmt) unit).containsInvokeExpr()){
-									final Statement callStatement = new Statement((Stmt) unit,
-											WeightedBoomerang.this.icfg().getMethodOf(unit));
-
-									boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) unit,
-											returningFact.fact());
-									if(valueUsedInStatement ||
-											AbstractBoomerangSolver.assignsValue((Stmt) unit,returningFact.fact())){
-										unbalancedReturnFlow(callStatement, returningFact, trans, weight);
-									}
-								}
-							}
-						});
+						}
 					} else {
 						for (SootMethod entryPoint : Scene.v().getEntryPoints()) {
 							for (Unit ep : WeightedBoomerang.this.icfg().getStartPointsOf(entryPoint)) {
