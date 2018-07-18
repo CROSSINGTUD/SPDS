@@ -270,6 +270,7 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 
     @Override
     public Collection<Unit> getAllPrecomputedCallers(SootMethod sootMethod) {
+        logger.debug("Getting precomputed callers of {}", sootMethod);
         Set<Unit> callers = new HashSet<>();
         Iterator<Edge> precomputedCallers = precomputedCallGraph.edgesInto(sootMethod);
         while (precomputedCallers.hasNext()){
