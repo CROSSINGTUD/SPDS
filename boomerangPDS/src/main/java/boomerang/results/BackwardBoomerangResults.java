@@ -183,6 +183,47 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		
 	}
 	
+
+	
+	private class ExtractAllocationSiteStateListener extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+		
+		private ForwardQuery query;
+		private Set<ForwardQuery> results;
+		private BackwardQuery bwQuery;
+
+		public ExtractAllocationSiteStateListener(INode<Node<Statement, Val>> state,  BackwardQuery bwQuery,ForwardQuery query, Set<ForwardQuery> results) {
+			super(state);
+			this.bwQuery = bwQuery;
+			this.query = query;
+			this.results = results;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+		}
+		
+		@Override
+		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+			if(t.getLabel().equals(Field.empty()) && t.getStart().fact().equals(bwQuery.asNode())){
+				results.add(query);
+			}
+		}
+
+		@Override
+		public int hashCode() {
+			//Otherwise we cannot register this listener twice.
+			return System.identityHashCode(this);
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			//Otherwise we cannot register this listener twice.
+			return this == obj;
+		}
+	}
+	
 	public Set<AccessPath> getAllAliases() {
 		final Set<AccessPath> results = Sets.newHashSet();
 		for (final Query fw : getAllocationSites().keySet()) {
