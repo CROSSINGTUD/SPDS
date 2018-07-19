@@ -99,15 +99,13 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 			@Override
 			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-				if(t.getLabel().equals(Field.epsilon()))
-					return;
 				if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(succ)
 						&& !flowSolver.valueUsedInStatement(curr.getUnit().get(), t.getStart().fact().fact())) {
 					Val alias = t.getStart().fact().fact();
 					Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
 					flowSolver.setFieldContextReachable(aliasedVarAtSucc);
 					for(Val fact : Lists.newArrayList(returningFacts)) {
-						Node<Statement, Val> rightOpNode = new Node<Statement, Val>(curr, fact);
+						Node<Statement, Val> rightOpNode = new Node<Statement, Val>(succ, fact);
 						flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
 					}
 					importToFlowSolver(t, aliasTrans.getLabel(),aliasTrans.getTarget());
@@ -144,11 +142,7 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 		@Override
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if (t.getLabel().equals(Field.empty())) {
-			flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement, Val>>>(
-					t.getStart(), aliasTransLabel, aliasTransTarget));
-			}
-//			importToFlowSolver(t, aliasTransLabel,aliasTransTarget);
+			importToFlowSolver(t, aliasTransLabel,aliasTransTarget);
 		}
 
 		@Override

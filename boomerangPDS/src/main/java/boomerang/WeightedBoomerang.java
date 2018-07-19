@@ -151,6 +151,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 											return;
 										}
 //										
+										
 										solver.setCallingContextReachable(returnedVal);
 										solver.getCallAutomaton().addWeightForTransition(new Transition<Statement,INode<Val>>(returningFact,callStatement,solver.getCallAutomaton().getInitialState()),weight);
 
@@ -176,14 +177,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 								if(!returningFact.fact().isStatic() && !returningFact.fact().m().equals(callStatement.getMethod())) {
 									return;
 								}
-//								solver.setCallingContextReachable(new Node<Statement, Val>(callStatement,
-//										returningFact.fact()));
-//								solver.setFieldContextReachable(new Node<Statement, Val>(callStatement,
-//										returningFact.fact()));
-//								solver.addNormalCallFlow(new Node<Statement, Val>(callStatement,
-//										returningFact.fact()), returnedVal);
+								
 								solver.setCallingContextReachable(returnedVal);
-								solver.getCallAutomaton().addWeightForTransition(new Transition<Statement,INode<Val>>(returningFact,callStatement,solver.getCallAutomaton().getInitialState()), weight);
 								solver.getCallAutomaton().addWeightForTransition(new Transition<Statement,INode<Val>>(returningFact,returnSite,solver.getCallAutomaton().getInitialState()), weight);
 								
 								final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
