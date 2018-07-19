@@ -36,7 +36,6 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 		if(!returningFacts.add(returningFact)) {
 			return;
 		}
-		
 		if(activate) {
 			return;
 		}
@@ -92,15 +91,16 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 
 	@Override
 	protected void activate(Transition<Field, INode<Node<Statement, Val>>> aliasTrans) {
-		if(activate)
-			return;
-		activate = true;
+//		if(activate)
+//			return;
+//		activate = true;
 		baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 			@Override
 			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 				if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(succ)
 						&& !flowSolver.valueUsedInStatement(curr.getUnit().get(), t.getStart().fact().fact())) {
+//					
 					Val alias = t.getStart().fact().fact();
 					Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
 					flowSolver.setFieldContextReachable(aliasedVarAtSucc);
@@ -108,7 +108,9 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 						Node<Statement, Val> rightOpNode = new Node<Statement, Val>(succ, fact);
 						flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
 					}
-					importToFlowSolver(t, aliasTrans.getLabel(),aliasTrans.getTarget());
+					if(!aliasTrans.getLabel().equals(Field.empty())){
+						importToFlowSolver(t, aliasTrans.getLabel(),aliasTrans.getTarget());
+					}
 				}
 
 			}

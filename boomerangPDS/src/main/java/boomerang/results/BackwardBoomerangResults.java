@@ -270,7 +270,6 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 			});
 			
 		}
-		System.out.println(results);
 		return results;
 	}
 	
