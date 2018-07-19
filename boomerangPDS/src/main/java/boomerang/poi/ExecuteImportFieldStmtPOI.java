@@ -76,9 +76,9 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 
 	@Override
 	protected void activate(Transition<Field, INode<Node<Statement, Val>>> aliasTrans) {
-//		if(activate)
-//			return;
-//		activate = true;
+		if(activate)
+			return;
+		activate = true;
 		baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field,INode<Node<Statement,Val>>,W>(){
 			@Override
 			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
