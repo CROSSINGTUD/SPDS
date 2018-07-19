@@ -123,69 +123,6 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 					t.getStart(), aliasTransLabel, aliasTransTarget));
 		} else if (!t.getLabel().equals(Field.epsilon())) {
 			flowSolver.getFieldAutomaton().addTransition(t);
-			baseSolver.getFieldAutomaton().registerListener(new ImportToFlowSolver(t.getTarget(), aliasTransLabel,aliasTransTarget));
-		}
-	}
-
-	private class ImportToFlowSolver extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
-
-		private Field aliasTransLabel;
-		private INode<Node<Statement, Val>> aliasTransTarget;
-
-		public ImportToFlowSolver(INode<Node<Statement, Val>> node, Field aliasTransLabel,
-				INode<Node<Statement, Val>> aliasTransTarget) {
-			super(node);
-			this.aliasTransLabel = aliasTransLabel;
-			this.aliasTransTarget = aliasTransTarget;
-		}
-
-		@Override
-		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			importToFlowSolver(t, aliasTransLabel,aliasTransTarget);
-		}
-
-		@Override
-		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((aliasTransLabel == null) ? 0 : aliasTransLabel.hashCode());
-			result = prime * result + ((aliasTransTarget == null) ? 0 : aliasTransTarget.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			ImportToFlowSolver other = (ImportToFlowSolver) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (aliasTransLabel == null) {
-				if (other.aliasTransLabel != null)
-					return false;
-			} else if (!aliasTransLabel.equals(other.aliasTransLabel))
-				return false;
-			if (aliasTransTarget == null) {
-				if (other.aliasTransTarget != null)
-					return false;
-			} else if (!aliasTransTarget.equals(other.aliasTransTarget))
-				return false;
-			return true;
-		}
-
-		private ExecuteImportCallStmtPOI getOuterType() {
-			return ExecuteImportCallStmtPOI.this;
 		}
 	}
 
