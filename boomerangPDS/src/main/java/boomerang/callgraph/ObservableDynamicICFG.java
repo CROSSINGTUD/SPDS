@@ -45,7 +45,6 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
     private CallGraph demandDrivenCallGraph = new CallGraph();
     private CallGraph precomputedCallGraph;
     private WeightedBoomerang<W> solver;
-    private Set<SootMethod> methodsWithKnownCallers = new HashSet<>();
 
     private HashSet<CalleeListener<Unit, SootMethod>> calleeListeners = new HashSet<>();
     private HashSet<CallerListener<Unit, SootMethod>> callerListeners = new HashSet<>();
@@ -220,26 +219,12 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 
         logger.debug("Queried for callers of {}.", method);
 
-        //Add all CHA edges if we haven't already
-        if (!methodsWithKnownCallers.contains(method)){
-            Iterator<Edge> precomputedEdges = precomputedCallGraph.edgesInto(method);
-            while (precomputedEdges.hasNext()){
-                Edge edge = precomputedEdges.next();
-                addCallIfNotInGraph(edge.srcUnit(), method, edge.kind());
-            }
-            methodsWithKnownCallers.add(method);
-        }
-
         //Notify the new listener about what we already now
         Iterator<Edge> edgeIterator = demandDrivenCallGraph.edgesInto(method);
         while (edgeIterator.hasNext()){
             Edge edge = edgeIterator.next();
             listener.onCallerAdded(edge.srcUnit(), method);
         }
-
-
-
-
     }
 
 

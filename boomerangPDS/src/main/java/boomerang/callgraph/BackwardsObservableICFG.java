@@ -23,7 +23,7 @@ public class BackwardsObservableICFG implements ObservableICFG<Unit, SootMethod>
 
     @Override
     public Collection<Unit> getAllPrecomputedCallers(SootMethod sootMethod) {
-        throw new RuntimeException("Precomputed Callers queried on backward icfg!");
+        return delegate.getAllPrecomputedCallers(sootMethod);
     }
 
     @Override

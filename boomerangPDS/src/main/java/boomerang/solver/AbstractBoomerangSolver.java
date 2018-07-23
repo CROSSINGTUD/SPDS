@@ -56,6 +56,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Set<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
 	private Multimap<SootMethod, Runnable> queuedReachableMethod = HashMultimap.create();
 	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
+	private Collection<SootMethod> methodsWithCallFlow = Sets.newHashSet();
 	private Collection<SootMethod> scopeOpeningReachableMethods = Sets.newHashSet();
 	protected final BoomerangOptions options;
 	public AbstractBoomerangSolver(ObservableICFG<Unit, SootMethod> icfg,
@@ -351,7 +352,20 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 			}
 		} else{
-			icfg.addCallerListener(new ReturnFlowCallerListener(method, curr, value, out));
+			if (methodsWithCallFlow.contains(method)){
+				icfg.addCallerListener(new ReturnFlowCallerListener(method, curr, value, out));
+			} else {
+				//Unbalanced call which we did not flow
+				for (Unit unit : icfg.getAllPrecomputedCallers(method)){
+					if (((Stmt) unit).containsInvokeExpr()){
+						for (Unit returnSite : icfg.getSuccsOf(unit)) {
+							Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) unit,
+									(Stmt) returnSite);
+							out.addAll(outFlow);
+						}
+					}
+				}
+			}
 		}
 		return out;
 	}
@@ -536,7 +550,9 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	}
 
-	protected abstract void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res);
+	protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res){
+		methodsWithCallFlow.add(callee);
+	}
 
 	public Set<Statement> getSuccsOf(Statement stmt) {
 		Set<Statement> res = Sets.newHashSet();

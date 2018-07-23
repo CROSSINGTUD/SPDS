@@ -233,11 +233,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					Statement callSite, InvokeExpr invokeExpr, Val fact, SootMethod callee, Stmt calleeSp) {
 				return super.computeCallFlow(caller, returnSite, callSite, invokeExpr, fact, callee, calleeSp);
 			}
-			
-			@Override
-			protected void onCallFlow(SootMethod callee, Stmt callSite, Val value,
-							Collection<? extends State> res) {
-			}
 
 			@Override
 			protected Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,
@@ -359,10 +354,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					return;
 				ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
 				callSitePoi.addByPassingAllocation(sourceQuery);
-			}
-
-			@Override
-			protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
 			}
 
 			@Override
