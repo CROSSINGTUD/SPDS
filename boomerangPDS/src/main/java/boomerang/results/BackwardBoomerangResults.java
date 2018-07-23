@@ -78,7 +78,7 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 			if(!(fw.getKey() instanceof ForwardQuery)) {
 				continue;
 			}
-			fw.getValue().getFieldAutomaton().registerListener(new ExtractAllocationSiteStateListener<>(fw.getValue().getFieldAutomaton().getInitialState(), query, (ForwardQuery) fw.getKey(), results));
+			fw.getValue().getFieldAutomaton().registerListener(new ExtractAllocationSiteStateListener(fw.getValue().getFieldAutomaton().getInitialState(), query, (ForwardQuery) fw.getKey(), results));
 			
 		}
 		allocationSites = Maps.newHashMap();
