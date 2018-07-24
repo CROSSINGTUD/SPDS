@@ -56,7 +56,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Set<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
 	private Multimap<SootMethod, Runnable> queuedReachableMethod = HashMultimap.create();
 	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
-	private Collection<SootMethod> methodsWithCallFlow = Sets.newHashSet();
+	private static Collection<SootMethod> methodsWithCallFlow = Sets.newHashSet();
 	private Collection<SootMethod> scopeOpeningReachableMethods = Sets.newHashSet();
 	protected final BoomerangOptions options;
 	public AbstractBoomerangSolver(ObservableICFG<Unit, SootMethod> icfg,
