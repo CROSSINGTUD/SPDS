@@ -261,6 +261,7 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
         while (precomputedCallers.hasNext()){
             Edge methodCall = precomputedCallers.next();
             callers.add(methodCall.srcUnit());
+            addCallIfNotInGraph(methodCall.srcUnit(), methodCall.tgt(), methodCall.kind());
         }
         return callers;
     }
