@@ -1,4 +1,5 @@
 /*******************************************************************************
+
  * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
@@ -53,7 +54,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 public abstract class WeightedBoomerang<W extends Weight> {
-	public static final boolean DEBUG = false;
+	public static final boolean DEBUG = true;
 	private static final Logger logger = LogManager.getLogger();
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
@@ -537,10 +538,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			final FieldWritePOI fieldWritePoi, final ForwardQuery sourceQuery) {
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(), fieldWritePoi.getBaseVar());
 		if (node.fact().equals(fieldWritePoi.getStoredVar())) {
-//			if(sourceQuery instanceof WeightedForwardQuery || options.computeAllAliases()) {//Additional logic for IDEal
-				backwardSolveUnderScope(backwardQuery,sourceQuery);
-				//TODO or All AliasQuery
-//			}
+			backwardSolveUnderScope(backwardQuery,sourceQuery);
 			fieldWritePoi.addFlowAllocation(sourceQuery);
 		}
 		if (node.fact().equals(fieldWritePoi.getBaseVar())) {
@@ -657,6 +655,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		if(!analysisWatch.isRunning()){
 			analysisWatch.start();
 		}
+		icfg().initalQueryMethod(query.stmt().getMethod());
 		boolean timedout = false;
 		try {
 			logger.debug("Starting forward analysis of: {}", query);
@@ -678,6 +677,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			analysisWatch.start();
 		}
 		boolean timedout = false;
+		icfg().initalQueryMethod(query.stmt().getMethod());
 		try {
 			logger.debug("Starting backward analysis of: {}", query);
 			backwardSolve(query);

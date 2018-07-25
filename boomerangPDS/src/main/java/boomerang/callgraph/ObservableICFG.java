@@ -1,5 +1,6 @@
 package boomerang.callgraph;
 
+import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.toolkits.callgraph.CallGraph;
@@ -103,4 +104,9 @@ public interface ObservableICFG<N,M> {
     boolean isReachable(N u);
 
     CallGraph getCallGraphCopy();
+
+	boolean isMethodsWithCallFlow(SootMethod method);
+
+	void initalQueryMethod(SootMethod method);
+
 }
