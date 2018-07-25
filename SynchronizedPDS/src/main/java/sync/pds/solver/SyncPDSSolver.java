@@ -408,22 +408,23 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		if(!addReachableState(witnessNode))
 			return;
 		Node<Stmt, Fact> curr = witnessNode.asNode();
-		Collection<? extends State> successors = computeSuccessor(curr);
-		for (State s : Lists.newArrayList(successors)) {
-			if (s instanceof Node) {
-				Node<Stmt, Fact> succ = (Node<Stmt, Fact>) s;
-				if (succ instanceof PushNode) {
-					PushNode<Stmt, Fact, Location> pushNode = (PushNode<Stmt, Fact, Location>) succ;
-					PDSSystem system = pushNode.system();
-					Location location = pushNode.location();
-					processPush(curr, location, pushNode, system);
-				} else {
-					processNormal(curr, succ);
-				}
-			} else if (s instanceof PopNode) {
-				PopNode<Fact> popNode = (PopNode<Fact>) s;
-				processPop(curr, popNode);
+		computeSuccessor(curr);
+	}
+	
+	protected void propagate(Node<Stmt,Fact> curr, State s) {
+		if (s instanceof Node) {
+			Node<Stmt, Fact> succ = (Node<Stmt, Fact>) s;
+			if (succ instanceof PushNode) {
+				PushNode<Stmt, Fact, Location> pushNode = (PushNode<Stmt, Fact, Location>) succ;
+				PDSSystem system = pushNode.system();
+				Location location = pushNode.location();
+				processPush(curr, location, pushNode, system);
+			} else {
+				processNormal(curr, succ);
 			}
+		} else if (s instanceof PopNode) {
+			PopNode<Fact> popNode = (PopNode<Fact>) s;
+			processPop(curr, popNode);
 		}
 	}
 
@@ -688,7 +689,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		generatedFieldState.put(e,state);
 	}
 
-	public abstract Collection<? extends State> computeSuccessor(Node<Stmt, Fact> node);
+	public abstract void computeSuccessor(Node<Stmt, Fact> node);
 
 	public abstract Field epsilonField();
 
