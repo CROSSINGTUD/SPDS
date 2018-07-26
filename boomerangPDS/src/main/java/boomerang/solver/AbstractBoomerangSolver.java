@@ -214,6 +214,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	public Collection<? extends State> computeSuccessor(Node<Statement, Val> node) {
 		Statement stmt = node.stmt();
 		Optional<Stmt> unit = stmt.getUnit();
+		logger.trace("Computing successor for {} with solver {}", node, this);
 		if (unit.isPresent()) {
 			Stmt curr = unit.get();
 			Val value = node.fact();
