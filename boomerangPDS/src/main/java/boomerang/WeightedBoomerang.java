@@ -1081,11 +1081,11 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		// System.out.println(q +" Call Aut (failed Additions): " +
 		// queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
 		// }
-		Debugger<W> debugger = getOrCreateDebugger();
-		debugger.done(queryToSolvers);
 		if (!DEBUG)
 			return;
 
+		Debugger<W> debugger = getOrCreateDebugger();
+		debugger.done(queryToSolvers);
 		int totalRules = 0;
 		for (Query q : queryToSolvers.keySet()) {
 			totalRules += queryToSolvers.getOrCreate(q).getNumberOfRules();
