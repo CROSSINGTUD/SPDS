@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private static final boolean FAIL_ON_IMPRECISE = false;
-	private static final boolean VISUALIZATION = true;
+	private static final boolean VISUALIZATION = false;
 
 	private ObservableICFG<Unit, SootMethod> dynamicIcfg;
 	private ObservableStaticICFG staticIcfg;
