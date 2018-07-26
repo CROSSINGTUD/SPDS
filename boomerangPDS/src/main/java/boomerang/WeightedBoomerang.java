@@ -13,6 +13,7 @@
 package boomerang;
 
 import boomerang.callgraph.BackwardsObservableICFG;
+import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.customize.BackwardEmptyCalleeFlow;
 import boomerang.customize.EmptyCalleeFlow;
@@ -83,18 +84,28 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					Statement exitStmt = trans.getLabel();
 					SootMethod callee = exitStmt.getMethod();
 					if (!callee.isStaticInitializer()) {
-						for (Unit callSite : WeightedBoomerang.this.icfg().getAllPrecomputedCallers(callee)) {
-							if(!((Stmt) callSite).containsInvokeExpr())
-								continue;
+						icfg().addCallerListener(new CallerListener<Unit, SootMethod>(){
 
-							final Statement callStatement = new Statement((Stmt) callSite,
-									WeightedBoomerang.this.icfg().getMethodOf(callSite));
-
-							boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) callSite, returningFact.fact());
-							if(valueUsedInStatement || AbstractBoomerangSolver.assignsValue((Stmt)callSite,returningFact.fact())){
-								unbalancedReturnFlow(callStatement, returningFact, trans, weight);
+							@Override
+							public SootMethod getObservedCallee() {
+								return callee;
 							}
-						}
+
+							@Override
+							public void onCallerAdded(Unit unit, SootMethod sootMethod) {
+								if (((Stmt) unit).containsInvokeExpr()){
+									final Statement callStatement = new Statement((Stmt) unit,
+											WeightedBoomerang.this.icfg().getMethodOf(unit));
+
+									boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) unit,
+											returningFact.fact());
+									if(valueUsedInStatement ||
+											AbstractBoomerangSolver.assignsValue((Stmt) unit,returningFact.fact())){
+										unbalancedReturnFlow(callStatement, returningFact, trans, weight);
+									}
+								}
+							}
+						});
 					} else {
 						for (SootMethod entryPoint : Scene.v().getEntryPoints()) {
 							for (Unit ep : WeightedBoomerang.this.icfg().getStartPointsOf(entryPoint)) {
