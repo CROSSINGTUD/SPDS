@@ -666,7 +666,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		if(!analysisWatch.isRunning()){
 			analysisWatch.start();
 		}
-		icfg().initalQueryMethod(query.stmt().getMethod());
 		boolean timedout = false;
 		try {
 			logger.debug("Starting forward analysis of: {}", query);
@@ -688,7 +687,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			analysisWatch.start();
 		}
 		boolean timedout = false;
-		icfg().initalQueryMethod(query.stmt().getMethod());
 		try {
 			logger.debug("Starting backward analysis of: {}", query);
 			backwardSolve(query);

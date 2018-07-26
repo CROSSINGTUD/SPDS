@@ -9,8 +9,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-import com.google.common.collect.Sets;
-
 public class BackwardsObservableICFG implements ObservableICFG<Unit, SootMethod> {
     protected final ObservableICFG<Unit, SootMethod> delegate;
 
@@ -109,8 +107,8 @@ public class BackwardsObservableICFG implements ObservableICFG<Unit, SootMethod>
 	}
 
 	@Override
-	public void initalQueryMethod(SootMethod method) {
-		delegate.initalQueryMethod(method);
+	public void addMethodWithCallFlow(SootMethod method) {
+		delegate.addMethodWithCallFlow(method);
 	}
 
 }

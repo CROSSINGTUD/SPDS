@@ -10,7 +10,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
 import heros.DontSynchronize;
 import heros.SynchronizedBy;
 import heros.solver.IDESolver;
@@ -47,7 +46,7 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
     private CallGraph demandDrivenCallGraph = new CallGraph();
     private CallGraph precomputedCallGraph;
     private WeightedBoomerang<W> solver;
-    private Set<SootMethod> methodWithUnbalancedCallFlow = Sets.newHashSet();
+    private Set<SootMethod> methodsWithCallFlow = Sets.newHashSet();
 
     private HashSet<CalleeListener<Unit, SootMethod>> calleeListeners = new HashSet<>();
     private HashSet<CallerListener<Unit, SootMethod>> callerListeners = new HashSet<>();
@@ -230,8 +229,6 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
         }
     }
 
-
-
     private boolean potentiallyHasMoreEdges(Iterator<Edge> chaEdgeIterator, Iterator<Edge> knownEdgeIterator){
         //Make a map checking for every edge in the CHA call graph whether it is in the known edges
 
@@ -265,7 +262,6 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
             Edge methodCall = precomputedCallers.next();
             callers.add(methodCall.srcUnit());
             addCallIfNotInGraph(methodCall.srcUnit(), methodCall.tgt(), methodCall.kind());
-            addMethodWithCallFlow(methodCall.src());
         }
         return callers;
     }
@@ -393,15 +389,11 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 
 	@Override
 	public boolean isMethodsWithCallFlow(SootMethod method) {
-		return methodWithUnbalancedCallFlow.contains(method);
+		return methodsWithCallFlow.contains(method);
 	}
 
-	private void addMethodWithCallFlow(SootMethod callee) {
-		methodWithUnbalancedCallFlow.add(callee);
-	}
+	public void addMethodWithCallFlow(SootMethod method) {
+        methodsWithCallFlow.add(method);
+    }
 
-	@Override
-	public void initalQueryMethod(SootMethod method) {
-		addMethodWithCallFlow(method);
-	}
 }

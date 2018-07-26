@@ -107,6 +107,6 @@ public interface ObservableICFG<N,M> {
 
 	boolean isMethodsWithCallFlow(SootMethod method);
 
-	void initalQueryMethod(SootMethod method);
+	void addMethodWithCallFlow(SootMethod method);
 
 }

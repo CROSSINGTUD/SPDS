@@ -145,7 +145,8 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
 	}
 
 	@Override
-	public void initalQueryMethod(SootMethod method) {
+	public void addMethodWithCallFlow(SootMethod method) {
+        //No need to keep track of that since we rely on the precomputed graph
 	}
 
 

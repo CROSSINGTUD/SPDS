@@ -354,7 +354,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 			}
 		} else{
-			if (!icfg.isMethodsWithCallFlow(method)){
+			if (icfg.isMethodsWithCallFlow(method)){
 				icfg.addCallerListener(new ReturnFlowCallerListener(method, currNode));
 			} else {
 				//Unbalanced call which we did not flow
@@ -545,6 +545,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	}
 
 	protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res){
+		icfg.addMethodWithCallFlow(callee);
 	}
 
 	public Set<Statement> getSuccsOf(Statement stmt) {
