@@ -89,12 +89,12 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 				callRules(q, solvers.get(q).getCallPDS().getAllRules());
 			}
 		}
-		for(Entry<Query, AbstractBoomerangSolver<W>> e : solvers.entrySet()){
+		for(Entry<Query, AbstractBoomerangSolver<W>> e : Lists.newArrayList(solvers.entrySet())){
 			logger.debug("Computing results for {}",e.getKey());
 			Query query = e.getKey();
 			JSONQuery queryJSON = new JSONQuery(query);
 			JSONArray data = new JSONArray();
-			for(SootMethod m : e.getValue().getReachableMethods()) {
+			for(SootMethod m : Lists.newArrayList(e.getValue().getReachableMethods())) {
 				Table<Statement, RegExAccessPath, W> results = e.getValue().getResults(m);
 				if(results.isEmpty())
 					continue;
