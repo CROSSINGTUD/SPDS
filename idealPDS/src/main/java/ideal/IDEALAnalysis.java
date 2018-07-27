@@ -63,16 +63,15 @@ public class IDEALAnalysis<W extends Weight> {
 		};
 	}
 
-	public Map<WeightedForwardQuery<W>, ForwardBoomerangResults<W>> run() {
+	public void run() {
 		printOptions();
 
 		Collection<Query> initialSeeds = seedFactory.computeSeeds();
 
 		if (initialSeeds.isEmpty())
-			logger.error("No seeds found!");
+			logger.info("No seeds found!");
 		else
 			logger.info("Analysing " + initialSeeds.size() + " seeds!");
-		Map<WeightedForwardQuery<W>, ForwardBoomerangResults<W>> seedToSolver = Maps.newHashMap();
 		for (Query s : initialSeeds) {
 			if(!(s instanceof WeightedForwardQuery))
 				continue;
@@ -81,17 +80,17 @@ public class IDEALAnalysis<W extends Weight> {
 			logger.info("Analyzing "+ seed);
 			Stopwatch watch = Stopwatch.createStarted();
 			analysisTime.put(seed, watch);
+			ForwardBoomerangResults<W> res;
 			try {
-				ForwardBoomerangResults<W> solver = run(seed);
-				seedToSolver.put(seed, solver);
+				res = run(seed);
 			} catch(IDEALSeedTimeout e){
-				seedToSolver.put(seed,(ForwardBoomerangResults<W>) e.getLastResults());
+				res = (ForwardBoomerangResults<W>) e.getLastResults();
 				timedoutSeeds.add(seed);
 			}
 			watch.stop();
 			logger.info("Analyzed (finished,timedout): \t (" + (seedCount -timedoutSeeds.size())+ "," + timedoutSeeds.size() + ") of "+ initialSeeds.size() + " seeds! ");
+			analysisDefinition.getResultHandler().report(seed,res);
 		}
-		return seedToSolver;
 	}
 
 	public ForwardBoomerangResults<W> run(ForwardQuery seed) {
@@ -99,8 +98,9 @@ public class IDEALAnalysis<W extends Weight> {
 		return idealAnalysis.run();
 	}
 	private void printOptions() {
-		if(PRINT_OPTIONS)
-			logger.info(analysisDefinition);
+		if(PRINT_OPTIONS) {
+			System.out.println(analysisDefinition);
+		}
 	}
 
 	public Collection<Query> computeSeeds() {

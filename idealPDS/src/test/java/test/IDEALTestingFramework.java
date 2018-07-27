@@ -11,6 +11,17 @@
  *******************************************************************************/
 package test;
 
+import java.io.File;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
+
+import com.google.common.collect.Lists;
+
 import boomerang.WeightedForwardQuery;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
@@ -20,11 +31,16 @@ import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.ForwardBoomerangResults;
-import com.google.common.collect.Lists;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
+import ideal.IDEALResultHandler;
 import ideal.IDEALSeedSolver;
-import soot.*;
+import ideal.StoreIDEALResultHandler;
+import soot.Body;
+import soot.SceneTransformer;
+import soot.SootMethod;
+import soot.Unit;
+import soot.Value;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
@@ -35,17 +51,13 @@ import test.core.selfrunning.ImprecisionException;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
-import java.io.File;
-import java.util.*;
-import java.util.Map.Entry;
-
 
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected ObservableICFG<Unit,SootMethod> staticIcfg;
 	private static final boolean FAIL_ON_IMPRECISE = false;
 	private static final boolean VISUALIZATION = false;
 
-
+	protected StoreIDEALResultHandler<TransitionFunction> resultHandler = new StoreIDEALResultHandler<>();
 	protected abstract TypeStateMachineWeightFunctions getStateMachine();
 
 	protected IDEALAnalysis<TransitionFunction> createAnalysis() {
@@ -65,6 +77,12 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			public Debugger<TransitionFunction> debugger(IDEALSeedSolver<TransitionFunction> solver) {
 				return VISUALIZATION ? new IDEVizDebugger<>(new File(ideVizFile.getAbsolutePath().replace(".json", " " + solver.getSeed() +".json")),icfg) : new Debugger();
 			}
+			
+			@Override
+			public IDEALResultHandler<TransitionFunction> getResultHandler() {
+				return resultHandler;
+			}
+			
 		});
 	}
 
@@ -107,7 +125,8 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	}
 
 	protected Map<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> executeAnalysis() {
-		return IDEALTestingFramework.this.createAnalysis().run();
+		IDEALTestingFramework.this.createAnalysis().run();
+		return resultHandler.getResults();
 	}
 
 	private Set<Assertion> parseExpectedQueryResults(SootMethod sootTestMethod) {

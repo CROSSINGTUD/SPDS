@@ -5,3 +5,5 @@
 *.iml
 .settings/
 bin/
+surefire-reports/
+shippable/

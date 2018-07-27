@@ -78,4 +78,9 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 	public BoomerangOptions boomerangOptions() {
 		return new DefaultBoomerangOptions();
 	}
+	
+	
+	public IDEALResultHandler getResultHandler(){
+		return new IDEALResultHandler();
+	};
 }
