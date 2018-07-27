@@ -25,6 +25,7 @@
 					<excludes>
 						<exclude>**/*LongTest.java</exclude>
 					</excludes>
+					<reportsDirectory>../surefire-reports</reportsDirectory>
 				</configuration>
 			</plugin>
 		</plugins>

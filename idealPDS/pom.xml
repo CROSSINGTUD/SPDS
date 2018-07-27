@@ -22,6 +22,7 @@
                 <configuration>
                     <argLine>-Xmx2G</argLine>
                     <argLine>-Xss128m</argLine>
+                    <reportsDirectory>../surefire-reports</reportsDirectory>
                 </configuration>
             </plugin>
         </plugins>
