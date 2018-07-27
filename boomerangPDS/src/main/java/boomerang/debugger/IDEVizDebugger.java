@@ -277,8 +277,13 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 				label.put("returnSite", icfg.isExitStmt(u));
 				JSONArray callees = new JSONArray();
 				Set<SootMethod> callers = new HashSet<>();
-				for (Unit callsite : icfg.getCallersOf(icfg.getMethodOf(u)))
-					callers.add(icfg.getMethodOf(callsite));
+				for (Unit callsite : icfg.getCallersOf(icfg.getMethodOf(u))){
+					try{
+						callers.add(icfg.getMethodOf(callsite));
+					} catch (Exception e){
+						
+					}
+				}
 	
 				for (SootMethod caller : callers)
 					callees.add(new JSONMethod(caller));

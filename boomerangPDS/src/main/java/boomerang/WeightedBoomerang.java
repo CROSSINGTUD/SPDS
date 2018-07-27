@@ -43,6 +43,7 @@ import boomerang.poi.AbstractPOI;
 import boomerang.poi.ExecuteImportCallStmtPOI;
 import boomerang.poi.ExecuteImportFieldStmtPOI;
 import boomerang.poi.PointOfIndirection;
+import boomerang.preanalysis.PreTransformBodies;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
@@ -54,10 +55,12 @@ import boomerang.solver.ReachableMethodListener;
 import boomerang.stats.IBoomerangStats;
 import heros.utilities.DefaultValueMap;
 import soot.Local;
+import soot.PackManager;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootField;
 import soot.SootMethod;
+import soot.Transform;
 import soot.Unit;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
@@ -88,7 +91,7 @@ import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedBoomerang<W extends Weight> {
-	public static final boolean DEBUG = false;
+	public static boolean DEBUG = false;
 	private static final Logger logger = LogManager.getLogger();
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
@@ -1055,25 +1058,19 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 		Debugger<W> debugger = getOrCreateDebugger();
 		debugger.done(queryToSolvers);
-		int totalRules = 0;
-		for (Query q : queryToSolvers.keySet()) {
-			totalRules += queryToSolvers.getOrCreate(q).getNumberOfRules();
-		}
-		System.out.println("Total number of rules: " + totalRules);
-		for (Query q : queryToSolvers.keySet()) {
-			System.out.println("========================");
-			System.out.println(q);
-			System.out.println("========================");
-			queryToSolvers.getOrCreate(q).debugOutput();
-			for (FieldReadPOI p : fieldReads.values()) {
-//				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
-				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {
-//					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
-				}
-			}
-			for(SootMethod m : queryToSolvers.get(q).getReachableMethods()) {
-				System.out.println(m + "\n" + Joiner.on("\n\t").join(queryToSolvers.get(q).getResults(m).cellSet()));
-			}
+//		int totalRules = 0;
+//		for (Query q : queryToSolvers.keySet()) {
+//			totalRules += queryToSolvers.getOrCreate(q).getNumberOfRules();
+//		}
+//		System.out.println("Total number of rules: " + totalRules);
+//		for (Query q : queryToSolvers.keySet()) {
+//			System.out.println("========================");
+//			System.out.println(q);
+//			System.out.println("========================");
+//			queryToSolvers.getOrCreate(q).debugOutput();
+//			for(SootMethod m : queryToSolvers.get(q).getReachableMethods()) {
+//				System.out.println(m + "\n" + Joiner.on("\n\t").join(queryToSolvers.get(q).getResults(m).cellSet()));
+//			}
 //			queryToSolvers.getOrCreate(q).debugOutput();
 //			for (FieldReadPOI p : fieldReads.values()) {
 //				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
@@ -1084,7 +1081,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 //					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
 //				}
 //			}
-		}
+//		}
 	}
 	
 	public Debugger<W> getOrCreateDebugger() {

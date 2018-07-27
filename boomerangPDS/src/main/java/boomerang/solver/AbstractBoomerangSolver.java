@@ -404,6 +404,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
+		boolean onlyStaticInitializer = false;
 		for (SootMethod callee : icfg.getCalleesOfCallAt(callSite)) {
 			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
 				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
@@ -414,9 +415,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 			}
 			addReachable(callee);
+			onlyStaticInitializer |= !callee.isStaticInitializer();
 		}
 		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-			if (icfg.getCalleesOfCallAt(callSite).isEmpty()) {
+			if (icfg.getCalleesOfCallAt(callSite).isEmpty() || (onlyStaticInitializer && value.isStatic())) {
 				out.addAll(computeNormalFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
 			}
 			out.addAll(getEmptyCalleeFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
