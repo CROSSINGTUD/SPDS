@@ -1,15 +1,10 @@
 package boomerang.poi;
 
-import java.util.Set;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
-import boomerang.solver.ForwardBoomerangSolver;
+import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.MethodBasedFieldTransitionListener;
 import soot.SootMethod;
 import sync.pds.solver.nodes.GeneratedState;
@@ -24,22 +19,18 @@ import wpds.interfaces.WPAUpdateListener;
 
 public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteImportPOI<W> {
 
+	private final Val returningFact;
 	private boolean activate;
-	private Set<Val> returningFacts = Sets.newHashSet();
+	private Node<Statement, Val> returnedNode;
 
 	public ExecuteImportCallStmtPOI(AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
-			Statement callSite, Statement returnStmt) {
-		super(baseSolver, flowSolver, callSite, returnStmt);
+			Statement callSite, Node<Statement, Val> returnedNode) {
+		super(baseSolver, flowSolver, callSite, returnedNode.stmt());
+		this.returnedNode = returnedNode;
+		this.returningFact = returnedNode.fact();
 	}
 
-	public void solve(Val returningFact) {
-		if(!returningFacts.add(returningFact)) {
-			return;
-		}
-		
-		if(activate) {
-			return;
-		}
+	public void solve() {
 		baseSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(curr.getMethod()) {
 
 			@Override
@@ -53,12 +44,12 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 					Val alias = aliasedVariableAtStmt.fact().fact();
 					if (alias.equals(returningFact) && t.getLabel().equals(Field.empty())) {
 						// t.getTarget is the allocation site
-						flowSolver.registerFieldTransitionListener(new FindNode(curr.getMethod(),returningFact));
+						flowSolver.registerFieldTransitionListener(new FindNode(curr.getMethod()));
 					}
 					if (alias.equals(returningFact) && !t.getLabel().equals(Field.empty())
 							&& !t.getLabel().equals(Field.epsilon())) {
 						flowAutomaton.registerListener(
-								new HasOutTransitionWithSameLabel(new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(succ,returningFact)), t.getLabel(), t.getTarget()));
+								new HasOutTransitionWithSameLabel(new SingleNode<Node<Statement,Val>>(returnedNode), t.getLabel(), t.getTarget()));
 					}
 				}
 			}
@@ -67,11 +58,8 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 
 	private class FindNode extends MethodBasedFieldTransitionListener<W> {
 
-		private Val returningFact;
-
-		public FindNode(SootMethod method, Val returningFact) {
+		public FindNode(SootMethod method) {
 			super(method);
-			this.returningFact = returningFact;
 		}
 
 		@Override
@@ -91,6 +79,31 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 	}
 
 	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime * result + ((returningFact == null) ? 0 : returningFact.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ExecuteImportCallStmtPOI other = (ExecuteImportCallStmtPOI) obj;
+		if (returningFact == null) {
+			if (other.returningFact != null)
+				return false;
+		} else if (!returningFact.equals(other.returningFact))
+			return false;
+		return true;
+	}
+
+	@Override
 	protected void activate(Transition<Field, INode<Node<Statement, Val>>> aliasTrans) {
 		if(activate)
 			return;
@@ -103,11 +116,9 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 						&& !flowSolver.valueUsedInStatement(curr.getUnit().get(), t.getStart().fact().fact())) {
 					Val alias = t.getStart().fact().fact();
 					Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
+					Node<Statement, Val> rightOpNode = new Node<Statement, Val>(succ, returningFact);
 					flowSolver.setFieldContextReachable(aliasedVarAtSucc);
-					for(Val fact : Lists.newArrayList(returningFacts)) {
-						Node<Statement, Val> rightOpNode = new Node<Statement, Val>(succ, fact);
-						flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
-					}
+					flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
 					importToFlowSolver(t, aliasTrans.getLabel(),aliasTrans.getTarget());
 				}
 

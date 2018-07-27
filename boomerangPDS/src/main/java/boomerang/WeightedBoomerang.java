@@ -53,20 +53,17 @@ import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import boomerang.stats.IBoomerangStats;
 import heros.utilities.DefaultValueMap;
-import soot.Body;
 import soot.Local;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootField;
 import soot.SootMethod;
 import soot.Unit;
-import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InvokeExpr;
 import soot.jimple.NewMultiArrayExpr;
-import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.StringConstant;
 import soot.jimple.toolkits.ide.icfg.BackwardsInterproceduralCFG;
@@ -143,15 +140,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 										Node<Statement, Val> returnedVal = new Node<Statement, Val>(callStatement,
 												returningFact.fact());
-
-										if(!solver.valueUsedInStatement(callStatement.getUnit().get(),returningFact.fact())) {
-											return;
-										}
-										if(!returningFact.fact().isStatic() && !returningFact.fact().m().equals(callStatement.getMethod())) {
-											return;
-										}
-//										
-										
 										solver.setCallingContextReachable(returnedVal);
 										solver.getCallAutomaton().addWeightForTransition(new Transition<Statement,INode<Val>>(returningFact,callStatement,solver.getCallAutomaton().getInitialState()),weight);
 
@@ -173,11 +161,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 							for (Statement returnSite : solver.getSuccsOf(callStatement)) {
 								Node<Statement, Val> returnedVal = new Node<Statement, Val>(returnSite,
 										returningFact.fact());
-
-								if(!returningFact.fact().isStatic() && !returningFact.fact().m().equals(callStatement.getMethod())) {
-									return;
-								}
-								
 								solver.setCallingContextReachable(returnedVal);
 								solver.getCallAutomaton().addWeightForTransition(new Transition<Statement,INode<Val>>(returningFact,returnSite,solver.getCallAutomaton().getInitialState()), weight);
 								
@@ -219,9 +202,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 						return;
 					if(!returnedFact.fact().isStatic() && !returnedFact.fact().m().equals(callSite.getMethod()))
 						return;
-					if(!solver.valueUsedInStatement(callSite.getUnit().get(),returnedFact.fact())) {
-						return;
-					}
 
 					final ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
 					callSitePoi.returnsFromCall(key, new Node<Statement, Val>(returnSite, returnedFact.fact()));
@@ -266,12 +246,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		@Override
 		protected ForwardCallSitePOI createItem(ForwardCallSitePOI key) {
 			stats.registerCallSitePOI(key);
-			return key;
-		}
-	};
-	private DefaultValueMap<ExecuteImportCallStmtPOI<W>, ExecuteImportCallStmtPOI<W>> forwardCallSitePOIWithSolver = new DefaultValueMap<ExecuteImportCallStmtPOI<W>,ExecuteImportCallStmtPOI<W>>() {
-		@Override
-		protected ExecuteImportCallStmtPOI<W> createItem(ExecuteImportCallStmtPOI<W> key) {
 			return key;
 		}
 	};
@@ -393,12 +367,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 	protected void backwardHandleEnterCall(WitnessNode<Statement, Val, Field> node, ForwardCallSitePOI returnSite,
 			BackwardQuery backwardQuery) {
-		Statement returnStmt = node.stmt();
-		SootMethod m = returnStmt.getMethod();
-		Val fact = node.fact();
-		if(fact.isStatic() || Util.isParameterLocal(fact, m) || Util.isReturnOperator(fact,returnStmt) || Util.isThisLocal(fact, m)){
-			returnSite.returnsFromCall(backwardQuery, node.asNode());
-		} 
+		returnSite.returnsFromCall(backwardQuery, node.asNode());
 	}
 
 	protected boolean isBackwardEnterCall(Statement stmt) {
@@ -980,8 +949,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				final Node<Statement, Val> returnedNode) {
 			if (byPassing.equals(flowQuery))
 				return;
-			ExecuteImportCallStmtPOI<W> importSolver = forwardCallSitePOIWithSolver.getOrCreate(new ExecuteImportCallStmtPOI<W>(queryToSolvers.get(byPassing), queryToSolvers.get(flowQuery),callSite, returnedNode.stmt()));
-			importSolver.solve(returnedNode.fact());
+			ExecuteImportCallStmtPOI<W> exec = new ExecuteImportCallStmtPOI<W>(queryToSolvers.get(byPassing), queryToSolvers.get(flowQuery), callSite, returnedNode);
+			exec.solve();
 		}
 
 
