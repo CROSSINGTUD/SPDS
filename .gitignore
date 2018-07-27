@@ -6,3 +6,4 @@
 .settings/
 bin/
 surefire-reports/
+shippable/
