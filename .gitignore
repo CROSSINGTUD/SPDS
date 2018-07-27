@@ -5,3 +5,4 @@
 *.iml
 .settings/
 bin/
+surefire-reports/
