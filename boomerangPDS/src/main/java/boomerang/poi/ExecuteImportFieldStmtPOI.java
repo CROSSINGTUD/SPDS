@@ -19,7 +19,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 
 	private final Val baseVar;
 	private final Val storedVar;
-	private boolean activate;
 	
 	public ExecuteImportFieldStmtPOI(final AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
 			AbstractPOI<Statement, Val, Field> poi, Statement succ) {
@@ -36,8 +35,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 				final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 
-				if(activate)
-					return;
 				if (!t.getStart().fact().stmt().equals(curr))
 					return;
 				if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
@@ -59,9 +56,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 
 		@Override
 		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-
-			if(activate)
-				return;
 			final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
 			if (!t.getStart().fact().stmt().equals(succ))
 				return;
@@ -76,9 +70,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 
 	@Override
 	protected void activate(Transition<Field, INode<Node<Statement, Val>>> aliasTrans) {
-		if(activate)
-			return;
-		activate = true;
 		baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field,INode<Node<Statement,Val>>,W>(){
 			@Override
 			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,

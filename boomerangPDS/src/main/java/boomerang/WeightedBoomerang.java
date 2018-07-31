@@ -325,10 +325,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				} else if (isFieldLoad(node.stmt())) {
 					backwardHandleFieldRead(node, createFieldLoad(node.stmt()), backwardQuery);
 				}
-				if (isBackwardEnterCall(node.stmt())) {
-					backwardHandleEnterCall(node, forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(node.stmt())),
-								backwardQuery);
-				}
 				if(isFirstStatementOfEntryPoint(node.stmt()) && node.fact().isStatic()){
 					StaticFieldVal val = (StaticFieldVal) node.fact();
 					for(SootMethod m : val.field().getDeclaringClass().getMethods()){
@@ -345,7 +341,23 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			}
 
 		});
+		solver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
 
+			@Override
+			public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
+					WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+				if(t.getTarget() instanceof GeneratedState) {
+					Statement returnSite = t.getLabel();
+					Val enteringFact = t.getStart().fact();
+					if (isBackwardEnterCall(returnSite) && (Util.isReturnOperator(enteringFact,returnSite) || Util.isParameterLocal(enteringFact, returnSite.getMethod()) || Util.isThisLocal(enteringFact, returnSite.getMethod()))) {
+						Node<Statement, Val> node = new Node<Statement,Val>(t.getLabel(),enteringFact);
+						backwardHandleEnterCall(node, forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(returnSite)),
+									backwardQuery);
+					}
+				}
+				
+			}
+		});
 		return solver;
 	}
 
@@ -368,9 +380,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		return false;
 	}
 
-	protected void backwardHandleEnterCall(WitnessNode<Statement, Val, Field> node, ForwardCallSitePOI returnSite,
+	protected void backwardHandleEnterCall(Node<Statement, Val> node, ForwardCallSitePOI returnSite,
 			BackwardQuery backwardQuery) {
-		returnSite.returnsFromCall(backwardQuery, node.asNode());
+		returnSite.returnsFromCall(backwardQuery, node);
 	}
 
 	protected boolean isBackwardEnterCall(Statement stmt) {

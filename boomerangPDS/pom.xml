@@ -19,11 +19,6 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>2.21.0</version>
-				<configuration>
-					<argLine>-Xmx2G</argLine>
-					<argLine>-Xss128m</argLine>
-					<reportsDirectory>../shippable/testresults</reportsDirectory>
-				</configuration>
 			</plugin>
 		</plugins>
 	</build>
@@ -99,8 +94,9 @@
 						<artifactId>maven-surefire-plugin</artifactId>
 						<version>2.21.0</version>
 						<configuration>
-							<argLine>-Xmx4G</argLine>
-							<argLine>-Xss128m</argLine>
+        					<forkCount>1.5C</forkCount>
+        					<reuseForks>true</reuseForks>
+							<argLine>-Xmx8G -Xss128m</argLine>
 							<includes>
 								<include>test.core.**</include>
 								<include>test.cases.basic.**</include>
@@ -121,8 +117,9 @@
 						<artifactId>maven-surefire-plugin</artifactId>
 						<version>2.21.0</version>
 						<configuration>
-							<argLine>-Xmx4G</argLine>
-							<argLine>-Xss128m</argLine>
+        						<forkCount>1.5C</forkCount>
+        						<reuseForks>true</reuseForks>
+							<argLine>-Xmx8G -Xss128m</argLine>
 							<excludes>
 								<exclude>**/*LongTest.java</exclude>
 							</excludes>
