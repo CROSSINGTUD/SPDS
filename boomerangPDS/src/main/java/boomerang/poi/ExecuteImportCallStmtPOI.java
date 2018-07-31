@@ -20,7 +20,6 @@ import wpds.interfaces.WPAUpdateListener;
 public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteImportPOI<W> {
 
 	private final Val returningFact;
-	private boolean activate;
 	private Node<Statement, Val> returnedNode;
 
 	public ExecuteImportCallStmtPOI(AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
@@ -36,8 +35,6 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 			@Override
 			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 				final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-				if(activate)
-					return;
 				if (!t.getStart().fact().stmt().equals(curr))
 					return;
 				if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
@@ -65,8 +62,6 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 		@Override
 		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
 			final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-			if(activate)
-				return;
 			if (!t.getStart().fact().stmt().equals(succ))
 				return;
 			if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
@@ -105,9 +100,6 @@ public class ExecuteImportCallStmtPOI<W extends Weight> extends AbstractExecuteI
 
 	@Override
 	protected void activate(Transition<Field, INode<Node<Statement, Val>>> aliasTrans) {
-		if(activate)
-			return;
-		activate = true;
 		baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 			@Override
 			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
