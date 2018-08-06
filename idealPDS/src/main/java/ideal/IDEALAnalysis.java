@@ -35,7 +35,6 @@ public class IDEALAnalysis<W extends Weight> {
 
 	private static final Logger logger = LogManager.getLogger();
 
-	public static boolean SEED_IN_APPLICATION_CLASS_METHOD = false;
 	public static boolean PRINT_OPTIONS = false;
 
 	protected final IDEALAnalysisDefinition<W> analysisDefinition;

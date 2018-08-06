@@ -3,9 +3,11 @@ package test.core;
 import boomerang.BackwardQuery;
 import boomerang.Query;
 import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.seedfactory.SimpleSeedFactory;
 import boomerang.util.AccessPath;
 import boomerang.util.AccessPathParser;
 import soot.*;
@@ -15,54 +17,18 @@ import soot.jimple.StringConstant;
 
 import java.util.*;
 
-class QueryForCallSiteDetector {
+class QueryForCallSiteDetector extends SimpleSeedFactory {
 
-    private ObservableStaticICFG icfg;
     boolean resultsMustNotBeEmpty = false;
     boolean accessPathQuery = false;
     boolean integerQueries;
     Set<AccessPath> expectedAccessPaths = new HashSet<>();
 
-    QueryForCallSiteDetector(ObservableStaticICFG icfg) {
-        this.icfg = icfg;
+    QueryForCallSiteDetector(ObservableICFG<Unit, SootMethod> icfg) {
+        super(icfg);
     }
 
-    Collection<Query> computeSeeds() {
-        List<Query> seeds = new ArrayList<>();
-
-        List<SootMethod> worklist = new ArrayList<>();
-        worklist.addAll(Scene.v().getEntryPoints());
-
-        Set<SootMethod> visited = new HashSet<>();
-        while (!worklist.isEmpty()){
-            SootMethod m = worklist.get(0);
-            visited.add(m);
-            worklist.remove(m);
-            if(!m.hasActiveBody())
-                continue;
-            for(Unit u : m.getActiveBody().getUnits()) {
-                seeds.addAll(generate(m, (Stmt) u));
-                if (icfg.isCallStmt(u)) {
-                    icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>() {
-                        @Override
-                        public Unit getObservedCaller() {
-                            return u;
-                        }
-
-                        @Override
-                        public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-                            if (!visited.contains(sootMethod) && !worklist.contains(sootMethod)){
-                                worklist.add(sootMethod);
-                            }
-                        }
-                    });
-                }
-            }
-        }
-        return seeds;
-    }
-
-    private Collection<? extends Query> generate(SootMethod method, Stmt u) {
+    protected Collection<? extends Query> generate(SootMethod method, Stmt u) {
         Optional<? extends Query> query = new FirstArgumentOf("queryFor").test(u);
 
         if (query.isPresent()) {
