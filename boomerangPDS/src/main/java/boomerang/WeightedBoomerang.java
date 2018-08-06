@@ -56,6 +56,7 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class WeightedBoomerang<W extends Weight> {
 	public static final boolean DEBUG = false;
+	protected ObservableICFG<Unit, SootMethod> icfg;
 	private static final Logger logger = LogManager.getLogger();
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
