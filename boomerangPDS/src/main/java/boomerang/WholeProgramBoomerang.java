@@ -11,13 +11,11 @@
  *******************************************************************************/
 package boomerang;
 
-import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
-import boomerang.seedfactory.SeedFactory;
+import boomerang.seedfactory.SimpleSeedFactory;
 import soot.SootMethod;
-import soot.Unit;
 import soot.jimple.AssignStmt;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
@@ -29,7 +27,7 @@ import java.util.Collections;
 public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBoomerang<W>{
 	private int reachableMethodCount;
 	private int allocationSites;
-	private SeedFactory<W> seedFactory;
+	private SimpleSeedFactory seedFactory;
 
 	public WholeProgramBoomerang(BoomerangOptions opts){
 		super(opts);
@@ -40,29 +38,19 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 	}
 
 	@Override
-	public SeedFactory<W> getSeedFactory() {
+	public SimpleSeedFactory getSeedFactory() {
 		if (seedFactory == null){
-			seedFactory = new SeedFactory<W>() {
+			seedFactory = new SimpleSeedFactory(new ObservableStaticICFG(new JimpleBasedInterproceduralCFG())) {
 
 				@Override
-				protected Collection<? extends Query> generate(SootMethod method, Stmt u,
-															   Collection<SootMethod> calledMethods) {
+				protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
 					if(u instanceof AssignStmt){
 						AssignStmt assignStmt = (AssignStmt) u;
 						if(options.isAllocationVal(assignStmt.getRightOp())){
-							return Collections.singleton(new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp(),new Statement((Stmt) u, method))));
+							return Collections.singleton(new ForwardQuery(new Statement(u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp(),new Statement((Stmt) u, method))));
 						}
 					}
 					return Collections.emptySet();
-				}
-
-				@Override
-				public ObservableICFG<Unit, SootMethod> icfg() {
-					return new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
-				}
-				@Override
-				protected boolean analyseClassInitializers() {
-					return true;
 				}
 			};
 		}

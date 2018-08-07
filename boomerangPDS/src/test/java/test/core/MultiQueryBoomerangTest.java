@@ -22,7 +22,7 @@ import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
-import boomerang.seedfactory.SeedFactory;
+import boomerang.seedfactory.SimpleSeedFactory;
 import com.google.common.base.Joiner;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
@@ -53,7 +53,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 	protected Multimap<Query,Query> expectedAllocsForQuery = HashMultimap.create();
 	protected Collection<Error> unsoundErrors = Sets.newHashSet();
 	protected Collection<Error> imprecisionErrors = Sets.newHashSet();
-	private SeedFactory<NoWeight> seedFactory;
+	private SimpleSeedFactory seedFactory;
 
 	protected int analysisTimeout = 300 *1000;
 
@@ -64,15 +64,10 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				staticIcfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
-				seedFactory = new SeedFactory<NoWeight>(){
+				seedFactory = new SimpleSeedFactory(staticIcfg) {
 
 					@Override
-					public ObservableICFG<Unit, SootMethod> icfg() {
-						return staticIcfg;
-					}
-
-					@Override
-					protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection calledMethods) {
+					protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
 						Optional<Query> query = new FirstArgumentOf("queryFor.*").test(u);
 
 						if(query.isPresent()){
@@ -83,7 +78,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 						return Collections.emptySet();
 					}
 
-					
+
 				};
 				queryForCallSites = seedFactory.computeSeeds();
 				runDemandDrivenBackward();
@@ -209,7 +204,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 			}
 
 			@Override
-			public SeedFactory<NoWeight> getSeedFactory() {
+			public SimpleSeedFactory getSeedFactory() {
 				return seedFactory;
 			}
 		};

@@ -32,7 +32,7 @@ public abstract class SimpleSeedFactory {
             if(!m.hasActiveBody())
                 continue;
             for(Unit u : m.getActiveBody().getUnits()) {
-                seeds.addAll(generate(m, (Stmt) u));
+                Collection<SootMethod> calledMethods = new HashSet<SootMethod>();
                 if (icfg.isCallStmt(u)) {
                     icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>() {
                         @Override
@@ -42,17 +42,19 @@ public abstract class SimpleSeedFactory {
 
                         @Override
                         public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+                            calledMethods.add(sootMethod);
                             if (!visited.contains(sootMethod) && !worklist.contains(sootMethod)){
                                 worklist.add(sootMethod);
                             }
                         }
                     });
                 }
+                seeds.addAll(generate(m, (Stmt) u, calledMethods));
             }
         }
         return seeds;
     }
 
-    protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u);
+    protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods);
 
 }

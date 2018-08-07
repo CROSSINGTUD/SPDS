@@ -19,7 +19,7 @@ import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
-import boomerang.seedfactory.SeedFactory;
+import boomerang.seedfactory.SimpleSeedFactory;
 import soot.*;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.callgraph.ReachableMethods;
@@ -116,7 +116,7 @@ public class ExampleMain {
 					}
 					
 					@Override
-					public SeedFactory<NoWeight> getSeedFactory() {
+					public SimpleSeedFactory getSeedFactory() {
 						return null;
 					}
 				};

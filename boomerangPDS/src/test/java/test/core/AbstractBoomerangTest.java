@@ -24,7 +24,7 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
-import boomerang.seedfactory.SeedFactory;
+import boomerang.seedfactory.SimpleSeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.util.AccessPath;
 import com.google.common.base.Joiner;
@@ -276,7 +276,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 
 				@Override
-				public SeedFactory<NoWeight> getSeedFactory() {
+				public SimpleSeedFactory getSeedFactory() {
 					return null;
 				}
 			};
@@ -363,12 +363,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			}
 
 			@Override
-			public SeedFactory<NoWeight> getSeedFactory() {
-				return new SeedFactory<NoWeight>() {
+			public SimpleSeedFactory getSeedFactory() {
+				return new SimpleSeedFactory(staticIcfg) {
 
 						@Override
-						protected Collection<? extends Query> generate(SootMethod method, Stmt u,
-																	   Collection<SootMethod> calledMethods) {
+						protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
 							if(u instanceof AssignStmt){
 								AssignStmt assignStmt = (AssignStmt) u;
 								if(options.isAllocationVal(assignStmt.getRightOp())){
@@ -376,15 +375,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 								}
 							}
 							return Collections.emptySet();
-						}
-
-						@Override
-						public ObservableICFG<Unit, SootMethod> icfg() {
-							return staticIcfg;
-						}
-						@Override
-						protected boolean analyseClassInitializers() {
-							return true;
 						}
 					};
 			}

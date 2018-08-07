@@ -28,7 +28,7 @@ class QueryForCallSiteDetector extends SimpleSeedFactory {
         super(icfg);
     }
 
-    protected Collection<? extends Query> generate(SootMethod method, Stmt u) {
+    protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
         Optional<? extends Query> query = new FirstArgumentOf("queryFor").test(u);
 
         if (query.isPresent()) {

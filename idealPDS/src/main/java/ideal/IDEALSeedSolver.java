@@ -19,7 +19,7 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.ForwardBoomerangResults;
-import boomerang.seedfactory.SeedFactory;
+import boomerang.seedfactory.SimpleSeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import com.google.common.base.Stopwatch;
 import soot.SootMethod;
@@ -44,7 +44,7 @@ public class IDEALSeedSolver<W extends Weight> {
 	private final WeightedBoomerang<W> phase1Solver;
 	private final WeightedBoomerang<W> phase2Solver;
 	private final Stopwatch analysisStopwatch = Stopwatch.createUnstarted();
-	private final SeedFactory<W> seedFactory;
+	private final SimpleSeedFactory seedFactory;
 	private WeightedBoomerang<W> timedoutSolver;
 	private Boomerang boomerangSolver;
 
@@ -52,7 +52,7 @@ public class IDEALSeedSolver<W extends Weight> {
 		ObjectFlow, ValueFlow
 	};
 
-	public IDEALSeedSolver(IDEALAnalysisDefinition<W> analysisDefinition, ForwardQuery seed,  SeedFactory<W> seedFactory) {
+	public IDEALSeedSolver(IDEALAnalysisDefinition<W> analysisDefinition, ForwardQuery seed,  SimpleSeedFactory seedFactory) {
 		this.analysisDefinition = analysisDefinition;
 		this.seed = seed;
 		this.seedFactory = seedFactory;
@@ -128,7 +128,7 @@ public class IDEALSeedSolver<W extends Weight> {
 			}
 			
 			@Override
-			public SeedFactory<W> getSeedFactory() {
+			public SimpleSeedFactory getSeedFactory() {
 				return seedFactory;
 			}
 		};

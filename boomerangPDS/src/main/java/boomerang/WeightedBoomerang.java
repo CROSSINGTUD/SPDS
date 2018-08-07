@@ -26,7 +26,7 @@ import boomerang.poi.ExecuteImportFieldStmtPOI;
 import boomerang.poi.PointOfIndirection;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
-import boomerang.seedfactory.SeedFactory;
+import boomerang.seedfactory.SimpleSeedFactory;
 import boomerang.solver.*;
 import boomerang.stats.IBoomerangStats;
 import com.google.common.base.Joiner;
@@ -1053,7 +1053,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		return debugger;
 	}
 
-	public SeedFactory<W> getSeedFactory(){
+	public SimpleSeedFactory getSeedFactory(){
 		return null;
 	}
 
