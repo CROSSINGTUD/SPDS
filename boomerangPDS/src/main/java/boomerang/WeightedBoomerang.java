@@ -996,6 +996,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	public abstract Debugger<W> createDebugger();
 
 	public void debugOutput() {
+		Debugger<W> debugger = getOrCreateDebugger();
+		debugger.done(queryToSolvers);
 		// for (Query q : queryToSolvers.keySet()) {
 		// System.out.println(q +" Nodes: " +
 		// queryToSolvers.getOrCreate(q).getReachedStates().size());
@@ -1013,8 +1015,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		if (!DEBUG)
 			return;
 
-		Debugger<W> debugger = getOrCreateDebugger();
-		debugger.done(queryToSolvers);
 		int totalRules = 0;
 		for (Query q : queryToSolvers.keySet()) {
 			totalRules += queryToSolvers.getOrCreate(q).getNumberOfRules();
