@@ -26,6 +26,7 @@ import boomerang.WeightedForwardQuery;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
+import boomerang.debugger.CallGraphDebugger;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Statement;
@@ -75,7 +76,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			
 			@Override
 			public Debugger<TransitionFunction> debugger(IDEALSeedSolver<TransitionFunction> solver) {
-				return VISUALIZATION ? new IDEVizDebugger<>(new File(ideVizFile.getAbsolutePath().replace(".json", " " + solver.getSeed() +".json")),icfg) : new Debugger();
+				return VISUALIZATION ? new IDEVizDebugger<>(new File(ideVizFile.getAbsolutePath().replace(".json", " " + solver.getSeed() +".json")),icfg) : new CallGraphDebugger(dotFile, icfg.getCallGraphCopy());
 			}
 			
 			@Override
