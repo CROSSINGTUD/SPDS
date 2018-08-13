@@ -4,6 +4,9 @@
 	<groupId>de.fraunhofer.iem</groupId>
 	<artifactId>boomerangPDS</artifactId>
 	<version>1.0.0</version>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
 	<build>
 		<plugins>
 			<plugin>
@@ -20,11 +23,9 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>2.21.0</version>
 				<configuration>
-					<argLine>-Xmx2G</argLine>
-					<argLine>-Xss128m</argLine>
-					<excludes>
-						<exclude>**/*LongTest.java</exclude>
-					</excludes>
+					<argLine>-Xmx8G -Xss128m</argLine>
+					<forkCount>1.5C</forkCount>
+					<reuseForks>true</reuseForks>
 				</configuration>
 			</plugin>
 		</plugins>
@@ -76,7 +77,7 @@
 			<artifactId>commons-lang3</artifactId>
 			<version>3.5</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-core</artifactId>
@@ -93,7 +94,10 @@
 
 	<profiles>
 		<profile>
-			<id>slimBoomerangPDSTestSet</id>
+			<id>defaultTestSet</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
 			<build>
 				<plugins>
 					<plugin>
@@ -101,8 +105,15 @@
 						<artifactId>maven-surefire-plugin</artifactId>
 						<version>2.21.0</version>
 						<configuration>
-							<argLine>-Xmx4G</argLine>
-							<argLine>-Xss128m</argLine>
+							<argLine>-Xmx8G -Xss128m</argLine>
+							<forkCount>1.5C</forkCount>
+							<reuseForks>true</reuseForks>
+							<includes>
+								<include>test.core.**</include>
+								<include>test.cases.basic.**</include>
+								<include>test.cases.context.**</include>
+								<include>test.cases.subclassing.**</include>
+							</includes>
 							<excludes>
 								<exclude>**/*LongTest.java</exclude>
 							</excludes>

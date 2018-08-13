@@ -4,6 +4,9 @@
     <groupId>de.fraunhofer.iem</groupId>
     <artifactId>idealPDS</artifactId>
     <version>1.0.0</version>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
     <build>
         <plugins>
             <plugin>
@@ -20,8 +23,9 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.21.0</version>
                 <configuration>
-                    <argLine>-Xmx2G</argLine>
-                    <argLine>-Xss128m</argLine>
+                    <argLine>-Xmx8G -Xss128m</argLine>
+                    <forkCount>1.5C</forkCount>
+                    <reuseForks>true</reuseForks>
                 </configuration>
             </plugin>
         </plugins>
@@ -79,7 +83,10 @@
 
     <profiles>
         <profile>
-            <id>slimBoomerangPDSTestSet</id>
+            <id>defaultTestSet</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <build>
                 <plugins>
                     <plugin>
@@ -87,9 +94,9 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <version>2.21.0</version>
                         <configuration>
-                            <argLine>-Xmx4G</argLine>
-                            <argLine>-Xss128m</argLine>
-                            <forkCount>1C</forkCount>
+                            <argLine>-Xmx8G -Xss128m</argLine>
+                            <forkCount>1.5C</forkCount>
+                            <reuseForks>true</reuseForks>
                             <excludes>
                                 <exclude>typestate.tests.PrintStreamTest</exclude>
                             </excludes>
