@@ -79,7 +79,10 @@
 
     <profiles>
         <profile>
-            <id>slimBoomerangPDSTestSet</id>
+            <id>defaultTestSet</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
             <build>
                 <plugins>
                     <plugin>
