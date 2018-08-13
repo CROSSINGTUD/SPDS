@@ -79,7 +79,7 @@ public class IDEALSeedSolver<W extends Weight> {
 				analysisStopwatch.stop();
 			}
 			timedoutSolver = this.phase1Solver;
-			throw new IDEALSeedTimeout(this,this.phase1Solver);
+			throw new IDEALSeedTimeout(this,this.phase1Solver, resultPhase1);
 		}
 		ForwardBoomerangResults<W> resultPhase2 = runPhase(this.phase2Solver,Phases.ValueFlow);
 		if(resultPhase2.isTimedout()) {
@@ -87,7 +87,7 @@ public class IDEALSeedSolver<W extends Weight> {
 				analysisStopwatch.stop();
 			}
 			timedoutSolver = this.phase2Solver;
-			throw new IDEALSeedTimeout(this,this.phase2Solver);
+			throw new IDEALSeedTimeout(this,this.phase2Solver, resultPhase2);
 		}
 		return resultPhase2;
 	}
@@ -101,7 +101,7 @@ public class IDEALSeedSolver<W extends Weight> {
 
 			@Override
 			public Debugger<W> createDebugger() {
-				return analysisDefinition.debugger();
+				return analysisDefinition.debugger(IDEALSeedSolver.this);
 			}
 
 			@Override

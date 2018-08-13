@@ -9,36 +9,39 @@
  * Contributors:
  *     Johannes Spaeth - initial API and implementation
  *******************************************************************************/
-package test.cases.sets;
+package test.cases.fields;
 
-import java.util.HashSet;
-
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.core.AbstractBoomerangTest;
-import test.core.selfrunning.AllocatedObject;
 
+public class ReuseOfSummaryTest extends AbstractBoomerangTest{
 
-public class HashSetsLongTest extends AbstractBoomerangTest{
 	@Test
-	@Ignore
-	public void addAndRetrieve(){
-		HashSet<Object> set = new HashSet<>();
-		AllocatedObject alias = new AllocatedObject(){};
-		AllocatedObject alias3 = new AllocatedObject(){};
-		set.add(alias);
-		set.add(alias3);
-		Object alias2 = null;
-		for(Object o : set)
-			alias2 = o;
-		Object ir = alias2;
-		Object query2 = ir;
-		queryFor(query2);
+	public void summaryTest(){
+	    A a = new A();
+	    A b = new A();
+
+	    Object c = new Alloc(); //o1
+		foo(a,b,c);
+	    foo(a,a,c);
+
+	    /**
+	     * the test case extracts all allocated object of type Alloc and assumes 
+	     * these objects to flow as argument to queryFor(var).
+	     * In this example var and a.f point to o1 
+	     */
+	    Object var = a.f;
+	    queryFor(var);
+	}
+	private void foo(A c, A d, Object f) {
+		d.f = f;
 	}
 	
-	@Override
-	protected boolean includeJDK() {
-		return true;
+	private static class A{
+		Object f;
+	
+		public A() {
+		}
 	}
 }

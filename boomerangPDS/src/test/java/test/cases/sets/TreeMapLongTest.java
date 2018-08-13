@@ -12,37 +12,22 @@
 package test.cases.sets;
 
 
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.Map;
+import java.util.TreeMap;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 
 
-public class TreeSetsLongTest extends AbstractBoomerangTest{
+public class TreeMapLongTest extends AbstractBoomerangTest{
 	@Test
-	@Ignore
 	public void addAndRetrieve(){
-		Set<Object> set = new TreeSet<Object>();
+		Map<Integer,Object> set = new TreeMap<Integer,Object>();
 		Alloc alias = new Alloc();
-		set.add(alias);
-//		alias = new Alloc();
-//		set.add(alias);
-//		alias = new Alloc();
-//		set.add(alias);
-//		alias = new Alloc();
-//		set.add(alias);
-//		alias = new Alloc();
-//		set.add(alias);
-		
-		Object alias2 = null;
-		for(Object o : set)
-			alias2 = o;
-		Object ir = alias2;
-		Object query2 = ir;
+		set.put(1,alias);
+		Object query2 = set.get(2);
 		queryFor(query2);
 	}
 	

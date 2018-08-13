@@ -9,11 +9,7 @@
  * Contributors:
  *     Johannes Spaeth - initial API and implementation
  *******************************************************************************/
-package test.cases.sets;
-
-
-import java.util.Set;
-import java.util.TreeSet;
+package test.cases.reflection;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -21,33 +17,27 @@ import org.junit.Test;
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 
+public class ReflectionTest extends AbstractBoomerangTest{
 
-public class TreeSetsLongTest extends AbstractBoomerangTest{
 	@Test
-	@Ignore
-	public void addAndRetrieve(){
-		Set<Object> set = new TreeSet<Object>();
-		Alloc alias = new Alloc();
-		set.add(alias);
-//		alias = new Alloc();
-//		set.add(alias);
-//		alias = new Alloc();
-//		set.add(alias);
-//		alias = new Alloc();
-//		set.add(alias);
-//		alias = new Alloc();
-//		set.add(alias);
-		
-		Object alias2 = null;
-		for(Object o : set)
-			alias2 = o;
-		Object ir = alias2;
-		Object query2 = ir;
-		queryFor(query2);
+	public void bypassClassForName() throws ClassNotFoundException, InstantiationException, IllegalAccessException{
+		Alloc query = new Alloc();
+		Class<?> cls = Class.forName(A.class.getName());
+		queryFor(query);
 	}
 	
-	@Override
-	protected boolean includeJDK() {
-		return true;
+	@Ignore
+	@Test
+	public void loadObject() throws ClassNotFoundException, InstantiationException, IllegalAccessException{
+		Class<?> cls = Class.forName(A.class.getName());
+		Object newInstance = cls.newInstance();
+		A a = (A) newInstance;
+		Alloc query = a.field;
+		queryFor(query);
 	}
+	
+	private static class A{
+		Alloc field = new Alloc();
+	}
+	
 }

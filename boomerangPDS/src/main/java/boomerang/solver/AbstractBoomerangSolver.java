@@ -18,6 +18,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.Set;
 
 import com.google.common.base.Optional;
@@ -71,6 +75,7 @@ import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {
 
+	private static final Logger logger = LogManager.getLogger();
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
@@ -209,6 +214,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	public Collection<? extends State> computeSuccessor(Node<Statement, Val> node) {
 		Statement stmt = node.stmt();
 		Optional<Stmt> unit = stmt.getUnit();
+		logger.trace("Computing successor for {} with solver {}", node, this);
 		if (unit.isPresent()) {
 			Stmt curr = unit.get();
 			Val value = node.fact();
@@ -398,6 +404,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
+		boolean onlyStaticInitializer = false;
 		for (SootMethod callee : icfg.getCalleesOfCallAt(callSite)) {
 			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
 				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
@@ -408,9 +415,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 			}
 			addReachable(callee);
+			onlyStaticInitializer |= !callee.isStaticInitializer();
 		}
 		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-			if (icfg.getCalleesOfCallAt(callSite).isEmpty()) {
+			if (icfg.getCalleesOfCallAt(callSite).isEmpty() || (onlyStaticInitializer && value.isStatic())) {
 				out.addAll(computeNormalFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
 			}
 			out.addAll(getEmptyCalleeFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
@@ -546,6 +554,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(targetType,sourceType);
 			return !castFails;
 		}
+		//TODO this line is necessary as canStoreType does not properly work for interfaces, see Java doc. 
+		if(targetType.getSootClass().isInterface()) {
+			return false;
+		}
 		boolean castFails = Scene.v().getOrMakeFastHierarchy().canStoreType(targetType,sourceType) || Scene.v().getOrMakeFastHierarchy().canStoreType(sourceType,targetType);
 		return !castFails;
 	}
@@ -553,7 +565,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	public void addReachable(SootMethod m) {
 		if (reachableMethods.add(m)) {
-//			System.out.println(this + "  " + m);
 			Collection<Runnable> collection = queuedReachableMethod.get(m);
 			for (Runnable runnable : collection) {
 				runnable.run();
@@ -597,8 +608,9 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		return results;
 	}
 	
-	public Table<Statement, RegExAccessPath, W> getResults(){
+	public Table<Statement, RegExAccessPath, W> getResults(SootMethod m){
 		final Table<Statement, RegExAccessPath, W> results = HashBasedTable.create();
+		logger.debug("Start extracting results from {}", this);
 		fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 
 			@Override
@@ -607,10 +619,22 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				if(t.getStart() instanceof GeneratedState) {
 					return;
 				}
-				IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
-				results.put(t.getStart().fact().stmt(), new RegExAccessPath(t.getStart().fact().fact(), regEx),w);
+				if(t.getStart().fact().stmt().getMethod().equals(m)) {
+					IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
+					AbstractBoomerangSolver.this.callAutomaton.registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
+
+						@Override
+						public void onWeightAdded(Transition<Statement, INode<Val>> callT, W w,
+								WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+							if(callT.getStart().fact().equals(t.getStart().fact().fact()) && callT.getLabel().equals(t.getStart().fact().stmt())) {
+								results.put(t.getStart().fact().stmt(), new RegExAccessPath(t.getStart().fact().fact(),regEx),w);
+							}
+						}
+					});
+				}
 			}
 		});
+		logger.debug("End extracted results from {}", this);
 		return results;
 	}
 	
@@ -629,6 +653,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 			}
 		});
+	}
+
+	public Collection<SootMethod> getReachableMethods() {
+		return reachableMethods;
 	}
 	
 }

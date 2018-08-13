@@ -26,6 +26,7 @@
 					<argLine>-Xmx8G -Xss128m</argLine>
 					<forkCount>1.5C</forkCount>
 					<reuseForks>true</reuseForks>
+                    <reportsDirectory>../shippable/testresults</reportsDirectory>
 				</configuration>
 			</plugin>
 		</plugins>
@@ -77,6 +78,12 @@
 			<artifactId>commons-lang3</artifactId>
 			<version>3.5</version>
 		</dependency>
+
+		<dependency>
+			<groupId>org.apache.logging.log4j</groupId>
+			<artifactId>log4j-core</artifactId>
+			<version>2.11.0</version>
+		</dependency>
 	</dependencies>
 	<repositories>
 		<repository>
@@ -102,11 +109,12 @@
 							<argLine>-Xmx8G -Xss128m</argLine>
 							<forkCount>1.5C</forkCount>
 							<reuseForks>true</reuseForks>
+                            <reportsDirectory>../shippable/testresults</reportsDirectory>
 							<includes>
 								<include>test.core.**</include>
 								<include>test.cases.basic.**</include>
 								<include>test.cases.context.**</include>
-								<include>test.cases.subclassing.**</include>
+								<include>test.cases.fields.**</include>
 							</includes>
 							<excludes>
 								<exclude>**/*LongTest.java</exclude>

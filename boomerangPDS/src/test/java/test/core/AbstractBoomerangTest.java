@@ -39,6 +39,7 @@ import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.preanalysis.PreTransformBodies;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
@@ -48,13 +49,16 @@ import boomerang.util.AccessPathParser;
 import heros.utilities.DefaultValueMap;
 import soot.Body;
 import soot.Local;
+import soot.PackManager;
 import soot.RefType;
 import soot.Scene;
 import soot.SceneTransformer;
 import soot.SootClass;
 import soot.SootMethod;
+import soot.Transform;
 import soot.Unit;
 import soot.Value;
+import soot.JastAddJ.VariableScope;
 import soot.jimple.AssignStmt;
 import soot.jimple.IntConstant;
 import soot.jimple.InvokeExpr;
@@ -78,6 +82,7 @@ import wpds.interfaces.WPAStateListener;
 public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	private static final boolean FAIL_ON_IMPRECISE = false;
+	private static final boolean VISUALIZATION = false;
 
 	@Rule
 	public Timeout timeout = new Timeout(10000000);
@@ -95,7 +100,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	protected int analysisTimeout = 3000 *1000;
 
-	private enum AnalysisMode {
+	public enum AnalysisMode {
 		WholeProgram, DemandDrivenBackward;
 	}
 
@@ -107,6 +112,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	}
 
 	protected SceneTransformer createAnalysisTransformer() {
+		PackManager.v().getPack("wjtp").add(new Transform("wjtp.prepare", new PreTransformBodies()));
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
@@ -315,7 +321,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				
 				@Override
 				public Debugger createDebugger() {
-					return new IDEVizDebugger(ideVizFile,icfg);
+					return VISUALIZATION ? new IDEVizDebugger(ideVizFile,icfg) : new Debugger();
 				}
 
 				@Override
@@ -364,7 +370,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 			@Override
 			public Debugger createDebugger() {
-				return new IDEVizDebugger(ideVizFile, icfg);
+				return VISUALIZATION ? new IDEVizDebugger(ideVizFile, icfg) : new Debugger();
 			}
 
 			@Override

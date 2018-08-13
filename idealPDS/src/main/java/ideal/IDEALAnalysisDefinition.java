@@ -69,9 +69,14 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 		return str;
 	}
 
-	public abstract Debugger<W> debugger();
+	public abstract Debugger<W> debugger(IDEALSeedSolver<W> idealSeedSolver);
 
 	public BoomerangOptions boomerangOptions() {
 		return new DefaultBoomerangOptions();
 	}
+	
+	
+	public IDEALResultHandler getResultHandler(){
+		return new IDEALResultHandler();
+	};
 }
