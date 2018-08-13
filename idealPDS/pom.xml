@@ -20,8 +20,9 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.21.0</version>
                 <configuration>
-                    <argLine>-Xmx4G</argLine>
-                    <argLine>-Xss128m</argLine>
+                    <argLine>-Xmx8G -Xss128m</argLine>
+                    <forkCount>1.5C</forkCount>
+                    <reuseForks>true</reuseForks>
                 </configuration>
             </plugin>
         </plugins>
