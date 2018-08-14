@@ -408,7 +408,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
-        boolean onlyStaticInitializer = false;
 		icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>(){
 
 			@Override
@@ -427,7 +426,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 					}
 				}
 				addReachable(sootMethod);
-                onlyStaticInitializer |= !sootMethod.isStaticInitializer();
 			}
 		});
 		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
