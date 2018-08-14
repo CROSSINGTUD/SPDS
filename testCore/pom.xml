@@ -51,11 +51,16 @@
 			<version>1.0.0-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
-	 <repositories>
-    <repository>
-      <id>soot-snapshot</id>
-      <name>soot snapshots</name>
-      <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
-    </repository>
-</repositories> 
+	<repositories>
+		<repository>
+			<id>soot-snapshot</id>
+			<name>soot snapshots</name>
+			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
+		</repository>
+		<repository>
+			<id>soot-release</id>
+			<name>soot release</name>
+			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
+		</repository>
+	</repositories>
 </project>
