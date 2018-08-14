@@ -3,5 +3,8 @@
 *.project
 *.classpath
 *.iml
+*.idea
 .settings/
 bin/
+surefire-reports/
+shippable/

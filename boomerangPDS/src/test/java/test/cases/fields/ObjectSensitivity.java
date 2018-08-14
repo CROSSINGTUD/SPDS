@@ -27,8 +27,12 @@ public class ObjectSensitivity extends AbstractBoomerangTest{
 
 	    Object b3 = a1.getF();
 	    Object b4 = a2.getF();
-
+	    flow(b4);
 	    queryFor(b4);
+	}
+	private void flow(Object b3) {
+		// TODO Auto-generated method stub
+		
 	}
 	@Test
 	public void objectSensitivity2(){

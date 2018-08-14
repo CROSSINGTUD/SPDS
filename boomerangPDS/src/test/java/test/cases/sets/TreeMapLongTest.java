@@ -11,29 +11,23 @@
  *******************************************************************************/
 package test.cases.sets;
 
-import java.util.HashSet;
 
-import org.junit.Ignore;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.junit.Test;
 
+import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
-import test.core.selfrunning.AllocatedObject;
 
 
-public class HashSetsLongTest extends AbstractBoomerangTest{
+public class TreeMapLongTest extends AbstractBoomerangTest{
 	@Test
-	@Ignore
 	public void addAndRetrieve(){
-		HashSet<Object> set = new HashSet<>();
-		AllocatedObject alias = new AllocatedObject(){};
-		AllocatedObject alias3 = new AllocatedObject(){};
-		set.add(alias);
-		set.add(alias3);
-		Object alias2 = null;
-		for(Object o : set)
-			alias2 = o;
-		Object ir = alias2;
-		Object query2 = ir;
+		Map<Integer,Object> set = new TreeMap<Integer,Object>();
+		Alloc alias = new Alloc();
+		set.put(1,alias);
+		Object query2 = set.get(2);
 		queryFor(query2);
 	}
 	

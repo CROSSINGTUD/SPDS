@@ -33,7 +33,9 @@ import boomerang.jimple.Val;
 import boomerang.results.ForwardBoomerangResults;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
+import ideal.IDEALResultHandler;
 import ideal.IDEALSeedSolver;
+import ideal.StoreIDEALResultHandler;
 import soot.Body;
 import soot.SceneTransformer;
 import soot.SootMethod;
@@ -54,7 +56,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	private static final boolean FAIL_ON_IMPRECISE = false;
 	private static final boolean VISUALIZATION = false;
 
-
+	protected StoreIDEALResultHandler<TransitionFunction> resultHandler = new StoreIDEALResultHandler<>();
 	protected abstract TypeStateMachineWeightFunctions getStateMachine();
 
 	protected IDEALAnalysis<TransitionFunction> createAnalysis() {
@@ -79,6 +81,12 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			public Debugger<TransitionFunction> debugger(IDEALSeedSolver<TransitionFunction> solver) {
 				return VISUALIZATION ? new IDEVizDebugger<>(new File(ideVizFile.getAbsolutePath().replace(".json", " " + solver.getSeed() +".json")),icfg) : new Debugger();
 			}
+			
+			@Override
+			public IDEALResultHandler<TransitionFunction> getResultHandler() {
+				return resultHandler;
+			}
+			
 		});
 	}
 
@@ -121,7 +129,8 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	}
 
 	protected Map<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> executeAnalysis() {
-		return IDEALTestingFramework.this.createAnalysis().run();
+		IDEALTestingFramework.this.createAnalysis().run();
+		return resultHandler.getResults();
 	}
 
 	private Set<Assertion> parseExpectedQueryResults(SootMethod sootTestMethod) {

@@ -16,6 +16,7 @@ import com.google.common.collect.Table;
 import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
 import boomerang.Query;
+import boomerang.Util;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -29,6 +30,8 @@ import soot.PointsToSet;
 import soot.Type;
 import soot.jimple.ClassConstant;
 import soot.jimple.NewExpr;
+import sync.pds.solver.SyncPDSUpdateListener;
+import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -49,6 +52,7 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 	private final boolean timedout;
 	private final IBoomerangStats<W> stats;
 	private Stopwatch analysisWatch;
+	private long maxMemory;
 
 	public BackwardBoomerangResults(BackwardQuery query, boolean timedout, DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers, IBoomerangStats<W> stats, Stopwatch analysisWatch) {
 		this.query = query;
@@ -56,6 +60,8 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		this.timedout = timedout;
 		this.stats = stats;
 		this.analysisWatch = analysisWatch;
+		stats.terminated(query, this);
+		maxMemory = Util.getReallyUsedMemory();
 	}
 	public Map<ForwardQuery,PAutomaton<Statement, INode<Val>>> getAllocationSites(){
 		computeAllocations();
@@ -234,29 +240,36 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		for (final Query fw : getAllocationSites().keySet()) {
 			if(fw instanceof BackwardQuery)
 				continue;
-
-			final INode<Node<Statement, Val>> allocNode = queryToSolvers.getOrCreate(fw).getFieldAutomaton().getInitialState();			
-			queryToSolvers.getOrCreate(fw).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
+			queryToSolvers.getOrCreate(fw).registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
+				
 				@Override
-				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-					if(t.getStart().fact().stmt().equals(query.stmt()) && !(t.getStart() instanceof GeneratedState)){
-						final Val base = t.getStart().fact().fact();
-						if (t.getLabel().equals(Field.empty())) {
-							if (t.getTarget().equals(allocNode)) {
-								results.add(new AccessPath(base));
+				public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+					if(reachableNode.stmt().equals(query.stmt())){
+						Val base = reachableNode.fact();
+						final INode<Node<Statement, Val>> allocNode = queryToSolvers.getOrCreate(fw).getFieldAutomaton().getInitialState();			
+						queryToSolvers.getOrCreate(fw).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
+							@Override
+							public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+								if(t.getStart().fact().stmt().equals(query.stmt()) && !(t.getStart() instanceof GeneratedState) && t.getStart().fact().fact().equals(base)){
+									if (t.getLabel().equals(Field.empty())) {
+										if (t.getTarget().equals(allocNode)) {
+											results.add(new AccessPath(base));
+										}
+									}
+									List<Field> fields = Lists.newArrayList();
+									if (!(t.getLabel() instanceof Empty)) {
+										fields.add(t.getLabel());
+									}
+									queryToSolvers.getOrCreate(fw).getFieldAutomaton().registerListener(new ExtractAccessPathStateListener(t.getTarget(),allocNode,base, fields, results));
+								}
 							}
-						}
-						List<Field> fields = Lists.newArrayList();
-						if (!(t.getLabel() instanceof Empty)) {
-							fields.add(t.getLabel());
-						}
-						queryToSolvers.getOrCreate(fw).getFieldAutomaton().registerListener(new ExtractAccessPathStateListener(t.getTarget(),allocNode,base, fields, results));
+						});
 					}
 				}
 			});
+			
 		}
-		System.out.println(results);
 		return results;
 	}
 	
@@ -401,5 +414,8 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 	public Set<ClassConstant> possibleClassConstants() {
 		throw new RuntimeException("Not implemented!");
 	}
-	
+
+	public long getMaxMemory() {
+		return maxMemory;
+	}
 }

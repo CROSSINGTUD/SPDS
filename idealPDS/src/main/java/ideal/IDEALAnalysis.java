@@ -60,7 +60,7 @@ public class IDEALAnalysis<W extends Weight> {
 		};
 	}
 
-	public Map<WeightedForwardQuery<W>, ForwardBoomerangResults<W>> run() {
+	public void run() {
 		printOptions();
 
 		Collection<Query> initialSeeds = seedFactory.computeSeeds();
@@ -70,7 +70,6 @@ public class IDEALAnalysis<W extends Weight> {
 			System.err.println("No seeds found!");
 		else
 			System.err.println("Analysing " + initialSeeds.size() + " seeds!");
-		Map<WeightedForwardQuery<W>, ForwardBoomerangResults<W>> seedToSolver = Maps.newHashMap();
 		for (Query s : initialSeeds) {
 			if(!(s instanceof WeightedForwardQuery))
 				continue;
@@ -79,27 +78,28 @@ public class IDEALAnalysis<W extends Weight> {
 			System.err.println("Analyzing "+ seed);
 			Stopwatch watch = Stopwatch.createStarted();
 			analysisTime.put(seed, watch);
+			ForwardBoomerangResults<W> res;
 			try {
-				ForwardBoomerangResults<W> solver = run(seed);
-				seedToSolver.put(seed, solver);
+				res = run(seed);
 //				System.err.println(String.format("Seed Analysis finished in ms (Solver1/Solver2):  %s/%s", solver.getPhase1Solver().getAnalysisStopwatch().elapsed(), solver.getPhase2Solver().getAnalysisStopwatch().elapsed()));
 			} catch(IDEALSeedTimeout e){
-				seedToSolver.put(seed,(ForwardBoomerangResults<W>) e.getLastResults());
+				res = (ForwardBoomerangResults<W>) e.getLastResults();
 				timedoutSeeds.add(seed);
 			}
 			watch.stop();
 			System.err.println("Analyzed (finished,timedout): \t (" + (seedCount -timedoutSeeds.size())+ "," + timedoutSeeds.size() + ") of "+ initialSeeds.size() + " seeds! ");
+			analysisDefinition.getResultHandler().report(seed,res);
 		}
 //		System.out.println("Analysis time for all seeds: "+ watch.elapsed());
-		return seedToSolver;
 	}
 	public ForwardBoomerangResults<W> run(ForwardQuery seed) {
 		IDEALSeedSolver<W> idealAnalysis = new IDEALSeedSolver<W>(analysisDefinition, seed, seedFactory);
 		return idealAnalysis.run();
 	}
 	private void printOptions() {
-		if(PRINT_OPTIONS)
+		if(PRINT_OPTIONS) {
 			System.out.println(analysisDefinition);
+		}
 	}
 
 	public Collection<Query> computeSeeds() {
