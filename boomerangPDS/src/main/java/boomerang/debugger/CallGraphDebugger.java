@@ -39,6 +39,7 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
     private Multimap<SootMethod, Unit> predecessors = HashMultimap.create();
     private float avgNumOfPredecessors;
     private int numOfEdgesInCallGraph;
+    private static int seedNumber = 0;
     
     public CallGraphDebugger(File dotFile, CallGraph callGraph){
         this.dotFile = dotFile;
@@ -47,6 +48,8 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
     
     @Override
     public void done(Map<Query, AbstractBoomerangSolver<W>> queryToSolvers) {
+        seedNumber++;
+
         logger.info("Starting to compute visualization.");
 
         //Use string builder to get text for call graph
@@ -62,13 +65,17 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
         //End graph
         stringBuilder.append("}");
 
+        String dotFileName = dotFile.getAbsolutePath();
+        dotFileName = dotFileName.substring(0, dotFileName.lastIndexOf('.')) + seedNumber + ".dot";
+        File seedDotFile = new File(dotFileName);
+
         //Write out what was gathered in the string builder
-        try (FileWriter file = new FileWriter(dotFile)) {
-            logger.info("Writing visualization to file {}", dotFile.getAbsolutePath());
+        try (FileWriter file = new FileWriter(seedDotFile)) {
+            logger.info("Writing visualization to file {}", seedDotFile.getAbsolutePath());
             file.write(stringBuilder.toString());
-            logger.info("Visualization available in file {}", dotFile.getAbsolutePath());
+            logger.info("Visualization available in file {}", seedDotFile.getAbsolutePath());
         } catch (IOException e) {
-            logger.info("Exception in writing to visualization file {} : {}", dotFile.getAbsolutePath(), e.getMessage());
+            logger.info("Exception in writing to visualization file {} : {}", seedDotFile.getAbsolutePath(), e.getMessage());
         }
     }
 
