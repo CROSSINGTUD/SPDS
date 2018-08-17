@@ -111,4 +111,9 @@ public class BackwardsObservableICFG implements ObservableICFG<Unit, SootMethod>
 		delegate.addMethodWithCallFlow(method);
 	}
 
+    @Override
+    public int getNumberOfEdgesTakenFromPrecomputedGraph() {
+        return delegate.getNumberOfEdgesTakenFromPrecomputedGraph();
+    }
+
 }

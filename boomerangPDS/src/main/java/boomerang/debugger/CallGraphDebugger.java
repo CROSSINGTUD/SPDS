@@ -1,6 +1,7 @@
 package boomerang.debugger;
 
 import boomerang.Query;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.solver.AbstractBoomerangSolver;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -39,11 +40,19 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
     private Multimap<SootMethod, Unit> predecessors = HashMultimap.create();
     private float avgNumOfPredecessors;
     private int numOfEdgesInCallGraph;
+    private int numEdgesFromPrecomputed;
     private static int seedNumber = 0;
+
+    private ObservableICFG<Unit,SootMethod> icfg;
     
     public CallGraphDebugger(File dotFile, CallGraph callGraph){
         this.dotFile = dotFile;
         this.callGraph = callGraph;
+    }
+
+    public CallGraphDebugger(File dotFile, CallGraph callGraph, ObservableICFG<Unit,SootMethod> icfg){
+        this(dotFile, callGraph);
+        this.icfg = icfg;
     }
     
     @Override
@@ -114,6 +123,12 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
         }
         computeVirtualCallSiteMetrics();
         computePredecessorMetrics();
+        if (icfg != null){
+            numEdgesFromPrecomputed = icfg.getNumberOfEdgesTakenFromPrecomputedGraph();
+        }
+        if (numEdgesFromPrecomputed <0){
+            numEdgesFromPrecomputed = numOfEdgesInCallGraph;
+        }
     }
 
     private void computeVirtualCallSiteMetrics() {
@@ -143,29 +158,31 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
 
     public String getCsvHeader(){
         return "numOfEdgesInCallGraph; totalCallSites; " +
-                "virtualCallSites; numVirtualCallSitesSingleTarget; numVirtualCallSitesMultipleTarget; " +
+                "virtualCallSites; virtualCallSitesSingleTarget; virtualCallSitesMultipleTarget; " +
                 "avgNumTargetsVirtualCallSites; avgNumTargetMultiTargetCallSites;" +
-                "avgNumOfPredecessors;";
+                "avgNumOfPredecessors; edgesFromPrecomputed;";
     }
 
     public String getCallGraphStatisticsAsCsv(){
         computeCallGraphStatistics();
         return String.valueOf(numOfEdgesInCallGraph) +
-                ',' +
+                ';' +
                 totalCallSites.size() +
-                ',' +
+                ';' +
                 numVirtualCallSites +
-                ',' +
+                ';' +
                 numVirtualCallSitesSingleTarget +
-                ',' +
+                ';' +
                 numVirtualCallSitesMultipleTarget +
-                ',' +
+                ';' +
                 avgNumTargetsVirtualCallSites+
-                ',' +
+                ';' +
                 avgNumTargetMultiTargetCallSites+
                 ',' +
                 avgNumOfPredecessors +
-                ',';
+                ';' +
+                numEdgesFromPrecomputed +
+                ';';
     }
 
 }

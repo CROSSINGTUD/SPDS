@@ -43,6 +43,8 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 
     private static final Logger logger = LogManager.getLogger();
 
+    private int numberOfEdgesTakenFromPrecomputedCallGraph=0;
+
     private CallGraph demandDrivenCallGraph = new CallGraph();
     private CallGraph precomputedCallGraph;
     private WeightedBoomerang<W> solver;
@@ -261,14 +263,20 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
         while (precomputedCallers.hasNext()){
             Edge methodCall = precomputedCallers.next();
             callers.add(methodCall.srcUnit());
-            addCallIfNotInGraph(methodCall.srcUnit(), methodCall.tgt(), methodCall.kind());
+            boolean wasPrecomputedAdded = addCallIfNotInGraph(methodCall.srcUnit(), methodCall.tgt(), methodCall.kind());
+            if (wasPrecomputedAdded)
+                numberOfEdgesTakenFromPrecomputedCallGraph++;
         }
         return callers;
     }
 
-    private void addCallIfNotInGraph(Unit caller, SootMethod callee, Kind kind) {
+    /**
+     * Returns true if the call was added to the call graph, false if it was already present and the call graph did not
+     * change
+     */
+    private boolean addCallIfNotInGraph(Unit caller, SootMethod callee, Kind kind) {
         if (isCallInGraph(caller, callee))
-            return;
+            return false;
 
         logger.debug("Added call from unit '{}' to method '{}'", caller, callee);
         Edge edge = new Edge(getMethodOf(caller), caller, callee, kind);
@@ -284,6 +292,7 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
             if (callee.equals(listener.getObservedCallee()))
                 listener.onCallerAdded(caller, callee);
         }
+        return true;
     }
 
     private boolean isCallInGraph(Unit caller, SootMethod callee) {
@@ -394,6 +403,11 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 
 	public void addMethodWithCallFlow(SootMethod method) {
         methodsWithCallFlow.add(method);
+    }
+
+    @Override
+    public int getNumberOfEdgesTakenFromPrecomputedGraph() {
+        return numberOfEdgesTakenFromPrecomputedCallGraph;
     }
 
 }

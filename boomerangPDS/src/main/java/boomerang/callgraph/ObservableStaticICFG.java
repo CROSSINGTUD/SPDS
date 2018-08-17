@@ -149,5 +149,14 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
         //No need to keep track of that since we rely on the precomputed graph
 	}
 
+    /**
+     * Returns negative number to signify all edges are precomputed. CallGraphDebugger will add the actual number in.
+     * @return -1 as all edges are precomputed, but we don't have access to the actual number
+     */
+    @Override
+    public int getNumberOfEdgesTakenFromPrecomputedGraph() {
+        return -1;
+    }
+
 
 }

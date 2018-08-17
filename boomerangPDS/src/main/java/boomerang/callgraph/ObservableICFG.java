@@ -109,4 +109,6 @@ public interface ObservableICFG<N,M> {
 
 	void addMethodWithCallFlow(SootMethod method);
 
+	int getNumberOfEdgesTakenFromPrecomputedGraph();
+
 }
