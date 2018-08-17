@@ -178,7 +178,7 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
                 avgNumTargetsVirtualCallSites+
                 ';' +
                 avgNumTargetMultiTargetCallSites+
-                ',' +
+                ';' +
                 avgNumOfPredecessors +
                 ';' +
                 numEdgesFromPrecomputed +
