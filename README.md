@@ -8,10 +8,6 @@ Additionally, it contains an implementation of [Boomerang](boomerangPDS) and [ID
 
 # Checkout, Build and Install
 
-This repository contains a git submodules that is required for the build. To clone this repository use:
-
-```git clone --recurse-submodules https://github.com/CROSSINGTUD/WPDS.git```
-
 To build and install WPDS into you local repository, run 
 
 ``mvn clean install -DskipTests``
