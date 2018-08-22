@@ -5,4 +5,4 @@ jdk:
 
 build:
   ci:
-   - mvn clean verify surefire:test --fail-at-end
+   - mvn verify surefire:test --fail-at-end
