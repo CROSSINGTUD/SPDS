@@ -26,6 +26,7 @@
                     <argLine>-Xmx8G -Xss128m</argLine>
                     <forkCount>1.5C</forkCount>
                     <reuseForks>true</reuseForks>
+                    <reportsDirectory>../shippable/testresults</reportsDirectory>
                 </configuration>
             </plugin>
         </plugins>
