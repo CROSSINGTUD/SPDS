@@ -26,7 +26,7 @@
 					<argLine>-Xmx8G -Xss128m</argLine>
 					<forkCount>1.5C</forkCount>
 					<reuseForks>true</reuseForks>
-                    <reportsDirectory>../shippable/testresults</reportsDirectory>
+                    <reportsDirectory>../shippable/testresults/boomerangPDS</reportsDirectory>
 				</configuration>
 			</plugin>
 		</plugins>
