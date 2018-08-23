@@ -1,7 +1,7 @@
 
 # WPDS
 
-[![Build Status](http://soot-build.cs.uni-paderborn.de/jenkins/job/boomerang/job/WPDS-Snapshot/badge/icon)](http://soot-build.cs.uni-paderborn.de/jenkins/job/boomerang/job/WPDS-Snapshot/)
+[![Build Status](http://soot-build.cs.uni-paderborn.de/jenkins/job/boomerang/job/WPDS/badge/icon)](http://soot-build.cs.uni-paderborn.de/jenkins/job/boomerang/job/WPDS-Snapshot/)
 
 This repository contains a Java implementation of Weighted Pushdown Systems.
 Additionally, it contains an implementation of [Boomerang](boomerangPDS) and [IDEal](idealPDS) based on a Weighted Pushdown System.
