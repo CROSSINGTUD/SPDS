@@ -19,11 +19,11 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
@@ -43,8 +43,6 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.StaticFieldVal;
 import boomerang.jimple.Val;
 import boomerang.poi.AbstractPOI;
-import boomerang.poi.ExecuteImportCallStmtPOI;
-import boomerang.poi.ExecuteImportFieldStmtPOI;
 import boomerang.poi.PointOfIndirection;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
@@ -119,6 +117,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 								final Transition<Statement, INode<Val>> trans, final W weight) {
 							Statement exitStmt = trans.getLabel();
 							SootMethod callee = exitStmt.getMethod();
+							System.err.println("unbalanced "+ solver);
+//							final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
+//									.getOrCreate(new ForwardCallSitePOI(callSite));
+//							callSitePoi.returnsFromCall(key, new Node<Statement, Val>(returnSite, returnedFact.fact()));
 							if (!callee.isStaticInitializer()) {
 								for (Unit callSite : WeightedBoomerang.this.icfg().getCallersOf(callee)) {
 									if (!((Stmt) callSite).containsInvokeExpr())
@@ -219,6 +221,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 					final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
 							.getOrCreate(new ForwardCallSitePOI(callSite));
+					if(solver.toString().contains("orwardQuery: (allocationIndirect $r0 = new CallPOITest$B,$r0 (CallPOITest.allocationIndi"))
+					{
+						System.err.println(callSite + " returns here ");
+					}
 					callSitePoi.returnsFromCall(key, new Node<Statement, Val>(returnSite, returnedFact.fact()));
 				}
 			});
@@ -921,12 +927,40 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				AbstractPOI<Statement, Val, Field> poi) {
 			WeightedBoomerang<W>.FlowsToPair flowsToPair = new FlowsToPair(flowSolver, baseSolver);
 			if (activeFlowsToPair.put(flowsToPair, poi)) {
+				System.out.println("activateFlowPair "+ flowsToPair.flowSolver + " <- " + flowsToPair.baseSolver) ;
 				Collection<FlowsToPairListener> listeners = queuedActiveFlowsToPairListener.get(flowsToPair);
 				for (FlowsToPairListener l : Lists.newArrayList(listeners)) {
 					l.trigger(poi);
+					doShareSameCallSite(flowSolver, baseSolver, l, poi);
 				}
 			}
 		}
+		public void doShareSameCallSite(AbstractBoomerangSolver<W> flowSolver, AbstractBoomerangSolver<W> baseSolver, WeightedBoomerang<W>.FlowsToPairListener listener, AbstractPOI<Statement, Val, Field> poi) {
+			flowSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
+
+				@Override
+				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+					Statement stmt = t.getStart().fact().stmt();
+					for(Statement s : flowSolver.getPredsOf(stmt)){
+						if(icfg().isCallStmt(s.getUnit().get())){
+							baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
+
+								@Override
+								public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+										WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+									Statement baseStmt = t.getStart().fact().stmt();
+									if(baseStmt.equals(stmt)){
+										listener.importStartingFrom(t, poi);
+									}
+								}
+							});
+						}
+					}
+				}
+			});
+		}
+
 	}
 	private final class CallSiteFlowsToPairListener extends FlowsToPairListener {
 		private final Node<Statement, Val> returnedNode;
@@ -942,6 +976,11 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			AbstractBoomerangSolver<W> baseSolver = this.baseFlowSolverPair.baseSolver;
 			AbstractBoomerangSolver<W> flowSolver = this.baseFlowSolverPair.flowSolver;
 			Statement succ = returnedNode.stmt();
+			if(flowSolver.toString().contains("AllocObj")){
+				System.err.println("TEST");
+				System.err.println(baseSolver +"   "+ flowSolver);
+				System.err.println(succ);
+			}
 			baseSolver.getFieldAutomaton()
 					.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 
@@ -951,7 +990,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 							// TODO Auto-generated method stub
 							if (!(t.getStart() instanceof GeneratedState)
 									&& t.getStart().fact().stmt().equals(succ)) {
-								CallSiteFlowsToPairListener.this.importStartingFrom(t, poi);
+//								System.err.println(succ + "\n " + t);
+//								System.err.println("import to " +flowSolver);
 								Val alias = t.getStart().fact().fact();
 								Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
 								flowSolver.addNormalCallFlow(returnedNode, aliasedVarAtSucc);
@@ -1031,12 +1071,17 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 	protected void registerFlowsToPairListener(FlowsToPairListener flowsToPairListener) {
+
+//		if(flowsToPairListener.baseFlowSolverPair.flowSolver.toString().contains("AllocObj") && flowsToPairListener instanceof WeightedBoomerang.CallSiteFlowsToPairListener){
+//			System.err.println("register  "+ flowsToPairListener.baseFlowSolverPair.flowSolver + " <- " + flowsToPairListener.baseFlowSolverPair.baseSolver + " ") ;
+//		}
 		for (AbstractPOI<Statement, Val, Field> p : activeFlowsToPair.get(flowsToPairListener.baseFlowSolverPair)) {
 			flowsToPairListener.trigger(p);
 		}
 
 		queuedActiveFlowsToPairListener.put(flowsToPairListener.baseFlowSolverPair, flowsToPairListener);
 	}
+	
 	private final class ImportToSolver extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 		private AbstractPOI<Statement, Val, Field> poi;
 		private WeightedBoomerang<W>.FlowsToPairListener l;
@@ -1293,6 +1338,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 		private void eachPair(final ForwardQuery byPassing, final Query flowQuery,
 				final Node<Statement, Val> returnedNode) {
+//			System.err.println(callSite +" "+ flowQuery + byPassing);
 			registerFlowsToPairListener(new CallSiteFlowsToPairListener(new FlowsToPair(queryToSolvers.get(flowQuery), queryToSolvers.get(byPassing)), returnedNode));
 		}
 
