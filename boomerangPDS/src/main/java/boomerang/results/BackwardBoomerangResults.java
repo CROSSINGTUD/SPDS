@@ -235,6 +235,18 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		}
 	}
 	
+	public boolean aliases(Query el) {
+		for (final Query fw : getAllocationSites().keySet()) {
+			if(fw instanceof BackwardQuery)
+				continue;
+			if(queryToSolvers.getOrCreate(fw).getReachedStates().contains(el.asNode())) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	@Deprecated
 	public Set<AccessPath> getAllAliases() {
 		final Set<AccessPath> results = Sets.newHashSet();
 		for (final Query fw : getAllocationSites().keySet()) {
@@ -418,4 +430,5 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 	public long getMaxMemory() {
 		return maxMemory;
 	}
+	
 }
