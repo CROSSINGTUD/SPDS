@@ -927,7 +927,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				AbstractPOI<Statement, Val, Field> poi) {
 			WeightedBoomerang<W>.FlowsToPair flowsToPair = new FlowsToPair(flowSolver, baseSolver);
 			if (activeFlowsToPair.put(flowsToPair, poi)) {
-				System.out.println("activateFlowPair "+ flowsToPair.flowSolver + " <- " + flowsToPair.baseSolver) ;
 				Collection<FlowsToPairListener> listeners = queuedActiveFlowsToPairListener.get(flowsToPair);
 				for (FlowsToPairListener l : Lists.newArrayList(listeners)) {
 					l.trigger(poi);
@@ -947,11 +946,18 @@ public abstract class WeightedBoomerang<W extends Weight> {
 							baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 
 								@Override
-								public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+								public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> innerT, W w,
 										WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-									Statement baseStmt = t.getStart().fact().stmt();
+									Statement baseStmt = innerT.getStart().fact().stmt();
 									if(baseStmt.equals(stmt)){
-										listener.importStartingFrom(t, poi);
+										listener.importStartingFrom(innerT, poi);
+										if (!(innerT.getStart() instanceof GeneratedState)) {
+//											System.err.println(succ + "\n " + t);
+//											System.err.println("import to " +flowSolver);
+											Val alias = innerT.getStart().fact().fact();
+											Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(stmt, alias);
+											flowSolver.addNormalCallFlow(t.getStart().fact(), aliasedVarAtSucc);
+										}
 									}
 								}
 							});
