@@ -960,6 +960,38 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 					});
 		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			CallSiteFlowsToPairListener other = (CallSiteFlowsToPairListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (returnedNode == null) {
+				if (other.returnedNode != null)
+					return false;
+			} else if (!returnedNode.equals(other.returnedNode))
+				return false;
+			return true;
+		}
+
+		private WeightedBoomerang getOuterType() {
+			return WeightedBoomerang.this;
+		}
 		
 		
 	}

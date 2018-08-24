@@ -91,7 +91,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Set<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
 	private Multimap<SootMethod, Runnable> queuedReachableMethod = HashMultimap.create();
 	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
-	private Collection<SootMethod> scopeOpeningReachableMethods = Sets.newHashSet();
 	protected final BoomerangOptions options;
 	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg,
 			Query query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
@@ -116,7 +115,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		// TODO recap, I assume we can implement this more easily.
 		this.generatedFieldState = genField;
 		addReachable(query.asNode().stmt().getMethod());
-		scopeOpeningReachableMethods.add(query.asNode().stmt().getMethod());
 	}
 	
 	@Override
