@@ -263,7 +263,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			return key;
 		}
 	};
-	private Multimap<FlowsToPair,AbstractPOI<Statement, Val, Field>> activeFlowsToPair = HashMultimap.create();
+	private Multimap<FlowsToPair, AbstractPOI<Statement, Val, Field>> activeFlowsToPair = HashMultimap.create();
 	private Multimap<FlowsToPair, FlowsToPairListener> queuedActiveFlowsToPairListener = HashMultimap.create();
 	protected final BoomerangOptions options;
 	private Debugger<W> debugger;
@@ -870,10 +870,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 	public class FieldWritePOI extends AbstractPOI<Statement, Val, Field> {
+
 		public FieldWritePOI(Statement statement, Val base, Field field, Val stored) {
 			super(statement, base, field, stored);
 		}
-		
 
 		@Override
 		public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
@@ -894,64 +894,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 										Val alias = aliasedVariableAtStmt.fact().fact();
 										if (alias.equals(FieldWritePOI.this.getBaseVar())
 												&& t.getLabel().equals(Field.empty())) {
-											WeightedBoomerang<W>.FlowsToPair flowsToPair = new FlowsToPair(flowSolver, baseSolver);
+											WeightedBoomerang<W>.FlowsToPair flowsToPair = new FlowsToPair(flowSolver,
+													baseSolver);
 											flowsTo(flowSolver, baseSolver, FieldWritePOI.this);
-											registerFlowsToPairListener(new FlowsToPairListener(flowsToPair) {
-
-												@Override
-												void trigger(AbstractPOI<Statement, Val, Field> poi) {
-													baseSolver.getFieldAutomaton()
-													.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
-
-														@Override
-														public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-																WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-															// TODO Auto-generated method stub
-															if (!(t.getStart() instanceof GeneratedState)
-																	&& t.getStart().fact().stmt().equals(succ)) {
-																importStartingFrom(t);
-
-																Val alias = t.getStart().fact().fact();
-																Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
-																Node<Statement, Val> rightOpNode = new Node<Statement, Val>(
-																		FieldWritePOI.this.getStmt(), FieldWritePOI.this.getStoredVar());
-																flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
-															}
-														}
-
-														private void importStartingFrom(Transition<Field, INode<Node<Statement, Val>>> t) {
-															if (t.getLabel().equals(Field.empty())) {
-																Field storedField = FieldWritePOI.this.getField();
-																INode<Node<Statement, Val>> intermediateState = flowSolver.getFieldAutomaton()
-																		.createState(new SingleNode<Node<Statement, Val>>(
-																				new Node<Statement, Val>(succ, FieldWritePOI.this.getBaseVar())),
-																				storedField);
-																flowSolver.getFieldAutomaton().addTransition(
-																		new Transition<Field, INode<Node<Statement, Val>>>(t.getStart(),
-																				storedField, intermediateState));
-															} else {
-																flowSolver.getFieldAutomaton().addTransition(t);
-																baseSolver.getFieldAutomaton().registerListener(
-																		new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(t.getTarget()){
-
-																			@Override
-																			public void onOutTransitionAdded(
-																					Transition<Field, INode<Node<Statement, Val>>> t, W w,
-																					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-																				importStartingFrom(t);
-																			}
-
-																			@Override
-																			public void onInTransitionAdded(
-																					Transition<Field, INode<Node<Statement, Val>>> t, W w,
-																					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-
-																			}});
-															}
-														}
-													});
-												}
-											});
+											registerFlowsToPairListener(new FieldFlowsToPairListener(flowsToPair));
 										}
 									}
 								}
@@ -960,27 +906,136 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			}
 		}
 
-
 		protected void flowsTo(AbstractBoomerangSolver<W> flowSolver, AbstractBoomerangSolver<W> baseSolver,
 				AbstractPOI<Statement, Val, Field> poi) {
 			WeightedBoomerang<W>.FlowsToPair flowsToPair = new FlowsToPair(flowSolver, baseSolver);
-			if (activeFlowsToPair.put(flowsToPair,poi)) {
+			if (activeFlowsToPair.put(flowsToPair, poi)) {
 				Collection<FlowsToPairListener> listeners = queuedActiveFlowsToPairListener.get(flowsToPair);
-				for(FlowsToPairListener l : Lists.newArrayList(listeners)){
+				for (FlowsToPairListener l : Lists.newArrayList(listeners)) {
 					l.trigger(poi);
 				}
 			}
 		}
 	}
 
-	
+	private class FieldFlowsToPairListener extends FlowsToPairListener {
+		private final class ImportToSolver extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+			private AbstractPOI<Statement, Val, Field> poi;
+
+			private ImportToSolver(INode<Node<Statement, Val>> state, AbstractPOI<Statement, Val, Field> poi) {
+				super(state);
+				this.poi = poi;
+			}
+
+			@Override
+			public void onOutTransitionAdded(
+					Transition<Field, INode<Node<Statement, Val>>> t, W w,
+					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+				importStartingFrom(t,poi);
+			}
+
+			@Override
+			public void onInTransitionAdded(
+					Transition<Field, INode<Node<Statement, Val>>> t, W w,
+					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+
+			}
+
+			@Override
+			public int hashCode() {
+				final int prime = 31;
+				int result = super.hashCode();
+				result = prime * result + getOuterType().hashCode();
+				result = prime * result + ((poi == null) ? 0 : poi.hashCode());
+				return result;
+			}
+
+			@Override
+			public boolean equals(Object obj) {
+				if (this == obj)
+					return true;
+				if (!super.equals(obj))
+					return false;
+				if (getClass() != obj.getClass())
+					return false;
+				ImportToSolver other = (ImportToSolver) obj;
+				if (!getOuterType().equals(other.getOuterType()))
+					return false;
+				if (poi == null) {
+					if (other.poi != null)
+						return false;
+				} else if (!poi.equals(other.poi))
+					return false;
+				return true;
+			}
+
+			private FieldFlowsToPairListener getOuterType() {
+				return FieldFlowsToPairListener.this;
+			}
+			
+		}
+
+		private FieldFlowsToPairListener(WeightedBoomerang<W>.FlowsToPair flowsToPair) {
+			super(flowsToPair);
+		}
+
+		private void importStartingFrom(Transition<Field, INode<Node<Statement, Val>>> t, AbstractPOI<Statement, Val, Field> poi) {
+			AbstractBoomerangSolver<W> baseSolver = baseFlowSolverPair.baseSolver;
+			AbstractBoomerangSolver<W> flowSolver = baseFlowSolverPair.flowSolver;
+			if (t.getLabel().equals(Field.empty())) {
+				for (Statement succ : flowSolver.getSuccsOf(poi.getStmt())) {
+					Field storedField = poi.getField();
+					INode<Node<Statement, Val>> intermediateState = flowSolver.getFieldAutomaton()
+							.createState(
+									new SingleNode<Node<Statement, Val>>(
+											new Node<Statement, Val>(succ, poi.getBaseVar())),
+									storedField);
+					flowSolver.getFieldAutomaton().addTransition(
+							new Transition<Field, INode<Node<Statement, Val>>>(t.getStart(),
+									storedField, intermediateState));
+				}
+			} else {
+				flowSolver.getFieldAutomaton().addTransition(t);
+				baseSolver.getFieldAutomaton().registerListener(
+						new ImportToSolver(t.getTarget(),poi));
+			}
+		}
+		@Override
+		void trigger(AbstractPOI<Statement, Val, Field> poi) {
+			AbstractBoomerangSolver<W> baseSolver = baseFlowSolverPair.baseSolver;
+			AbstractBoomerangSolver<W> flowSolver = baseFlowSolverPair.flowSolver;
+			for (Statement succ : flowSolver.getSuccsOf(poi.getStmt())) {
+				baseSolver.getFieldAutomaton()
+						.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
+
+							@Override
+							public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+								// TODO Auto-generated method stub
+								if (!(t.getStart() instanceof GeneratedState)
+										&& t.getStart().fact().stmt().equals(succ)) {
+									importStartingFrom(t, poi);
+
+									Val alias = t.getStart().fact().fact();
+									Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
+									Node<Statement, Val> rightOpNode = new Node<Statement, Val>(poi.getStmt(),
+											poi.getStoredVar());
+									flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
+								}
+							}
+						});
+			}
+		}
+	}
+
 	protected void registerFlowsToPairListener(FlowsToPairListener flowsToPairListener) {
-		for(AbstractPOI<Statement, Val, Field> p : activeFlowsToPair.get(flowsToPairListener.baseFlowSolverPair)){
+		for (AbstractPOI<Statement, Val, Field> p : activeFlowsToPair.get(flowsToPairListener.baseFlowSolverPair)) {
 			flowsToPairListener.trigger(p);
 		}
 
 		queuedActiveFlowsToPairListener.put(flowsToPairListener.baseFlowSolverPair, flowsToPairListener);
 	}
+
 	private abstract class FlowsToPairListener {
 
 		final WeightedBoomerang<W>.FlowsToPair baseFlowSolverPair;
@@ -990,6 +1045,38 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		}
 
 		abstract void trigger(AbstractPOI<Statement, Val, Field> poi);
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((baseFlowSolverPair == null) ? 0 : baseFlowSolverPair.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			FlowsToPairListener other = (FlowsToPairListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (baseFlowSolverPair == null) {
+				if (other.baseFlowSolverPair != null)
+					return false;
+			} else if (!baseFlowSolverPair.equals(other.baseFlowSolverPair))
+				return false;
+			return true;
+		}
+
+		private WeightedBoomerang getOuterType() {
+			return WeightedBoomerang.this;
+		}
 
 	}
 
@@ -1120,77 +1207,80 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		private void eachPair(final ForwardQuery byPassing, final Query flowQuery,
 				final Node<Statement, Val> returnedNode) {
 			Statement succ = returnedNode.stmt();
-			registerFlowsToPairListener(new FlowsToPairListener(new FlowsToPair(queryToSolvers.get(flowQuery), queryToSolvers.get(byPassing))) {
-				
+			registerFlowsToPairListener(new FlowsToPairListener(
+					new FlowsToPair(queryToSolvers.get(flowQuery), queryToSolvers.get(byPassing))) {
+
 				@Override
 				void trigger(AbstractPOI<Statement, Val, Field> poi) {
-					AbstractBoomerangSolver<W> baseSolver = this.baseFlowSolverPair.baseSolver;	
-					AbstractBoomerangSolver<W> flowSolver = this.baseFlowSolverPair.flowSolver;					
+					AbstractBoomerangSolver<W> baseSolver = this.baseFlowSolverPair.baseSolver;
+					AbstractBoomerangSolver<W> flowSolver = this.baseFlowSolverPair.flowSolver;
 					baseSolver.getFieldAutomaton()
-					.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
+							.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 
-						@Override
-						public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-								WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-							// TODO Auto-generated method stub
-							if (!(t.getStart() instanceof GeneratedState)
-									&& t.getStart().fact().stmt().equals(succ)) {
-								importStartingFrom(t);
-								Val alias = t.getStart().fact().fact();
-								Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
-								flowSolver.addNormalCallFlow(returnedNode, aliasedVarAtSucc);
-							}
-						}
-
-						private void importStartingFrom(Transition<Field, INode<Node<Statement, Val>>> t) {
-							if (t.getLabel().equals(Field.empty())) {
-								Field storedField = poi.getField();
-								for(Statement s : flowSolver.getSuccsOf(poi.getStmt())){
-									INode<Node<Statement, Val>> intermediateState = flowSolver.getFieldAutomaton()
-											.createState(new SingleNode<Node<Statement, Val>>(
-													new Node<Statement, Val>(s, poi.getBaseVar())),
-													storedField);
-									flowSolver.getFieldAutomaton().addTransition(
-											new Transition<Field, INode<Node<Statement, Val>>>(t.getStart(),
-													storedField, intermediateState));
+								@Override
+								public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+										WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+									// TODO Auto-generated method stub
+									if (!(t.getStart() instanceof GeneratedState)
+											&& t.getStart().fact().stmt().equals(succ)) {
+										importStartingFrom(t);
+										Val alias = t.getStart().fact().fact();
+										Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
+										flowSolver.addNormalCallFlow(returnedNode, aliasedVarAtSucc);
+									}
 								}
-							} else {
-								flowSolver.getFieldAutomaton().addTransition(t);
-								baseSolver.getFieldAutomaton().registerListener(
-										new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(t.getTarget()) {
 
-											@Override
-											public void onOutTransitionAdded(
-													Transition<Field, INode<Node<Statement, Val>>> t, W w,
-													WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-												importStartingFrom(t);
-											}
+								private void importStartingFrom(Transition<Field, INode<Node<Statement, Val>>> t) {
+									if (t.getLabel().equals(Field.empty())) {
+										Field storedField = poi.getField();
+										for (Statement s : flowSolver.getSuccsOf(poi.getStmt())) {
+											INode<Node<Statement, Val>> intermediateState = flowSolver
+													.getFieldAutomaton().createState(
+															new SingleNode<Node<Statement, Val>>(
+																	new Node<Statement, Val>(s, poi.getBaseVar())),
+															storedField);
+											flowSolver.getFieldAutomaton().addTransition(
+													new Transition<Field, INode<Node<Statement, Val>>>(t.getStart(),
+															storedField, intermediateState));
+										}
+									} else {
+										flowSolver.getFieldAutomaton().addTransition(t);
+										baseSolver.getFieldAutomaton().registerListener(
+												new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(
+														t.getTarget()) {
 
-											@Override
-											public void onInTransitionAdded(
-													Transition<Field, INode<Node<Statement, Val>>> t, W w,
-													WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+													@Override
+													public void onOutTransitionAdded(
+															Transition<Field, INode<Node<Statement, Val>>> t, W w,
+															WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+														importStartingFrom(t);
+													}
 
-											}
+													@Override
+													public void onInTransitionAdded(
+															Transition<Field, INode<Node<Statement, Val>>> t, W w,
+															WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
 
-											@Override
-											public int hashCode() {
-												//TODO implement better
-												return System.identityHashCode(this);
-											}
+													}
 
-											@Override
-											public boolean equals(Object obj) {
-												//TODO implement better
-												return obj == this;
-											}
-										});
-							}
-						}});
+													@Override
+													public int hashCode() {
+														// TODO implement better
+														return System.identityHashCode(this);
+													}
+
+													@Override
+													public boolean equals(Object obj) {
+														// TODO implement better
+														return obj == this;
+													}
+												});
+									}
+								}
+							});
 				}
 			});
 		}
-
 
 		public void addByPassingAllocation(ForwardQuery byPassingAllocation) {
 			if (byPassingAllocations.add(byPassingAllocation)) {
