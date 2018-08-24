@@ -649,7 +649,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				}
 				if(t.getStart().fact().stmt().equals(stmt)) {
 					IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), fieldAutomaton.getInitialState());
-					System.out.println(t.getStart().fact().fact() +" " + regEx);
+					logger.debug(t.getStart().fact().fact() +" " + regEx);
 				}
 			}
 		});

@@ -1361,14 +1361,14 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		for (Query q : queryToSolvers.keySet()) {
 			totalRules += queryToSolvers.getOrCreate(q).getNumberOfRules();
 		}
-		System.out.println("Total number of rules: " + totalRules);
+		logger.debug("Total number of rules: " + totalRules);
 		for (Query q : queryToSolvers.keySet()) {
-			System.out.println("========================");
-			System.out.println(q);
-			System.out.println("========================");
+			logger.debug("========================");
+			logger.debug(q);
+			logger.debug("========================");
 			queryToSolvers.getOrCreate(q).debugOutput();
 			for (SootMethod m : queryToSolvers.get(q).getReachableMethods()) {
-				System.out.println(m + "\n" + Joiner.on("\n\t").join(queryToSolvers.get(q).getResults(m).cellSet()));
+				logger.debug(m + "\n" + Joiner.on("\n\t").join(queryToSolvers.get(q).getResults(m).cellSet()));
 			}
 			queryToSolvers.getOrCreate(q).debugOutput();
 			for (FieldReadPOI p : fieldReads.values()) {

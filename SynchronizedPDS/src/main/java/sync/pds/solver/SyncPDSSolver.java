@@ -728,8 +728,8 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 	public void debugOutput() {
-		System.out.println(this.getClass());
-		System.out.println("All reachable states");
+		logger.debug(this.getClass());
+		logger.debug("All reachable states");
 		prettyPrintSet(getReachedStates());
 
 		HashSet<Node<Stmt, Fact>> notFieldReachable = Sets.newHashSet(callingContextReachable);
@@ -737,30 +737,31 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		HashSet<Node<Stmt, Fact>> notCallingContextReachable = Sets.newHashSet(fieldContextReachable);
 		notCallingContextReachable.removeAll(getReachedStates());
 		if (!notFieldReachable.isEmpty()) {
-			System.out.println("Calling context reachable");
+			logger.debug("Calling context reachable");
 			prettyPrintSet(notFieldReachable);
 		}
 		if (!notCallingContextReachable.isEmpty()) {
-			System.out.println("Field matching reachable");
+			logger.debug("Field matching reachable");
 			prettyPrintSet(notCallingContextReachable);
 		}
-		System.out.println(fieldPDS);
-		System.out.println(fieldAutomaton.toDotString());
-		System.out.println(callingPDS);
-		System.out.println(callAutomaton.toDotString());
-		System.out.println("===== end === "+ this.getClass());
+		logger.debug(fieldPDS);
+		logger.debug(fieldAutomaton.toDotString());
+		logger.debug(callingPDS);
+		logger.debug(callAutomaton.toDotString());
+		logger.debug("===== end === "+ this.getClass());
 	}
 
 	private void prettyPrintSet(Collection<? extends Object> set) {
 		int j = 0;
+		String  s ="";
 		for (Object reachableState : set) {
-			System.out.print(reachableState);
-			System.out.print("\t");
+			s += reachableState;
+			s +="\t";
 			 if(j++ > 5){
-				 System.out.print("\n");
+				 s+= "\n";
 				 j = 0;
 			 }
 		}
-		System.out.println();
+		logger.debug(s);
 	}
 }
