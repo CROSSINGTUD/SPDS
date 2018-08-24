@@ -26,7 +26,9 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 
@@ -43,7 +45,6 @@ import boomerang.poi.AbstractPOI;
 import boomerang.poi.ExecuteImportCallStmtPOI;
 import boomerang.poi.ExecuteImportFieldStmtPOI;
 import boomerang.poi.PointOfIndirection;
-import boomerang.preanalysis.PreTransformBodies;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
@@ -55,12 +56,10 @@ import boomerang.solver.ReachableMethodListener;
 import boomerang.stats.IBoomerangStats;
 import heros.utilities.DefaultValueMap;
 import soot.Local;
-import soot.PackManager;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootField;
 import soot.SootMethod;
-import soot.Transform;
 import soot.Unit;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
@@ -91,7 +90,7 @@ import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedBoomerang<W extends Weight> {
-	public static boolean DEBUG = false;
+	public static boolean DEBUG = true;
 	private static final Logger logger = LogManager.getLogger();
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
@@ -252,6 +251,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			return key;
 		}
 	};
+	private Set<FlowsToPair> activeFlowsToPair = Sets.newHashSet();
+	private Multimap<FlowsToPair,FlowsToPairListener> querdActiveFlowsToPairListener = HashMultimap.create();
 	protected final BoomerangOptions options;
 	private Debugger<W> debugger;
 	private Stopwatch analysisWatch = Stopwatch.createUnstarted();
@@ -864,13 +865,154 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			if (flowAllocation instanceof BackwardQuery) {
 			} else if (flowAllocation instanceof ForwardQuery) {
 				for(Statement succ : queryToSolvers.get(flowAllocation).getSuccsOf(getStmt())) {
-					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(queryToSolvers.get(baseAllocation),queryToSolvers.get(flowAllocation),FieldWritePOI.this, succ);
-					exec.solve();
+					AbstractBoomerangSolver<W> baseSolver = queryToSolvers.get(baseAllocation);
+					AbstractBoomerangSolver<W> flowSolver = queryToSolvers.get(flowAllocation);
+					baseSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(this.getStmt().getMethod()) {
+
+						@Override
+						public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+							final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
+							if (!t.getStart().fact().stmt().equals(FieldWritePOI.this.getStmt()))
+								return;
+							if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
+								Val alias = aliasedVariableAtStmt.fact().fact();
+								if (alias.equals(FieldWritePOI.this.getBaseVar()) && t.getLabel().equals(Field.empty())) {
+									flowsTo(flowSolver,baseSolver, succ);
+								}
+							}
+						}
+					});
 				}
+			}
+		}
+
+		protected void flowsTo(AbstractBoomerangSolver<W> flowSolver, AbstractBoomerangSolver<W> baseSolver, Statement succ) {
+			if(activeFlowsToPair.add(new FlowsToPair(flowSolver, baseSolver))) {
+				baseSolver.getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement,Val>>, W>(baseSolver.getFieldAutomaton().getInitialState()) {
+
+					@Override
+					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+						flowSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
+
+							@Override
+							public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> innerT, W w,
+									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+								if(!(t.getTarget().equals(baseSolver.getFieldAutomaton().getInitialState())) && innerT.getStart().equals(t.getStart()) && t.getLabel().equals(Field.empty()) && !innerT.getLabel().equals(Field.empty()) ) {
+									System.out.println(t);
+									baseSolver.getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement, Val>>, W>(t.getTarget()) {
+
+										@Override
+										public void onOutTransitionAdded(
+												Transition<Field, INode<Node<Statement, Val>>> t, W w,
+												WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+											// TODO Auto-generated method stub
+											
+										}
+
+										@Override
+										public void onInTransitionAdded(
+												Transition<Field, INode<Node<Statement, Val>>> ot, W w,
+												WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+											System.out.println(new Transition<>(ot.getStart(), innerT.getLabel(),innerT.getTarget()));
+											flowSolver.getFieldAutomaton().addTransition(new Transition<>(ot.getStart(), innerT.getLabel(),innerT.getTarget()));
+//											if (!(ot.getStart() instanceof GeneratedState) && ot.getStart().fact().stmt().equals(succ)
+//													&& !ot.getStart().fact().fact().equals(FieldWritePOI.this.getBaseVar())) {
+//												Val alias = ot.getStart().fact().fact();
+//												Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
+//												Node<Statement, Val> rightOpNode = new Node<Statement, Val>(FieldWritePOI.this.getStmt(), FieldWritePOI.this.getStoredVar());
+//												flowSolver.setFieldContextReachable(aliasedVarAtSucc);
+//												flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
+//											}
+										}
+										@Override
+										public int hashCode() {
+											return System.identityHashCode(this);
+										}
+										@Override
+										public boolean equals(Object obj) {
+											return obj == this;
+										}
+									});
+								}
+								
+							}
+						});
+					}
+
+					@Override
+					public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+						// TODO Auto-generated method stub
+						
+					}
+
+					@Override
+					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+						flowSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
+
+							@Override
+							public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> innerT, W w,
+									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+								if(!(t.getTarget().equals(baseSolver.getFieldAutomaton().getInitialState())) && innerT.getStart().equals(t.getStart()) && t.getLabel().equals(Field.empty()) && !innerT.getLabel().equals(Field.empty()) ) {
+									System.out.println(t);
+								}
+							}});
+							
+					}
+				});
 			}
 		}
 	}
 
+	private interface FlowsToPairListener{
+		
+	}
+	private class FlowsToPair{
+		private final AbstractBoomerangSolver<W> flowSolver;
+		private final AbstractBoomerangSolver<W> baseSolver;
+		private FlowsToPair( AbstractBoomerangSolver<W> flowSolver, AbstractBoomerangSolver<W> baseSolver){
+			this.flowSolver = flowSolver;
+			this.baseSolver = baseSolver;
+		}
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
+			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
+			return result;
+		}
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			FlowsToPair other = (FlowsToPair) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (baseSolver == null) {
+				if (other.baseSolver != null)
+					return false;
+			} else if (!baseSolver.equals(other.baseSolver))
+				return false;
+			if (flowSolver == null) {
+				if (other.flowSolver != null)
+					return false;
+			} else if (!flowSolver.equals(other.flowSolver))
+				return false;
+			return true;
+		}
+		private WeightedBoomerang getOuterType() {
+			return WeightedBoomerang.this;
+		}
+		
+	}
 	private class QueryWithVal {
 		private final Query flowSourceQuery;
 		private final Node<Statement, Val> returningFact;
@@ -950,10 +1092,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 		private void eachPair(final ForwardQuery byPassing, final Query flowQuery,
 				final Node<Statement, Val> returnedNode) {
-			if (byPassing.equals(flowQuery))
-				return;
-			ExecuteImportCallStmtPOI<W> exec = new ExecuteImportCallStmtPOI<W>(queryToSolvers.get(byPassing), queryToSolvers.get(flowQuery), callSite, returnedNode);
-			exec.solve();
 		}
 
 
@@ -1012,10 +1150,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				throw new RuntimeException("should not be invoked!");
 			if (flowAllocation instanceof ForwardQuery) {
 			} else if (flowAllocation instanceof BackwardQuery) {
-				for(Statement succ : queryToSolvers.get(flowAllocation).getSuccsOf(getStmt())) {
-					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(queryToSolvers.get(baseAllocation),queryToSolvers.get(flowAllocation),FieldReadPOI.this, succ);
-					exec.solve();
-				}
 			}
 		}
 	}
@@ -1058,30 +1192,30 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 		Debugger<W> debugger = getOrCreateDebugger();
 		debugger.done(queryToSolvers);
-//		int totalRules = 0;
-//		for (Query q : queryToSolvers.keySet()) {
-//			totalRules += queryToSolvers.getOrCreate(q).getNumberOfRules();
-//		}
-//		System.out.println("Total number of rules: " + totalRules);
-//		for (Query q : queryToSolvers.keySet()) {
-//			System.out.println("========================");
-//			System.out.println(q);
-//			System.out.println("========================");
-//			queryToSolvers.getOrCreate(q).debugOutput();
-//			for(SootMethod m : queryToSolvers.get(q).getReachableMethods()) {
-//				System.out.println(m + "\n" + Joiner.on("\n\t").join(queryToSolvers.get(q).getResults(m).cellSet()));
-//			}
-//			queryToSolvers.getOrCreate(q).debugOutput();
-//			for (FieldReadPOI p : fieldReads.values()) {
-//				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
-//			}
-//			for (FieldWritePOI p : fieldWrites.values()) {
-//				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
-//				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {
-//					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
-//				}
-//			}
-//		}
+		int totalRules = 0;
+		for (Query q : queryToSolvers.keySet()) {
+			totalRules += queryToSolvers.getOrCreate(q).getNumberOfRules();
+		}
+		System.out.println("Total number of rules: " + totalRules);
+		for (Query q : queryToSolvers.keySet()) {
+			System.out.println("========================");
+			System.out.println(q);
+			System.out.println("========================");
+			queryToSolvers.getOrCreate(q).debugOutput();
+			for(SootMethod m : queryToSolvers.get(q).getReachableMethods()) {
+				System.out.println(m + "\n" + Joiner.on("\n\t").join(queryToSolvers.get(q).getResults(m).cellSet()));
+			}
+			queryToSolvers.getOrCreate(q).debugOutput();
+			for (FieldReadPOI p : fieldReads.values()) {
+				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
+			}
+			for (FieldWritePOI p : fieldWrites.values()) {
+				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
+				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {
+					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
+				}
+			}
+		}
 	}
 	
 	public Debugger<W> getOrCreateDebugger() {

@@ -30,25 +30,7 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> extends AbstractExecute
 	
 
 	public void solve() {
-		baseSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(curr.getMethod()) {
-
-			@Override
-			public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-				final INode<Node<Statement, Val>> aliasedVariableAtStmt = t.getStart();
-
-				if(activate)
-					return;
-				if (!t.getStart().fact().stmt().equals(curr))
-					return;
-				if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
-					Val alias = aliasedVariableAtStmt.fact().fact();
-					if (alias.equals(baseVar) && t.getLabel().equals(Field.empty())) {
-						// t.getTarget is the allocation site
-						flowSolver.getFieldAutomaton().registerListener(new FindNode(curr.getMethod()));
-					}
-				}
-			}
-		});
+		
 	}
 	
 	private class FindNode extends MethodBasedFieldTransitionListener<W>{
