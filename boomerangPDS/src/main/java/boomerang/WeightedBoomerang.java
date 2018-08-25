@@ -16,9 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,7 +28,6 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 
 import boomerang.customize.BackwardEmptyCalleeFlow;
@@ -77,7 +74,6 @@ import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.ConnectPushListener;
 import wpds.impl.NestedWeightedPAutomatons;
 import wpds.impl.SummaryNestedWeightedPAutomatons;
 import wpds.impl.Transition;
@@ -117,10 +113,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 								final Transition<Statement, INode<Val>> trans, final W weight) {
 							Statement exitStmt = trans.getLabel();
 							SootMethod callee = exitStmt.getMethod();
-							System.err.println("unbalanced "+ solver);
-//							final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
-//									.getOrCreate(new ForwardCallSitePOI(callSite));
-//							callSitePoi.returnsFromCall(key, new Node<Statement, Val>(returnSite, returnedFact.fact()));
 							if (!callee.isStaticInitializer()) {
 								for (Unit callSite : WeightedBoomerang.this.icfg().getCallersOf(callee)) {
 									if (!((Stmt) callSite).containsInvokeExpr())
@@ -155,9 +147,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 																		solver.getCallAutomaton().getInitialState()),
 																weight);
 
-												final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
-														.getOrCreate(new ForwardCallSitePOI(callStatement));
-												callSitePoi.returnsFromCall(key, returnedVal);
 											}
 										});
 									}
@@ -178,10 +167,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 												new Transition<Statement, INode<Val>>(returningFact, returnSite,
 														solver.getCallAutomaton().getInitialState()),
 												weight);
-
-										final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
-												.getOrCreate(new ForwardCallSitePOI(callStatement));
-										callSitePoi.returnsFromCall(key, returnedVal);
 									}
 								}
 
@@ -206,26 +191,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 							throw new BoomerangTimeoutException(elapsed, stats);
 						}
 					}
-				}
-			});
-
-			solver.getCallAutomaton().registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
-
-				@Override
-				public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact,
-						W returnedWeight) {
-					if (!callSite.getMethod().equals(returnSite.getMethod()))
-						return;
-					if (!returnedFact.fact().isStatic() && !returnedFact.fact().m().equals(callSite.getMethod()))
-						return;
-
-					final ForwardCallSitePOI callSitePoi = forwardCallSitePOI
-							.getOrCreate(new ForwardCallSitePOI(callSite));
-					if(solver.toString().contains("orwardQuery: (allocationIndirect $r0 = new CallPOITest$B,$r0 (CallPOITest.allocationIndi"))
-					{
-						System.err.println(callSite + " returns here ");
-					}
-					callSitePoi.returnsFromCall(key, new Node<Statement, Val>(returnSite, returnedFact.fact()));
 				}
 			});
 
@@ -259,13 +224,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		@Override
 		protected FieldReadPOI createItem(FieldReadPOI key) {
 			stats.registerFieldReadPOI(key);
-			return key;
-		}
-	};
-	private DefaultValueMap<ForwardCallSitePOI, ForwardCallSitePOI> forwardCallSitePOI = new DefaultValueMap<ForwardCallSitePOI, ForwardCallSitePOI>() {
-		@Override
-		protected ForwardCallSitePOI createItem(ForwardCallSitePOI key) {
-			stats.registerCallSitePOI(key);
 			return key;
 		}
 	};
@@ -345,8 +303,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					backwardHandleFieldRead(node, createFieldLoad(node.stmt()), backwardQuery);
 				}
 				if (isBackwardEnterCall(node.stmt())) {
-					backwardHandleEnterCall(node, forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(node.stmt())),
-							backwardQuery);
+					//TODO
 				}
 				if (isFirstStatementOfEntryPoint(node.stmt()) && node.fact().isStatic()) {
 					StaticFieldVal val = (StaticFieldVal) node.fact();
@@ -388,10 +345,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		return false;
 	}
 
-	protected void backwardHandleEnterCall(WitnessNode<Statement, Val, Field> node, ForwardCallSitePOI returnSite,
-			BackwardQuery backwardQuery) {
-		returnSite.returnsFromCall(backwardQuery, node.asNode());
-	}
 
 	protected boolean isBackwardEnterCall(Statement stmt) {
 		if (!stmt.getUnit().isPresent())
@@ -419,10 +372,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 			@Override
 			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
-				if (value.isStatic())
 					return;
-				ForwardCallSitePOI callSitePoi = forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(callSite));
-				callSitePoi.addByPassingAllocation(sourceQuery);
 			}
 
 			@Override
@@ -465,10 +415,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					forwardHandleFieldLoad(node, createArrayFieldLoad(node.stmt()), sourceQuery);
 				}
 				if (isBackwardEnterCall(node.stmt())) {
-					if (!(WeightedBoomerang.this instanceof WholeProgramBoomerang)) {
-						forwardCallSitePOI.getOrCreate(new ForwardCallSitePOI(node.stmt()))
-								.addByPassingAllocation(sourceQuery);
-					}
+					//TODO
 				}
 			}
 		});
@@ -968,79 +915,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		}
 
 	}
-	private final class CallSiteFlowsToPairListener extends FlowsToPairListener {
-		private final Node<Statement, Val> returnedNode;
-
-		private CallSiteFlowsToPairListener(WeightedBoomerang<W>.FlowsToPair flowsToPair,
-				Node<Statement, Val> returnedNode) {
-			super(flowsToPair);
-			this.returnedNode = returnedNode;
-		}
-
-		@Override
-		void trigger(AbstractPOI<Statement, Val, Field> poi) {
-			AbstractBoomerangSolver<W> baseSolver = this.baseFlowSolverPair.baseSolver;
-			AbstractBoomerangSolver<W> flowSolver = this.baseFlowSolverPair.flowSolver;
-			Statement succ = returnedNode.stmt();
-			if(flowSolver.toString().contains("AllocObj")){
-				System.err.println("TEST");
-				System.err.println(baseSolver +"   "+ flowSolver);
-				System.err.println(succ);
-			}
-			baseSolver.getFieldAutomaton()
-					.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
-
-						@Override
-						public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-								WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-							// TODO Auto-generated method stub
-							if (!(t.getStart() instanceof GeneratedState)
-									&& t.getStart().fact().stmt().equals(succ)) {
-//								System.err.println(succ + "\n " + t);
-//								System.err.println("import to " +flowSolver);
-								Val alias = t.getStart().fact().fact();
-								Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
-								flowSolver.addNormalCallFlow(returnedNode, aliasedVarAtSucc);
-							}
-						}
-
-					});
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((returnedNode == null) ? 0 : returnedNode.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			CallSiteFlowsToPairListener other = (CallSiteFlowsToPairListener) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (returnedNode == null) {
-				if (other.returnedNode != null)
-					return false;
-			} else if (!returnedNode.equals(other.returnedNode))
-				return false;
-			return true;
-		}
-
-		private WeightedBoomerang getOuterType() {
-			return WeightedBoomerang.this;
-		}
-		
-		
-	}
 	private class FieldFlowsToPairListener extends FlowsToPairListener {
 		
 
@@ -1261,130 +1135,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		}
 
 		private WeightedBoomerang getOuterType() {
-			return WeightedBoomerang.this;
-		}
-
-	}
-
-	private class QueryWithVal {
-		private final Query flowSourceQuery;
-		private final Node<Statement, Val> returningFact;
-
-		QueryWithVal(Query q, Node<Statement, Val> asNode) {
-			this.flowSourceQuery = q;
-			this.returningFact = asNode;
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + getOuterType().hashCode();
-			if (flowSourceQuery instanceof ForwardQuery)
-				result = prime * result + ((flowSourceQuery == null) ? 0 : flowSourceQuery.hashCode());
-			result = prime * result + ((returningFact == null) ? 0 : returningFact.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			QueryWithVal other = (QueryWithVal) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (flowSourceQuery instanceof ForwardQuery)
-				if (flowSourceQuery == null) {
-					if (other.flowSourceQuery != null)
-						return false;
-				} else if (!flowSourceQuery.equals(other.flowSourceQuery))
-					return false;
-			if (returningFact == null) {
-				if (other.returningFact != null)
-					return false;
-			} else if (!returningFact.equals(other.returningFact))
-				return false;
-			return true;
-		}
-
-		@Override
-		public String toString() {
-			return returningFact.toString() + " " + flowSourceQuery;
-		}
-
-		private WeightedBoomerang<W> getOuterType() {
-			return WeightedBoomerang.this;
-		}
-
-	}
-
-	public class ForwardCallSitePOI {
-
-		private Statement callSite;
-		private Set<QueryWithVal> returnsFromCall = Sets.newHashSet();
-		private Set<ForwardQuery> byPassingAllocations = Sets.newHashSet();
-
-		public ForwardCallSitePOI(Statement callSite) {
-			this.callSite = callSite;
-		}
-
-		public void returnsFromCall(final Query flowQuery, Node<Statement, Val> returnedNode) {
-			if (returnedNode.fact().isStatic())
-				return;
-			if (returnsFromCall.add(new QueryWithVal(flowQuery, returnedNode))) {
-				for (final ForwardQuery byPassing : Lists.newArrayList(byPassingAllocations)) {
-					eachPair(byPassing, flowQuery, returnedNode);
-				}
-			}
-		}
-
-		private void eachPair(final ForwardQuery byPassing, final Query flowQuery,
-				final Node<Statement, Val> returnedNode) {
-//			System.err.println(callSite +" "+ flowQuery + byPassing);
-			registerFlowsToPairListener(new CallSiteFlowsToPairListener(new FlowsToPair(queryToSolvers.get(flowQuery), queryToSolvers.get(byPassing)), returnedNode));
-		}
-
-		public void addByPassingAllocation(ForwardQuery byPassingAllocation) {
-			if (byPassingAllocations.add(byPassingAllocation)) {
-				for (QueryWithVal e : Lists.newArrayList(returnsFromCall)) {
-					eachPair(byPassingAllocation, e.flowSourceQuery, e.returningFact);
-				}
-			}
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			ForwardCallSitePOI other = (ForwardCallSitePOI) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (callSite == null) {
-				if (other.callSite != null)
-					return false;
-			} else if (!callSite.equals(other.callSite))
-				return false;
-			return true;
-		}
-
-		private WeightedBoomerang<W> getOuterType() {
 			return WeightedBoomerang.this;
 		}
 

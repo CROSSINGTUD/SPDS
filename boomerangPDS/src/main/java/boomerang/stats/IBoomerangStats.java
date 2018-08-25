@@ -33,8 +33,6 @@ import wpds.impl.Weight;
 public interface IBoomerangStats<W extends Weight> {
     void registerSolver(Query key, AbstractBoomerangSolver<W> solver);
 
-    void registerCallSitePOI(WeightedBoomerang<W>.ForwardCallSitePOI key);
-
     void registerFieldWritePOI(WeightedBoomerang<W>.FieldWritePOI key);
 
     void registerFieldReadPOI(WeightedBoomerang<W>.FieldReadPOI key);
