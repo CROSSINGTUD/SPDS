@@ -18,11 +18,10 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.util.Set;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.HashBasedTable;
@@ -70,7 +69,6 @@ import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.State;
-import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {
