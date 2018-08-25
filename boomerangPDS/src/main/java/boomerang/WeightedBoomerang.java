@@ -845,7 +845,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				AbstractBoomerangSolver<W> baseSolver = queryToSolvers.get(baseAllocation);
 				AbstractBoomerangSolver<W> flowSolver = queryToSolvers.get(flowAllocation);
 				for(Statement succ : flowSolver.getSuccsOf(getStmt())) {
-					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<>(baseSolver, flowSolver, FieldWritePOI.this, succ);
+					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<>(icfg(),baseSolver, flowSolver, FieldWritePOI.this, succ);
 					exec.solve();
 				}
 			}
@@ -864,6 +864,12 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				throw new RuntimeException("should not be invoked!");
 			if (flowAllocation instanceof ForwardQuery) {
 			} else if (flowAllocation instanceof BackwardQuery) {
+				AbstractBoomerangSolver<W> baseSolver = queryToSolvers.get(baseAllocation);
+				AbstractBoomerangSolver<W> flowSolver = queryToSolvers.get(flowAllocation);
+				for(Statement succ : flowSolver.getSuccsOf(getStmt())) {
+					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<>(icfg(),baseSolver, flowSolver, FieldReadPOI.this, succ);
+					exec.solve();
+				}
 			}
 		}
 	}

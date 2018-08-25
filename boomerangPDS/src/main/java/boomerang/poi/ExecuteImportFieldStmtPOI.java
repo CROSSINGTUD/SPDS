@@ -5,7 +5,11 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.MethodBasedFieldTransitionListener;
+import soot.SootMethod;
+import soot.Unit;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -27,10 +31,13 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 	private final Val baseVar;
 	private final Val storedVar;
 	private final Field field;
+	private final BiDiInterproceduralCFG<Unit, SootMethod> icfg;
 	boolean active = false;
 	
-	public ExecuteImportFieldStmtPOI(final AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
+	
+	public ExecuteImportFieldStmtPOI(BiDiInterproceduralCFG<Unit, SootMethod> icfg, final AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
 			AbstractPOI<Statement, Val, Field> poi, Statement succ) {
+		this.icfg = icfg;
 		this.baseSolver = baseSolver;
 		this.flowSolver = flowSolver;
 		this.baseAutomaton = baseSolver.getFieldAutomaton();
@@ -92,7 +99,10 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 	private void handlingAtCallSites() {
 		flowSolver.getFieldAutomaton().registerListener(new ImportAtCallSite(this));
 	}
-	
+
+	protected boolean isBackward() {
+		return flowSolver instanceof BackwardBoomerangSolver;
+	}
 	private final class ImportAtCallSite implements WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> {
 
 		private ExecuteImportFieldStmtPOI<W> executeImportFieldStmtPOI;
@@ -105,25 +115,28 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 		public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
 			Statement stmt = t.getStart().fact().stmt();
+			boolean predIsCallStmt = false;
 			for(Statement s : flowSolver.getPredsOf(stmt)){
-				if(Util.isCallStmt(s.getUnit().get()) && flowSolver.valueUsedInStatement(s.getUnit().get(),t.getStart().fact().fact())){
-					baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
-
-						@Override
-						public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> innerT, W w,
-								WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-							Statement baseStmt = innerT.getStart().fact().stmt();
-							if(baseStmt.equals(stmt)){
-								importStartingFrom(innerT);
-								if (!(innerT.getStart() instanceof GeneratedState)) {
-									Val alias = innerT.getStart().fact().fact();
-									Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(stmt, alias);
-									flowSolver.addNormalCallFlow(t.getStart().fact(), aliasedVarAtSucc);
-								}
+				predIsCallStmt |= s.isCallsite() && flowSolver.valueUsedInStatement(s.getUnit().get(),t.getStart().fact().fact());
+			}
+			
+			if(predIsCallStmt || (isBackward() && icfg.isExitStmt(stmt.getUnit().get()))) {
+				baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
+	
+					@Override
+					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> innerT, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+						Statement baseStmt = innerT.getStart().fact().stmt();
+						if(baseStmt.equals(stmt)){
+							importStartingFrom(innerT);
+							if (!(innerT.getStart() instanceof GeneratedState)) {
+								Val alias = innerT.getStart().fact().fact();
+								Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(stmt, alias);
+								flowSolver.addNormalCallFlow(t.getStart().fact(), aliasedVarAtSucc);
 							}
 						}
-					});
-				}
+					}
+				});
 			}
 		}
 
