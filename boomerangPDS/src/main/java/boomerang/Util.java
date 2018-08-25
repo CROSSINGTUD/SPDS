@@ -62,5 +62,9 @@ public class Util {
 		return ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed();
 			//	+ ManagementFactory.getMemoryMXBean().getNonHeapMemoryUsage().getUsed();
 	}
+
+	public static boolean isCallStmt(Stmt stmt) {
+		return stmt.containsInvokeExpr();
+	}
 	
 }
