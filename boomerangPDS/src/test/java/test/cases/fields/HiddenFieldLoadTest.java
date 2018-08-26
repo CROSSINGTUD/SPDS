@@ -35,6 +35,15 @@ public class HiddenFieldLoadTest extends AbstractBoomerangTest{
 		queryFor(alias);
 	}
 	@Test
+	public void run7(){
+		A b = new A();
+		A a = b;
+		b.setFBranched();
+		int x = 1;
+		Object alias = a.f;
+		queryFor(alias);
+	}
+	@Test
 	public void run3(){
 		A b = new A();
 		A a = b;
@@ -78,6 +87,18 @@ public class HiddenFieldLoadTest extends AbstractBoomerangTest{
 		Object f;
 		public void setF() {
 			f = new Alloc();
+		}
+
+		public void setFBranched() {
+			if(staticallyUnknown()) {
+				f = new Alloc();
+			}
+			else {
+				f = new Alloc();
+			}
+		}
+		public boolean staticallyUnknown() {
+			return true;
 		}
 
 		public void setF(Object alloc) {
