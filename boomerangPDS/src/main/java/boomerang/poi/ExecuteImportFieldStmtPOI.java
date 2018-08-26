@@ -73,21 +73,8 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 	}
 
 	protected void flowsTo() {
-		baseSolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
-
-			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-				// TODO Auto-generated method stub
-				if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(succ)) {
-					importStartingFrom(t);
-					Val alias = t.getStart().fact().fact();
-					Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
-					Node<Statement, Val> rightOpNode = new Node<Statement, Val>(curr, storedVar);
-					flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
-				}
-			}
-		});
+		baseSolver.registerStatementFieldTransitionListener(new ImportIndirectAliases(succ, flowSolver,curr) );
+//		getFieldAutomaton().registerListener(new ImportIndirectAliases(flowSolver,curr));
 		handlingAtCallSites();
 	}
 
@@ -99,30 +86,68 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 		return flowSolver instanceof BackwardBoomerangSolver;
 	}
 
-	private final class CallSiteOrExitStmtImport implements WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> {
+	private final class ImportIndirectAliases extends StatementBasedFieldTransitionListener<W> {
+		private AbstractBoomerangSolver<W> flowSolver;
+		private Statement curr;
+
+		public ImportIndirectAliases(Statement succ, AbstractBoomerangSolver<W> flowSolver, Statement curr) {
+			super(succ);
+			this.flowSolver = flowSolver;
+			this.curr = curr;
+		}
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((curr == null) ? 0 : curr.hashCode());
+			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ImportIndirectAliases other = (ImportIndirectAliases) obj;
+			if (curr == null) {
+				if (other.curr != null)
+					return false;
+			} else if (!curr.equals(other.curr))
+				return false;
+			if (flowSolver == null) {
+				if (other.flowSolver != null)
+					return false;
+			} else if (!flowSolver.equals(other.flowSolver))
+				return false;
+			return true;
+		}
+
+		@Override
+		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+			if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(succ)) {
+				importStartingFrom(t);
+				Val alias = t.getStart().fact().fact();
+				Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(succ, alias);
+				Node<Statement, Val> rightOpNode = new Node<Statement, Val>(curr, storedVar);
+				flowSolver.addNormalCallFlow(rightOpNode, aliasedVarAtSucc);
+			}
+		}
+	}
+	private final class CallSiteOrExitStmtImport extends StatementBasedFieldTransitionListener<W> {
 		private final WitnessNode<Statement, Val, Field> reachableNode;
 		private final Statement stmt;
 		private AbstractBoomerangSolver<W> flowSolver;
 
 		private CallSiteOrExitStmtImport(AbstractBoomerangSolver<W> flowSolver,
 				WitnessNode<Statement, Val, Field> reachableNode, Statement stmt) {
+			super(stmt);
 			this.flowSolver = flowSolver;
 			this.reachableNode = reachableNode;
 			this.stmt = stmt;
-		}
-
-		@Override
-		public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> innerT, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-			Statement baseStmt = innerT.getStart().fact().stmt();
-			if (baseStmt.equals(stmt)) {
-				importStartingFrom(innerT);
-				if (!(innerT.getStart() instanceof GeneratedState)) {
-					Val alias = innerT.getStart().fact().fact();
-					Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(stmt, alias);
-					flowSolver.addNormalCallFlow(reachableNode.asNode(), aliasedVarAtSucc);
-				}
-			}
 		}
 
 		@Override
@@ -154,6 +179,16 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 			} else if (!stmt.equals(other.stmt))
 				return false;
 			return true;
+		}
+
+		@Override
+		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> innerT) {
+			importStartingFrom(innerT);
+			if (!(innerT.getStart() instanceof GeneratedState)) {
+				Val alias = innerT.getStart().fact().fact();
+				Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(stmt, alias);
+				flowSolver.addNormalCallFlow(reachableNode.asNode(), aliasedVarAtSucc);
+			}
 		}
 	}
 	private final class CallSiteOrExitStatementListener extends StatementBasedFieldTransitionListener<W> {
@@ -231,7 +266,8 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 				predIsCallStmt |= s.isCallsite();
 			}
 			if (predIsCallStmt || (isBackward() && icfg.isExitStmt(stmt.getUnit().get()))) {
-				baseSolver.registerStatementFieldTransitionListener(new CallSiteOrExitStatementListener(stmt, reachableNode, baseSolver, flowSolver));
+				baseSolver.getFieldAutomaton()
+						.registerListener(new CallSiteOrExitStmtImport(flowSolver, reachableNode, stmt));
 			}
 
 		}

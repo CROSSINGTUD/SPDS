@@ -561,18 +561,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			// TODO or All AliasQuery
 			// }
 			
-			queryToSolvers.get(sourceQuery).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
-
-				@Override
-				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-					if(t.getStart() instanceof GeneratedState)
-						return;
-					if(t.getStart().fact().stmt().equals(node.stmt()) && t.getLabel().equals(Field.empty())){
-						fieldWritePoi.addFlowAllocation(sourceQuery);
-					}
-				}
-			});
+			queryToSolvers.get(sourceQuery).getFieldAutomaton().registerListener(new ForwardHandleFieldWrite(sourceQuery, fieldWritePoi, node.stmt()));
 		}
 		if (node.fact().equals(fieldWritePoi.getBaseVar())) {
 			queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(
@@ -592,6 +581,69 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			}
 		});
 	}
+
+	private final class ForwardHandleFieldWrite implements WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> {
+		private final ForwardQuery sourceQuery;
+		private final WeightedBoomerang<W>.FieldWritePOI fieldWritePoi;
+		private final Statement stmt;
+
+		private ForwardHandleFieldWrite(ForwardQuery sourceQuery, WeightedBoomerang<W>.FieldWritePOI fieldWritePoi,
+				Statement statement) {
+			this.sourceQuery = sourceQuery;
+			this.fieldWritePoi = fieldWritePoi;
+			this.stmt = statement;
+		}
+
+		@Override
+		public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+			if(t.getStart() instanceof GeneratedState)
+				return;
+			if(t.getStart().fact().stmt().equals(stmt) && t.getLabel().equals(Field.empty())){
+				fieldWritePoi.addFlowAllocation(sourceQuery);
+			}
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((sourceQuery == null) ? 0 : sourceQuery.hashCode());
+			result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ForwardHandleFieldWrite other = (ForwardHandleFieldWrite) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (sourceQuery == null) {
+				if (other.sourceQuery != null)
+					return false;
+			} else if (!sourceQuery.equals(other.sourceQuery))
+				return false;
+			if (stmt == null) {
+				if (other.stmt != null)
+					return false;
+			} else if (!stmt.equals(other.stmt))
+				return false;
+			return true;
+		}
+
+		private WeightedBoomerang getOuterType() {
+			return WeightedBoomerang.this;
+		}
+		
+	}
+
 
 	private class TriggerBaseAllocationAtFieldWrite extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
