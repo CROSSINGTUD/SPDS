@@ -200,64 +200,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 			}
 		}
 	}
-	private final class CallSiteOrExitStatementListener extends StatementBasedFieldTransitionListener<W> {
-		private final WitnessNode<Statement, Val, Field> reachableNode;
-		private final Statement stmt;
-		private AbstractBoomerangSolver<W> baseSolver;
-		private AbstractBoomerangSolver<W> flowSolver;
-
-		private CallSiteOrExitStatementListener(Statement stmt, WitnessNode<Statement, Val, Field> reachableNode, AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver) {
-			super(stmt);
-			this.reachableNode = reachableNode;
-			this.stmt = stmt;
-			this.baseSolver = baseSolver;
-			this.flowSolver = flowSolver;
-		}
-
-		@Override
-		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-			baseSolver.getFieldAutomaton()
-					.registerListener(new CallSiteOrExitStmtImport(flowSolver, reachableNode, stmt));
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
-			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
-			result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			CallSiteOrExitStatementListener other = (CallSiteOrExitStatementListener) obj;
-			if (baseSolver == null) {
-				if (other.baseSolver != null)
-					return false;
-			} else if (!baseSolver.equals(other.baseSolver))
-				return false;
-			if (flowSolver == null) {
-				if (other.flowSolver != null)
-					return false;
-			} else if (!flowSolver.equals(other.flowSolver))
-				return false;
-			if (stmt == null) {
-				if (other.stmt != null)
-					return false;
-			} else if (!stmt.equals(other.stmt))
-				return false;
-			return true;
-		}
-		
-	}
 	private final class ShareCallSiteListener implements SyncPDSUpdateListener<Statement, Val, Field> {
 		private AbstractBoomerangSolver<W> baseSolver;
 		private AbstractBoomerangSolver<W> flowSolver;
