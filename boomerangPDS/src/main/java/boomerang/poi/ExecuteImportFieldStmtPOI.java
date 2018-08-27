@@ -52,6 +52,9 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 	}
 
 	public void solve() {
+		if(baseSolver.equals(flowSolver)){
+			return;
+		}
 		baseSolver.registerFieldTransitionListener(new MethodBasedFieldTransitionListener<W>(curr.getMethod()) {
 
 			@Override
@@ -128,6 +131,9 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 
 		@Override
 		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+			if(t.getLabel().equals(Field.epsilon())){
+				return;
+			}
 			if (!(t.getStart() instanceof GeneratedState) && t.getStart().fact().stmt().equals(succ)) {
 				importStartingFrom(t);
 				Val alias = t.getStart().fact().fact();
@@ -183,6 +189,9 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 
 		@Override
 		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> innerT) {
+			if(innerT.getLabel().equals(Field.epsilon())){
+				return;
+			}
 			importStartingFrom(innerT);
 			if (!(innerT.getStart() instanceof GeneratedState)) {
 				Val alias = innerT.getStart().fact().fact();
@@ -263,7 +272,7 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 			Statement stmt = reachableNode.stmt();
 			boolean predIsCallStmt = false;
 			for (Statement s : flowSolver.getPredsOf(stmt)) {
-				predIsCallStmt |= s.isCallsite();
+				predIsCallStmt |= s.isCallsite() && flowSolver.valueUsedInStatement(s.getUnit().get(), reachableNode.fact());
 			}
 			if (predIsCallStmt || (isBackward() && icfg.isExitStmt(stmt.getUnit().get()))) {
 				baseSolver.getFieldAutomaton()
