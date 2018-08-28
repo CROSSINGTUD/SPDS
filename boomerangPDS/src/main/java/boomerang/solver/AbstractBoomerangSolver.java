@@ -86,6 +86,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			.create();
 	private Multimap<Statement, StatementBasedFieldTransitionListener<W>> perStatementFieldTransitionsListener = HashMultimap
 			.create();
+	private Multimap<Statement, Transition<Statement, INode<Val>>> perStatementCallTransitions = HashMultimap
+			.create();
+	private Multimap<Statement, StatementBasedCallTransitionListener<W>> perStatementCallTransitionsListener = HashMultimap
+			.create();
 	private Set<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
 	private Multimap<SootMethod, Runnable> queuedReachableMethod = HashMultimap.create();
 	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
@@ -109,12 +113,19 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 				addTransitionToStatement(t.getStart().fact().stmt(), t);
 			}
 		});
-
+		this.callAutomaton.registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
+			@Override
+			public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
+					WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+				addCallTransitionToStatement(t.getLabel(),t);
+			}
+		});
 		// TODO recap, I assume we can implement this more easily.
 		this.generatedFieldState = genField;
 		addReachable(query.asNode().stmt().getMethod());
 	}
 	
+
 	@Override
 	protected boolean preventCallTransitionAdd(Transition<Statement, INode<Val>> t, W weight) {
 		if (t.getStart() instanceof GeneratedState)
@@ -197,7 +208,24 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			}
 		}
 	}
+	
+	private void addCallTransitionToStatement(Statement s, Transition<Statement, INode<Val>> t) {
+		if (perStatementCallTransitions.put(s, t)) {
+			for (StatementBasedCallTransitionListener<W> l : Lists
+					.newArrayList(perStatementCallTransitionsListener.get(s))) {
+				l.onAddedTransition(t);
+			}
+		}
+	}
 
+	public void registerStatementCallTransitionListener(StatementBasedCallTransitionListener<W> l) {
+		if (perStatementCallTransitionsListener.put(l.getStmt(), l)) {
+			for (Transition<Statement, INode<Val>> t : Lists
+					.newArrayList(perStatementCallTransitions.get(l.getStmt()))) {
+				l.onAddedTransition(t);
+			}
+		}
+	}
 	public INode<Node<Statement, Val>> generateFieldState(final INode<Node<Statement, Val>> d, final Field loc) {
 		Entry<INode<Node<Statement, Val>>, Field> e = new AbstractMap.SimpleEntry<>(d, loc);
 		if (!generatedFieldState.containsKey(e)) {

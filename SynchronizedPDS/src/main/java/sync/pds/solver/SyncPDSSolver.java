@@ -652,7 +652,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		WitnessNode<Stmt, Fact, Field> witnessNode = new WitnessNode<Stmt,Fact,Field>(node.stmt(),node.fact());
 		return witnessNode;
 	}
-	public void setFieldContextReachable(Node<Stmt,Fact> node) {
+	private void setFieldContextReachable(Node<Stmt,Fact> node) {
 		if (!fieldContextReachable.add(node)) {
 			return;
 		}

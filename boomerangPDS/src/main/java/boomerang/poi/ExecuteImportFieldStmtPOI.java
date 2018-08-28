@@ -6,6 +6,7 @@ import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.MethodBasedFieldTransitionListener;
+import boomerang.solver.StatementBasedCallTransitionListener;
 import boomerang.solver.StatementBasedFieldTransitionListener;
 import soot.SootMethod;
 import soot.Unit;
@@ -23,6 +24,126 @@ import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public class ExecuteImportFieldStmtPOI<W extends Weight> {
+	private final class ImportTransitionFromCall extends StatementBasedCallTransitionListener<W> {
+		private AbstractBoomerangSolver<W> flowSolver;
+		private Statement stmt;
+		private INode<Val> target;
+
+		public ImportTransitionFromCall(AbstractBoomerangSolver<W> flowSolver, Statement stmt, INode<Val> target) {
+			super(stmt);
+			this.flowSolver = flowSolver;
+			this.stmt = stmt;
+			this.target = target;
+		}
+
+		@Override
+		public void onAddedTransition(Transition<Statement, INode<Val>> t) {
+			if(t.getStart() instanceof GeneratedState)
+				return;
+			if(t.getLabel().equals(stmt)){
+				flowSolver.getCallAutomaton().addTransition(new Transition<Statement, INode<Val>>(t.getStart(), t.getLabel(), target));
+			}
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
+			result = prime * result + ((target == null) ? 0 : target.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ImportTransitionFromCall other = (ImportTransitionFromCall) obj;
+			if (flowSolver == null) {
+				if (other.flowSolver != null)
+					return false;
+			} else if (!flowSolver.equals(other.flowSolver))
+				return false;
+			if (target == null) {
+				if (other.target != null)
+					return false;
+			} else if (!target.equals(other.target))
+				return false;
+			return true;
+		}
+
+		
+	}
+	private class ForAnyCallSiteOrExitStmt implements WPAUpdateListener<Statement, INode<Val>, W> {
+
+		private AbstractBoomerangSolver<W> baseSolver;
+		private AbstractBoomerangSolver<W> flowSolver;
+
+		public ForAnyCallSiteOrExitStmt(AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver) {
+			this.baseSolver = baseSolver;
+			this.flowSolver = flowSolver;
+		}
+
+		@Override
+		public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
+				WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+			if(t.getStart() instanceof GeneratedState)
+				return;
+			Statement returnSiteOrExitStmt = t.getString();
+			if(!returnSiteOrExitStmt.getUnit().isPresent()){
+				return;
+			}
+			boolean predIsCallStmt = false;
+			for (Statement s : flowSolver.getPredsOf(returnSiteOrExitStmt)) {
+				predIsCallStmt |= s.isCallsite() && flowSolver.valueUsedInStatement(s.getUnit().get(), t.getStart().fact());
+			}
+			
+			if (predIsCallStmt || (isBackward() && icfg.isExitStmt(returnSiteOrExitStmt.getUnit().get()))) {
+				importSolvers(returnSiteOrExitStmt,t.getTarget());
+			}
+		}
+
+		private void importSolvers(Statement callSiteOrExitStmt, INode<Val> node) {
+			baseSolver.registerStatementCallTransitionListener(new ImportTransitionFromCall(flowSolver,callSiteOrExitStmt, node));
+			baseSolver.registerStatementFieldTransitionListener(new CallSiteOrExitStmtImport(flowSolver, callSiteOrExitStmt));
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
+			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ForAnyCallSiteOrExitStmt other = (ForAnyCallSiteOrExitStmt) obj;
+			if (baseSolver == null) {
+				if (other.baseSolver != null)
+					return false;
+			} else if (!baseSolver.equals(other.baseSolver))
+				return false;
+			if (flowSolver == null) {
+				if (other.flowSolver != null)
+					return false;
+			} else if (!flowSolver.equals(other.flowSolver))
+				return false;
+			return true;
+		}
+
+	}
 
 	protected final AbstractBoomerangSolver<W> baseSolver;
 	protected final AbstractBoomerangSolver<W> flowSolver;
@@ -77,12 +198,11 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 
 	protected void flowsTo() {
 		baseSolver.registerStatementFieldTransitionListener(new ImportIndirectAliases(succ, flowSolver,curr) );
-//		getFieldAutomaton().registerListener(new ImportIndirectAliases(flowSolver,curr));
 		handlingAtCallSites();
 	}
 
 	private void handlingAtCallSites() {
-		flowSolver.registerListener(new ShareCallSiteListener(baseSolver, flowSolver));
+		flowSolver.getCallAutomaton().registerListener(new ForAnyCallSiteOrExitStmt(baseSolver, flowSolver));
 	}
 
 	protected boolean isBackward() {
@@ -144,16 +264,12 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 		}
 	}
 	private final class CallSiteOrExitStmtImport extends StatementBasedFieldTransitionListener<W> {
-		private final WitnessNode<Statement, Val, Field> reachableNode;
-		private final Statement stmt;
 		private AbstractBoomerangSolver<W> flowSolver;
 
 		private CallSiteOrExitStmtImport(AbstractBoomerangSolver<W> flowSolver,
-				WitnessNode<Statement, Val, Field> reachableNode, Statement stmt) {
+				 Statement stmt) {
 			super(stmt);
 			this.flowSolver = flowSolver;
-			this.reachableNode = reachableNode;
-			this.stmt = stmt;
 		}
 
 		@Override
@@ -161,7 +277,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 			final int prime = 31;
 			int result = 1;
 			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
-			result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
 			return result;
 		}
 
@@ -179,11 +294,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 					return false;
 			} else if (!flowSolver.equals(other.flowSolver))
 				return false;
-			if (stmt == null) {
-				if (other.stmt != null)
-					return false;
-			} else if (!stmt.equals(other.stmt))
-				return false;
 			return true;
 		}
 
@@ -192,68 +302,10 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 			if(innerT.getLabel().equals(Field.epsilon())){
 				return;
 			}
-			importStartingFrom(innerT);
 			if (!(innerT.getStart() instanceof GeneratedState)) {
-				Val alias = innerT.getStart().fact().fact();
-				Node<Statement, Val> aliasedVarAtSucc = new Node<Statement, Val>(stmt, alias);
-				flowSolver.addNormalCallFlow(reachableNode.asNode(), aliasedVarAtSucc);
+				importStartingFrom(innerT);
 			}
 		}
-	}
-	private final class ShareCallSiteListener implements SyncPDSUpdateListener<Statement, Val, Field> {
-		private AbstractBoomerangSolver<W> baseSolver;
-		private AbstractBoomerangSolver<W> flowSolver;
-
-		public ShareCallSiteListener(AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver) {
-			this.baseSolver = baseSolver;
-			this.flowSolver = flowSolver;
-		}
-
-		@Override
-		public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
-			Statement stmt = reachableNode.stmt();
-			boolean predIsCallStmt = false;
-			for (Statement s : flowSolver.getPredsOf(stmt)) {
-				predIsCallStmt |= s.isCallsite() && flowSolver.valueUsedInStatement(s.getUnit().get(), reachableNode.fact());
-			}
-			if (predIsCallStmt || (isBackward() && icfg.isExitStmt(stmt.getUnit().get()))) {
-				baseSolver.getFieldAutomaton()
-						.registerListener(new CallSiteOrExitStmtImport(flowSolver, reachableNode, stmt));
-			}
-
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
-			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			ShareCallSiteListener other = (ShareCallSiteListener) obj;
-			if (baseSolver == null) {
-				if (other.baseSolver != null)
-					return false;
-			} else if (!baseSolver.equals(other.baseSolver))
-				return false;
-			if (flowSolver == null) {
-				if (other.flowSolver != null)
-					return false;
-			} else if (!flowSolver.equals(other.flowSolver))
-				return false;
-			return true;
-		}
-
 	}
 
 	protected void importStartingFrom(Transition<Field, INode<Node<Statement, Val>>> t) {
