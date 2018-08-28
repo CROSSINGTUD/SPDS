@@ -22,7 +22,6 @@ import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
-import soot.javaToJimple.LocalGenerator;
 import soot.jimple.AssignStmt;
 import soot.jimple.Constant;
 import soot.jimple.InstanceFieldRef;

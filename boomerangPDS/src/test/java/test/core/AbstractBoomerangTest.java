@@ -91,27 +91,33 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				} else{
 					allocationSites = extractQuery(new AllocationSiteOf());
 				}
-				for (AnalysisMode analysis : getAnalyses()) {
-					switch (analysis) {
-					case WholeProgram:
-						if(!queryDetector.integerQueries)
-							runWholeProgram();
-						break;
-					case DemandDrivenBackward:
-						runDemandDrivenBackward();
-						break;
+				for(int i = 0; i< getIterations();i++) {
+					for (AnalysisMode analysis : getAnalyses()) {
+						switch (analysis) {
+						case WholeProgram:
+							if(!queryDetector.integerQueries)
+								runWholeProgram();
+							break;
+						case DemandDrivenBackward:
+							runDemandDrivenBackward();
+							break;
+						}
 					}
-				}
-				if(queryDetector.resultsMustNotBeEmpty)
-					return;
-				if (!unsoundErrors.isEmpty()) {
-					throw new RuntimeException(Joiner.on("\n").join(unsoundErrors));
-				}
-				if (!imprecisionErrors.isEmpty() && FAIL_ON_IMPRECISE) {
-					throw new AssertionError(Joiner.on("\n").join(imprecisionErrors));
+					if(queryDetector.resultsMustNotBeEmpty)
+						return;
+					if (!unsoundErrors.isEmpty()) {
+						throw new RuntimeException(Joiner.on("\n").join(unsoundErrors));
+					}
+					if (!imprecisionErrors.isEmpty() && FAIL_ON_IMPRECISE) {
+						throw new AssertionError(Joiner.on("\n").join(imprecisionErrors));
+					}
 				}
 			}
 		};
+	}
+
+	public int getIterations() {
+		return 1;
 	}
 
 	private void runDemandDrivenBackward() {

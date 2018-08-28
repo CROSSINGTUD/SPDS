@@ -32,6 +32,7 @@ public class MayBe extends ExpectedResults<TransitionFunction,Val> {
 //			if(t.equals(Transition.identity()))
 //				continue;
 			State s = t.to();
+			if(s != null)
 			if(state == InternalState.ACCEPTING){
 				satisfied |= !s.isErrorState();
 			} else if(state == InternalState.ERROR){

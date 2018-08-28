@@ -70,11 +70,6 @@ public class SimpleBoomerangStats<W extends Weight> implements IBoomerangStats<W
     }
 
     @Override
-    public void registerCallSitePOI(WeightedBoomerang<W>.ForwardCallSitePOI key) {
-
-    }
-
-    @Override
     public void registerFieldWritePOI(WeightedBoomerang<W>.FieldWritePOI key) {
 
     }

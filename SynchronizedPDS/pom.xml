@@ -51,6 +51,9 @@
 			<id>soot-release</id>
 			<name>soot release</name>
 			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
 		</repository>
 	</repositories>
 </project>

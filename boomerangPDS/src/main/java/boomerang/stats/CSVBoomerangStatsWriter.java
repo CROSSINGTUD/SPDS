@@ -15,7 +15,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -74,7 +73,6 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 	private Set<SootMethod> fieldVisitedMethods = Sets.newHashSet();
 	private int arrayFlows;
 	private int staticFlows;
-	private int callSitePOIs;
 	private int fieldWritePOIs;
 	private int fieldReadPOIs;
 	
@@ -180,11 +178,6 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 
 
 	@Override
-	public void registerCallSitePOI(WeightedBoomerang<W>.ForwardCallSitePOI key) {
-		callSitePOIs++;
-	}
-
-	@Override
 	public void registerFieldWritePOI(WeightedBoomerang<W>.FieldWritePOI key) {
 		fieldWritePOIs++;
 	}
@@ -209,7 +202,6 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 		s+= String.format("Visited Methods (Field/Call): \t\t %s/%s\n", fieldVisitedMethods.size(), callVisitedMethods.size());
 		s+= String.format("Reached Forward Nodes(Collisions): \t\t %s (%s)\n", reachedForwardNodes.size(),reachedForwardNodeCollisions);
 		s+= String.format("Reached Backward Nodes(Collisions): \t\t %s (%s)\n", reachedBackwardNodes.size(),reachedBackwardNodeCollisions);
-		s+= String.format("Point of Indirections (Store/Load/Callsite): \t\t %s/%s/%s\n", fieldWritePOIs,fieldReadPOIs,callSitePOIs);
 		s+= String.format("Global Field Rules(Collisions): \t\t %s (%s)\n", globalFieldRules.size(),fieldRulesCollisions);
 		s+= String.format("Global Field Transitions(Collisions): \t\t %s (%s)\n", globalFieldTransitions.size(),fieldTransitionCollisions);
 		s+= String.format("Global Call Rules(Collisions): \t\t %s (%s)\n", globalCallRules.size(),callRulesCollisions);

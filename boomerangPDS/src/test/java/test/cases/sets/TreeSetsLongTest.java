@@ -24,7 +24,6 @@ import test.core.AbstractBoomerangTest;
 
 public class TreeSetsLongTest extends AbstractBoomerangTest{
 	@Test
-	@Ignore
 	public void addAndRetrieve(){
 		Set<Object> set = new TreeSet<Object>();
 		Alloc alias = new Alloc();
@@ -49,5 +48,8 @@ public class TreeSetsLongTest extends AbstractBoomerangTest{
 	@Override
 	protected boolean includeJDK() {
 		return true;
+	}
+	public int getIterations(){
+		return 10;
 	}
 }

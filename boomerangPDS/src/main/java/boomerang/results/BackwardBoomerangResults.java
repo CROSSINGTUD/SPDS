@@ -1,5 +1,16 @@
 package boomerang.results;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
 import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
 import boomerang.Query;
@@ -11,10 +22,6 @@ import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.stats.IBoomerangStats;
 import boomerang.util.AccessPath;
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import heros.utilities.DefaultValueMap;
 import soot.PointsToSet;
 import soot.Type;
@@ -33,12 +40,6 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.Empty;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
 
 public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 
@@ -91,6 +92,7 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		for(ForwardQuery q : results) {
 			PAutomaton<Statement,INode<Val>> context = constructContextGraph(queryToSolvers.get(q));
 			assert allocationSites.get(q) == null;
+//			System.out.println(context.toRegEx(new SingleNode<Val>(query.var()), new SingleNode<Val>(q.asNode().fact())));
 			allocationSites.put(q, context);
 		}
 	}
@@ -230,6 +232,18 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		}
 	}
 	
+	public boolean aliases(Query el) {
+		for (final Query fw : getAllocationSites().keySet()) {
+			if(fw instanceof BackwardQuery)
+				continue;
+			if(queryToSolvers.getOrCreate(fw).getReachedStates().contains(el.asNode())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	@Deprecated
 	public Set<AccessPath> getAllAliases() {
 		final Set<AccessPath> results = Sets.newHashSet();
 		for (final Query fw : getAllocationSites().keySet()) {
@@ -413,4 +427,5 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 	public long getMaxMemory() {
 		return maxMemory;
 	}
+
 }
