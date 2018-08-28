@@ -21,8 +21,7 @@ public abstract class SimpleSeedFactory {
     public Collection<Query> computeSeeds() {
         List<Query> seeds = new ArrayList<>();
 
-        List<SootMethod> worklist = new ArrayList<>();
-        worklist.addAll(Scene.v().getEntryPoints());
+        List<SootMethod> worklist = new ArrayList<>(Scene.v().getEntryPoints());
 
         Set<SootMethod> visited = new HashSet<>();
         while (!worklist.isEmpty()){
