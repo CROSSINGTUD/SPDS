@@ -186,7 +186,8 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
             Type type = forwardQuery.getType();
             if (type instanceof RefType){
                 SootMethod calleeMethod = getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) type).getSootClass());
-                addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
+                if (calleeMethod != null)
+                    addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
             } else if (type instanceof ArrayType){
                 Type base = ((ArrayType) type).baseType;
                 if (base instanceof RefType){
@@ -198,6 +199,7 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
     }
 
     private SootMethod getMethodFromClassOrFromSuperclass(SootMethod method, SootClass sootClass){
+        SootClass originalClass = sootClass;
         while(sootClass != null){
             for (SootMethod candidate : sootClass.getMethods()){
                 if (candidate.getSubSignature().equals(method.getSubSignature())){
@@ -207,10 +209,12 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
             if (sootClass.hasSuperclass()){
                 sootClass = sootClass.getSuperclass();
             } else {
-                sootClass = null; //No further class to look in, will throw exception
+                logger.error("Did not find method {} for class {}", method, originalClass);
+                return null;
             }
         }
-        throw new RuntimeException("No method found in class or superclasses");
+        logger.error("Did not find method {} for class {}", method, originalClass);
+        return null;
     }
 
     @Override
