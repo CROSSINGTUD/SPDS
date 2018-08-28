@@ -26,7 +26,7 @@
                     <argLine>-Xmx8G -Xss128m</argLine>
                     <forkCount>1.5C</forkCount>
                     <reuseForks>true</reuseForks>
-                    <reportsDirectory>../shippable/testresults</reportsDirectory>
+                    <reportsDirectory>../shippable/testresults/idealPDS</reportsDirectory>
                 </configuration>
             </plugin>
         </plugins>
@@ -79,11 +79,17 @@
             <id>soot-snapshot</id>
             <name>soot snapshots</name>
             <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
         </repository>
         <repository>
             <id>soot-release</id>
             <name>soot release</name>
             <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
         </repository>
     </repositories>
 </project>

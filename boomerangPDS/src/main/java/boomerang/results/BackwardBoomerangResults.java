@@ -7,11 +7,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
 
 import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
@@ -25,7 +23,6 @@ import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.stats.IBoomerangStats;
 import boomerang.util.AccessPath;
 import heros.utilities.DefaultValueMap;
-import soot.Local;
 import soot.PointsToSet;
 import soot.Type;
 import soot.jimple.ClassConstant;
@@ -235,6 +232,18 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		}
 	}
 	
+	public boolean aliases(Query el) {
+		for (final Query fw : getAllocationSites().keySet()) {
+			if(fw instanceof BackwardQuery)
+				continue;
+			if(queryToSolvers.getOrCreate(fw).getReachedStates().contains(el.asNode())) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	@Deprecated
 	public Set<AccessPath> getAllAliases() {
 		final Set<AccessPath> results = Sets.newHashSet();
 		for (final Query fw : getAllocationSites().keySet()) {
@@ -418,4 +427,5 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 	public long getMaxMemory() {
 		return maxMemory;
 	}
+	
 }
