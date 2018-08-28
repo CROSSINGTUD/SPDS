@@ -193,22 +193,26 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 
 	private void handlingAtFieldStatements() {
 		baseSolver.registerStatementFieldTransitionListener(new ImportIndirectAliases(succ, this) );
-		flowSolver.registerStatementCallTransitionListener(new ImportIndirectCallAliases(curr, this) );
+		flowSolver.registerStatementCallTransitionListener(new ImportIndirectCallAliases(curr, this.flowSolver) );
+	}
+	
+	private void handlingAtCallSites() {
+		flowSolver.getCallAutomaton().registerListener(new ForAnyCallSiteOrExitStmt(this));
 	}
 
 	private final class ImportIndirectCallAliases extends StatementBasedCallTransitionListener<W>{
 
-		private ExecuteImportFieldStmtPOI<W> poi;
+		private AbstractBoomerangSolver<W> flowSolver;
 
-		public ImportIndirectCallAliases(Statement stmt, ExecuteImportFieldStmtPOI<W> poi) {
+		public ImportIndirectCallAliases(Statement stmt, AbstractBoomerangSolver<W> flowSolver) {
 			super(stmt);
-			this.poi = poi;
+			this.flowSolver = flowSolver;
 		}
 
 		@Override
 		public void onAddedTransition(Transition<Statement, INode<Val>> t) {
 			if(t.getStart().fact().equals(storedVar)){
-				baseSolver.registerStatementCallTransitionListener(new ImportIndirectCallAliasesAtSucc(succ,this,t.getTarget()));
+				baseSolver.registerStatementCallTransitionListener(new ImportIndirectCallAliasesAtSucc(succ,t.getTarget()));
 			}
 		}
 
@@ -216,7 +220,7 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
-			result = prime * result + ((poi == null) ? 0 : poi.hashCode());
+			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
 			return result;
 		}
 
@@ -229,10 +233,10 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 			if (getClass() != obj.getClass())
 				return false;
 			ImportIndirectCallAliases other = (ImportIndirectCallAliases) obj;
-			if (poi == null) {
-				if (other.poi != null)
+			if (flowSolver == null) {
+				if (other.flowSolver != null)
 					return false;
-			} else if (!poi.equals(other.poi))
+			} else if (!flowSolver.equals(other.flowSolver))
 				return false;
 			return true;
 		}
@@ -241,12 +245,10 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 	private final class ImportIndirectCallAliasesAtSucc extends StatementBasedCallTransitionListener<W>{
 
 		private INode<Val> target;
-		private ExecuteImportFieldStmtPOI<W>.ImportIndirectCallAliases poi;
 
 		public ImportIndirectCallAliasesAtSucc(
-				Statement succ, ExecuteImportFieldStmtPOI<W>.ImportIndirectCallAliases poi, INode<Val> target) {
+				Statement succ, INode<Val> target) {
 			super(succ);
-			this.poi = poi;
 			this.target = target;
 		}
 
@@ -259,7 +261,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
-			result = prime * result + ((poi == null) ? 0 : poi.hashCode());
 			result = prime * result + ((target == null) ? 0 : target.hashCode());
 			return result;
 		}
@@ -273,11 +274,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 			if (getClass() != obj.getClass())
 				return false;
 			ImportIndirectCallAliasesAtSucc other = (ImportIndirectCallAliasesAtSucc) obj;
-			if (poi == null) {
-				if (other.poi != null)
-					return false;
-			} else if (!poi.equals(other.poi))
-				return false;
 			if (target == null) {
 				if (other.target != null)
 					return false;
@@ -286,10 +282,6 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 			return true;
 		}
 
-	}
-	
-	private void handlingAtCallSites() {
-		flowSolver.getCallAutomaton().registerListener(new ForAnyCallSiteOrExitStmt(this));
 	}
 
 	protected boolean isBackward() {
