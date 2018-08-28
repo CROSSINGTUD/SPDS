@@ -11,6 +11,7 @@
  *******************************************************************************/
 package boomerang;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -779,6 +780,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		if (analysisWatch.isRunning()) {
 			analysisWatch.stop();
 		}
+		
 		return new BackwardBoomerangResults<W>(query, timedout, this.queryToSolvers, getStats(), analysisWatch);
 	}
 
@@ -1050,6 +1052,27 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		// System.out.println(q +" Call Aut (failed Additions): " +
 		// queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
 		// }
+
+		for (Query q : queryToSolvers.keySet()) {
+			System.out.println("LONGEST CALL" + queryToSolvers.getOrCreate(q).getCallAutomaton().getLongestPath().size());
+			Set<Statement> longestPath2 = queryToSolvers.getOrCreate(q).getCallAutomaton().getLongestPath();
+			String callPath = "";
+			for(Statement t : longestPath2) {
+				if(!t.equals(Statement.epsilon())) {
+					callPath += "."+t.getUnit().get();
+				}
+			}
+			System.out.println("LONGEST CALL " + longestPath2.size() +" "+ callPath);
+			Set<Field> longestPath = queryToSolvers.getOrCreate(q).getFieldAutomaton().getLongestPath();
+			String ap = "";
+			for(Field t : longestPath) {
+				if(t.equals(Field.empty())) {
+					
+				} else
+				ap += "."+t.getSootField().getName();
+			}
+			System.out.println("LONGEST FIELD " + longestPath.size() +" "+ ap);
+		}
 		if (!DEBUG)
 			return;
 
