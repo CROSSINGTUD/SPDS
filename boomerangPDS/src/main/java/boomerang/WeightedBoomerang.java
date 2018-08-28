@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
@@ -48,7 +47,7 @@ import boomerang.poi.ExecuteImportFieldStmtPOI;
 import boomerang.poi.PointOfIndirection;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
-import boomerang.seedfactory.SeedFactory;
+import boomerang.seedfactory.SimpleSeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
@@ -212,12 +211,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				}
 			});
 
-			SeedFactory<W> seedFactory = getSeedFactory();
-			if (seedFactory != null) {
-				for (SootMethod m : seedFactory.getMethodScope(key)) {
-					solver.addReachable(m);
-				}
-			}
 			onCreateSubSolver(solver);
 			return solver;
 		}
