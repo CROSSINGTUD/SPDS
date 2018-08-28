@@ -16,14 +16,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import boomerang.callgraph.BackwardsObservableICFG;
-import boomerang.callgraph.CallerListener;
+
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
@@ -31,9 +29,10 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 
+import boomerang.callgraph.BackwardsObservableICFG;
+import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.customize.BackwardEmptyCalleeFlow;
 import boomerang.customize.EmptyCalleeFlow;
@@ -963,7 +962,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			}
 		}
 	}
-	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
 
 	public void registerActivationListener(
 			WeightedBoomerang<W>.SolverPair solverPair, ExecuteImportFieldStmtPOI<W> exec) {
@@ -1025,7 +1023,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 
-	public void createPOI(BiDiInterproceduralCFG<Unit, SootMethod> icfg, AbstractBoomerangSolver<W> baseSolver,
+	public void createPOI(ObservableICFG<Unit, SootMethod> icfg, AbstractBoomerangSolver<W> baseSolver,
 			AbstractBoomerangSolver<W> flowSolver, WeightedBoomerang<W>.FieldReadPOI fieldReadPOI, Statement succ) {
 		// TODO Auto-generated method stub
 

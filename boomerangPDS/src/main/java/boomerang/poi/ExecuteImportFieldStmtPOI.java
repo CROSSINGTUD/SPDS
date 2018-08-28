@@ -1,5 +1,6 @@
 package boomerang.poi;
 
+import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -8,8 +9,7 @@ import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.StatementBasedCallTransitionListener;
 import boomerang.solver.StatementBasedFieldTransitionListener;
 import soot.SootMethod;
-import soot.Unit;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import soot.Unit;;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -150,10 +150,10 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 	private final Val baseVar;
 	private final Val storedVar;
 	private final Field field;
-	private final BiDiInterproceduralCFG<Unit, SootMethod> icfg;
+	private final ObservableICFG<Unit, SootMethod> icfg;
 	boolean active = false;
 
-	public ExecuteImportFieldStmtPOI(BiDiInterproceduralCFG<Unit, SootMethod> icfg,
+	public ExecuteImportFieldStmtPOI(ObservableICFG<Unit, SootMethod> icfg,
 			final AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
 			AbstractPOI<Statement, Val, Field> poi, Statement succ) {
 		this.icfg = icfg;
