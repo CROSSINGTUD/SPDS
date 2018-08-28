@@ -52,14 +52,4 @@ public class FileMustBeClosedTestDemandDriven extends IDEALTestingFramework{
 	protected TypeStateMachineWeightFunctions getStateMachine() {
 		return new FileMustBeClosedStateMachine();
 	}
-
-	@Override
-	protected String getCallGraphAlgorithm(){
-		return "spark";
-	}
-
-	@Override
-	protected String[] getCallGraphOptions() {
-		return new String[]{"rta", "on-fly-cg:false"};
-	}
 }
