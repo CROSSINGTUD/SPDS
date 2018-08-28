@@ -21,7 +21,7 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
-public class ExecuteImportFieldStmtPOI<W extends Weight> {
+public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 	private final class ImportTransitionFromCall extends StatementBasedCallTransitionListener<W> {
 		private AbstractBoomerangSolver<W> flowSolver;
 		private Statement stmt;
@@ -78,10 +78,10 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 	}
 	private class ForAnyCallSiteOrExitStmt implements WPAUpdateListener<Statement, INode<Val>, W> {
 
-		private ExecuteImportFieldStmtPOI<W> poi;
+		private AbstractBoomerangSolver<W> baseSolver;
 
-		public ForAnyCallSiteOrExitStmt(ExecuteImportFieldStmtPOI<W> poi) {
-			this.poi = poi;
+		public ForAnyCallSiteOrExitStmt(AbstractBoomerangSolver<W> baseSolver) {
+			this.baseSolver = baseSolver;
 		}
 
 		@Override
@@ -105,14 +105,14 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 
 		private void importSolvers(Statement callSiteOrExitStmt, INode<Val> node) {
 			baseSolver.registerStatementCallTransitionListener(new ImportTransitionFromCall(flowSolver,callSiteOrExitStmt, node));
-			baseSolver.registerStatementFieldTransitionListener(new CallSiteOrExitStmtImport(flowSolver, callSiteOrExitStmt, ExecuteImportFieldStmtPOI.this));
+			baseSolver.registerStatementFieldTransitionListener(new CallSiteOrExitStmtImport(flowSolver, baseSolver, callSiteOrExitStmt));
 		}
 
 		@Override
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
-			result = prime * result + ((poi == null) ? 0 : poi.hashCode());
+			result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
 			return result;
 		}
 
@@ -125,10 +125,10 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 			if (getClass() != obj.getClass())
 				return false;
 			ForAnyCallSiteOrExitStmt other = (ForAnyCallSiteOrExitStmt) obj;
-			if (poi == null) {
-				if (other.poi != null)
+			if (baseSolver == null) {
+				if (other.baseSolver != null)
 					return false;
-			} else if (!poi.equals(other.poi))
+			} else if (!baseSolver.equals(other.baseSolver))
 				return false;
 			return true;
 		}
@@ -192,12 +192,12 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 	}
 
 	private void handlingAtFieldStatements() {
-		baseSolver.registerStatementFieldTransitionListener(new ImportIndirectAliases(succ, this) );
+		baseSolver.registerStatementFieldTransitionListener(new ImportIndirectAliases(succ, this.flowSolver,this.baseSolver) );
 		flowSolver.registerStatementCallTransitionListener(new ImportIndirectCallAliases(curr, this.flowSolver) );
 	}
 	
 	private void handlingAtCallSites() {
-		flowSolver.getCallAutomaton().registerListener(new ForAnyCallSiteOrExitStmt(this));
+		flowSolver.getCallAutomaton().registerListener(new ForAnyCallSiteOrExitStmt(this.baseSolver));
 	}
 
 	private final class ImportIndirectCallAliases extends StatementBasedCallTransitionListener<W>{
@@ -289,11 +289,14 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 	}
 
 	private final class ImportIndirectAliases extends StatementBasedFieldTransitionListener<W> {
-		private ExecuteImportFieldStmtPOI<W> poi;
 
-		public ImportIndirectAliases(Statement succ, ExecuteImportFieldStmtPOI<W> poi) {
+		private AbstractBoomerangSolver<W> flowSolver;
+		private AbstractBoomerangSolver<W> baseSolver;
+
+		public ImportIndirectAliases(Statement succ,AbstractBoomerangSolver<W> flowSolver,AbstractBoomerangSolver<W> baseSolver) {
 			super(succ);
-			this.poi = poi;
+			this.flowSolver = flowSolver;
+			this.baseSolver = baseSolver;
 		}
 
 		@Override
@@ -310,7 +313,8 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
-			result = prime * result + ((poi == null) ? 0 : poi.hashCode());
+			result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
+			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
 			return result;
 		}
 
@@ -323,22 +327,29 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 			if (getClass() != obj.getClass())
 				return false;
 			ImportIndirectAliases other = (ImportIndirectAliases) obj;
-			if (poi == null) {
-				if (other.poi != null)
+			if (baseSolver == null) {
+				if (other.baseSolver != null)
 					return false;
-			} else if (!poi.equals(other.poi))
+			} else if (!baseSolver.equals(other.baseSolver))
+				return false;
+			if (flowSolver == null) {
+				if (other.flowSolver != null)
+					return false;
+			} else if (!flowSolver.equals(other.flowSolver))
 				return false;
 			return true;
 		}
 
 	}
 	private final class CallSiteOrExitStmtImport extends StatementBasedFieldTransitionListener<W> {
-		private ExecuteImportFieldStmtPOI<W> poi;
 
-		private CallSiteOrExitStmtImport(AbstractBoomerangSolver<W> flowSolver,
-				 Statement stmt, ExecuteImportFieldStmtPOI<W> poi) {
+		private AbstractBoomerangSolver<W> flowSolver;
+		private AbstractBoomerangSolver<W> baseSolver;
+		private CallSiteOrExitStmtImport(AbstractBoomerangSolver<W> flowSolver,AbstractBoomerangSolver<W> baseSolver,
+				 Statement stmt) {
 			super(stmt);
-			this.poi = poi;
+			this.flowSolver = flowSolver;
+			this.baseSolver = baseSolver;
 		}
 		@Override
 		public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> innerT) {
@@ -349,55 +360,63 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 				importStartingFrom(innerT);
 			}
 		}
-
 		@Override
 		public int hashCode() {
 			final int prime = 31;
-			int result = 1;
-			result = prime * result + ((poi == null) ? 0 : poi.hashCode());
+			int result = super.hashCode();
+			result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
+			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
 			return result;
 		}
-
 		@Override
 		public boolean equals(Object obj) {
 			if (this == obj)
 				return true;
-			if (obj == null)
+			if (!super.equals(obj))
 				return false;
 			if (getClass() != obj.getClass())
 				return false;
 			CallSiteOrExitStmtImport other = (CallSiteOrExitStmtImport) obj;
-			if (poi == null) {
-				if (other.poi != null)
+			if (baseSolver == null) {
+				if (other.baseSolver != null)
 					return false;
-			} else if (!poi.equals(other.poi))
+			} else if (!baseSolver.equals(other.baseSolver))
+				return false;
+			if (flowSolver == null) {
+				if (other.flowSolver != null)
+					return false;
+			} else if (!flowSolver.equals(other.flowSolver))
 				return false;
 			return true;
 		}
-
 	}
 
 	protected void importStartingFrom(Transition<Field, INode<Node<Statement, Val>>> t) {
 		if (t.getLabel().equals(Field.empty())) {
-			INode<Node<Statement, Val>> intermediateState = flowSolver.getFieldAutomaton()
-					.createState(new SingleNode<Node<Statement, Val>>(new Node<Statement, Val>(succ, baseVar)), field);
-			flowSolver.getFieldAutomaton().addTransition(
-					new Transition<Field, INode<Node<Statement, Val>>>(t.getStart(), field, intermediateState));
+			activate(t.getStart());
 		} else  {
 			flowSolver.getFieldAutomaton().addTransition(t);
 			baseSolver.getFieldAutomaton()
-					.registerListener(new ImportToSolver(t.getTarget(), this.baseSolver, this.flowSolver, this));
+					.registerListener(new ImportToSolver(t.getTarget(),this.flowSolver));
 		}
 	}
 
+	public abstract void activate(INode<Node<Statement, Val>> start); 
+	
+	public void trigger(INode<Node<Statement, Val>> start){
+		INode<Node<Statement, Val>> intermediateState = flowSolver.getFieldAutomaton()
+				.createState(new SingleNode<Node<Statement, Val>>(new Node<Statement, Val>(succ, baseVar)), field);
+		flowSolver.getFieldAutomaton().addTransition(
+				new Transition<Field, INode<Node<Statement, Val>>>(start, field, intermediateState));
+	}
 	private final class ImportToSolver extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
-		private ExecuteImportFieldStmtPOI<W> poi;
+		private AbstractBoomerangSolver<W> flowSolver;
 
-		public ImportToSolver(INode<Node<Statement, Val>> target, AbstractBoomerangSolver<W> baseSolver,
-				AbstractBoomerangSolver<W> flowSolver, ExecuteImportFieldStmtPOI<W> poi) {
+		public ImportToSolver(INode<Node<Statement, Val>> target,
+				AbstractBoomerangSolver<W> flowSolver) {
 			super(target);
-			this.poi = poi;
+			this.flowSolver = flowSolver;
 		}
 
 		@Override
@@ -415,9 +434,7 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
-			result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
 			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
-			result = prime * result + ((poi == null) ? 0 : poi.hashCode());
 			return result;
 		}
 
@@ -430,13 +447,15 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 			if (getClass() != obj.getClass())
 				return false;
 			ImportToSolver other = (ImportToSolver) obj;
-			if (poi == null) {
-				if (other.poi != null)
+			if (flowSolver == null) {
+				if (other.flowSolver != null)
 					return false;
-			} else if (!poi.equals(other.poi))
+			} else if (!flowSolver.equals(other.flowSolver))
 				return false;
 			return true;
 		}
+
+
 
 	}
 
@@ -447,7 +466,7 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 		result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
 		result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
 		result = prime * result + ((curr == null) ? 0 : curr.hashCode());
-//		result = prime * result + ((succ == null) ? 0 : succ.hashCode());
+		result = prime * result + ((succ == null) ? 0 : succ.hashCode());
 		return result;
 	}
 
@@ -475,11 +494,11 @@ public class ExecuteImportFieldStmtPOI<W extends Weight> {
 				return false;
 		} else if (!curr.equals(other.curr))
 			return false;
-//		if (succ == null) {
-//			if (other.succ != null)
-//				return false;
-//		} else if (!succ.equals(other.succ))
-//			return false;
+		if (succ == null) {
+			if (other.succ != null)
+				return false;
+		} else if (!succ.equals(other.succ))
+			return false;
 		return true;
 	}
 

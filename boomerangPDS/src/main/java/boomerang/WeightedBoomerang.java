@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
@@ -25,7 +26,10 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 
 import boomerang.customize.BackwardEmptyCalleeFlow;
@@ -90,6 +94,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	private long lastTick;
 	private IBoomerangStats<W> stats;
 	private List<SolverCreationListener<W>> solverCreationListeners = Lists.newArrayList();
+	private Multimap<SolverPair, ExecuteImportFieldStmtPOI<W>> poiListeners = HashMultimap.create();
+	private Multimap<SolverPair,INode<Node<Statement,Val>>> activatedPoi = HashMultimap.create();
 	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
 
 		@Override
@@ -897,15 +903,22 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				AbstractBoomerangSolver<W> baseSolver = queryToSolvers.get(baseAllocation);
 				AbstractBoomerangSolver<W> flowSolver = queryToSolvers.get(flowAllocation);
 				for(Statement succ : flowSolver.getSuccsOf(getStmt())) {
-					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<>(icfg(),baseSolver, flowSolver, FieldWritePOI.this, succ);
+					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(icfg(),baseSolver, flowSolver, FieldWritePOI.this, succ){
+						public void activate(INode<Node<Statement,Val>> start) {
+							activateAllPois(new SolverPair(flowSolver,baseSolver),start);
+						};
+					};
+					registerActivationListener(new SolverPair(flowSolver,baseSolver), exec);
 					exec.solve();
 				}
 			}
 		}
+
 	}
 	
 
 	public class FieldReadPOI extends AbstractPOI<Statement, Val, Field> {
+
 		public FieldReadPOI(Statement statement, Val base, Field field, Val stored) {
 			super(statement, base, field, stored);
 		}
@@ -919,14 +932,94 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				AbstractBoomerangSolver<W> baseSolver = queryToSolvers.get(baseAllocation);
 				AbstractBoomerangSolver<W> flowSolver = queryToSolvers.get(flowAllocation);
 				for(Statement succ : flowSolver.getSuccsOf(getStmt())) {
-					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<>(icfg(),baseSolver, flowSolver, FieldReadPOI.this, succ);
+					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(icfg(),baseSolver, flowSolver, FieldReadPOI.this, succ){
+						public void activate(INode<Node<Statement,Val>> start) {
+							activateAllPois(new SolverPair(flowSolver,baseSolver),start);
+						};
+					};
+					registerActivationListener(new SolverPair(flowSolver,baseSolver), exec);
 					exec.solve();
 				}
 			}
 		}
+
 	}
 
+	protected void activateAllPois(SolverPair pair, INode<Node<Statement, Val>> start) {
+		if(activatedPoi.put(pair, start)){
+			Collection<ExecuteImportFieldStmtPOI<W>> listeners = poiListeners.get(pair);
+			for(ExecuteImportFieldStmtPOI<W> l : Lists.newArrayList(listeners)){
+				l.trigger(start);
+			}
+		}
+	}
 	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
+
+	public void registerActivationListener(
+			WeightedBoomerang<W>.SolverPair solverPair, ExecuteImportFieldStmtPOI<W> exec) {
+		Collection<INode<Node<Statement, Val>>> listeners = activatedPoi.get(solverPair);
+		for(INode<Node<Statement, Val>> node : Lists.newArrayList(listeners)){
+			exec.trigger(node);
+		}
+		poiListeners.put(solverPair, exec);
+	}
+
+	private class SolverPair{
+
+		private AbstractBoomerangSolver<W> flowSolver;
+		private AbstractBoomerangSolver<W> baseSolver;
+
+		public SolverPair(AbstractBoomerangSolver<W> flowSolver, AbstractBoomerangSolver<W> baseSolver) {
+			this.flowSolver = flowSolver;
+			this.baseSolver = baseSolver;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((baseSolver == null) ? 0 : baseSolver.hashCode());
+			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			SolverPair other = (SolverPair) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (baseSolver == null) {
+				if (other.baseSolver != null)
+					return false;
+			} else if (!baseSolver.equals(other.baseSolver))
+				return false;
+			if (flowSolver == null) {
+				if (other.flowSolver != null)
+					return false;
+			} else if (!flowSolver.equals(other.flowSolver))
+				return false;
+			return true;
+		}
+
+		private WeightedBoomerang getOuterType() {
+			return WeightedBoomerang.this;
+		}
+		
+	}
+	
+
+	public void createPOI(BiDiInterproceduralCFG<Unit, SootMethod> icfg, AbstractBoomerangSolver<W> baseSolver,
+			AbstractBoomerangSolver<W> flowSolver, WeightedBoomerang<W>.FieldReadPOI fieldReadPOI, Statement succ) {
+		// TODO Auto-generated method stub
+		
+	}
 
 	protected abstract WeightFunctions<Statement, Val, Field, W> getForwardFieldWeights();
 
