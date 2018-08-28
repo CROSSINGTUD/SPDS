@@ -12,9 +12,11 @@
 package typestate.tests;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.Test;
 
@@ -78,6 +80,17 @@ public class IteratorTest extends IDEALTestingFramework {
 			System.out.println(foo(it1));
 		}
 		mayBeInErrorState(it1);
+	}
+
+	@Test
+	public void test5(){
+		Map variableNames = new HashMap();
+		variableNames.put(new Object(), new Object());
+		if (!variableNames.isEmpty()){
+			Iterator i = variableNames.keySet().iterator();
+			i.next();
+			mustBeInErrorState(i);
+		}
 	}
 
 	public Object foo(Iterator it) {

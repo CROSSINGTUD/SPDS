@@ -3,7 +3,10 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>de.fraunhofer.iem</groupId>
 	<artifactId>boomerangPDS</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.0-SNAPSHOT</version>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
 	<build>
 		<plugins>
 			<plugin>
@@ -20,9 +23,10 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>2.21.0</version>
 				<configuration>
-					<argLine>-Xmx2G</argLine>
-					<argLine>-Xss128m</argLine>
-					<reportsDirectory>../shippable/testresults</reportsDirectory>
+					<argLine>-Xmx8G -Xss128m</argLine>
+					<forkCount>1.5C</forkCount>
+					<reuseForks>true</reuseForks>
+                    <reportsDirectory>../shippable/testresults/boomerangPDS</reportsDirectory>
 				</configuration>
 			</plugin>
 		</plugins>
@@ -31,19 +35,18 @@
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
 			<artifactId>testCore</artifactId>
-			<version>1.0.0</version>
+			<version>1.0.0-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
 			<artifactId>WPDS</artifactId>
-			<version>1.0.0</version>
+			<version>1.0.0-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
 			<version>23.5-jre</version>
 		</dependency>
-
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
 			<artifactId>PathExpression</artifactId>
@@ -62,7 +65,7 @@
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
 			<artifactId>synchronizedPDS</artifactId>
-			<version>1.0.0</version>
+			<version>1.0.0-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.googlecode.json-simple</groupId>
@@ -74,7 +77,7 @@
 			<artifactId>commons-lang3</artifactId>
 			<version>3.5</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-core</artifactId>
@@ -87,11 +90,19 @@
 			<name>soot snapshots</name>
 			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
 		</repository>
+		<repository>
+			<id>soot-release</id>
+			<name>soot release</name>
+			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
+		</repository>
 	</repositories>
 
 	<profiles>
 		<profile>
-			<id>slimBoomerangPDSTestSet</id>
+			<id>defaultTestSet</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
 			<build>
 				<plugins>
 					<plugin>
@@ -99,30 +110,12 @@
 						<artifactId>maven-surefire-plugin</artifactId>
 						<version>2.21.0</version>
 						<configuration>
-							<argLine>-Xmx4G</argLine>
-							<argLine>-Xss128m</argLine>
 							<includes>
 								<include>test.core.**</include>
 								<include>test.cases.basic.**</include>
 								<include>test.cases.context.**</include>
 								<include>test.cases.fields.**</include>
 							</includes>
-						</configuration>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
-		<profile>
-			<id>standardPDSTestSet</id>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-surefire-plugin</artifactId>
-						<version>2.21.0</version>
-						<configuration>
-							<argLine>-Xmx4G</argLine>
-							<argLine>-Xss128m</argLine>
 							<excludes>
 								<exclude>**/*LongTest.java</exclude>
 							</excludes>

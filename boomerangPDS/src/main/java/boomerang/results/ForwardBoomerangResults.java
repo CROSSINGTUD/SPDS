@@ -170,7 +170,7 @@ public class ForwardBoomerangResults<W extends Weight> {
 		}
 	}
 
-	
+
 	private void findLastUsage(Statement exitStmt, Map<Val, W> row, Table<Statement, Val, W> destructingStatement, ForwardBoomerangSolver<W> forwardSolver) {
 		LinkedList<Statement> worklist = Lists.newLinkedList();
 		worklist.add(exitStmt);
@@ -249,7 +249,7 @@ public class ForwardBoomerangResults<W extends Weight> {
 		}
 		return false;
 	}
-	
+
 	public long getMaxMemory() {
 		return maxMemory;
 	}

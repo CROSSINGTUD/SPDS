@@ -22,6 +22,8 @@ import java.util.Set;
 
 import com.google.common.collect.Lists;
 
+import boomerang.BoomerangOptions;
+import boomerang.DefaultBoomerangOptions;
 import boomerang.WeightedForwardQuery;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
@@ -83,6 +85,17 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			public IDEALResultHandler<TransitionFunction> getResultHandler() {
 				return resultHandler;
 			}
+
+			@Override
+            public BoomerangOptions boomerangOptions() {
+			    return new DefaultBoomerangOptions() {
+
+                    @Override
+                    public boolean onTheFlyCallGraph() {
+                        return false;
+                    }
+                };
+            }
 			
 		});
 	}

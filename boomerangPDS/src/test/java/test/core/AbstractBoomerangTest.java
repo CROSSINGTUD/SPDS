@@ -23,6 +23,7 @@ import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.preanalysis.PreTransformBodies;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SimpleSeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
@@ -64,7 +65,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	protected int analysisTimeout = 3000 *1000;
 
-	private enum AnalysisMode {
+	public enum AnalysisMode {
 		WholeProgram, DemandDrivenBackward;
 	}
 
@@ -75,7 +76,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	}
 
 	protected SceneTransformer createAnalysisTransformer() {
-		HashSet<SootMethod> printedMethods = new HashSet<>();
+		PackManager.v().getPack("wjtp").add(new Transform("wjtp.prepare", new PreTransformBodies()));
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
@@ -159,7 +160,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					}
 				}
 			}
-			
+
 			return Optional.empty();
 		}
 	}

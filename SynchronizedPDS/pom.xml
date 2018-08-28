@@ -3,7 +3,10 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>de.fraunhofer.iem</groupId>
 	<artifactId>synchronizedPDS</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.0-SNAPSHOT</version>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
 	<build>
 		<plugins>
 			<plugin>
@@ -20,7 +23,7 @@
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
 			<artifactId>WPDS</artifactId>
-			<version>1.0.0</version>
+			<version>1.0.0-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 		    <groupId>com.google.guava</groupId>
@@ -43,4 +46,11 @@
 			<version>2.11.0</version>
 		</dependency>
 	</dependencies>
+	<repositories>
+		<repository>
+			<id>soot-release</id>
+			<name>soot release</name>
+			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
+		</repository>
+	</repositories>
 </project>

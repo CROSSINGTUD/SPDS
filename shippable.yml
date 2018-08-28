@@ -2,10 +2,7 @@ language: java
 
 jdk:
    - oraclejdk8
-env:
-- NIGHTLYBUILD=$BRANCH
 
 build:
   ci:
-   - git checkout --recurse-submodules $NIGHTLYBUILD
-   - mvn clean verify surefire:test --fail-at-end -P slimBoomerangPDSTestSet -T 1C
+   - mvn verify --fail-at-end -B

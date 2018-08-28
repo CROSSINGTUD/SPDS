@@ -85,7 +85,6 @@ public abstract class AbstractTestingFramework {
         //https://soot-build.cs.uni-paderborn.de/public/origin/develop/soot/soot-develop/options/soot_options.htm#phase_5_2
 		Options.v().setPhaseOption("cg.cha", "on");
 		Options.v().setPhaseOption("cg.cha", "verbose:true");
-
 		Options.v().set_output_format(Options.output_format_none);
 
 		String userdir = System.getProperty("user.dir");
