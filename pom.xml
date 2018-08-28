@@ -7,12 +7,11 @@
   <packaging>pom</packaging>
   <name>weightedBoomerang-root</name>
   <modules>
-    <module>idealPDS</module>
-    <module>boomerangPDS</module>
-    <module>testCore</module>
-    <module>SynchronizedPDS</module>
     <module>WPDS</module>
-    <module>PathExpression</module>
+    <module>SynchronizedPDS</module>
+    <module>testCore</module>
+    <module>boomerangPDS</module>
+    <module>idealPDS</module>
     </modules>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

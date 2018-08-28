@@ -719,5 +719,5 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	public Collection<SootMethod> getReachableMethods() {
 		return reachableMethods;
 	}
-
+	
 }
