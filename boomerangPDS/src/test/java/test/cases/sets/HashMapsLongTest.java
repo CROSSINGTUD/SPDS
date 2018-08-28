@@ -18,7 +18,6 @@ import org.junit.Test;
 
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
-import test.core.AbstractBoomerangTest.AnalysisMode;
 import test.core.selfrunning.AllocatedObject;
 
 
@@ -40,12 +39,5 @@ public class HashMapsLongTest extends AbstractBoomerangTest{
 	@Override
 	protected boolean includeJDK() {
 		return true;
-	}
-	
-
-	protected AnalysisMode[] getAnalyses() {
-		return new AnalysisMode[] {
-				 AnalysisMode.WholeProgram
-				};
 	}
 }

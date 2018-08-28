@@ -49,4 +49,7 @@ public class TreeSetsLongTest extends AbstractBoomerangTest{
 	protected boolean includeJDK() {
 		return true;
 	}
+	public int getIterations(){
+		return 10;
+	}
 }
