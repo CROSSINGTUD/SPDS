@@ -13,8 +13,8 @@ package test.cases.string;
 
 import org.junit.Test;
 
-import test.cases.fields.A;
 import test.core.AbstractBoomerangTest;
+import test.core.selfrunning.AllocatedObject;
 
 public class StringTest extends AbstractBoomerangTest {
 	@Test
@@ -40,7 +40,7 @@ public class StringTest extends AbstractBoomerangTest {
 		StringBuffer t2 = new StringBuffer();
 		queryFor(t);
 	}
-	private static class T implements AllocatedObject{
+	private static class T implements AllocatedObject {
 
 		private String string;
 
