@@ -68,6 +68,8 @@ public class Util {
 		while(listener.hasNext()) {
 			MethodOrMethodContext next = listener.next();
 			SootMethod method = next.method();
+			if(!method.hasActiveBody())
+				continue;
 			Body activeBody = method.getActiveBody();
 			for(Unit u : activeBody.getUnits()) {
 				List<Unit> succsOf = icfg.getSuccsOf(u);

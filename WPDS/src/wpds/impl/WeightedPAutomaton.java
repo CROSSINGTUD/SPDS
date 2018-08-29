@@ -700,6 +700,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			visited.add(pop);
 			Collection<Transition<N, D>> inTrans = transitionsInto.get(pop);
 			for(Transition<N, D> t : inTrans) {
+				if(t.getLabel().equals(this.epsilon()))
+					continue;
+				if(!isGeneratedState(t.getStart()))
+					continue;
 				if(visited.contains(t.getStart())) {
 					return true;
 				}
@@ -722,6 +726,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 				if(t.getLabel().equals(this.epsilon()))
 					continue;
 				D next = t.getStart();
+				if(!isGeneratedState(next))
+					continue;
 				if(next.equals(pop))
 					continue;
 				Set<N> atNext = getOrCreate(pathReachingD,next);

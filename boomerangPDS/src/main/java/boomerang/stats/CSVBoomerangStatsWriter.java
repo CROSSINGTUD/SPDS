@@ -86,6 +86,7 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 	private static final String CSV_SEPARATOR = ";";
 	private List<String> headers = Lists.newArrayList();
 	private Map<String,String> headersToValues = Maps.newHashMap();
+	private long memoryBefore;
 	private enum Headers{
 		Query,QueryType,FieldTransitions,CallTransitions,CallRules,FieldRules, ReachedForwardNodes, ReachedBackwardNodes, 
 		CallVisitedMethods, FieldVisitedMethods, CallVisitedStmts, FieldVisitedStmts,FieldWritePOIs,
@@ -95,7 +96,10 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 		FieldLongestAccessPath,
 		CallLongestCallStack,
 		CallContainsLoop,
-		FieldContainsLoop
+		FieldContainsLoop,
+		MemoryBefore,
+		MemoryAfter,
+		MemoryDiff
 	}
 	
 	public CSVBoomerangStatsWriter(String outputFileName) {
@@ -103,6 +107,7 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 		for(Headers h : Headers.values()) {
 			this.headers.add(h.toString());
 		}
+		memoryBefore = Util.getReallyUsedMemory();
 	}
 
 	public static <K> Map<K, Integer> sortByValues(final Map<K, Integer> map) {
@@ -332,7 +337,7 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 	}
 	
 	private void writeToFile(Query query, long queryTime, boolean timeout) {
-		
+		long memoryAfter = Util.getReallyUsedMemory();
 		put(Headers.Query,query.toString());
 		put(Headers.QueryType, (query instanceof BackwardQuery ? "B" : "F"));
 		put(Headers.QueryTime, queryTime);
@@ -358,6 +363,9 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 		put(Headers.FieldLongestAccessPath, queries.get(query).getFieldAutomaton().getLongestPath().size());
 		put(Headers.CallContainsLoop, queries.get(query).getCallAutomaton().containsLoop());
 		put(Headers.FieldContainsLoop, queries.get(query).getFieldAutomaton().containsLoop());
+		put(Headers.MemoryAfter, memoryAfter);
+		put(Headers.MemoryBefore, memoryBefore);
+		put(Headers.MemoryDiff, memoryAfter - memoryBefore);
 		try {
 			File reportFile = new File(outputFileName).getAbsoluteFile();
 			if (!reportFile.getParentFile().exists()) {
