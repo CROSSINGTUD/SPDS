@@ -46,4 +46,5 @@ public interface BoomerangOptions {
 
 	public boolean aliasing();
 	
+	public boolean objectSensitive();
 }

@@ -554,6 +554,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	protected void backwardHandleFieldRead(final WitnessNode<Statement, Val, Field> node, FieldReadPOI fieldRead,
 			final BackwardQuery sourceQuery) {
 		if (node.fact().equals(fieldRead.getStoredVar())) {
+			AbstractBoomerangSolver<W> flowSolver = queryToSolvers.getOrCreate(sourceQuery);
+			for(Statement p : flowSolver.getPredsOf(fieldRead.getStmt())){
+				queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(new ForwardHandleFieldWrite(sourceQuery, fieldRead, p));
+			}
 			fieldRead.addFlowAllocation(sourceQuery);
 		}
 	}
@@ -585,11 +589,11 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 	private final class ForwardHandleFieldWrite implements WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> {
-		private final ForwardQuery sourceQuery;
-		private final WeightedBoomerang<W>.FieldWritePOI fieldWritePoi;
+		private final Query sourceQuery;
+		private final AbstractPOI<Statement, Val, Field> fieldWritePoi;
 		private final Statement stmt;
 
-		private ForwardHandleFieldWrite(ForwardQuery sourceQuery, WeightedBoomerang<W>.FieldWritePOI fieldWritePoi,
+		private ForwardHandleFieldWrite(Query sourceQuery, AbstractPOI<Statement, Val, Field> fieldWritePoi,
 				Statement statement) {
 			this.sourceQuery = sourceQuery;
 			this.fieldWritePoi = fieldWritePoi;
@@ -715,16 +719,19 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	private void forwardHandleFieldLoad(final WitnessNode<Statement, Val, Field> node, final FieldReadPOI fieldReadPoi,
 			final ForwardQuery sourceQuery) {
 		if (node.fact().equals(fieldReadPoi.getBaseVar())) {
-			queryToSolvers.getOrCreate(sourceQuery).registerFieldTransitionListener(
-					new MethodBasedFieldTransitionListener<W>(node.stmt().getMethod()) {
-						@Override
-						public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-							if (t.getStart().fact().equals(node.asNode())
-									&& isAllocationNode(t.getTarget().fact().fact(), sourceQuery)) {
-								fieldReadPoi.addBaseAllocation(sourceQuery);
-							}
-						}
-					});
+			queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(
+					new TriggerBaseAllocationAtFieldWrite(new SingleNode<Node<Statement, Val>>(node.asNode()),
+							fieldReadPoi, sourceQuery));
+//			queryToSolvers.getOrCreate(sourceQuery).registerFieldTransitionListener(
+//					new MethodBasedFieldTransitionListener<W>(node.stmt().getMethod()) {
+//						@Override
+//						public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
+//							if (t.getStart().fact().equals(node.asNode())
+//									&& isAllocationNode(t.getTarget().fact().fact(), sourceQuery)) {
+//								fieldReadPoi.addBaseAllocation(sourceQuery);
+//							}
+//						}
+//					});
 		}
 	}
 
@@ -901,7 +908,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				AbstractBoomerangSolver<W> baseSolver = queryToSolvers.get(baseAllocation);
 				AbstractBoomerangSolver<W> flowSolver = queryToSolvers.get(flowAllocation);
 				for(Statement succ : flowSolver.getSuccsOf(getStmt())) {
-					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(icfg(),baseSolver, flowSolver, FieldWritePOI.this, succ){
+					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(WeightedBoomerang.this,baseSolver, flowSolver, FieldWritePOI.this, succ){
 						public void activate(INode<Node<Statement,Val>> start) {
 							activateAllPois(new SolverPair(flowSolver,baseSolver),start);
 						};
@@ -930,7 +937,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				AbstractBoomerangSolver<W> baseSolver = queryToSolvers.get(baseAllocation);
 				AbstractBoomerangSolver<W> flowSolver = queryToSolvers.get(flowAllocation);
 				for(Statement succ : flowSolver.getSuccsOf(getStmt())) {
-					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(icfg(),baseSolver, flowSolver, FieldReadPOI.this, succ){
+					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(WeightedBoomerang.this,baseSolver, flowSolver, FieldReadPOI.this, succ){
 						public void activate(INode<Node<Statement,Val>> start) {
 							activateAllPois(new SolverPair(flowSolver,baseSolver),start);
 						};
@@ -1119,6 +1126,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				results.put(t.getLabel(), t.getStart().fact(), w);
 		}
 		return results;
+	}
+
+	public BoomerangOptions getOptions() {
+		return this.options;
 	}
 
 }
