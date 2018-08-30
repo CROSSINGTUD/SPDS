@@ -234,9 +234,9 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 		if(!boomerang.getOptions().objectSensitive()){
 			flowsTo();
 		} else {
-			System.out.println("WAITING");
-			System.out.println(this.curr);
-			System.out.println(baseSolver + "   " + flowSolver);
+//			System.out.println("WAITING");
+//			System.out.println(this.curr);
+//			System.out.println(baseSolver + "   " + flowSolver);
 			flowSolver.getCallAutomaton().registerListener(new BaseSolverContext(new SingleNode<Val>(storedVar), flowSolver) {
 				
 				@Override
@@ -412,9 +412,9 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 		if(active)
 			return;
 		if(boomerang.getOptions().objectSensitive()){
-			System.out.println("ACTIVATE");
-			System.out.println(this.curr);
-			System.out.println(baseSolver + "   " + flowSolver);
+//			System.out.println("ACTIVATE");
+//			System.out.println(this.curr);
+//			System.out.println(baseSolver + "   " + flowSolver);
 		}
 		active = true;
 		handlingAtFieldStatements();
@@ -633,9 +633,19 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 		if (t.getLabel().equals(Field.empty())) {
 			activate(t.getStart());
 		} else {
-			flowSolver.getFieldAutomaton().addTransition(t);	
+			flowSolver.getFieldAutomaton().addTransition(new Transition<Field, INode<Node<Statement, Val>>>(convert(t.getStart()),t.getLabel(),convert(t.getTarget())));	
 			baseSolver.getFieldAutomaton().registerListener(new ImportToSolver(t.getTarget(), this.flowSolver));
 		}
+	}
+
+	private INode<Node<Statement, Val>> convert(INode<Node<Statement, Val>> target) {
+		if(!isBackward())
+			return target;
+		if(target instanceof GeneratedState) {
+			GeneratedState<Node<Statement, Val>,Field> generatedState = (GeneratedState<Node<Statement, Val>,Field>) target;
+			return new GeneratedState<Node<Statement,Val>, Field>(flowSolver.getFieldAutomaton().getInitialState(), generatedState.location());
+		}
+		return target;
 	}
 
 	public abstract void activate(INode<Node<Statement, Val>> start);
