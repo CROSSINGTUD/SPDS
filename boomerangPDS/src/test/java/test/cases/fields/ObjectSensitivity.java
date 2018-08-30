@@ -66,9 +66,9 @@ public class ObjectSensitivity extends AbstractBoomerangTest{
 	    A a1 = new A(b1);
 	    Object b3 = a1.getF();
 	}
-	private static class A{
+	public static class A{
 
-		private Object f;
+		public Object f;
 
 		public A(Object o) {
 			this.f = o;
