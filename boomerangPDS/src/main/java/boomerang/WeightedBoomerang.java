@@ -11,6 +11,7 @@
  *******************************************************************************/
 package boomerang;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -779,6 +780,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		if (analysisWatch.isRunning()) {
 			analysisWatch.stop();
 		}
+		
 		return new BackwardBoomerangResults<W>(query, timedout, this.queryToSolvers, getStats(), analysisWatch);
 	}
 
@@ -1050,6 +1052,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		// System.out.println(q +" Call Aut (failed Additions): " +
 		// queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
 		// }
+
 		if (!DEBUG)
 			return;
 
