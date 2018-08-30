@@ -562,12 +562,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			final FieldWritePOI fieldWritePoi, final ForwardQuery sourceQuery) {
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(), fieldWritePoi.getBaseVar());
 		if (node.fact().equals(fieldWritePoi.getStoredVar())) {
-			// if(sourceQuery instanceof WeightedForwardQuery ||
-			// options.computeAllAliases()) {//Additional logic for IDEal
 			backwardSolveUnderScope(backwardQuery, sourceQuery);
-			// TODO or All AliasQuery
-			// }
-			
 			queryToSolvers.get(sourceQuery).getFieldAutomaton().registerListener(new ForwardHandleFieldWrite(sourceQuery, fieldWritePoi, node.stmt()));
 		}
 		if (node.fact().equals(fieldWritePoi.getBaseVar())) {
@@ -806,14 +801,15 @@ public abstract class WeightedBoomerang<W extends Weight> {
 						new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact());
 				if (isMultiArrayAllocation(unit.get()) && options.arrayFlows()) {
 					// TODO fix; adjust as below;
+					SingleNode<Node<Statement, Val>> sourveVal = new SingleNode<Node<Statement, Val>>(source);
+					GeneratedState<Node<Statement, Val>, Field> genState = new GeneratedState<Node<Statement, Val>, Field>(sourveVal, Field.array());
 					insertTransition(solver.getFieldAutomaton(),
 							new Transition<Field, INode<Node<Statement, Val>>>(
-									new SingleNode<Node<Statement, Val>>(source), Field.array(),
-									new AllocNode<Node<Statement, Val>>(query.asNode())));
+									sourveVal, Field.array(),
+									genState));
 					insertTransition(solver.getFieldAutomaton(),
-							new Transition<Field, INode<Node<Statement, Val>>>(
-									new SingleNode<Node<Statement, Val>>(source), Field.array(),
-									new SingleNode<Node<Statement, Val>>(source)));
+							new Transition<Field, INode<Node<Statement, Val>>>(genState, Field.empty(),
+									solver.getFieldAutomaton().getInitialState()));
 				}
 				if (isStringAllocation(unit.get())) {
 					// Scene.v().forceResolve("java.lang.String",
