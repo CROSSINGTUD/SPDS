@@ -584,6 +584,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 	private void backwardSolveUnderScope(BackwardQuery backwardQuery, ForwardQuery forwardQuery, WitnessNode<Statement, Val, Field> node) {
+		scopedQueries .add(backwardQuery);
 		backwardSolve(backwardQuery);
 		final AbstractBoomerangSolver<W> bwSolver = queryToSolvers.getOrCreate(backwardQuery);
 		AbstractBoomerangSolver<W> fwSolver = queryToSolvers.getOrCreate(forwardQuery);
@@ -594,7 +595,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			}
 		});
 		
-		scopedQueries .add(backwardQuery);
 		
 		fwSolver.getCallAutomaton().registerListener(new BaseSolverContext<W>(fwSolver, new SingleNode<>(node.fact()), node.stmt(), fwSolver) {
 
