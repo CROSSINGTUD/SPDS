@@ -208,7 +208,7 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 			if (!(aliasedVariableAtStmt instanceof GeneratedState)) {
 				Val alias = aliasedVariableAtStmt.fact().fact();
 				if (alias.equals(poi.baseVar) && t.getLabel().equals(Field.empty())) {
-					shareSameContext();
+					flowsTo();
 				}
 			}
 		}
@@ -239,55 +239,6 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 
 	}
 
-
-	private void shareSameContext() {
-//		if(curr.toString().contains("getNode $r1 = l3[$i2]"))
-//			flowsTo();
-		if(!boomerang.getOptions().objectSensitive()){
-			flowsTo();
-		} else {
-//			System.out.println("WAITING");
-//			System.out.println(this.curr);
-//			System.out.println(baseSolver + "   " + flowSolver);
-			flowSolver.getCallAutomaton().registerListener(new BaseSolverContext<W>(this, new SingleNode<Val>(storedVar), curr,flowSolver) {
-				
-				@Override
-				public void callSiteFound(Statement flowCall) {
-					if(isBackward()){
-						for(Statement succ : flowSolver.getPredsOf(flowCall)){
-							if(succ.isCallsite()){
-								for(Statement s : flowSolver.getPredsOf(succ)){
-									addFlowSolverContext(s);
-								}	
-							}
-						}
-					} else{
-						addFlowSolverContext(flowCall);
-					}
-				}
-
-				@Override
-				public void anyContext() {
-					flowsTo();
-				}
-			});
-			
-			baseSolver.getCallAutomaton().registerListener(new BaseSolverContext<W>(this, new SingleNode<Val>(baseVar), curr, baseSolver){
-				
-				@Override
-				public void callSiteFound(Statement callSite) {
-					addBaseSolverContext(callSite);
-				}
-
-				@Override
-				public void anyContext() {
-					flowsTo();
-				}
-				
-			});
-		
-		}
-	}
 	protected void addBaseSolverContext(Statement callSite) {
 		if(baseSolverContexts.add(callSite)){
 			if(flowSolverContexts.contains(callSite)){
@@ -307,11 +258,6 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 	protected void flowsTo() {
 		if(active)
 			return;
-		if(boomerang.getOptions().objectSensitive()){
-//			System.out.println("ACTIVATE");
-//			System.out.println(this.curr);
-//			System.out.println(baseSolver + "   " + flowSolver);
-		}
 		active = true;
 		handlingAtFieldStatements();
 		handlingAtCallSites();
