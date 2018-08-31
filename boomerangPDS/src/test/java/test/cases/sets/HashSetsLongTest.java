@@ -22,7 +22,6 @@ import test.core.selfrunning.AllocatedObject;
 
 public class HashSetsLongTest extends AbstractBoomerangTest{
 	@Test
-	@Ignore
 	public void addAndRetrieve(){
 		HashSet<Object> set = new HashSet<>();
 		AllocatedObject alias = new AllocatedObject(){};
