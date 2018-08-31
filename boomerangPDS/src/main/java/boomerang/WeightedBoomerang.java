@@ -600,6 +600,14 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 			@Override
 			public void anyContext() {
+				for (Unit callSite : WeightedBoomerang.this.icfg().getCallersOf(node.stmt().getMethod())) {
+					if (!((Stmt) callSite).containsInvokeExpr())
+						continue;
+					final Statement callStatement = new Statement((Stmt) callSite,
+							WeightedBoomerang.this.icfg().getMethodOf(callSite));
+					Node<Statement,AbstractBoomerangSolver<W>> solverPair = new Node<>(callStatement,bwSolver);
+						triggerUnbalancedPop(solverPair);
+				}
 			}
 
 			@Override
