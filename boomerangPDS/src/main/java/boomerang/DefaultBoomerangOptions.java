@@ -18,6 +18,7 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.stats.IBoomerangStats;
 import boomerang.stats.SimpleBoomerangStats;
+import soot.ArrayType;
 import soot.RefType;
 import soot.Scene;
 import soot.SootMethod;
@@ -71,8 +72,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 			NewArrayExpr expr = (NewArrayExpr) val;
 			return expr.getBaseType() instanceof RefType;
 		} else if(val instanceof NewMultiArrayExpr){
-			NewMultiArrayExpr expr = (NewMultiArrayExpr) val;
-			return expr.getBaseType().getArrayElementType() instanceof RefType;
+			return true;
 		}
 		return false;
 	}
@@ -172,5 +172,4 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 	public boolean aliasing() {
 		return true;
 	}
-
 }

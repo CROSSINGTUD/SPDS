@@ -77,7 +77,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	protected final InterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
-	private final Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> generatedFieldState;
+	protected final Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> generatedFieldState;
 	private Multimap<SootMethod, Transition<Field, INode<Node<Statement, Val>>>> perMethodFieldTransitions = HashMultimap
 			.create();
 	private Multimap<SootMethod, MethodBasedFieldTransitionListener<W>> perMethodFieldTransitionsListener = HashMultimap

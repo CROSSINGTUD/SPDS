@@ -11,6 +11,7 @@
  *******************************************************************************/
 package boomerang.solver;
 
+import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -44,6 +45,7 @@ import soot.jimple.ThrowStmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
+import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
@@ -68,6 +70,14 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 		return false;
 	}
 
+	public INode<Node<Statement,Val>> generateFieldState(final INode<Node<Statement, Val>> d, final Field loc) {
+		Entry<INode<Node<Statement,Val>>, Field> e = new AbstractMap.SimpleEntry<>(d, loc);
+		if (!generatedFieldState.containsKey(e)) {
+			generatedFieldState.put(e, new GeneratedState<Node<Statement,Val>,Field>(fieldAutomaton.getInitialState(),loc));
+		}
+		return generatedFieldState.get(e);
+	}
+	
 	@Override
 	protected Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite, Stmt returnSite) {
 		Statement returnSiteStatement = new Statement(returnSite,icfg.getMethodOf(returnSite));
