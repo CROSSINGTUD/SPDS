@@ -122,15 +122,15 @@ public abstract class WeightedBoomerang<W extends Weight> {
 							SootMethod callee = exitStmt.getMethod();
 							if (!callee.isStaticInitializer()) {
 
-								WeightedBoomerang<W>.UnbalancedPopInfo info = new UnbalancedPopInfo(returningFact, trans,weight);
+								UnbalancedPopHandler<W> info = new UnbalancedPopHandler<W>(returningFact, trans,weight);
 								for (Unit callSite : WeightedBoomerang.this.icfg().getCallersOf(callee)) {
 									if (!((Stmt) callSite).containsInvokeExpr())
 										continue;
 									final Statement callStatement = new Statement((Stmt) callSite,
 											WeightedBoomerang.this.icfg().getMethodOf(callSite));
-									WeightedBoomerang<W>.UnbalancedPopPair solverPair = new UnbalancedPopPair(solver, callStatement);
+									Node<Statement,AbstractBoomerangSolver<W>> solverPair = new Node<>(callStatement,solver);
 									registerUnbalancedPopListener(solverPair, info);
-									if(callee.isStatic() || solver instanceof ForwardBoomerangSolver) {
+									if(callee.isStatic() || !scopedQueries.contains(key)) {
 										triggerUnbalancedPop(solverPair);
 									}
 								}
@@ -195,157 +195,28 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	;
 
 	private void registerUnbalancedPopListener(
-			WeightedBoomerang<W>.UnbalancedPopPair unbalancedPopPair, WeightedBoomerang<W>.UnbalancedPopInfo unbalancedPopInfo) {
+			Node<Statement,AbstractBoomerangSolver<W>> unbalancedPopPair, UnbalancedPopHandler<W> unbalancedPopInfo) {
 		if(unbalancedPopPairs.contains(unbalancedPopPair)) {
-			unbalancedPopInfo.trigger(unbalancedPopPair.callStatement,unbalancedPopPair.solver);
+			unbalancedPopInfo.trigger(unbalancedPopPair.stmt(),unbalancedPopPair.fact());
 		}else {
 			unbalancedListeners.put(unbalancedPopPair, unbalancedPopInfo);
 		}
 		
 	}
 	
-	Multimap<UnbalancedPopPair,UnbalancedPopInfo> unbalancedListeners = HashMultimap.create();
-	Set<UnbalancedPopPair> unbalancedPopPairs = Sets.newHashSet();
+	Multimap<Node<Statement,AbstractBoomerangSolver<W>>,UnbalancedPopHandler<W>> unbalancedListeners = HashMultimap.create();
+	Set<Node<Statement,AbstractBoomerangSolver<W>>> unbalancedPopPairs = Sets.newHashSet();
 	
-	private void triggerUnbalancedPop(WeightedBoomerang<W>.UnbalancedPopPair unbalancedPopPair) {
+	private void triggerUnbalancedPop(Node<Statement,AbstractBoomerangSolver<W>> unbalancedPopPair) {
 		if(unbalancedPopPairs.add(unbalancedPopPair)) {
-			for(UnbalancedPopInfo unbalancedPopInfo : unbalancedListeners.get(unbalancedPopPair)) {
-				unbalancedPopInfo.trigger(unbalancedPopPair.callStatement,unbalancedPopPair.solver);
+			for(UnbalancedPopHandler<W> unbalancedPopInfo : unbalancedListeners.get(unbalancedPopPair)) {
+				unbalancedPopInfo.trigger(unbalancedPopPair.stmt(),unbalancedPopPair.fact());
 			}
 		}
 	}
 
-	private class UnbalancedPopInfo{
-
-		private INode<Val> returningFact;
-		private Transition<Statement, INode<Val>> trans;
-		private W weight;
-
-		public UnbalancedPopInfo(INode<Val> returningFact, Transition<Statement, INode<Val>> trans, W weight) {
-			this.returningFact = returningFact;
-			this.trans = trans;
-			this.weight = weight;
-		}
-		void trigger(Statement callStatement, AbstractBoomerangSolver<W> solver){
-				boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) callStatement.getUnit().get(),
-						returningFact.fact());
-				if (valueUsedInStatement || AbstractBoomerangSolver.assignsValue((Stmt) callStatement.getUnit().get(),
-						returningFact.fact())) {
-					unbalancedReturnFlow(callStatement, returningFact, trans, weight, solver);
-				}
-		}
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((returningFact == null) ? 0 : returningFact.hashCode());
-			result = prime * result + ((trans == null) ? 0 : trans.hashCode());
-			result = prime * result + ((weight == null) ? 0 : weight.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			UnbalancedPopInfo other = (UnbalancedPopInfo) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (returningFact == null) {
-				if (other.returningFact != null)
-					return false;
-			} else if (!returningFact.equals(other.returningFact))
-				return false;
-			if (trans == null) {
-				if (other.trans != null)
-					return false;
-			} else if (!trans.equals(other.trans))
-				return false;
-			if (weight == null) {
-				if (other.weight != null)
-					return false;
-			} else if (!weight.equals(other.weight))
-				return false;
-			return true;
-		}
-
-		private WeightedBoomerang getOuterType() {
-			return WeightedBoomerang.this;
-		}
-		
-	}
-	private class UnbalancedPopPair{
-
-		private AbstractBoomerangSolver<W> solver;
-		private Statement callStatement;
-
-		public UnbalancedPopPair(AbstractBoomerangSolver<W> solver, Statement callStatement) {
-			this.solver = solver;
-			this.callStatement = callStatement;
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((callStatement == null) ? 0 : callStatement.hashCode());
-			result = prime * result + ((solver == null) ? 0 : solver.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			UnbalancedPopPair other = (UnbalancedPopPair) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (callStatement == null) {
-				if (other.callStatement != null)
-					return false;
-			} else if (!callStatement.equals(other.callStatement))
-				return false;
-			if (solver == null) {
-				if (other.solver != null)
-					return false;
-			} else if (!solver.equals(other.solver))
-				return false;
-			return true;
-		}
-
-		private WeightedBoomerang getOuterType() {
-			return WeightedBoomerang.this;
-		}
-		
-	}
-	private void unbalancedReturnFlow(final Statement callStatement, final INode<Val> returningFact,
-			final Transition<Statement, INode<Val>> trans, final W weight, AbstractBoomerangSolver<W> solver) {
-		solver.submit(callStatement.getMethod(), new Runnable() {
-			@Override
-			public void run() {
-				for (Statement returnSite : solver.getSuccsOf(callStatement)) {
-					Node<Statement, Val> returnedVal = new Node<Statement, Val>(returnSite,
-							returningFact.fact());
-					solver.setCallingContextReachable(returnedVal);
-					solver.getCallAutomaton().addWeightForTransition(
-							new Transition<Statement, INode<Val>>(returningFact, returnSite,
-									solver.getCallAutomaton().getInitialState()),
-							weight);
-				}
-			}
-
-		});
-	}
+	
+	
 
 	private BackwardsInterproceduralCFG bwicfg;
 	private EmptyCalleeFlow forwardEmptyCalleeFlow = new ForwardEmptyCalleeFlow();
@@ -372,6 +243,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	protected final BoomerangOptions options;
 	private Debugger<W> debugger;
 	private Stopwatch analysisWatch = Stopwatch.createUnstarted();
+	private Set<BackwardQuery> scopedQueries = Sets.newHashSet();
 
 	public WeightedBoomerang(BoomerangOptions options) {
 		this.options = options;
@@ -722,19 +594,19 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			}
 		});
 		
+		scopedQueries .add(backwardQuery);
+		
 		fwSolver.getCallAutomaton().registerListener(new BaseSolverContext<W>(fwSolver, new SingleNode<>(node.fact()), node.stmt(), fwSolver) {
 
 			@Override
 			public void anyContext() {
-				// TODO Auto-generated method stub
-				
 			}
 
 			@Override
 			public void callSiteFound(Statement callSite) {
 				for(Statement realCall : fwSolver.getSuccsOf(callSite)){
 					if(realCall.isCallsite()) {
-						triggerUnbalancedPop(new UnbalancedPopPair(bwSolver, realCall));
+						triggerUnbalancedPop(new Node<Statement,AbstractBoomerangSolver<W>>(realCall,bwSolver));
 					}
 				}
 			}});
