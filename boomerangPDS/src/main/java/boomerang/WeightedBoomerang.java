@@ -11,7 +11,6 @@
  *******************************************************************************/
 package boomerang;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -52,7 +51,6 @@ import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
-import boomerang.solver.MethodBasedFieldTransitionListener;
 import boomerang.solver.ReachableMethodListener;
 import boomerang.stats.IBoomerangStats;
 import heros.utilities.DefaultValueMap;
@@ -74,7 +72,6 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.WitnessNode;
-import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -584,7 +581,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 	private void backwardSolveUnderScope(BackwardQuery backwardQuery, ForwardQuery forwardQuery, WitnessNode<Statement, Val, Field> node) {
-		scopedQueries .add(backwardQuery);
+		scopedQueries.add(backwardQuery);
 		backwardSolve(backwardQuery);
 		final AbstractBoomerangSolver<W> bwSolver = queryToSolvers.getOrCreate(backwardQuery);
 		AbstractBoomerangSolver<W> fwSolver = queryToSolvers.getOrCreate(forwardQuery);
@@ -612,7 +609,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 			@Override
 			public void callSiteFound(Statement callSite) {
-				for(Statement realCall : fwSolver.getSuccsOf(callSite)){
+				for(Statement realCall : fwSolver.getPredsOf(callSite)){
 					if(realCall.isCallsite()) {
 						triggerUnbalancedPop(new Node<Statement,AbstractBoomerangSolver<W>>(realCall,bwSolver));
 					}
