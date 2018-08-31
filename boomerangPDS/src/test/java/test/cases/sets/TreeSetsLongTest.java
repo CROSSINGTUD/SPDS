@@ -86,6 +86,6 @@ public class TreeSetsLongTest extends AbstractBoomerangTest{
 		return true;
 	}
 	public int getIterations(){
-		return 1;
+		return 10;
 	}
 }
