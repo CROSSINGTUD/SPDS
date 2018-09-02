@@ -42,14 +42,13 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		accessPathQueryFor(alloc,"a[b]");
 	}
 	@Test
-	@Ignore
 	public void sameField(){
 		AllocA alloc = new AllocA();
 		A b = new A();
 		A c = new A();
 		b.g = alloc;
 		c.g = b;
-		accessPathQueryFor(alloc,"b[g]");
+		accessPathQueryFor(alloc,"b[g];c[g,g]");
 	}
 	@Test
 	public void getAllAliasesBranched(){
