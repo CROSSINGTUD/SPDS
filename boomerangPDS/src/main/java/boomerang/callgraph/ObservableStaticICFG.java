@@ -23,6 +23,9 @@ import java.util.Set;
  * @author Melanie Bruns on 04.05.2018
  */
 public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
+    private HashSet<CalleeListener<Unit, SootMethod>> calleeListeners = new HashSet<>();
+    private HashSet<CallerListener<Unit, SootMethod>> callerListeners = new HashSet<>();
+
     /**
      * Wrapped static ICFG. If available, this is used to handle all queries.
      */
@@ -49,15 +52,19 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
 
     @Override
     public void addCalleeListener(CalleeListener<Unit, SootMethod> listener) {
-        for (SootMethod method : precomputedGraph.getCalleesOfCallAt(listener.getObservedCaller())){
-            listener.onCalleeAdded(listener.getObservedCaller(), method);
+        if (calleeListeners.add(listener)){
+            for (SootMethod method : precomputedGraph.getCalleesOfCallAt(listener.getObservedCaller())){
+                listener.onCalleeAdded(listener.getObservedCaller(), method);
+            }
         }
     }
 
     @Override
     public void addCallerListener(CallerListener<Unit, SootMethod> listener) {
-        for (Unit unit : precomputedGraph.getCallersOf(listener.getObservedCallee())){
-            listener.onCallerAdded(unit, listener.getObservedCallee());
+        if (callerListeners.add(listener)){
+            for (Unit unit : precomputedGraph.getCallersOf(listener.getObservedCallee())){
+                listener.onCallerAdded(unit, listener.getObservedCallee());
+            }
         }
     }
 
