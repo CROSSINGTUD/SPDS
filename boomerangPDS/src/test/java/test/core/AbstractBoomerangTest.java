@@ -273,7 +273,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				@Override
 				public Debugger createDebugger() {
 					return VISUALIZATION ? new IDEVizDebugger(ideVizFile, icfg()) :
-							new CallGraphDebugger(dotFile, dynamicIcfg.getCallGraphCopy());
+							new CallGraphDebugger(dotFile, dynamicIcfg);
 				}
 
 				@Override
@@ -336,7 +336,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 			@Override
 			public Debugger createDebugger() {
-				return VISUALIZATION ? new IDEVizDebugger(ideVizFile, dynamicIcfg) : new CallGraphDebugger(dotFile, dynamicIcfg.getCallGraphCopy());
+				return VISUALIZATION ? new IDEVizDebugger(ideVizFile, dynamicIcfg) : new CallGraphDebugger(dotFile,
+						dynamicIcfg);
 			}
 
 			@Override

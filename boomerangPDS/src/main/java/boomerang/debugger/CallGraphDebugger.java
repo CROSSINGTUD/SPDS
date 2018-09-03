@@ -2,6 +2,7 @@ package boomerang.debugger;
 
 import boomerang.Query;
 import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.solver.AbstractBoomerangSolver;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -28,6 +29,7 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
     private static final Logger logger = LogManager.getLogger();
     
     private File dotFile;
+    private ObservableICFG<Unit,SootMethod> icfg;
     private CallGraph callGraph;
 
     private HashSet<Unit> totalCallSites = new HashSet<>();
@@ -43,21 +45,37 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
     private int numEdgesFromPrecomputed;
     private static int seedNumber = 0;
 
-    private ObservableICFG<Unit,SootMethod> icfg;
-    
-    public CallGraphDebugger(File dotFile, CallGraph callGraph){
-        this.dotFile = dotFile;
-        this.callGraph = callGraph;
-    }
 
-    public CallGraphDebugger(File dotFile, CallGraph callGraph, ObservableICFG<Unit,SootMethod> icfg){
-        this(dotFile, callGraph);
+    public CallGraphDebugger(File dotFile, ObservableICFG<Unit,SootMethod> icfg){
+        this.dotFile = dotFile;
         this.icfg = icfg;
     }
     
     @Override
     public void done(Map<Query, AbstractBoomerangSolver<W>> queryToSolvers) {
-        seedNumber++;
+        callGraph = icfg.getCallGraphCopy();
+
+        //Check if we have a static icfg, so the call graph does not change across seeds
+        if (icfg instanceof ObservableStaticICFG){
+            //Check if we already have made a dot file for that icfg once
+            if (dotFile.exists()){
+                //Then we do not need to do it again
+                return;
+            }
+        } else {
+            //We have a dynamic icfg that is different for every seed. Enumerate the files
+            seedNumber++;
+            //The call graph debugger becomes active for both phases of the IDEALSeedSolver, and they operate on the
+            // same call graph so do not output that
+            // call graph twice
+            if (seedNumber%2 ==0){
+                return;
+            }
+            int actualSeedNumber= seedNumber/2+1;
+            String dotFileName = dotFile.getAbsolutePath();
+            dotFileName = dotFileName.substring(0, dotFileName.lastIndexOf('.')) + actualSeedNumber + ".dot";
+            dotFile = new File(dotFileName);
+        }
 
         logger.info("Starting to compute visualization.");
 
@@ -74,17 +92,13 @@ public class CallGraphDebugger<W extends Weight> extends Debugger<W>{
         //End graph
         stringBuilder.append("}");
 
-        String dotFileName = dotFile.getAbsolutePath();
-        dotFileName = dotFileName.substring(0, dotFileName.lastIndexOf('.')) + seedNumber + ".dot";
-        File seedDotFile = new File(dotFileName);
-
         //Write out what was gathered in the string builder
-        try (FileWriter file = new FileWriter(seedDotFile)) {
-            logger.info("Writing visualization to file {}", seedDotFile.getAbsolutePath());
+        try (FileWriter file = new FileWriter(dotFile)) {
+            logger.trace("Writing visualization to file {}", dotFile.getAbsolutePath());
             file.write(stringBuilder.toString());
-            logger.info("Visualization available in file {}", seedDotFile.getAbsolutePath());
+            logger.info("Visualization available in file {}", dotFile.getAbsolutePath());
         } catch (IOException e) {
-            logger.info("Exception in writing to visualization file {} : {}", seedDotFile.getAbsolutePath(), e.getMessage());
+            logger.info("Exception in writing to visualization file {} : {}", dotFile.getAbsolutePath(), e.getMessage());
         }
     }
 

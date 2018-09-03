@@ -78,7 +78,8 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			
 			@Override
 			public Debugger<TransitionFunction> debugger(IDEALSeedSolver<TransitionFunction> solver) {
-				return VISUALIZATION ? new IDEVizDebugger<>(new File(ideVizFile.getAbsolutePath().replace(".json", " " + solver.getSeed() +".json")),icfg) : new CallGraphDebugger(dotFile, icfg.getCallGraphCopy());
+				return VISUALIZATION ? new IDEVizDebugger<>(new File(ideVizFile.getAbsolutePath().replace(".json",
+						" " + solver.getSeed() +".json")),icfg) : new CallGraphDebugger(dotFile, icfg);
 			}
 			
 			@Override
