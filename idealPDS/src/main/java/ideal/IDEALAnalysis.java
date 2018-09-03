@@ -61,9 +61,9 @@ public class IDEALAnalysis<W extends Weight> {
 		Collection<Query> initialSeeds = seedFactory.computeSeeds();
 
 		if (initialSeeds.isEmpty())
-			logger.info("No seeds found!");
+			System.out.println("No seeds found!");
 		else
-			logger.info("Analysing " + initialSeeds.size() + " seeds!");
+			System.out.println("Analysing " + initialSeeds.size() + " seeds!");
 		for (Query s : initialSeeds) {
 			if(!(s instanceof WeightedForwardQuery))
 				continue;
@@ -80,7 +80,7 @@ public class IDEALAnalysis<W extends Weight> {
 				timedoutSeeds.add(seed);
 			}
 			watch.stop();
-			logger.info("Analyzed (finished,timedout): \t (" + (seedCount -timedoutSeeds.size())+ "," + timedoutSeeds.size() + ") of "+ initialSeeds.size() + " seeds! ");
+			System.out.println("Analyzed (finished,timedout): \t (" + (seedCount -timedoutSeeds.size())+ "," + timedoutSeeds.size() + ") of "+ initialSeeds.size() + " seeds! ");
 			analysisDefinition.getResultHandler().report(seed,res);
 		}
 	}
