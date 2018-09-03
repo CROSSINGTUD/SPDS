@@ -358,7 +358,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			if (icfg.isMethodsWithCallFlow(method)){
 				icfg.addCallerListener(new ReturnFlowCallerListener(method, currNode));
 			} else {
-				//Unbalanced call which we did not flow
+				//Unbalanced call which we did not observe a flow to previously
 				for (Unit unit : icfg.getAllPrecomputedCallers(method)){
 					if (((Stmt) unit).containsInvokeExpr()){
 						for (Unit returnSite : icfg.getSuccsOf(unit)) {
