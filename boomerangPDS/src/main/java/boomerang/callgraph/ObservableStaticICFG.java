@@ -141,7 +141,7 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
 
 	@Override
 	public boolean isMethodsWithCallFlow(SootMethod method) {
-		return true;
+		return false;
 	}
 
 	@Override
