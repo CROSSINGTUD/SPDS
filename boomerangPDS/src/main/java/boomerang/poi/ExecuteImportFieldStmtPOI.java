@@ -37,11 +37,11 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 		}
 
 		@Override
-		public void onAddedTransition(Transition<Statement, INode<Val>> t) {
+		public void onAddedTransition(Transition<Statement, INode<Val>> t, W w) {
 			if (t.getStart() instanceof GeneratedState)
 				return;
 			flowSolver.getCallAutomaton()
-					.addTransition(new Transition<Statement, INode<Val>>(t.getStart(), t.getLabel(), target));
+					.addWeightForTransition(new Transition<Statement, INode<Val>>(t.getStart(), t.getLabel(), target), w);
 		}
 
 		@Override
@@ -283,10 +283,10 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 		}
 
 		@Override
-		public void onAddedTransition(Transition<Statement, INode<Val>> t) {
+		public void onAddedTransition(Transition<Statement, INode<Val>> t, W w) {
 			if (t.getStart().fact().equals(storedVar)) {
 				baseSolver.registerStatementCallTransitionListener(
-						new ImportIndirectCallAliasesAtSucc(succ, t.getTarget()));
+						new ImportIndirectCallAliasesAtSucc(succ, t.getTarget(), w));
 			}
 		}
 
@@ -319,16 +319,18 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 	private final class ImportIndirectCallAliasesAtSucc extends StatementBasedCallTransitionListener<W> {
 
 		private INode<Val> target;
+		private W w;
 
-		public ImportIndirectCallAliasesAtSucc(Statement succ, INode<Val> target) {
+		public ImportIndirectCallAliasesAtSucc(Statement succ, INode<Val> target, W w) {
 			super(succ);
 			this.target = target;
+			this.w = w;
 		}
 
 		@Override
-		public void onAddedTransition(Transition<Statement, INode<Val>> t) {
+		public void onAddedTransition(Transition<Statement, INode<Val>> t, W w) {
 			flowSolver.getCallAutomaton()
-					.addTransition(new Transition<Statement, INode<Val>>(t.getStart(), t.getLabel(), target));
+					.addWeightForTransition(new Transition<Statement, INode<Val>>(t.getStart(), t.getLabel(), target),this.w);
 		}
 
 		@Override

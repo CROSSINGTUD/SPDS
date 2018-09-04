@@ -86,8 +86,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			.create();
 	private Multimap<Statement, StatementBasedFieldTransitionListener<W>> perStatementFieldTransitionsListener = HashMultimap
 			.create();
-	private Multimap<Statement, Transition<Statement, INode<Val>>> perStatementCallTransitions = HashMultimap
-			.create();
+	private HashBasedTable<Statement, Transition<Statement, INode<Val>>,W> perStatementCallTransitions = HashBasedTable.create();
 	private Multimap<Statement, StatementBasedCallTransitionListener<W>> perStatementCallTransitionsListener = HashMultimap
 			.create();
 	private Set<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
@@ -117,7 +116,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			@Override
 			public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
 					WeightedPAutomaton<Statement, INode<Val>, W> aut) {
-				addCallTransitionToStatement(t.getLabel(),t);
+				addCallTransitionToStatement(t.getLabel(),t, w);
 			}
 		});
 		// TODO recap, I assume we can implement this more easily.
@@ -209,20 +208,25 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		}
 	}
 	
-	private void addCallTransitionToStatement(Statement s, Transition<Statement, INode<Val>> t) {
-		if (perStatementCallTransitions.put(s, t)) {
-			for (StatementBasedCallTransitionListener<W> l : Lists
-					.newArrayList(perStatementCallTransitionsListener.get(s))) {
-				l.onAddedTransition(t);
+	private void addCallTransitionToStatement(Statement s, Transition<Statement, INode<Val>> t, W w) {
+		W put = perStatementCallTransitions.get(s, t);
+		if(put != null) {
+			Weight combineWith = put.combineWith(w);
+			if(!combineWith.equals(put)) {
+				for (StatementBasedCallTransitionListener<W> l : Lists
+						.newArrayList(perStatementCallTransitionsListener.get(s))) {
+					l.onAddedTransition(t,w);
+				}
 			}
 		}
 	}
 
 	public void registerStatementCallTransitionListener(StatementBasedCallTransitionListener<W> l) {
 		if (perStatementCallTransitionsListener.put(l.getStmt(), l)) {
-			for (Transition<Statement, INode<Val>> t : Lists
-					.newArrayList(perStatementCallTransitions.get(l.getStmt()))) {
-				l.onAddedTransition(t);
+			Map<Transition<Statement, INode<Val>>, W> row = perStatementCallTransitions.row(l.getStmt());
+			for (Entry<Transition<Statement, INode<Val>>, W> t : Lists
+					.newArrayList(row.entrySet())) {
+				l.onAddedTransition(t.getKey(),t.getValue());
 			}
 		}
 	}

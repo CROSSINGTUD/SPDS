@@ -32,9 +32,9 @@ public abstract class StatementBasedCallTransitionListener<W extends Weight> imp
 	@Override
 	public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
 			WeightedPAutomaton<Statement, INode<Val>, W> aut) {
-		onAddedTransition(t);
+		onAddedTransition(t,w);
 	}
-	public abstract void onAddedTransition(Transition<Statement, INode<Val>> t);
+	public abstract void onAddedTransition(Transition<Statement, INode<Val>> t, W w);
 	@Override
 	public int hashCode() {
 		final int prime = 31;

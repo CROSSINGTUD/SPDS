@@ -108,7 +108,11 @@ public class TransitionFunction extends Weight {
 		TransitionFunction func = (TransitionFunction) other;
 		if (other.equals(one()) || this.equals(one())) {
 			Set<ITransition> transitions = new HashSet<>((other.equals(one()) ? value : func.value));
-			transitions.add(Transition.identity());
+			Set<ITransition> idTransitions = Sets.newHashSet();
+			for(ITransition t : transitions) {
+				idTransitions.add(new Transition(t.from(),t.from()));
+			}
+			transitions.addAll(idTransitions);
 			return new TransitionFunction(transitions,Sets.newHashSet((other.equals(one()) ? stateChangeStatements : func.stateChangeStatements)));
 		}
 		Set<ITransition> transitions = new HashSet<>(func.value);

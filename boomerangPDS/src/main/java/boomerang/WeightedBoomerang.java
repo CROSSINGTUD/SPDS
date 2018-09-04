@@ -406,7 +406,14 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			protected WeightFunctions<Statement, Val, Field, W> getFieldWeights() {
 				return WeightedBoomerang.this.getForwardFieldWeights();
 			}
-
+			
+			@Override
+			protected boolean preventCallTransitionAdd(Transition<Statement, INode<Val>> t, W weight) {
+				if(preventForwardCallTransitionAdd(sourceQuery, t, weight)) {
+					return true;
+				}
+				return super.preventCallTransitionAdd(t, weight);
+			}
 		};
 
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
@@ -475,6 +482,12 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			}
 
 		};
+	}
+
+
+	public boolean preventForwardCallTransitionAdd(ForwardQuery sourceQuery,
+			Transition<Statement, INode<Val>> t, W weight) {
+		return false;
 	}
 
 	protected FieldReadPOI createFieldLoad(Statement s) {

@@ -11,7 +11,6 @@
  *******************************************************************************/
 package typestate.tests;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
@@ -52,7 +51,9 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		file.open();
 //		mustBeInErrorState(file);
 		mustBeInErrorState(alias);
+		int y = 1;
 		alias.close();
+		int x = 1;
 //		mustBeInAcceptingState(alias);
 		mustBeInAcceptingState(file);
 	}
@@ -213,10 +214,22 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		container.field = new File();
 		File field = container.field;
 		field.open();
+		File f2 = container.field;
+		mustBeInErrorState(f2);
+	}
+	
+	@Test
+	public void flowViaFieldDirect2() {
+		ObjectWithField container = new ObjectWithField();
+		container.field = new File();
+		File field = container.field;
+		field.open();
+		mustBeInErrorState(container.field);
 		File field2 = container.field;
 		field2.close();
 		mustBeInAcceptingState(container.field);
 	}
+	
 	@Test
 	public void flowViaFieldNotUnbalanced() {
 		ObjectWithField container = new ObjectWithField();
@@ -441,7 +454,7 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 	public void wrappedClose1() {
 		File file = new File();
 		file.open();
-//		mustBeInErrorState(file);
+		mustBeInErrorState(file);
 		cls(file);
 		mustBeInAcceptingState(file);
 	}
@@ -536,13 +549,35 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		mustBeInErrorState(file);
 	}
 
-	private static class InnerObject{
-		private final File file;
+	public static class InnerObject{
+		public File file;
 
 		public InnerObject(){
 			this.file = new File();
 			this.file.open();
 		}
+
+		public InnerObject(String string) {
+			this.file = new File();
+		}
+
+		public void doClose() {
+			mustBeInErrorState(file);
+			this.file.close();
+			mustBeInAcceptingState(file);
+		}
+
+		public void doOpen() {
+			this.file.open();
+			mustBeInErrorState(file);
+		}
+	}
+	
+	@Test
+	public void storedInObject2(){
+		InnerObject o = new InnerObject("");
+		o.doOpen();
+		o.doClose();
 	}
 	@Override
 	protected TypeStateMachineWeightFunctions getStateMachine() {
