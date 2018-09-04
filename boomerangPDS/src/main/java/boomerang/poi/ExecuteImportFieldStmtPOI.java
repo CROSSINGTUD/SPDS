@@ -12,7 +12,6 @@ import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.StatementBasedCallTransitionListener;
 import boomerang.solver.StatementBasedFieldTransitionListener;
-import java_cup.symbol_set;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.GeneratedState;
@@ -175,8 +174,6 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 	private final Field field;
 	boolean active = false;
 	private WeightedBoomerang<W> boomerang;
-	private Set<Statement> baseSolverContexts = Sets.newHashSet();
-	private Set<Statement> flowSolverContexts = Sets.newHashSet();
 
 	public ExecuteImportFieldStmtPOI(WeightedBoomerang<W> boomerang,
 			final AbstractBoomerangSolver<W> baseSolver, AbstractBoomerangSolver<W> flowSolver,
@@ -248,22 +245,6 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 
 	}
 
-	protected void addBaseSolverContext(Statement callSite) {
-		if(baseSolverContexts.add(callSite)){
-			if(flowSolverContexts.contains(callSite)){
-				flowsTo();
-			}
-		}
-	}
-	protected void addFlowSolverContext(Statement callSite) {
-		if(flowSolverContexts.add(callSite)){
-			if(baseSolverContexts.contains(callSite)){
-				flowsTo();
-			}
-		}
-	}
-	
-	
 	protected void flowsTo() {
 		if(active)
 			return;
