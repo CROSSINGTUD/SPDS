@@ -438,6 +438,20 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		}
 		return res;
 	}
+	
+	/**
+	 * Returns the set of types the backward analysis for the triggered query ever propagates.
+	 * @return Set of types the backward analysis propagates
+	 */
+	public Set<Type> getPropagationType(){
+		AbstractBoomerangSolver<W> solver = queryToSolvers.get(query);
+		Set<Type> types = Sets.newHashSet();
+		for(Transition<Statement, INode<Val>> t :solver.getCallAutomaton().getTransitions()) {
+			types.add(t.getStart().fact().value().getType());
+		}
+		return types;
+	}
+	
 	@Override
 	public Set<String> possibleStringConstants() {
 		throw new RuntimeException("Not implemented!");
