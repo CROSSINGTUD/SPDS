@@ -87,7 +87,7 @@ import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedBoomerang<W extends Weight> {
-	public static boolean DEBUG = false;
+	public static boolean DEBUG = true;
 	private static final Logger logger = LogManager.getLogger();
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
@@ -583,7 +583,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			final FieldWritePOI fieldWritePoi, final ForwardQuery sourceQuery) {
 		BackwardQuery backwardQuery = new BackwardQuery(node.stmt(), fieldWritePoi.getBaseVar());
 		if (node.fact().equals(fieldWritePoi.getStoredVar())) {
-			backwardSolveUnderScope(backwardQuery, sourceQuery, node);
+			backwardSolveUnderScope(backwardQuery, sourceQuery, node.asNode());
 			queryToSolvers.get(sourceQuery).getFieldAutomaton().registerListener(new ForwardHandleFieldWrite(sourceQuery, fieldWritePoi, node.stmt()));
 		}
 		if (node.fact().equals(fieldWritePoi.getBaseVar())) {
@@ -593,7 +593,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		}
 	}
 
-	private void backwardSolveUnderScope(BackwardQuery backwardQuery, ForwardQuery forwardQuery, WitnessNode<Statement, Val, Field> node) {
+	public BackwardBoomerangResults<W> backwardSolveUnderScope(BackwardQuery backwardQuery, ForwardQuery forwardQuery, Node<Statement, Val> node) {
 		scopedQueries.add(backwardQuery);
 		backwardSolve(backwardQuery);
 		final AbstractBoomerangSolver<W> bwSolver = queryToSolvers.getOrCreate(backwardQuery);
@@ -628,6 +628,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					}
 				}
 			}});
+		 return new BackwardBoomerangResults<W>(backwardQuery, false, this.queryToSolvers, getStats(), analysisWatch);
 	}
 
 	private final class ForwardHandleFieldWrite implements WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> {

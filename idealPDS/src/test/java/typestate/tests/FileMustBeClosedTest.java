@@ -160,6 +160,18 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 	}
 
 	@Test
+	public void wrappedOpenCall() {
+		File file1 = new File();
+		call3(file1, file1);
+		mustBeInErrorState(file1);
+	}
+
+	private static void call3(File other, File alias) {
+		alias.open();
+		mustBeInErrorState(alias);
+	}
+
+	@Test
 	public void interprocedural() {
 		File file = new File();
 		file.open();
@@ -294,7 +306,10 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 
 	private void call(File file1, File file2) {
 		file1.open();
+		//DOES NOT WORK IF WE COMMENT THIS OUT?
+		int x = 1;
 		file2.close();
+//		int y = 2;
 		mustBeInAcceptingState(file1);
 	}
 

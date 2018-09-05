@@ -161,7 +161,6 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	}
 
 	public Collection<Node<Statement, Val>> getAliasesFor(Node<Statement, Val> node) {
-		logger.debug("Get alias flow for "+  node+ " " + alias.get(node));
 		return alias.get(node);
 	}
 	
@@ -170,6 +169,7 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	}
 
 	public boolean containsIndirectFlow(Node<Statement, Val> node) {
+		System.out.println("NON KILL:" + nonKillFlow);
 		return nonKillFlow.contains(node);
 	}
 
