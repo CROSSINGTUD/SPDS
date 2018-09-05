@@ -211,12 +211,19 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private void addCallTransitionToStatement(Statement s, Transition<Statement, INode<Val>> t, W w) {
 		W put = perStatementCallTransitions.get(s, t);
 		if(put != null) {
-			Weight combineWith = put.combineWith(w);
+			W combineWith = (W) put.combineWith(w);
 			if(!combineWith.equals(put)) {
+				perStatementCallTransitions.put(s, t,combineWith);
 				for (StatementBasedCallTransitionListener<W> l : Lists
 						.newArrayList(perStatementCallTransitionsListener.get(s))) {
 					l.onAddedTransition(t,w);
 				}
+			}
+		} else {
+			perStatementCallTransitions.put(s, t,w);
+			for (StatementBasedCallTransitionListener<W> l : Lists
+					.newArrayList(perStatementCallTransitionsListener.get(s))) {
+				l.onAddedTransition(t,w);
 			}
 		}
 	}

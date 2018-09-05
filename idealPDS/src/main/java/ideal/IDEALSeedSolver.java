@@ -157,7 +157,8 @@ public class IDEALSeedSolver<W extends Weight> {
 	protected boolean preventStrongUpdateFlows(Transition<Statement, INode<Val>> t, W weight) {
 		if(idealWeightFunctions.isStrongUpdateStatement(t.getLabel())){
 			if(!idealWeightFunctions.containsIndirectFlow(new Node<Statement,Val>(t.getLabel(),t.getStart().fact()))) {
-				if(!(t.getStart() instanceof GeneratedState)) {
+				if((t.getStart() instanceof GeneratedState) || (t.getTarget() instanceof GeneratedState)) {
+				} else {
 					System.out.println("PREVENT ADDING " + t);
 					return true;
 				}
