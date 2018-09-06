@@ -157,7 +157,7 @@ public class IDEALSeedSolver<W extends Weight> {
 	protected boolean preventStrongUpdateFlows(Transition<Statement, INode<Val>> t, W weight) {
 		if(idealWeightFunctions.isStrongUpdateStatement(t.getLabel())){
 			if(!idealWeightFunctions.containsIndirectFlow(new Node<Statement,Val>(t.getLabel(),t.getStart().fact()))) {
-				if((t.getStart() instanceof GeneratedState) || (t.getTarget() instanceof GeneratedState)) {
+				if((t.getStart() instanceof GeneratedState)) {
 				} else {
 					System.out.println("PREVENT ADDING " + t);
 					return true;
@@ -196,13 +196,13 @@ public class IDEALSeedSolver<W extends Weight> {
 					return;
 				}
 				idealWeightFunctions.potentialStrongUpdate(curr, weight);
-				BackwardBoomerangResults<NoWeight> backwardSolveUnderScope = boomerangSolver.backwardSolveUnderScope(new BackwardQuery(curr.stmt(),curr.fact()),seed,curr);
+				BackwardBoomerangResults<W> backwardSolveUnderScope = boomerang.backwardSolveUnderScope(new BackwardQuery(curr.stmt(),curr.fact()),seed,curr);
 				if(!res.getAnalysisWatch().isRunning()) {
 					res.getAnalysisWatch().start();
 				}
 				System.out.println("NON ONE FLOW  " + curr +weight);
 
-				for(final Entry<Query, AbstractBoomerangSolver<NoWeight>> e : boomerangSolver.getSolvers().entrySet()){
+				for(final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()){
 					if(e.getKey() instanceof ForwardQuery){
 						e.getValue().synchedEmptyStackReachable(curr, new EmptyStackWitnessListener<Statement, Val>() {
 							@Override
@@ -217,12 +217,12 @@ public class IDEALSeedSolver<W extends Weight> {
 
 				Map<ForwardQuery, PAutomaton<Statement, INode<Val>>> allocationSites = backwardSolveUnderScope.getAllocationSites();
 				for(ForwardQuery e : allocationSites.keySet()) {
-					AbstractBoomerangSolver<NoWeight> solver = boomerangSolver.getSolvers().get(e);
+					AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
 					System.out.println("ALLOC " + e);
-					solver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, Weight.NoWeight>() {
+					solver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
 						@Override
-						public void onWeightAdded(Transition<Statement, INode<Val>> t, NoWeight w,
-								WeightedPAutomaton<Statement, INode<Val>, NoWeight> aut) {
+						public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
+								WeightedPAutomaton<Statement, INode<Val>, W> aut) {
 							for(Statement succ : solver.getSuccsOf(curr.stmt())) {
 								if(t.getLabel().equals(succ) && !t.getStart().fact().equals(curr.fact())) {
 									idealWeightFunctions.addNonKillFlow(curr);
