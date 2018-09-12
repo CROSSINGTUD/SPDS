@@ -13,12 +13,13 @@ package boomerang;
 
 import com.google.common.base.Optional;
 
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.stats.IBoomerangStats;
 import boomerang.stats.SimpleBoomerangStats;
-import soot.ArrayType;
 import soot.RefType;
 import soot.Scene;
 import soot.SootMethod;
@@ -33,7 +34,6 @@ import soot.jimple.NullConstant;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
 import soot.jimple.StringConstant;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
@@ -159,7 +159,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		return Optional.absent();
 	}
 
-	protected class AllocationValCalleeListener implements CalleeListener<Unit,SootMethod>{
+	protected class AllocationValCalleeListener implements CalleeListener<Unit,SootMethod> {
 		AtomicReference<AllocVal> returnValue;
 		AssignStmt as;
 		ObservableICFG<Unit, SootMethod> icfg;
