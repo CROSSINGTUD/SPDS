@@ -1,5 +1,6 @@
 package boomerang.results;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -236,8 +237,16 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		for (final Query fw : getAllocationSites().keySet()) {
 			if(fw instanceof BackwardQuery)
 				continue;
+			
 			if(queryToSolvers.getOrCreate(fw).getReachedStates().contains(el.asNode())) {
-				return true;
+				for(Transition<Field, INode<Node<Statement, Val>>> t :queryToSolvers.getOrCreate(fw).getFieldAutomaton().getTransitions()){
+					if(t.getStart() instanceof GeneratedState){
+						continue;
+					}
+					if(t.getStart().fact().equals(el.asNode()) && t.getLabel().equals(Field.empty())){
+						return true;
+					}
+				}
 			}
 		}
 		return false;
@@ -266,9 +275,9 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 											results.add(new AccessPath(base));
 										}
 									}
-									List<Field> fields = Lists.newArrayList();
+									List<Transition<Field, INode<Node<Statement, Val>>>> fields = Lists.newArrayList();
 									if (!(t.getLabel() instanceof Empty)) {
-										fields.add(t.getLabel());
+										fields.add(t);
 									}
 									queryToSolvers.getOrCreate(fw).getFieldAutomaton().registerListener(new ExtractAccessPathStateListener(t.getTarget(),allocNode,base, fields, results));
 								}
@@ -285,12 +294,12 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 	private class ExtractAccessPathStateListener extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
 		private INode<Node<Statement, Val>> allocNode;
-		private Collection<Field> fields;
+		private Collection<Transition<Field, INode<Node<Statement, Val>>>> fields;
 		private Set<AccessPath> results;
 		private Val base;
 
 		public ExtractAccessPathStateListener(INode<Node<Statement, Val>> state, INode<Node<Statement, Val>> allocNode,
-				Val base, Collection<Field> fields, Set<AccessPath> results) {
+				Val base, Collection<Transition<Field, INode<Node<Statement, Val>>>> fields, Set<AccessPath> results) {
 			super(state);
 			this.allocNode = allocNode;
 			this.base = base;
@@ -301,21 +310,35 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		@Override
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-//			if(t.getTarget() instanceof AllocNode && t.getLabel().equals(Field.epsilon()))
-//				return;
-			Collection<Field> copiedFields = (fields instanceof Set ? Sets.newHashSet(fields) : Lists.newArrayList(fields));
+			if(t.getLabel().equals(Field.epsilon()))
+				return;
+			Collection<Transition<Field, INode<Node<Statement, Val>>>> copiedFields = (fields instanceof Set ? Sets.newHashSet(fields) : Lists.newArrayList(fields));
 			if (!t.getLabel().equals(Field.empty())) {
-				if(copiedFields.contains(t.getLabel())){
+				if(copiedFields.contains(t)){
 					copiedFields = Sets.newHashSet(fields);
 				}
 				if(!(t.getLabel() instanceof Empty))
-					copiedFields.add(t.getLabel());
+					copiedFields.add(t);
 			}
 			if (t.getTarget().equals(allocNode)) {
-				results.add(new AccessPath(base, copiedFields));
+				
+				results.add(new AccessPath(base, convert(copiedFields)));
 			} 
 			weightedPAutomaton.registerListener(
 							new ExtractAccessPathStateListener(t.getTarget(), allocNode, base, copiedFields, results));
+		}
+
+		private Collection<Field> convert(Collection<Transition<Field, INode<Node<Statement, Val>>>> fields) {
+			Collection<Field> res;
+			if(fields instanceof List) {
+				res = Lists.newArrayList();
+			} else {
+				res = Sets.newHashSet();
+			}
+			for(Transition<Field, INode<Node<Statement, Val>>> f : fields) {
+				res.add(f.getLabel());
+			}
+			return res;
 		}
 
 		@Override
@@ -415,6 +438,20 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		}
 		return res;
 	}
+	
+	/**
+	 * Returns the set of types the backward analysis for the triggered query ever propagates.
+	 * @return Set of types the backward analysis propagates
+	 */
+	public Set<Type> getPropagationType(){
+		AbstractBoomerangSolver<W> solver = queryToSolvers.get(query);
+		Set<Type> types = Sets.newHashSet();
+		for(Transition<Statement, INode<Val>> t :solver.getCallAutomaton().getTransitions()) {
+			types.add(t.getStart().fact().value().getType());
+		}
+		return types;
+	}
+	
 	@Override
 	public Set<String> possibleStringConstants() {
 		throw new RuntimeException("Not implemented!");

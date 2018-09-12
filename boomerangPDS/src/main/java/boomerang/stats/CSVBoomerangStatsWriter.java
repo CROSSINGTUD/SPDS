@@ -31,6 +31,7 @@ import com.google.common.collect.Sets;
 import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
 import boomerang.Query;
+import boomerang.Util;
 import boomerang.WeightedBoomerang;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -42,6 +43,7 @@ import boomerang.solver.ForwardBoomerangSolver;
 import soot.SootMethod;
 import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.WitnessNode;
+import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.Rule;
@@ -71,6 +73,10 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 	private int reachedBackwardNodeCollisions;
 	private Set<SootMethod> callVisitedMethods = Sets.newHashSet();
 	private Set<SootMethod> fieldVisitedMethods = Sets.newHashSet();
+	private Set<Statement> callVisitedStmts = Sets.newHashSet();
+	private Set<Statement> fieldVisitedStmts = Sets.newHashSet();
+	private Set<INode<Node<Statement,Val>>> fieldGeneratedStates = Sets.newHashSet();
+	private Set<INode<Val>> callGeneratedStates = Sets.newHashSet();
 	private int arrayFlows;
 	private int staticFlows;
 	private int fieldWritePOIs;
@@ -80,10 +86,20 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 	private static final String CSV_SEPARATOR = ";";
 	private List<String> headers = Lists.newArrayList();
 	private Map<String,String> headersToValues = Maps.newHashMap();
-	private long maxMemory;
+	private long memoryBefore;
 	private enum Headers{
 		Query,QueryType,FieldTransitions,CallTransitions,CallRules,FieldRules, ReachedForwardNodes, ReachedBackwardNodes, 
-		CallVisitedMethods, FieldVisitedMethods, FieldWritePOIs, FieldReadPOIs, StaticFlows, ArrayFlows, QueryTime, Timeout, 
+		CallVisitedMethods, FieldVisitedMethods, CallVisitedStmts, FieldVisitedStmts,FieldWritePOIs,
+		FieldReadPOIs, StaticFlows, ArrayFlows, QueryTime, Timeout, ICFGEdges, 
+		CallGeneratedStates, 
+		FieldGeneratedStates,
+		FieldLongestAccessPath,
+		CallLongestCallStack,
+		CallContainsLoop,
+		FieldContainsLoop,
+		MemoryBefore,
+		MemoryAfter,
+		MemoryDiff
 	}
 	
 	public CSVBoomerangStatsWriter(String outputFileName) {
@@ -91,6 +107,7 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 		for(Headers h : Headers.values()) {
 			this.headers.add(h.toString());
 		}
+		memoryBefore = Util.getReallyUsedMemory();
 	}
 
 	public static <K> Map<K, Integer> sortByValues(final Map<K, Integer> map) {
@@ -119,9 +136,12 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 					fieldTransitionCollisions++;
 				}
 				fieldVisitedMethods.add(t.getStart().fact().stmt().getMethod());
+				fieldVisitedStmts.add(t.getStart().fact().stmt());
 				if(t.getLabel().equals(Field.array())){
 					arrayFlows++;
 				}
+				addFieldGeneratedState(t.getStart());
+				addFieldGeneratedState(t.getTarget());
 			}
 		});
 
@@ -133,10 +153,13 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 					callTransitionCollisions++;
 				}
 				callVisitedMethods.add(t.getLabel().getMethod());
+				fieldVisitedStmts.add(t.getLabel());
 
 				if(t.getStart().fact().isStatic()){
 					staticFlows++;
 				}
+				addCallGeneratedState(t.getStart());
+				addCallGeneratedState(t.getTarget());
 			}
 		});
 
@@ -154,7 +177,6 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 			public void onRuleAdded(Rule<Statement, INode<Val>, W> rule) {
 				if (!globalCallRules.add(rule)) {
 					callRulesCollisions++;
-
 				} 
 			}
 		});
@@ -177,6 +199,17 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 	}
 
 
+	protected void addFieldGeneratedState(INode<Node<Statement, Val>> s) {
+		if(s instanceof GeneratedState) {
+			fieldGeneratedStates.add(s);
+		}
+	}
+
+	protected void addCallGeneratedState(INode<Val> s) {
+		if(s instanceof GeneratedState) {
+			callGeneratedStates.add(s);
+		}
+	}
 	@Override
 	public void registerFieldWritePOI(WeightedBoomerang<W>.FieldWritePOI key) {
 		fieldWritePOIs++;
@@ -304,6 +337,7 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 	}
 	
 	private void writeToFile(Query query, long queryTime, boolean timeout) {
+		long memoryAfter = Util.getReallyUsedMemory();
 		put(Headers.Query,query.toString());
 		put(Headers.QueryType, (query instanceof BackwardQuery ? "B" : "F"));
 		put(Headers.QueryTime, queryTime);
@@ -317,10 +351,21 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 		put(Headers.FieldWritePOIs, fieldWritePOIs);
 		put(Headers.FieldVisitedMethods,fieldVisitedMethods.size());
 		put(Headers.CallVisitedMethods,callVisitedMethods.size());
+		put(Headers.FieldVisitedStmts,fieldVisitedStmts.size());
+		put(Headers.CallVisitedStmts,callVisitedStmts.size());
 		put(Headers.ReachedForwardNodes,reachedForwardNodes.size());
 		put(Headers.ReachedBackwardNodes,reachedBackwardNodes.size());
 		put(Headers.StaticFlows, staticFlows);
-		
+		put(Headers.ICFGEdges, Util.getICFGEdges());
+		put(Headers.CallGeneratedStates, callGeneratedStates.size());
+		put(Headers.FieldGeneratedStates, fieldGeneratedStates.size());
+		put(Headers.CallLongestCallStack, queries.get(query).getCallAutomaton().getLongestPath().size());
+		put(Headers.FieldLongestAccessPath, queries.get(query).getFieldAutomaton().getLongestPath().size());
+		put(Headers.CallContainsLoop, queries.get(query).getCallAutomaton().containsLoop());
+		put(Headers.FieldContainsLoop, queries.get(query).getFieldAutomaton().containsLoop());
+		put(Headers.MemoryAfter, memoryAfter);
+		put(Headers.MemoryBefore, memoryBefore);
+		put(Headers.MemoryDiff, memoryAfter - memoryBefore);
 		try {
 			File reportFile = new File(outputFileName).getAbsoluteFile();
 			if (!reportFile.getParentFile().exists()) {

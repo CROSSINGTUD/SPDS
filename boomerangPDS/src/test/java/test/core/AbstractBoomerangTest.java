@@ -11,7 +11,28 @@
  *******************************************************************************/
 package test.core;
 
-import boomerang.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import org.junit.Rule;
+import org.junit.rules.Timeout;
+
+import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+
+import boomerang.BackwardQuery;
+import boomerang.Boomerang;
+import boomerang.DefaultBoomerangOptions;
+import boomerang.ForwardQuery;
+import boomerang.IntAndStringBoomerangOptions;
+import boomerang.Query;
+import boomerang.WeightedBoomerang;
+import boomerang.WholeProgramBoomerang;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.callgraph.ObservableICFG;
@@ -27,13 +48,30 @@ import boomerang.preanalysis.PreTransformBodies;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SimpleSeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.stats.IBoomerangStats;
 import boomerang.util.AccessPath;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import boomerang.util.AccessPathParser;
 import heros.utilities.DefaultValueMap;
-import soot.*;
-import soot.jimple.*;
+import soot.Body;
+import soot.Local;
+import soot.PackManager;
+import soot.RefType;
+import soot.Scene;
+import soot.SceneTransformer;
+import soot.SootClass;
+import soot.SootMethod;
+import soot.Transform;
+import soot.Unit;
+import soot.Value;
+import soot.JastAddJ.VariableScope;
+import soot.jimple.AssignStmt;
+import soot.jimple.IntConstant;
+import soot.jimple.InvokeExpr;
+import soot.jimple.NewExpr;
+import soot.jimple.ReturnStmt;
+import soot.jimple.Stmt;
+import soot.jimple.StringConstant;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
@@ -71,6 +109,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	protected AnalysisMode[] getAnalyses() {
 		return new AnalysisMode[] {
+				AnalysisMode.WholeProgram,
 				AnalysisMode.DemandDrivenBackward
 				};
 	}
@@ -217,8 +256,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			return Objects.hash(p_returnValue, p_as, p_statement, p_stmt);
 		}
 	}
-
-
 
 	private void compareQuery(Collection<? extends Query> expectedResults,
 			Collection<? extends Node<Statement, Val>> results, AnalysisMode analysis) {

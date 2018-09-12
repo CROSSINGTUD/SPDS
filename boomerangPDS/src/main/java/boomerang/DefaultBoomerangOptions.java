@@ -11,16 +11,29 @@
  *******************************************************************************/
 package boomerang;
 
-import boomerang.callgraph.CalleeListener;
-import boomerang.callgraph.ObservableICFG;
+import com.google.common.base.Optional;
+
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.stats.IBoomerangStats;
 import boomerang.stats.SimpleBoomerangStats;
-import com.google.common.base.Optional;
-import soot.*;
-import soot.jimple.*;
+import soot.ArrayType;
+import soot.RefType;
+import soot.Scene;
+import soot.SootMethod;
+import soot.Type;
+import soot.Unit;
+import soot.Value;
+import soot.jimple.AssignStmt;
+import soot.jimple.NewArrayExpr;
+import soot.jimple.NewExpr;
+import soot.jimple.NewMultiArrayExpr;
+import soot.jimple.NullConstant;
+import soot.jimple.ReturnStmt;
+import soot.jimple.Stmt;
+import soot.jimple.StringConstant;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
@@ -62,8 +75,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 			NewArrayExpr expr = (NewArrayExpr) val;
 			return expr.getBaseType() instanceof RefType;
 		} else if(val instanceof NewMultiArrayExpr){
-			NewMultiArrayExpr expr = (NewMultiArrayExpr) val;
-			return expr.getBaseType().getArrayElementType() instanceof RefType;
+			return true;
 		}
 		return false;
 	}
@@ -205,5 +217,4 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 	public boolean aliasing() {
 		return true;
 	}
-
 }

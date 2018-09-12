@@ -11,6 +11,7 @@
  *******************************************************************************/
 package wpds.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,6 +38,7 @@ import pathexpression.IRegEx;
 import pathexpression.LabeledGraph;
 import pathexpression.PathExpressionComputer;
 import pathexpression.RegEx;
+import wpds.interfaces.Empty;
 import wpds.interfaces.ForwardDFSEpsilonVisitor;
 import wpds.interfaces.ForwardDFSVisitor;
 import wpds.interfaces.Location;
@@ -698,6 +700,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			visited.add(pop);
 			Collection<Transition<N, D>> inTrans = transitionsInto.get(pop);
 			for(Transition<N, D> t : inTrans) {
+				if(t.getLabel().equals(this.epsilon()))
+					continue;
+				if(!isGeneratedState(t.getStart()))
+					continue;
 				if(visited.contains(t.getStart())) {
 					return true;
 				}
@@ -707,4 +713,48 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		return false;
 	}
 	
+	public Set<N> getLongestPath() {
+		//Performs a backward DFS
+		LinkedList<D> worklist = Lists.newLinkedList();
+		worklist.add(initialState);
+		Map<D,Set<N>> pathReachingD = Maps.newHashMap();
+		while(!worklist.isEmpty()) {
+			D pop = worklist.pop();
+			Set<N> atCurr = getOrCreate(pathReachingD,pop);
+			Collection<Transition<N, D>> inTrans = transitionsInto.get(pop);
+			for(Transition<N, D> t : inTrans) {
+				if(t.getLabel().equals(this.epsilon()))
+					continue;
+				D next = t.getStart();
+				if(!isGeneratedState(next))
+					continue;
+				if(next.equals(pop))
+					continue;
+				Set<N> atNext = getOrCreate(pathReachingD,next);
+				Set<N> newAtCurr = Sets.newHashSet(atCurr);
+				if(newAtCurr.add(t.getLabel())) {
+					boolean addAll = atNext.addAll(newAtCurr);
+					if(addAll) {
+						worklist.add(next);
+					}
+				}
+			}
+		}
+		Set<N> longest = Sets.newHashSet();
+		for(Set<N> l : pathReachingD.values()) {
+			if(longest.size() < l.size()) {
+				longest = l;
+			}
+		}
+		return longest;
+	}
+
+	private Set<N> getOrCreate(Map<D,Set<N>> pathReachingD, D pop) {
+		Set<N> collection = pathReachingD.get(pop);
+		if(collection == null) {
+			collection = Sets.newHashSet();
+			pathReachingD.put(pop, collection);
+		}
+		return collection;
+	}
 }
