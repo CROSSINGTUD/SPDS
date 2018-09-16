@@ -51,9 +51,7 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		file.open();
 //		mustBeInErrorState(file);
 		mustBeInErrorState(alias);
-		int y = 1;
 		alias.close();
-		int x = 1;
 //		mustBeInAcceptingState(alias);
 		mustBeInAcceptingState(file);
 	}
@@ -306,10 +304,9 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 
 	private void call(File file1, File file2) {
 		file1.open();
-		//DOES NOT WORK IF WE COMMENT THIS OUT?
+		//TODO: This test case fails if we comment out the next line
 		int x = 1;
 		file2.close();
-//		int y = 2;
 		mustBeInAcceptingState(file1);
 	}
 
@@ -412,7 +409,8 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 	private void bar(ObjectWithField a, File file) {
 		file.open();
 		a.field = file;
-		mustBeInErrorState(a.field);
+		File whoAmI = a.field;
+		mustBeInErrorState(whoAmI);
 	}
 
 	@Test
@@ -465,6 +463,19 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		wrappedParamClose(file);
 		mustBeInAcceptingState(file);
 	}
+	
+	@Test
+	public void wrappedOpen2() {
+		File file = new File();
+		wrappedParamOpen(file);
+		mustBeInErrorState(file);
+	}
+	private void wrappedParamOpen(File a) {
+		openCall(a);
+	}
+	private void openCall(File f) {
+		f.open();
+	}
 	@Test
 	public void wrappedClose1() {
 		File file = new File();
@@ -494,13 +505,9 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		File file = new File();
 		file.open();
 		mustBeInErrorState(file);
-		int x = 1;
-		System.out.println(x);
 		mustBeInErrorState(file);
 		file.close();
 		mustBeInAcceptingState(file);
-		x = 1;
-		System.out.println(x);
 		mustBeInAcceptingState(file);
 	}
 

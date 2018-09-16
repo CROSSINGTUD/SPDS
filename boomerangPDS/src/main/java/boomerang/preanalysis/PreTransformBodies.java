@@ -13,9 +13,12 @@ package boomerang.preanalysis;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
+
 
 import soot.Body;
 import soot.Local;
+import soot.PatchingChain;
 import soot.Scene;
 import soot.SceneTransformer;
 import soot.SootClass;
@@ -25,6 +28,8 @@ import soot.Value;
 import soot.jimple.AssignStmt;
 import soot.jimple.Constant;
 import soot.jimple.InstanceFieldRef;
+import soot.jimple.ReturnStmt;
+import soot.jimple.ReturnVoidStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.internal.JAssignStmt;
 import soot.jimple.internal.JNopStmt;
@@ -68,6 +73,15 @@ public class PreTransformBodies extends SceneTransformer {
 				}
 				Body b = m.getActiveBody();
 				b.getUnits().addFirst(new JNopStmt());
+				Set<Unit> returnStmts = Sets.newHashSet();
+				for(Unit u : b.getUnits()) {
+					if(u instanceof ReturnStmt || u instanceof ReturnVoidStmt) {
+						returnStmts.add(u);
+					}
+				}
+				for(Unit rets : returnStmts) {
+					b.getUnits().insertBefore(new JNopStmt(), rets);
+				}
 			}
 		}
 	}

@@ -12,6 +12,7 @@
 package ideal;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -30,7 +31,10 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import ideal.IDEALSeedSolver.Phases;
 import sync.pds.solver.WeightFunctions;
+import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import wpds.impl.NormalRule;
+import wpds.impl.Rule;
 import wpds.impl.Weight;
 
 public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<Statement,Val,Statement,W> {
@@ -38,9 +42,8 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	private static final Logger logger = LogManager.getLogger();
 	private WeightFunctions<Statement,Val,Statement,W> delegate;
 	private Set<NonOneFlowListener<W>> listeners = Sets.newHashSet(); 
-	private Map<Statement, W> potentialStrongUpdates = Maps.newHashMap();
+	private Set<Statement> potentialStrongUpdates = Sets.newHashSet();
 	private Set<Statement> weakUpdates = Sets.newHashSet();
-	private Set<Node<Statement,Val>> strongUpdateNodes = Sets.newHashSet();
 	private Multimap<Node<Statement,Val>, W> nonOneFlowNodes = HashMultimap.create();
 	private Phases phase;
 	private boolean strongUpdates;
@@ -141,10 +144,8 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		return "[IDEAL-Wrapped Weights] " + delegate.toString();
 	}
 
-	public void potentialStrongUpdate(Node<Statement, Val> curr, W weight) {
-		W w = potentialStrongUpdates.get(curr.stmt());
-		W newWeight = (w == null ? weight : (W) w.combineWith(weight)); 
-		potentialStrongUpdates.put(curr.stmt(), newWeight);
+	public void potentialStrongUpdate(Statement stmt) {
+		potentialStrongUpdates.add(stmt);
 	}
 	
 	public void weakUpdate(Statement stmt) {
@@ -165,15 +166,22 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	}
 	
 	public boolean isStrongUpdateStatement(Statement stmt) {
-		return potentialStrongUpdates.containsKey(stmt) && !weakUpdates.contains(stmt) && strongUpdates;
+		return potentialStrongUpdates.contains(stmt) && !weakUpdates.contains(stmt) && strongUpdates;
 	}
 
 	public boolean containsIndirectFlow(Node<Statement, Val> node) {
-		System.out.println("NON KILL:" + nonKillFlow);
 		return nonKillFlow.contains(node);
 	}
 
 	public void addNonKillFlow(Node<Statement, Val> curr) {
 		nonKillFlow.add(curr);
+	}
+
+	public void printStrongUpdates() {
+		HashSet<Statement> sU = Sets.newHashSet(potentialStrongUpdates);
+		System.out.println("Strong updates " + sU);
+		System.out.println("Weak updates " + weakUpdates);
+		System.out.println("Non kill-flows " + nonKillFlow);
+		System.out.println("Alias -flows " + alias);
 	}
 }
