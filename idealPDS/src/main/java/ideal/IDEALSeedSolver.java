@@ -17,8 +17,6 @@ import java.util.Map.Entry;
 
 import com.google.common.base.Stopwatch;
 
-import boomerang.BackwardQuery;
-import boomerang.Boomerang;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
@@ -26,7 +24,6 @@ import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import boomerang.poi.BaseSolverContext;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
@@ -387,7 +384,7 @@ public class IDEALSeedSolver<W extends Weight> {
 						.getAllocationSites();
 				for (ForwardQuery e : allocationSites.keySet()) {
 					AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
-					System.out.println("ALLOC " + e);
+					System.out.println("ALLOC " + e +" \n for query " + query);
 					solver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
 						@Override
 						public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,

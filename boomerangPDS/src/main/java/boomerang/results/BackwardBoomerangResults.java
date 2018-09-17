@@ -15,6 +15,7 @@ import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.Util;
+import boomerang.WeightedBoomerang.AccessPathBackwardQuery;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -28,6 +29,7 @@ import soot.Type;
 import soot.jimple.ClassConstant;
 import soot.jimple.NewExpr;
 import sync.pds.solver.SyncPDSUpdateListener;
+import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -84,8 +86,24 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 			if(!(fw.getKey() instanceof ForwardQuery)) {
 				continue;
 			}
-			fw.getValue().getFieldAutomaton().registerListener(new ExtractAllocationSiteStateListener(fw.getValue().getFieldAutomaton().getInitialState(), query, (ForwardQuery) fw.getKey(), results));
-			
+			if(query instanceof AccessPathBackwardQuery) {
+				SingleNode<Node<Statement, Val>> startNode = new SingleNode<Node<Statement,Val>>(query.asNode());
+				for(Statement pred : fw.getValue().getPredsOf(query.stmt())){
+					fw.getValue().getFieldAutomaton().registerListener(new IntersectionListener(startNode,fw.getValue().getFieldAutomaton(), new SingleNode<Node<Statement,Val>>(new Node<Statement,Val>(pred,query.asNode().fact())),((AccessPathBackwardQuery)query).getFieldAutomaton()) {
+						
+						@Override
+						protected void intersect(Transition<Field, INode<Node<Statement, Val>>> tA,
+								Transition<Field, INode<Node<Statement, Val>>> tB) {
+							System.out.println("INTERSECT " + tA);
+							if(tA.getLabel().equals(Field.empty())) {
+								results.add((ForwardQuery) fw.getKey());
+							}
+						}
+					});
+				}
+			} else {
+				fw.getValue().getFieldAutomaton().registerListener(new ExtractAllocationSiteStateListener(fw.getValue().getFieldAutomaton().getInitialState(), query, (ForwardQuery) fw.getKey(), results));
+			}
 		}
 		allocationSites = Maps.newHashMap();
 		for(ForwardQuery q : results) {
@@ -213,7 +231,7 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		@Override
 		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if(t.getLabel().equals(Field.empty()) && t.getStart().fact().equals(bwQuery.asNode())){
+			if(t.getStart().fact().equals(bwQuery.asNode()) && t.getLabel().equals(Field.empty())){
 				results.add(query);
 			}
 		}
@@ -462,5 +480,156 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 	public long getMaxMemory() {
 		return maxMemory;
 	}
+	private class ExtractAllocationSiteAccesssPathStateListener extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+		
+		private ForwardQuery query;
+		private Set<ForwardQuery> results;
+		private AccessPathBackwardQuery bwQuery;
+
+		public ExtractAllocationSiteAccesssPathStateListener(INode<Node<Statement, Val>> state,  AccessPathBackwardQuery bwQuery,ForwardQuery query, Set<ForwardQuery> results) {
+			super(state);
+			this.bwQuery = bwQuery;
+			this.query = query;
+			this.results = results;
+		}
+
+		@Override
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+			
+			if(t.getStart().fact().equals(bwQuery.asNode()) && t.getLabel().equals(Field.empty())){
+				results.add(query);
+			}
+		}
+		
+		@Override
+		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+		}
+
+		@Override
+		public int hashCode() {
+			//Otherwise we cannot register this listener twice.
+			return System.identityHashCode(this);
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			//Otherwise we cannot register this listener twice.
+			return this == obj;
+		}
+	}
 	
+	private abstract class IntersectionListener extends WPAStateListener<Field, INode<Node<Statement,Val>>, W>{
+		public IntersectionListener(INode<Node<Statement, Val>> stateA,WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> autA,INode<Node<Statement, Val>> stateB,WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> autB) {
+			super(stateA);
+			this.autA = autA;
+			this.autB = autB;
+			this.stateB = stateB;
+		}
+
+		WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> autA;
+		INode<Node<Statement,Val>> stateA;
+		WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> autB;
+		INode<Node<Statement,Val>> stateB;
+		@Override
+		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> tA, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+			System.out.println("INTERSECT A " + tA.getLabel());
+			autB.registerListener(new WPAStateListener<Field, INode<Node<Statement,Val>>, W>(stateB) {
+
+				@Override
+				public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> tB, W w,
+						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+					if(tA.getLabel().equals(tB.getLabel())) {
+						intersect(tA,tB);
+						System.out.println("INTERSECT REACHED " + tA);
+						System.out.println("INTERSECT REACHED " + tB);
+						BackwardBoomerangResults<W>.IntersectionListener outer = IntersectionListener.this;
+						autA.registerListener(new IntersectionListener(tA.getTarget(),autA, tB.getTarget(), autB) {
+							@Override
+							protected void intersect(Transition<Field, INode<Node<Statement, Val>>> tA,
+									Transition<Field, INode<Node<Statement, Val>>> tB) {
+								outer.intersect(tA, tB);
+							}
+						});
+					}
+				}
+
+				@Override
+				public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> tB, W w,
+						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+					System.out.println("INTERSECT B " + tB.getLabel());
+				
+				}
+				@Override
+				public int hashCode() {
+					return System.identityHashCode(this);
+				}
+				@Override
+				public boolean equals(Object obj) {
+					return this == obj;
+				}
+			});
+		}
+
+		protected abstract void intersect(Transition<Field, INode<Node<Statement, Val>>> tA,
+				Transition<Field, INode<Node<Statement, Val>>> tB);
+
+		@Override
+		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = super.hashCode();
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((autA == null) ? 0 : autA.hashCode());
+			result = prime * result + ((autB == null) ? 0 : autB.hashCode());
+			result = prime * result + ((stateA == null) ? 0 : stateA.hashCode());
+			result = prime * result + ((stateB == null) ? 0 : stateB.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!super.equals(obj))
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			IntersectionListener other = (IntersectionListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (autA == null) {
+				if (other.autA != null)
+					return false;
+			} else if (!autA.equals(other.autA))
+				return false;
+			if (autB == null) {
+				if (other.autB != null)
+					return false;
+			} else if (!autB.equals(other.autB))
+				return false;
+			if (stateA == null) {
+				if (other.stateA != null)
+					return false;
+			} else if (!stateA.equals(other.stateA))
+				return false;
+			if (stateB == null) {
+				if (other.stateB != null)
+					return false;
+			} else if (!stateB.equals(other.stateB))
+				return false;
+			return true;
+		}
+
+		private BackwardBoomerangResults getOuterType() {
+			return BackwardBoomerangResults.this;
+		}
+		
+	}
 }
