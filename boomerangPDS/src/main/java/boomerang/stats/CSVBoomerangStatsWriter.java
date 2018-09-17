@@ -42,7 +42,6 @@ import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
 import soot.SootMethod;
 import sync.pds.solver.SyncPDSUpdateListener;
-import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -181,16 +180,16 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
 			}
 		});
 
-		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
+		solver.registerListener(new SyncPDSUpdateListener<Statement, Val>() {
 
 			@Override
-			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+			public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
 				if(solver instanceof ForwardBoomerangSolver) {
-					if (!reachedForwardNodes.add(reachableNode.asNode())) {
+					if (!reachedForwardNodes.add(reachableNode)) {
 						reachedForwardNodeCollisions++;
 					}
 				} else {
-					if (!reachedBackwardNodes.add(reachableNode.asNode())) {
+					if (!reachedBackwardNodes.add(reachableNode)) {
 						reachedBackwardNodeCollisions++;
 					}
 				}

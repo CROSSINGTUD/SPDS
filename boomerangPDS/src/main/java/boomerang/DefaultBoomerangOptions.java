@@ -18,7 +18,6 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.stats.IBoomerangStats;
 import boomerang.stats.SimpleBoomerangStats;
-import soot.ArrayType;
 import soot.RefType;
 import soot.Scene;
 import soot.SootMethod;

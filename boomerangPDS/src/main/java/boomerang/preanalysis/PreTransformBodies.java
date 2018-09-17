@@ -19,7 +19,6 @@ import com.google.common.collect.Sets;
 
 import soot.Body;
 import soot.Local;
-import soot.PatchingChain;
 import soot.Scene;
 import soot.SceneTransformer;
 import soot.SootClass;

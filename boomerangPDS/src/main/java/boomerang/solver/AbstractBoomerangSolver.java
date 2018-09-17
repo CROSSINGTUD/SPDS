@@ -54,7 +54,6 @@ import soot.jimple.NewExpr;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import sync.pds.solver.SyncPDSSolver;
-import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
@@ -511,7 +510,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	}
 
 	@Override
-	protected void processNode(final WitnessNode<Statement, Val, Field> witnessNode) {
+	protected void processNode(final Node<Statement, Val> witnessNode) {
 		submit(witnessNode.stmt().getMethod(), new Runnable() {
 			@Override
 			public void run() {

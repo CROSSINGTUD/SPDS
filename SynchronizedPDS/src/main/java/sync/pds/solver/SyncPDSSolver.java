@@ -63,11 +63,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			return "Field " + super.toString();
 		};
 	};
-	private final Set<WitnessNode<Stmt,Fact,Field>> reachedStates = Sets.newHashSet();
+	private final Set<Node<Stmt,Fact>> reachedStates = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> callingContextReachable = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> fieldContextReachable = Sets.newHashSet();
-	private final Set<SyncPDSUpdateListener<Stmt, Fact, Field>> updateListeners = Sets.newHashSet();
-	private final Multimap<WitnessNode<Stmt,Fact,Field>, SyncStatePDSUpdateListener<Stmt, Fact, Field>> reachedStateUpdateListeners = HashMultimap.create();
+	private final Set<SyncPDSUpdateListener<Stmt, Fact>> updateListeners = Sets.newHashSet();
+	private final Multimap<Node<Stmt,Fact>, SyncStatePDSUpdateListener<Stmt, Fact>> reachedStateUpdateListeners = HashMultimap.create();
 	protected final WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> fieldAutomaton;
 	protected final WeightedPAutomaton<Stmt, INode<Fact>,W> callAutomaton;
 
@@ -412,9 +412,8 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		Transition<Stmt, INode<Fact>> callTrans = createInitialCallTransition(curr);
 		callAutomaton
 				.addWeightForTransition(callTrans,weight);
-		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
 		callAutomaton.computeValues(callTrans, weight);
-		processNode(startNode);
+		processNode(curr);
 	}
 	
 	public void solve(Node<Stmt, Fact> curr, WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> fieldAut) {
@@ -428,9 +427,8 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		Transition<Stmt, INode<Fact>> callTrans = createInitialCallTransition(curr);
 		callAutomaton
 				.addWeightForTransition(callTrans,getCallWeights().getOne());
-		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
 		callAutomaton.computeValues(callTrans, getCallWeights().getOne());
-		processNode(startNode);
+		processNode(curr);
 	}
 	
 	public void solve(Node<Stmt, Fact> curr) {
@@ -441,10 +439,9 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		return new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), callAutomaton.getInitialState());
 	}
 	
-	protected void processNode(WitnessNode<Stmt, Fact,Field> witnessNode) {
-		if(!addReachableState(witnessNode))
+	protected void processNode(Node<Stmt, Fact> curr) {
+		if(!addReachableState(curr))
 			return;
-		Node<Stmt, Fact> curr = witnessNode.asNode();
 		Collection<? extends State> successors = computeSuccessor(curr);
 		for (State s : successors) {
 			if (s instanceof Node) {
@@ -465,14 +462,14 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 
-	private boolean addReachableState(WitnessNode<Stmt,Fact,Field> curr) {
+	private boolean addReachableState(Node<Stmt,Fact> curr) {
 		if (reachedStates.contains(curr))
 			return false;
 		reachedStates.add(curr);
-		for (SyncPDSUpdateListener<Stmt, Fact, Field> l : Lists.newLinkedList(updateListeners)) {
+		for (SyncPDSUpdateListener<Stmt, Fact> l : Lists.newLinkedList(updateListeners)) {
 			l.onReachableNodeAdded(curr);
 		}
-		for(SyncStatePDSUpdateListener<Stmt, Fact, Field> l : Lists.newLinkedList(reachedStateUpdateListeners.get(curr))){
+		for(SyncStatePDSUpdateListener<Stmt, Fact> l : Lists.newLinkedList(reachedStateUpdateListeners.get(curr))){
 			l.reachable();
 		}
 		return true;
@@ -521,10 +518,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		});
 	}
 	public void synchedReachable(final Node<Stmt,Fact> sourceNode, final WitnessListener<Stmt,Fact,Field> listener){
-		registerListener(new SyncPDSUpdateListener<Stmt, Fact, Field>() {
+		registerListener(new SyncPDSUpdateListener<Stmt, Fact>() {
 			@Override
-			public void onReachableNodeAdded(WitnessNode<Stmt, Fact, Field> reachableNode) {
-				if(!reachableNode.asNode().equals(sourceNode))
+			public void onReachableNodeAdded(Node<Stmt, Fact> reachableNode) {
+				if(!reachableNode.equals(sourceNode))
 					return;
 				fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, W>() {
 					@Override
@@ -660,33 +657,29 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		if (!callingContextReachable.add(node))
 			return;
 		if (fieldContextReachable.contains(node)) {
-			processNode(createWitness(node));
+			processNode(node);
 		}
 	}
 	
 
-	private WitnessNode<Stmt, Fact, Field> createWitness(Node<Stmt, Fact> node) {
-		WitnessNode<Stmt, Fact, Field> witnessNode = new WitnessNode<Stmt,Fact,Field>(node.stmt(),node.fact());
-		return witnessNode;
-	}
 	private void setFieldContextReachable(Node<Stmt,Fact> node) {
 		if (!fieldContextReachable.add(node)) {
 			return;
 		}
 		if (callingContextReachable.contains(node)) {
-			processNode(createWitness(node));		
+			processNode(node);		
 		}
 	}
 
-	public void registerListener(SyncPDSUpdateListener<Stmt, Fact, Field> listener) {
+	public void registerListener(SyncPDSUpdateListener<Stmt, Fact> listener) {
 		if (!updateListeners.add(listener)) {
 			return;
 		}
-		for (WitnessNode<Stmt, Fact, Field> reachableNode : Lists.newArrayList(reachedStates)) {
+		for (Node<Stmt, Fact> reachableNode : Lists.newArrayList(reachedStates)) {
 			listener.onReachableNodeAdded(reachableNode);
 		}
 	}
-	public void registerListener(SyncStatePDSUpdateListener<Stmt, Fact, Field> listener) {
+	public void registerListener(SyncStatePDSUpdateListener<Stmt, Fact> listener) {
 		if (!reachedStateUpdateListeners.put(listener.getNode(), listener)){
 			return;
 		}
@@ -738,10 +731,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	public abstract Field fieldWildCard();
 
 	public Set<Node<Stmt, Fact>> getReachedStates() {
-		Set<Node<Stmt,Fact>> res = Sets.newHashSet();
-		for(WitnessNode<Stmt, Fact, Field> s : reachedStates)
-			res.add(s.asNode());
-		return res;
+		return Sets.newHashSet(reachedStates);
 	}
 
 	public void debugOutput() {

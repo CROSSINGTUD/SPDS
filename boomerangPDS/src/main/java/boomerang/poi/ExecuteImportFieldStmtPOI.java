@@ -123,10 +123,10 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 		private void importSolvers(Statement callSiteOrExitStmt, INode<Val> node, W w) {
 			baseSolver.registerStatementCallTransitionListener(
 					new ImportTransitionFromCall(flowSolver, callSiteOrExitStmt, node, w));
-			baseSolver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
+			baseSolver.registerListener(new SyncPDSUpdateListener<Statement, Val>() {
 				
 				@Override
-				public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+				public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
 					if(reachableNode.stmt().equals(callSiteOrExitStmt)) {
 						baseSolver.registerStatementFieldTransitionListener(
 								new CallSiteOrExitStmtImport(flowSolver, baseSolver, reachableNode));
@@ -422,7 +422,7 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 		private Val fact;
 
 		private CallSiteOrExitStmtImport(AbstractBoomerangSolver<W> flowSolver, AbstractBoomerangSolver<W> baseSolver,
-				WitnessNode<Statement, Val, Field> reachableNode) {
+				Node<Statement, Val> reachableNode) {
 			super(reachableNode.stmt());
 			this.flowSolver = flowSolver;
 			this.baseSolver = baseSolver;

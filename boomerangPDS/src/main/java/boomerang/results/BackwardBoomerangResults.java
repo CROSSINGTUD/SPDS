@@ -1,6 +1,5 @@
 package boomerang.results;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +28,6 @@ import soot.Type;
 import soot.jimple.ClassConstant;
 import soot.jimple.NewExpr;
 import sync.pds.solver.SyncPDSUpdateListener;
-import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -258,10 +256,10 @@ public class BackwardBoomerangResults<W extends Weight> implements PointsToSet{
 		for (final Query fw : getAllocationSites().keySet()) {
 			if(fw instanceof BackwardQuery)
 				continue;
-			queryToSolvers.getOrCreate(fw).registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
+			queryToSolvers.getOrCreate(fw).registerListener(new SyncPDSUpdateListener<Statement, Val>() {
 				
 				@Override
-				public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+				public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
 					if(reachableNode.stmt().equals(query.stmt())){
 						Val base = reachableNode.fact();
 						final INode<Node<Statement, Val>> allocNode = queryToSolvers.getOrCreate(fw).getFieldAutomaton().getInitialState();			
