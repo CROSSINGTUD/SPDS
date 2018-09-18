@@ -27,10 +27,12 @@ import soot.ValueBox;
 import soot.jimple.AssignStmt;
 import soot.jimple.Constant;
 import soot.jimple.InstanceFieldRef;
+import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.internal.JAssignStmt;
 import soot.jimple.internal.JNopStmt;
+import soot.jimple.internal.JReturnStmt;
 import soot.jimple.internal.JimpleLocal;
 
 public class PreTransformBodies extends SceneTransformer {
@@ -75,9 +77,19 @@ public class PreTransformBodies extends SceneTransformer {
 								b.setValue(paramVal);
 							}
 						}
-					} else {
 					}
 				}
+			}
+			if (u instanceof ReturnStmt) {
+				ReturnStmt returnStmt = (ReturnStmt) u;
+				String label = "varReplacer" + new Integer(replaceCounter++).toString();
+				Local paramVal = new JimpleLocal(label, returnStmt.getOp().getType());
+				AssignStmt newUnit = new JAssignStmt(paramVal, returnStmt.getOp());
+				body.getLocals().add(paramVal);
+				body.getUnits().insertBefore(newUnit, u);
+				JReturnStmt other = new JReturnStmt(paramVal);
+				body.getUnits().insertBefore(other, u);
+				body.getUnits().remove(u);
 			}
 		}
 	}
@@ -114,6 +126,12 @@ public class PreTransformBodies extends SceneTransformer {
 							if(v instanceof Constant) {
 								retMap.put(u, methodBody);
 							}
+						}
+					}
+					if (u instanceof ReturnStmt) {
+						ReturnStmt assignStmt = (ReturnStmt) u;
+						if (assignStmt.getOp() instanceof Constant) {
+							retMap.put(u, methodBody);
 						}
 					}
 				}
