@@ -12,6 +12,7 @@
 package boomerang.preanalysis;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import soot.Body;
@@ -22,10 +23,12 @@ import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
+import soot.ValueBox;
 import soot.jimple.AssignStmt;
 import soot.jimple.Constant;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.StaticFieldRef;
+import soot.jimple.Stmt;
 import soot.jimple.internal.JAssignStmt;
 import soot.jimple.internal.JNopStmt;
 import soot.jimple.internal.JimpleLocal;
@@ -57,6 +60,25 @@ public class PreTransformBodies extends SceneTransformer {
 					body.getUnits().remove(u);
 				}
 			}
+			if (u instanceof Stmt && ((Stmt)u).containsInvokeExpr()) {
+				Stmt stmt = (Stmt) u;
+				List<ValueBox> useBoxes = stmt.getInvokeExpr().getUseBoxes();
+				for(Value v : stmt.getInvokeExpr().getArgs()) {
+					if(v instanceof Constant) {
+						String label = "varReplacer" + new Integer(replaceCounter++).toString();
+						Local paramVal = new JimpleLocal(label, v.getType());
+						AssignStmt newUnit = new JAssignStmt(paramVal, v);
+						body.getLocals().add(paramVal);
+						body.getUnits().insertBefore(newUnit, u);
+						for(ValueBox b : useBoxes) {
+							if(b.getValue().equals(v)) {
+								b.setValue(paramVal);
+							}
+						}
+					} else {
+					}
+				}
+			}
 		}
 	}
 
@@ -84,6 +106,14 @@ public class PreTransformBodies extends SceneTransformer {
 						AssignStmt assignStmt = (AssignStmt) u;
 						if (isFieldRef(assignStmt.getLeftOp()) && assignStmt.getRightOp() instanceof Constant) {
 							retMap.put(u, methodBody);
+						}
+					}
+					if (u instanceof Stmt && ((Stmt)u).containsInvokeExpr()) {
+						Stmt stmt = (Stmt) u;
+						for(Value v : stmt.getInvokeExpr().getArgs()) {
+							if(v instanceof Constant) {
+								retMap.put(u, methodBody);
+							}
 						}
 					}
 				}

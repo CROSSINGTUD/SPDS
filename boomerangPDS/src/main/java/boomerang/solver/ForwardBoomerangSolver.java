@@ -30,6 +30,7 @@ import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
 import soot.Body;
 import soot.Local;
+import soot.NullType;
 import soot.SootMethod;
 import soot.Type;
 import soot.Unit;
@@ -37,13 +38,17 @@ import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.CastExpr;
+import soot.jimple.IfStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
+import soot.jimple.NullConstant;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.ThrowStmt;
+import soot.jimple.internal.JEqExpr;
+import soot.jimple.internal.JNeExpr;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.CastNode;
 import sync.pds.solver.nodes.ExclusionNode;
@@ -193,6 +198,48 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 					out.add(new CastNode<Statement,Val, Type>(new Statement(succ, method), new Val(leftOp,method),castExpr.getCastType()));
 				}
 				
+			}
+		}
+		
+		if(curr instanceof IfStmt && query.getType() instanceof NullType) {
+			IfStmt ifStmt = (IfStmt) curr;
+			Stmt target = ifStmt.getTarget();
+			Value condition = ifStmt.getCondition();
+			if(condition instanceof JEqExpr) {
+				JEqExpr eqExpr = (JEqExpr) condition;
+				Value op1 = eqExpr.getOp1();
+				Value op2 = eqExpr.getOp2();
+				if(op1 instanceof NullConstant) {
+					if(op2.equals(fact.value())) {
+						if(!succ.equals(target)) {
+							return Collections.emptySet();
+						}
+					}
+				} else if(op2 instanceof NullConstant) {
+					if(op1.equals(fact.value())) {
+						if(!succ.equals(target)) {
+							return Collections.emptySet();
+						}
+					}
+				}
+			}		
+			if(condition instanceof JNeExpr) {
+				JNeExpr eqExpr = (JNeExpr) condition;
+				Value op1 = eqExpr.getOp1();
+				Value op2 = eqExpr.getOp2();
+				if(op1 instanceof NullConstant) {
+					if(op2.equals(fact.value())) {
+						if(succ.equals(target)) {
+							return Collections.emptySet();
+						}
+					}
+				} else if(op2 instanceof NullConstant) {
+					if(op1.equals(fact.value())) {
+						if(succ.equals(target)) {
+							return Collections.emptySet();
+						}
+					}
+				}
 			}
 		}
 		return out;
