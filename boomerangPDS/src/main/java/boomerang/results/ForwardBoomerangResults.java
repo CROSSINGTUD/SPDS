@@ -25,7 +25,11 @@ import heros.utilities.DefaultValueMap;
 import soot.Local;
 import soot.SootMethod;
 import soot.Unit;
+import soot.jimple.AssignStmt;
+import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.LengthExpr;
+import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.GeneratedState;
@@ -180,6 +184,49 @@ public class ForwardBoomerangResults<W extends Weight> {
 			}
 		});
 		return invokedMethodsOnInstance;
+	}
+	
+	public Set<Statement> getPotentialNullPointerDereferences() {
+		Set<Statement> res = Sets.newHashSet();
+		queryToSolvers.get(query).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
+
+			@Override
+			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+				if(!t.getLabel().equals(Field.empty()) || t.getStart() instanceof GeneratedState) {
+					return;
+				}
+				Node<Statement, Val> node = t.getStart().fact();
+				Val fact = node.fact();
+				Statement curr = node.stmt();
+				if(curr.isCallsite()){
+					Stmt callSite = (Stmt) curr.getUnit().get();
+					if(callSite.getInvokeExpr() instanceof InstanceInvokeExpr){
+						InstanceInvokeExpr e = (InstanceInvokeExpr)callSite.getInvokeExpr();
+						if(e.getBase().equals(fact.value())){
+							res.add(curr);
+						}
+					}
+				}
+				if(curr.getUnit().get() instanceof AssignStmt) {
+					AssignStmt assignStmt = (AssignStmt) curr.getUnit().get();
+					if(assignStmt.getRightOp() instanceof InstanceFieldRef) {
+						InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
+						if(ifr.getBase().equals(fact.value())){
+							res.add(curr);
+						}
+					}
+					if (assignStmt.getRightOp() instanceof LengthExpr) {
+						LengthExpr lengthExpr = (LengthExpr) assignStmt.getRightOp();
+						if (lengthExpr.getOp().equals(fact.value())) {
+							res.add(curr);
+						}
+					}
+				}
+			
+			}
+		});
+		return res;
 	}
 	
 	public boolean containsCallRecursion() {
