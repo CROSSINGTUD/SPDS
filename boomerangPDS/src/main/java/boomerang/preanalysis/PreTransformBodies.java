@@ -11,17 +11,15 @@
  *******************************************************************************/
 package boomerang.preanalysis;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import com.beust.jcommander.internal.Sets;
 
 import soot.Body;
 import soot.BodyTransformer;
 import soot.Local;
-import soot.Scene;
-import soot.SceneTransformer;
-import soot.SootClass;
-import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.ValueBox;
@@ -43,13 +41,12 @@ public class PreTransformBodies extends BodyTransformer {
 	@Override
 	protected void internalTransform(Body b, String phaseName, Map<String, String> options) {
 		addNopStmtToMethods(b);
-		transformConstantAtFieldWrites();
+		transformConstantAtFieldWrites(b);
 	}
 
-	private void transformConstantAtFieldWrites() {
-		Map<Unit, Body> cwnc = getStmtsWithConstants();
-		for (Unit u : cwnc.keySet()) {
-			Body body = cwnc.get(u);
+	private void transformConstantAtFieldWrites(Body body) {
+		Set<Unit> cwnc = getStmtsWithConstants(body);
+		for (Unit u : cwnc) {
 			if (u instanceof AssignStmt) {
 				AssignStmt assignStmt = (AssignStmt) u;
 				if (isFieldRef(assignStmt.getLeftOp()) && assignStmt.getRightOp() instanceof Constant) {
@@ -63,18 +60,18 @@ public class PreTransformBodies extends BodyTransformer {
 					body.getUnits().remove(u);
 				}
 			}
-			if (u instanceof Stmt && ((Stmt)u).containsInvokeExpr()) {
+			if (u instanceof Stmt && ((Stmt) u).containsInvokeExpr()) {
 				Stmt stmt = (Stmt) u;
 				List<ValueBox> useBoxes = stmt.getInvokeExpr().getUseBoxes();
-				for(Value v : stmt.getInvokeExpr().getArgs()) {
-					if(v instanceof Constant) {
+				for (Value v : stmt.getInvokeExpr().getArgs()) {
+					if (v instanceof Constant) {
 						String label = "varReplacer" + new Integer(replaceCounter++).toString();
 						Local paramVal = new JimpleLocal(label, v.getType());
 						AssignStmt newUnit = new JAssignStmt(paramVal, v);
 						body.getLocals().add(paramVal);
 						body.getUnits().insertBefore(newUnit, u);
-						for(ValueBox b : useBoxes) {
-							if(b.getValue().equals(v)) {
+						for (ValueBox b : useBoxes) {
+							if (b.getValue().equals(v)) {
 								b.setValue(paramVal);
 							}
 						}
@@ -97,37 +94,29 @@ public class PreTransformBodies extends BodyTransformer {
 
 	private void addNopStmtToMethods(Body b) {
 		b.getUnits().addFirst(new JNopStmt());
-
 	}
 
-	private Map<Unit, Body> getStmtsWithConstants() {
-		Map<Unit, Body> retMap = new LinkedHashMap<Unit, Body>();
-		for (SootClass sc : Scene.v().getClasses()) {
-			for (SootMethod sm : sc.getMethods()) {
-				if (!sm.hasActiveBody())
-					continue;
-				Body methodBody = sm.retrieveActiveBody();
-				for (Unit u : methodBody.getUnits()) {
-					if (u instanceof AssignStmt) {
-						AssignStmt assignStmt = (AssignStmt) u;
-						if (isFieldRef(assignStmt.getLeftOp()) && assignStmt.getRightOp() instanceof Constant) {
-							retMap.put(u, methodBody);
-						}
+	private Set<Unit> getStmtsWithConstants(Body methodBody) {
+		Set<Unit> retMap = Sets.newHashSet();
+		for (Unit u : methodBody.getUnits()) {
+			if (u instanceof AssignStmt) {
+				AssignStmt assignStmt = (AssignStmt) u;
+				if (isFieldRef(assignStmt.getLeftOp()) && assignStmt.getRightOp() instanceof Constant) {
+					retMap.add(u);
+				}
+			}
+			if (u instanceof Stmt && ((Stmt) u).containsInvokeExpr()) {
+				Stmt stmt = (Stmt) u;
+				for (Value v : stmt.getInvokeExpr().getArgs()) {
+					if (v instanceof Constant) {
+						retMap.add(u);
 					}
-					if (u instanceof Stmt && ((Stmt)u).containsInvokeExpr()) {
-						Stmt stmt = (Stmt) u;
-						for(Value v : stmt.getInvokeExpr().getArgs()) {
-							if(v instanceof Constant) {
-								retMap.put(u, methodBody);
-							}
-						}
-					}
-					if (u instanceof ReturnStmt) {
-						ReturnStmt assignStmt = (ReturnStmt) u;
-						if (assignStmt.getOp() instanceof Constant) {
-							retMap.put(u, methodBody);
-						}
-					}
+				}
+			}
+			if (u instanceof ReturnStmt) {
+				ReturnStmt assignStmt = (ReturnStmt) u;
+				if (assignStmt.getOp() instanceof Constant) {
+					retMap.add(u);
 				}
 			}
 		}
@@ -137,6 +126,5 @@ public class PreTransformBodies extends BodyTransformer {
 	private boolean isFieldRef(Value op) {
 		return op instanceof InstanceFieldRef || op instanceof StaticFieldRef;
 	}
-
 
 }
