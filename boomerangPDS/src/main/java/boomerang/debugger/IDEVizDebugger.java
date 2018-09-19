@@ -282,6 +282,8 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 						callers.add(icfg.getMethodOf(callsite));
 					} catch (Exception e){
 						
+					} catch(Error e){
+						
 					}
 				}
 	
