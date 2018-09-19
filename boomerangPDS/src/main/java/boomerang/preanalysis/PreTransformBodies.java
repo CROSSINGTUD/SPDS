@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 import soot.Body;
+import soot.BodyTransformer;
 import soot.Local;
 import soot.Scene;
 import soot.SceneTransformer;
@@ -33,13 +34,13 @@ import soot.jimple.internal.JAssignStmt;
 import soot.jimple.internal.JNopStmt;
 import soot.jimple.internal.JimpleLocal;
 
-public class PreTransformBodies extends SceneTransformer {
+public class PreTransformBodies extends BodyTransformer {
 
 	private int replaceCounter;
 
 	@Override
-	protected void internalTransform(String phaseName, Map<String, String> options) {
-		addNopStmtToMethods();
+	protected void internalTransform(Body b, String phaseName, Map<String, String> options) {
+		addNopStmtToMethods(b);
 		transformConstantAtFieldWrites();
 	}
 
@@ -82,16 +83,9 @@ public class PreTransformBodies extends SceneTransformer {
 		}
 	}
 
-	private void addNopStmtToMethods() {
-		for (SootClass c : Scene.v().getClasses()) {
-			for (SootMethod m : c.getMethods()) {
-				if (!m.hasActiveBody()) {
-					continue;
-				}
-				Body b = m.getActiveBody();
-				b.getUnits().addFirst(new JNopStmt());
-			}
-		}
+	private void addNopStmtToMethods(Body b) {
+		b.getUnits().addFirst(new JNopStmt());
+
 	}
 
 	private Map<Unit, Body> getStmtsWithConstants() {
@@ -125,5 +119,6 @@ public class PreTransformBodies extends SceneTransformer {
 	private boolean isFieldRef(Value op) {
 		return op instanceof InstanceFieldRef || op instanceof StaticFieldRef;
 	}
+
 
 }
