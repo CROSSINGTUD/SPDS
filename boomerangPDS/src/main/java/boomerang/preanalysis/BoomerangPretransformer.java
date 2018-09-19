@@ -159,4 +159,8 @@ public class BoomerangPretransformer extends BodyTransformer {
 		}
 		return instance;
 	}
+
+	public void reset() {
+		instance = null;
+	}
 }
