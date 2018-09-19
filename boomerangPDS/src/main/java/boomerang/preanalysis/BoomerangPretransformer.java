@@ -11,6 +11,7 @@
  *******************************************************************************/
 package boomerang.preanalysis;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -20,6 +21,9 @@ import com.beust.jcommander.internal.Sets;
 import soot.Body;
 import soot.BodyTransformer;
 import soot.Local;
+import soot.MethodOrMethodContext;
+import soot.Scene;
+import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.ValueBox;
@@ -33,10 +37,14 @@ import soot.jimple.internal.JAssignStmt;
 import soot.jimple.internal.JNopStmt;
 import soot.jimple.internal.JReturnStmt;
 import soot.jimple.internal.JimpleLocal;
+import soot.jimple.toolkits.callgraph.ReachableMethods;
+import soot.util.queue.QueueReader;
 
-public class PreTransformBodies extends BodyTransformer {
+public class BoomerangPretransformer extends BodyTransformer {
 
+	private static BoomerangPretransformer instance;
 	private int replaceCounter;
+	private boolean applied;
 
 	@Override
 	protected void internalTransform(Body b, String phaseName, Map<String, String> options) {
@@ -127,4 +135,28 @@ public class PreTransformBodies extends BodyTransformer {
 		return op instanceof InstanceFieldRef || op instanceof StaticFieldRef;
 	}
 
+	public void apply() {	
+		if(applied)
+			return;
+		ReachableMethods reachableMethods = Scene.v().getReachableMethods();
+		QueueReader<MethodOrMethodContext> listener = reachableMethods.listener();
+		while (listener.hasNext()) {
+			SootMethod method = listener.next().method();
+			if(method.hasActiveBody()) {
+				internalTransform(method.getActiveBody(),"",new HashMap<>());
+			}
+		}
+		applied = true;
+	}
+
+	public boolean isApplied() {
+		return applied;
+	}
+	
+	public static BoomerangPretransformer v() {
+		if(instance == null) {
+			instance = new BoomerangPretransformer();
+		}
+		return instance;
+	}
 }

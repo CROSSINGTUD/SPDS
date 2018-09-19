@@ -45,6 +45,7 @@ import boomerang.poi.AbstractPOI;
 import boomerang.poi.BaseSolverContext;
 import boomerang.poi.ExecuteImportFieldStmtPOI;
 import boomerang.poi.PointOfIndirection;
+import boomerang.preanalysis.BoomerangPretransformer;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
@@ -243,6 +244,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	public WeightedBoomerang(BoomerangOptions options) {
 		this.options = options;
 		this.stats = options.statsFactory();
+		if(!BoomerangPretransformer.v().isApplied()) {
+			throw new RuntimeException("Using WeightedBoomerang requires a call to BoomerangPretransformer.v().apply() prior constructing the ICFG");
+		}
 	}
 
 	public WeightedBoomerang() {
