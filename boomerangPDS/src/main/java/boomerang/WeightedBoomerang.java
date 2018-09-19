@@ -87,7 +87,6 @@ import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedBoomerang<W extends Weight> {
-	public static boolean DEBUG = false;
 	private static final Logger logger = LogManager.getLogger();
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
@@ -101,12 +100,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		protected AbstractBoomerangSolver<W> createItem(final Query key) {
 			final AbstractBoomerangSolver<W> solver;
 			if (key instanceof BackwardQuery) {
-				if (DEBUG)
-					System.out.println("Backward solving query: " + key);
+				logger.debug("Backward solving query: " + key);
 				solver = createBackwardSolver((BackwardQuery) key);
 			} else {
-				if (DEBUG)
-					System.out.println("Forward solving query: " + key);
+				logger.debug("Forward solving query: " + key);
 				solver = createForwardSolver((ForwardQuery) key);
 			}
 			solver.getCallAutomaton()
@@ -164,6 +161,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 				@Override
 				public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+					
 					if (options.analysisTimeoutMS() > 0) {
 						long elapsed = analysisWatch.elapsed(TimeUnit.MILLISECONDS);
 						if (elapsed - lastTick > 15000) {
@@ -1084,9 +1082,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		// System.out.println(q +" Call Aut (failed Additions): " +
 		// queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
 		// }
-
-		if (!DEBUG)
-			return;
 
 		Debugger<W> debugger = getOrCreateDebugger();
 		debugger.done(queryToSolvers);
