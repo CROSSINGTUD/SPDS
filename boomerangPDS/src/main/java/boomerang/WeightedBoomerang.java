@@ -1185,42 +1185,43 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 	public class AccessPathBackwardQuery extends BackwardQuery{
-		WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W> fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W>(new AllocNode<>(new Node<Statement,Val>(this.stmt(),this.correctVar()))) {
-			@Override
-			public INode<Node<Statement,Val>> createState(INode<Node<Statement,Val>> d, Field loc) {
-				if (loc.equals(Field.empty()))
-					return d;
-				return new GeneratedState<Node<Statement,Val>,Field>(d,loc);
-			}
-
-			@Override
-			public Field epsilon() {
-				return Field.epsilon();
-			}
-
-			@Override
-			public boolean nested() {
-				return false;
-			};
-			
-			@Override
-			public W getZero() {
-				return WeightedBoomerang.this.getForwardFieldWeights().getZero();
-			}
-
-			@Override
-			public W getOne() {
-				return WeightedBoomerang.this.getForwardFieldWeights().getOne();
-			}
-			@Override
-			public boolean isGeneratedState(INode<Node<Statement, Val>> d) {
-				return d instanceof GeneratedState;
-			}
-		};
-		private Val correctVar;
+		private final WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W> fieldAutomaton;
+		private final Val correctVar;
 		public AccessPathBackwardQuery(Statement stmt, Val variable, Val correctVar) {
 			super(stmt, variable);
 			this.correctVar = correctVar;
+			this.fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W>(new AllocNode<>(new Node<Statement,Val>(this.stmt(),this.correctVar()))) {
+				@Override
+				public INode<Node<Statement,Val>> createState(INode<Node<Statement,Val>> d, Field loc) {
+					if (loc.equals(Field.empty()))
+						return d;
+					return new GeneratedState<Node<Statement,Val>,Field>(d,loc);
+				}
+
+				@Override
+				public Field epsilon() {
+					return Field.epsilon();
+				}
+
+				@Override
+				public boolean nested() {
+					return false;
+				};
+				
+				@Override
+				public W getZero() {
+					return WeightedBoomerang.this.getForwardFieldWeights().getZero();
+				}
+
+				@Override
+				public W getOne() {
+					return WeightedBoomerang.this.getForwardFieldWeights().getOne();
+				}
+				@Override
+				public boolean isGeneratedState(INode<Node<Statement, Val>> d) {
+					return d instanceof GeneratedState;
+				}
+			};
 		}
 		private Val correctVar() {
 			return correctVar;
