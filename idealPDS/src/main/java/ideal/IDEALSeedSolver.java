@@ -357,7 +357,7 @@ public class IDEALSeedSolver<W extends Weight> {
 				}
 				idealWeightFunctions.potentialStrongUpdate(curr.stmt());
 				WeightedBoomerang<W>.AccessPathBackwardQuery query = boomerang.new AccessPathBackwardQuery(curr.stmt(),
-						curr.fact());
+						curr.fact(),seed.var());
 				boomerang.getSolvers().get(seed).getFieldAutomaton().registerListener(new ImportFieldAut(boomerang.getSolvers().get(seed),curr,
 						boomerang.getSolvers().get(seed).getFieldAutomaton(), query.getFieldAutomaton()));
 				BackwardBoomerangResults<W> backwardSolveUnderScope = boomerang.backwardSolveUnderScope(query, seed,

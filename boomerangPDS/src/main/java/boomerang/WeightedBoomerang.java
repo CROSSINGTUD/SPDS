@@ -1185,7 +1185,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 	public class AccessPathBackwardQuery extends BackwardQuery{
-		WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W> fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W>(new AllocNode<>(this.asNode())) {
+		WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W> fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W>(new AllocNode<>(new Node<Statement,Val>(this.stmt(),this.correctVar()))) {
 			@Override
 			public INode<Node<Statement,Val>> createState(INode<Node<Statement,Val>> d, Field loc) {
 				if (loc.equals(Field.empty()))
@@ -1217,8 +1217,13 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				return d instanceof GeneratedState;
 			}
 		};
-		public AccessPathBackwardQuery(Statement stmt, Val variable) {
+		private Val correctVar;
+		public AccessPathBackwardQuery(Statement stmt, Val variable, Val correctVar) {
 			super(stmt, variable);
+			this.correctVar = correctVar;
+		}
+		private Val correctVar() {
+			return correctVar;
 		}
 		public WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> getFieldAutomaton() {
 			return fieldAutomaton;

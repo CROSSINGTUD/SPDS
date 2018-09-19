@@ -93,7 +93,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 
 	@Override
 	public boolean typeCheck() {
-		return false;
+		return true;
 	}
 
 	@Override
