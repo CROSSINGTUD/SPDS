@@ -40,7 +40,15 @@ public class KeystoreTest extends IDEALTestingFramework {
 		}
 		mustBeInAcceptingState(ks);
 	}
-
+	@Test
+	public void test4() throws KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException {
+		KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+		KeyStore x = ks;
+		java.io.FileInputStream fis = null;
+		ks.load(fis, null);
+		mustBeInAcceptingState(ks);
+		mustBeInAcceptingState(x);
+	}
 	@Test
 	public void test2() throws KeyStoreException {
 		KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
