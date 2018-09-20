@@ -149,12 +149,19 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		File file = new File();
 		File alias = file;
 		call(alias);
-		int X = 1;
 		file.close();
 		mustBeInAcceptingState(file);
 		mustBeInAcceptingState(alias);
 	}
-
+	@Test
+	public void simpleAlias() {
+		File file = new File();
+		File alias = file;
+		alias.open();
+		file.close();
+		mustBeInAcceptingState(file);
+		mustBeInAcceptingState(alias);
+	}
 	private static void call(File alias) {
 		alias.open();
 	}

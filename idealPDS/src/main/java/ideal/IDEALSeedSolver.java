@@ -161,8 +161,8 @@ public class IDEALSeedSolver<W extends Weight> {
 
 	protected boolean preventStrongUpdateFlows(Transition<Statement, INode<Val>> t, W weight) {
 		if (idealWeightFunctions.isStrongUpdateStatement(t.getLabel())) {
-			if (!idealWeightFunctions
-					.containsIndirectFlow(new Node<Statement, Val>(t.getLabel(), t.getStart().fact()))) {
+			if (idealWeightFunctions
+					.isKillFlow(new Node<Statement, Val>(t.getLabel(), t.getStart().fact()))) {
 				if ((t.getStart() instanceof GeneratedState)) {
 				} else {
 					System.out.println("PREVENT ADDING " + t);
@@ -178,21 +178,6 @@ public class IDEALSeedSolver<W extends Weight> {
 		idealWeightFunctions.setPhase(phase);
 		final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = boomerang.getSolvers().getOrCreate(seed)
 				.getCallAutomaton();
-		callAutomaton.registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
-
-			@Override
-			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
-				if (!callSite.getMethod().equals(returnedFact.fact().m()))
-					return;
-				if (!callSite.getMethod().equals(returnSite.getMethod()))
-					return;
-				if (!w.equals(one)) {
-//					System.out.println("RECONNECT " + callSite);
-//					idealWeightFunctions.addOtherThanOneWeight(new Node<Statement, Val>(callSite, returnedFact.fact()),
-//							w);
-				}
-			}
-		});
 
 		if (phase.equals(Phases.ValueFlow)) {
 			registerIndirectFlowListener(boomerang.getSolvers().getOrCreate(seed));

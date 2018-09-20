@@ -47,8 +47,8 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	private Multimap<Node<Statement,Val>, W> nonOneFlowNodes = HashMultimap.create();
 	private Phases phase;
 	private boolean strongUpdates;
-	private Multimap<Node<Statement,Val>, Node<Statement,Val>> alias = HashMultimap.create(); 
-	private Set<Node<Statement,Val>> nonKillFlow = Sets.newHashSet();
+	private Multimap<Node<Statement,Val>, Node<Statement,Val>> indirectAlias = HashMultimap.create(); 
+	private Set<Node<Statement,Val>> nodesWithStrongUpdate = Sets.newHashSet();
 
 	public IDEALWeightFunctions(WeightFunctions<Statement,Val,Statement,W>  delegate, boolean strongUpdates) {
 		this.delegate = delegate;
@@ -158,30 +158,35 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 
 	public void addIndirectFlow(Node<Statement, Val> source, Node<Statement, Val> target) {
 		logger.debug("Alias flow detected "+  source+ " " + target);
-		alias.put(source, target);
+		indirectAlias.put(source, target);
 	}
 
 	public Collection<Node<Statement, Val>> getAliasesFor(Node<Statement, Val> node) {
-		return alias.get(node);
+		return indirectAlias.get(node);
 	}
 	
 	public boolean isStrongUpdateStatement(Statement stmt) {
 		return potentialStrongUpdates.contains(stmt) && !weakUpdates.contains(stmt) && strongUpdates;
 	}
 
-	public boolean containsIndirectFlow(Node<Statement, Val> node) {
-		return nonKillFlow.contains(node);
+	public boolean isKillFlow(Node<Statement, Val> node) {
+		if(node.toString().contains("close")) {
+		System.out.println("NON KILL FLOW" + node);
+		System.out.println("NON KILL FLOW" + !nodesWithStrongUpdate.contains(node));
+		System.out.println("NON KILL FLOW" + !indirectAlias.values().contains(node));
+		}
+		return !nodesWithStrongUpdate.contains(node) && !indirectAlias.containsValue(node);
 	}
 
 	public void addNonKillFlow(Node<Statement, Val> curr) {
-		nonKillFlow.add(curr);
+		nodesWithStrongUpdate.add(curr);
 	}
 
 	public void printStrongUpdates() {
 		HashSet<Statement> sU = Sets.newHashSet(potentialStrongUpdates);
 		System.out.println("Strong updates " + sU);
 		System.out.println("Weak updates " + weakUpdates);
-		System.out.println("Non kill-flows " + nonKillFlow);
-		System.out.println("Alias -flows " + alias);
+		System.out.println("Non kill-flows " + nodesWithStrongUpdate);
+		System.out.println("Alias -flows " + indirectAlias);
 	}
 }
