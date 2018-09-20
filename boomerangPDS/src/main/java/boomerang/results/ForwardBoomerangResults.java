@@ -35,16 +35,16 @@ import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import wpds.impl.PAutomaton;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
-public class ForwardBoomerangResults<W extends Weight> {
+public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerangResults<W> {
 
 	private final ForwardQuery query;
-	private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers;
 	private final BiDiInterproceduralCFG<Unit, SootMethod> bwicfg;
 	private final BiDiInterproceduralCFG<Unit, SootMethod> icfg;
 	private final boolean timedout;
@@ -52,10 +52,13 @@ public class ForwardBoomerangResults<W extends Weight> {
 	private Stopwatch analysisWatch;
 	private long maxMemory;
 
-	public ForwardBoomerangResults(ForwardQuery query, boolean timedout, DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers, BiDiInterproceduralCFG<Unit, SootMethod> icfg, BiDiInterproceduralCFG<Unit, SootMethod> bwicfg, IBoomerangStats<W> stats, Stopwatch analysisWatch) {
+	public ForwardBoomerangResults(ForwardQuery query, boolean timedout,
+			DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers,
+			BiDiInterproceduralCFG<Unit, SootMethod> icfg, BiDiInterproceduralCFG<Unit, SootMethod> bwicfg,
+			IBoomerangStats<W> stats, Stopwatch analysisWatch) {
+		super(queryToSolvers);
 		this.query = query;
 		this.timedout = timedout;
-		this.queryToSolvers = queryToSolvers;
 		this.icfg = icfg;
 		this.bwicfg = bwicfg;
 		this.stats = stats;
@@ -63,86 +66,87 @@ public class ForwardBoomerangResults<W extends Weight> {
 		stats.terminated(query, this);
 		this.maxMemory = Util.getReallyUsedMemory();
 	}
-	
+
 	public Stopwatch getAnalysisWatch() {
 		return analysisWatch;
 	}
-	
+
 	public boolean isTimedout() {
 		return timedout;
 	}
-	
-	public Table<Statement,Val, W> asStatementValWeightTable(){
-		final Table<Statement,Val, W> results = HashBasedTable.create();
+
+	public Table<Statement, Val, W> asStatementValWeightTable() {
+		final Table<Statement, Val, W> results = HashBasedTable.create();
 		WeightedPAutomaton<Statement, INode<Val>, W> callAut = queryToSolvers.getOrCreate(query).getCallAutomaton();
-		for(Entry<Transition<Statement, INode<Val>>, W> e : callAut.getTransitionsToFinalWeights().entrySet()){
+		for (Entry<Transition<Statement, INode<Val>>, W> e : callAut.getTransitionsToFinalWeights().entrySet()) {
 			Transition<Statement, INode<Val>> t = e.getKey();
 			W w = e.getValue();
-			if(t.getLabel().equals(Statement.epsilon()))
+			if (t.getLabel().equals(Statement.epsilon()))
 				continue;
-			if(t.getStart().fact().value() instanceof Local && !t.getLabel().getMethod().equals(t.getStart().fact().m()))
+			if (t.getStart().fact().value() instanceof Local
+					&& !t.getLabel().getMethod().equals(t.getStart().fact().m()))
 				continue;
-			if(t.getLabel().getUnit().isPresent())
-				results.put(t.getLabel(),t.getStart().fact(),w);
+			if (t.getLabel().getUnit().isPresent())
+				results.put(t.getLabel(), t.getStart().fact(), w);
 		}
 		return results;
 	}
-	
 
-	
-	public Table<Statement, Val, W>  getObjectDestructingStatements() {
+	public Table<Statement, Val, W> getObjectDestructingStatements() {
 		AbstractBoomerangSolver<W> solver = queryToSolvers.get(query);
-		if(solver == null)
+		if (solver == null)
 			return HashBasedTable.create();
 		Table<Statement, Val, W> res = asStatementValWeightTable();
 		Set<SootMethod> visitedMethods = Sets.newHashSet();
-		for(Statement s : res.rowKeySet()){
+		for (Statement s : res.rowKeySet()) {
 			visitedMethods.add(s.getMethod());
 		}
 		ForwardBoomerangSolver<W> forwardSolver = (ForwardBoomerangSolver) queryToSolvers.get(query);
 		Table<Statement, Val, W> destructingStatement = HashBasedTable.create();
-		for(SootMethod flowReaches : visitedMethods){
-			for(Unit ep : icfg.getEndPointsOf(flowReaches)){
+		for (SootMethod flowReaches : visitedMethods) {
+			for (Unit ep : icfg.getEndPointsOf(flowReaches)) {
 				Statement exitStmt = new Statement((Stmt) ep, flowReaches);
 				Set<State> escapes = Sets.newHashSet();
-				for(Unit callSite : icfg.getCallersOf(flowReaches)){
+				for (Unit callSite : icfg.getCallersOf(flowReaches)) {
 					SootMethod callee = icfg.getMethodOf(callSite);
-					if(visitedMethods.contains(callee)){
-						for(Entry<Val, W> valAndW : res.row(exitStmt).entrySet()){
-							for(Unit retSite : icfg.getSuccsOf(callSite)){
-								escapes.addAll(forwardSolver.computeReturnFlow(flowReaches, (Stmt) ep, valAndW.getKey(), (Stmt) callSite, (Stmt) retSite));
+					if (visitedMethods.contains(callee)) {
+						for (Entry<Val, W> valAndW : res.row(exitStmt).entrySet()) {
+							for (Unit retSite : icfg.getSuccsOf(callSite)) {
+								escapes.addAll(forwardSolver.computeReturnFlow(flowReaches, (Stmt) ep, valAndW.getKey(),
+										(Stmt) callSite, (Stmt) retSite));
 							}
 						}
 					}
 				}
-				if(escapes.isEmpty()){
+				if (escapes.isEmpty()) {
 					Map<Val, W> row = res.row(exitStmt);
-					findLastUsage(exitStmt, row, destructingStatement,forwardSolver);
+					findLastUsage(exitStmt, row, destructingStatement, forwardSolver);
 				}
 			}
 		}
 
 		return destructingStatement;
 	}
-	
-	private void findLastUsage(Statement exitStmt, Map<Val, W> row, Table<Statement, Val, W> destructingStatement, ForwardBoomerangSolver<W> forwardSolver) {
+
+	private void findLastUsage(Statement exitStmt, Map<Val, W> row, Table<Statement, Val, W> destructingStatement,
+			ForwardBoomerangSolver<W> forwardSolver) {
 		LinkedList<Statement> worklist = Lists.newLinkedList();
 		worklist.add(exitStmt);
 		Set<Statement> visited = Sets.newHashSet();
-		while(!worklist.isEmpty()){
+		while (!worklist.isEmpty()) {
 			Statement curr = worklist.poll();
-			if(!visited.add(curr)){
+			if (!visited.add(curr)) {
 				continue;
 			}
 			boolean valueUsedInStmt = false;
-			for(Entry<Val, W> e : row.entrySet()){
-				if(forwardSolver.valueUsedInStatement(curr.getUnit().get(), e.getKey())){
+			for (Entry<Val, W> e : row.entrySet()) {
+				if (forwardSolver.valueUsedInStatement(curr.getUnit().get(), e.getKey())) {
 					destructingStatement.put(curr, e.getKey(), e.getValue());
 					valueUsedInStmt = true;
 				}
 			}
-			if(!valueUsedInStmt){
-				for(Unit succ : bwicfg.getSuccsOf(curr.getUnit().get())){
+			if (!valueUsedInStmt) {
+				for (Unit succ : bwicfg.getSuccsOf(curr.getUnit().get())) {
 					worklist.add(new Statement((Stmt) succ, curr.getMethod()));
 				}
 			}
@@ -155,98 +159,106 @@ public class ForwardBoomerangResults<W extends Weight> {
 
 	public Map<Statement, SootMethod> getInvokedMethodOnInstance() {
 		Map<Statement, SootMethod> invokedMethodsOnInstance = Maps.newHashMap();
-		if(query.stmt().isCallsite()) {
+		if (query.stmt().isCallsite()) {
 			Stmt queryUnit = query.stmt().getUnit().get();
-			if(queryUnit.containsInvokeExpr()) {
+			if (queryUnit.containsInvokeExpr()) {
 				invokedMethodsOnInstance.put(query.stmt(), queryUnit.getInvokeExpr().getMethod());
 			}
 		}
-		queryToSolvers.get(query).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
+		queryToSolvers.get(query).getFieldAutomaton()
+				.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 
-			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-				if(!t.getLabel().equals(Field.empty()) || t.getStart() instanceof GeneratedState) {
-					return;
-				}
-				Node<Statement, Val> node = t.getStart().fact();
-				Val fact = node.fact();
-				Statement curr = node.stmt();
-				if(curr.isCallsite()){
-					Stmt callSite = (Stmt) curr.getUnit().get();
-					if(callSite.getInvokeExpr() instanceof InstanceInvokeExpr){
-						InstanceInvokeExpr e = (InstanceInvokeExpr)callSite.getInvokeExpr();
-						if(e.getBase().equals(fact.value())){
-							invokedMethodsOnInstance.put(curr, e.getMethod());
+					@Override
+					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+						if (!t.getLabel().equals(Field.empty()) || t.getStart() instanceof GeneratedState) {
+							return;
+						}
+						Node<Statement, Val> node = t.getStart().fact();
+						Val fact = node.fact();
+						Statement curr = node.stmt();
+						if (curr.isCallsite()) {
+							Stmt callSite = (Stmt) curr.getUnit().get();
+							if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
+								InstanceInvokeExpr e = (InstanceInvokeExpr) callSite.getInvokeExpr();
+								if (e.getBase().equals(fact.value())) {
+									invokedMethodsOnInstance.put(curr, e.getMethod());
+								}
+							}
 						}
 					}
-				}
-			}
-		});
+				});
 		return invokedMethodsOnInstance;
 	}
-	
-	public Set<Statement> getPotentialNullPointerDereferences() {
-		Set<Statement> res = Sets.newHashSet();
-		queryToSolvers.get(query).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 
-			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-					WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-				if(!t.getLabel().equals(Field.empty()) || t.getStart() instanceof GeneratedState) {
-					return;
-				}
-				Node<Statement, Val> node = t.getStart().fact();
-				Val fact = node.fact();
-				Statement curr = node.stmt();
-				if(curr.isCallsite()){
-					Stmt callSite = (Stmt) curr.getUnit().get();
-					if(callSite.getInvokeExpr() instanceof InstanceInvokeExpr){
-						InstanceInvokeExpr e = (InstanceInvokeExpr)callSite.getInvokeExpr();
-						if(e.getBase().equals(fact.value())){
-							res.add(curr);
+	public Map<Node<Statement, Val>, PAutomaton<Statement, INode<Val>>> getPotentialNullPointerDereferences() {
+		Set<Node<Statement, Val>> res = Sets.newHashSet();
+		queryToSolvers.get(query).getFieldAutomaton()
+				.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
+
+					@Override
+					public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+						if (!t.getLabel().equals(Field.empty()) || t.getStart() instanceof GeneratedState) {
+							return;
 						}
-					}
-				}
-				if(curr.getUnit().get() instanceof AssignStmt) {
-					AssignStmt assignStmt = (AssignStmt) curr.getUnit().get();
-					if(assignStmt.getRightOp() instanceof InstanceFieldRef) {
-						InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
-						if(ifr.getBase().equals(fact.value())){
-							res.add(curr);
+						Node<Statement, Val> node = t.getStart().fact();
+						Val fact = node.fact();
+						Statement curr = node.stmt();
+						if (curr.isCallsite()) {
+							Stmt callSite = (Stmt) curr.getUnit().get();
+							if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
+								InstanceInvokeExpr e = (InstanceInvokeExpr) callSite.getInvokeExpr();
+								if (e.getBase().equals(fact.value())) {
+									res.add(node);
+								}
+							}
 						}
-					}
-					if (assignStmt.getRightOp() instanceof LengthExpr) {
-						LengthExpr lengthExpr = (LengthExpr) assignStmt.getRightOp();
-						if (lengthExpr.getOp().equals(fact.value())) {
-							res.add(curr);
+						if (curr.getUnit().get() instanceof AssignStmt) {
+							AssignStmt assignStmt = (AssignStmt) curr.getUnit().get();
+							if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
+								InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
+								if (ifr.getBase().equals(fact.value())) {
+									res.add(node);
+								}
+							}
+							if (assignStmt.getRightOp() instanceof LengthExpr) {
+								LengthExpr lengthExpr = (LengthExpr) assignStmt.getRightOp();
+								if (lengthExpr.getOp().equals(fact.value())) {
+									res.add(node);
+								}
+							}
 						}
+
 					}
-				}
-			
-			}
-		});
-		return res;
+				});
+
+		Map<Node<Statement, Val>, PAutomaton<Statement, INode<Val>>> resWithContext = Maps.newHashMap();
+		for (Node<Statement, Val> r : res) {
+			PAutomaton<Statement, INode<Val>> context = constructContextGraph(query, r.fact());
+			resWithContext.put(r, context);
+		}
+		return resWithContext;
 	}
-	
+
 	public boolean containsCallRecursion() {
-		for(Entry<Query, AbstractBoomerangSolver<W>> e: queryToSolvers.entrySet()) {
-			if(e.getValue().getCallAutomaton().containsLoop()) {
+		for (Entry<Query, AbstractBoomerangSolver<W>> e : queryToSolvers.entrySet()) {
+			if (e.getValue().getCallAutomaton().containsLoop()) {
 				return true;
 			}
 		}
 		return false;
 	}
-	
+
 	public boolean containsFieldLoop() {
-		for(Entry<Query, AbstractBoomerangSolver<W>> e: queryToSolvers.entrySet()) {
-			if(e.getValue().getFieldAutomaton().containsLoop()) {
+		for (Entry<Query, AbstractBoomerangSolver<W>> e : queryToSolvers.entrySet()) {
+			if (e.getValue().getFieldAutomaton().containsLoop()) {
 				return true;
 			}
 		}
 		return false;
 	}
-	
+
 	public long getMaxMemory() {
 		return maxMemory;
 	}
