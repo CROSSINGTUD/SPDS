@@ -53,4 +53,8 @@ public class Method implements Location {
     public SootMethod getMethod() {
         return delegate;
     }
+    @Override
+    public String toString() {
+    	return delegate != null ? delegate.toString() : "METHOD EPS";
+    }
 }
