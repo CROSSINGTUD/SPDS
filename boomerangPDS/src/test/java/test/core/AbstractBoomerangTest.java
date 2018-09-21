@@ -361,10 +361,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			public int analysisTimeoutMS() {
 				return analysisTimeout;
 			}
-			@Override
-			public boolean onTheFlyCallGraph() {
-				return false;
-			}
 		}) {
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
@@ -400,22 +396,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 						NoWeight.NO_WEIGHT_ONE);
 			}
 
-			@Override
-			public SimpleSeedFactory getSeedFactory() {
-				return new SimpleSeedFactory(staticIcfg) {
-
-						@Override
-						protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
-							if(u instanceof AssignStmt){
-								AssignStmt assignStmt = (AssignStmt) u;
-								if(options.isAllocationVal(assignStmt.getRightOp())){
-									return Collections.singleton(new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp(),new Statement((Stmt) u, method))));
-								}
-							}
-							return Collections.emptySet();
-						}
-					};
-			}
 		};
 		setupSolver(solver);
 		solver.wholeProgramAnalysis();

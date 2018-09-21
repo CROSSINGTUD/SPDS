@@ -40,7 +40,7 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 	@Override
 	public SimpleSeedFactory getSeedFactory() {
 		if (seedFactory == null){
-			seedFactory = new SimpleSeedFactory(new ObservableStaticICFG(new JimpleBasedInterproceduralCFG())) {
+			seedFactory = new SimpleSeedFactory(icfg()) {
 
 				@Override
 				protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
