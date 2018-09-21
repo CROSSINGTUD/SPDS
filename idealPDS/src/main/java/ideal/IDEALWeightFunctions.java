@@ -132,7 +132,7 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	}
 
 	public void addIndirectFlow(Node<Statement, Val> source, Node<Statement, Val> target) {
-		logger.debug("Alias flow detected "+  source+ " " + target);
+		logger.trace("Alias flow detected "+  source+ " " + target);
 		indirectAlias.put(source, target);
 	}
 
@@ -150,13 +150,5 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 
 	public void addNonKillFlow(Node<Statement, Val> curr) {
 		nodesWithStrongUpdate.add(curr);
-	}
-
-	public void printStrongUpdates() {
-		HashSet<Statement> sU = Sets.newHashSet(potentialStrongUpdates);
-		System.out.println("Strong updates " + sU);
-		System.out.println("Weak updates " + weakUpdates);
-		System.out.println("Non kill-flows " + nodesWithStrongUpdate);
-		System.out.println("Alias -flows " + indirectAlias);
 	}
 }

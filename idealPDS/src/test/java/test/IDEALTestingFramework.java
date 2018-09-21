@@ -52,7 +52,7 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected JimpleBasedInterproceduralCFG icfg;
-	private static final boolean FAIL_ON_IMPRECISE = true;
+	private static final boolean FAIL_ON_IMPRECISE = false;
 	private static final boolean VISUALIZATION = false;
 
 	protected StoreIDEALResultHandler<TransitionFunction> resultHandler = new StoreIDEALResultHandler<>();

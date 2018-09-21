@@ -92,7 +92,6 @@ public class IDEALSeedSolver<W extends Weight> {
 			timedoutSolver = this.phase1Solver;
 			throw new IDEALSeedTimeout(this, this.phase1Solver, resultPhase1);
 		}
-		idealWeightFunctions.printStrongUpdates();
 		ForwardBoomerangResults<W> resultPhase2 = runPhase(this.phase2Solver, Phases.ValueFlow);
 		if (resultPhase2.isTimedout()) {
 			if (analysisStopwatch.isRunning()) {
