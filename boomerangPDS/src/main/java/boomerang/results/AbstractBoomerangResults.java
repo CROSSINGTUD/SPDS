@@ -90,6 +90,8 @@ public class AbstractBoomerangResults<W extends Weight> {
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((aut == null) ? 0 : aut.hashCode());
+			result = prime * result + ((solver == null) ? 0 : solver.hashCode());
 			result = prime * result + ((source == null) ? 0 : source.hashCode());
 			return result;
 		}
@@ -104,6 +106,16 @@ public class AbstractBoomerangResults<W extends Weight> {
 				return false;
 			CallStackExtracter other = (CallStackExtracter) obj;
 			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (aut == null) {
+				if (other.aut != null)
+					return false;
+			} else if (!aut.equals(other.aut))
+				return false;
+			if (solver == null) {
+				if (other.solver != null)
+					return false;
+			} else if (!solver.equals(other.solver))
 				return false;
 			if (source == null) {
 				if (other.source != null)
