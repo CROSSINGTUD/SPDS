@@ -356,6 +356,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			public int analysisTimeoutMS() {
 				return analysisTimeout;
 			}
+
+			@Override
+			public boolean onTheFlyCallGraph(){
+				return false;
+			}
 		}) {
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
