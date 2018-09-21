@@ -31,7 +31,6 @@ import heros.InterproceduralCFG;
 import soot.Body;
 import soot.Local;
 import soot.SootMethod;
-import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.ArrayRef;
@@ -45,7 +44,6 @@ import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.ThrowStmt;
 import sync.pds.solver.nodes.CallPopNode;
-import sync.pds.solver.nodes.CastNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
@@ -190,7 +188,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			} else if(rightOp instanceof CastExpr){
 				CastExpr castExpr = (CastExpr) rightOp;
 				if (castExpr.getOp().equals(fact.value())) {
-					out.add(new CastNode<Statement,Val, Type>(new Statement(succ, method), new Val(leftOp,method),castExpr.getCastType()));
+					out.add(new Node<Statement,Val>(new Statement(succ, method), new Val(leftOp,method)));
 				}
 				
 			}

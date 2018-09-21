@@ -29,7 +29,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 import sync.pds.solver.nodes.CallPopNode;
-import sync.pds.solver.nodes.CastNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
@@ -534,16 +533,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		});
 	}
 	public void addNormalFieldFlow(final Node<Stmt,Fact> curr, final Node<Stmt, Fact> succ) {
-		if(succ instanceof CastNode){
-			addFieldRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
-					fieldWildCard(), asFieldFact(succ), fieldWildCard(), getFieldWeights().normal(curr,succ)){
-				@Override
-				public boolean canBeApplied(Transition<Field, INode<Node<Stmt, Fact>>> t, W weight) {
-					return canCastBeApplied(curr,t,(CastNode)succ,weight);
-				}
-			});
-			return;
-		}
 		if (succ instanceof ExclusionNode) {
 			ExclusionNode<Stmt, Fact, Field> exNode = (ExclusionNode) succ;
 			addFieldRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
@@ -554,10 +543,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				fieldWildCard(), asFieldFact(succ), fieldWildCard(), getFieldWeights().normal(curr,succ)));
 	}
 
-
-	protected boolean canCastBeApplied(Node<Stmt, Fact> curr, Transition<Field, INode<Node<Stmt, Fact>>> t, CastNode<Stmt, Fact,?> succ, W weight){
-		return true;
-	}
 	protected INode<Node<Stmt,Fact>> asFieldFact(Node<Stmt, Fact> node) {
 		return new SingleNode<Node<Stmt,Fact>>(new Node<Stmt,Fact>(node.stmt(), node.fact()));
 	}
