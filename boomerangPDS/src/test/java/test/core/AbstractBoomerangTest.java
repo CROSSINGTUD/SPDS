@@ -368,15 +368,12 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 		}) {
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
-				if (dynamicIcfg == null){
-					dynamicIcfg = new ObservableDynamicICFG<>(this);
-				}
-				return dynamicIcfg;
+				return staticIcfg;
 			}
 
 			@Override
 			public Debugger createDebugger() {
-				return VISUALIZATION ? new IDEVizDebugger(ideVizFile, dynamicIcfg) : new CallGraphDebugger(dotFile, dynamicIcfg.getCallGraphCopy());
+				return VISUALIZATION ? new IDEVizDebugger(ideVizFile, staticIcfg) : new CallGraphDebugger(dotFile, staticIcfg.getCallGraphCopy());
 			}
 
 			@Override
