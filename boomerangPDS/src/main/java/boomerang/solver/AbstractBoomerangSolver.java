@@ -40,6 +40,7 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.util.RegExAccessPath;
 import heros.InterproceduralCFG;
+import java_cup.symbol_set;
 import pathexpression.IRegEx;
 import soot.NullType;
 import soot.RefType;
@@ -570,7 +571,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			return false;
 		}
 		if(!(targetVal instanceof RefType) || !(sourceVal instanceof RefType)){
-			if(targetVal instanceof NullType && isCastNode(t.getStart().fact())) {
+			if(options.killNullAtCast() && targetVal instanceof NullType && isCastNode(t.getStart().fact())) {
 				//A null pointer cannot be cast to any object 
 				return true;
 			}

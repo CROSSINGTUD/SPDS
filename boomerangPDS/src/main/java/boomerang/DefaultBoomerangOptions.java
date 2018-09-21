@@ -171,4 +171,9 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 	public boolean aliasing() {
 		return true;
 	}
+
+	@Override
+	public boolean killNullAtCast() {
+		return false;
+	}
 }
