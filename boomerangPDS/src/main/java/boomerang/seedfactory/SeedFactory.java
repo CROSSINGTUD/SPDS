@@ -11,26 +11,33 @@
  *******************************************************************************/
 package boomerang.seedfactory;
 
-import boomerang.Query;
-import boomerang.callgraph.CalleeListener;
-import boomerang.callgraph.ObservableICFG;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+
+import boomerang.Query;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.*;
+import wpds.impl.PushRule;
+import wpds.impl.Transition;
+import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
+import wpds.impl.WeightedPAutomaton;
+import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
-
-import java.util.*;
 
 /**
  * Created by johannesspath on 07.12.17.
@@ -119,92 +126,20 @@ public abstract class SeedFactory<W extends Weight> {
     	if(!m.hasActiveBody())
     	    return;
     	for(Unit u : m.getActiveBody().getUnits()) {
-            Collection<SootMethod> calledMethods = new HashSet<>();
-			if (icfg().isCallStmt(u)) {
-				icfg().addCalleeListener(new CalledMethodsCalleeListener(u, m, calledMethods));
-			}
+            Collection<SootMethod> calledMethods = (icfg().isCallStmt(u) ? icfg().getCalleesOfCallAt(u)
+                    : new HashSet<SootMethod>());
             for (Query seed : generate(m, (Stmt) u, calledMethods)) {
                 seedToTransition.put(seed, t);
             }
             if (icfg().isCallStmt(u)) {
-            	icfg().addCalleeListener(new AddPushRuleCalleeListener(u, m));
+                for (SootMethod callee : icfg().getCalleesOfCallAt(u)) {
+                    if (!callee.hasActiveBody())
+                        continue;
+                    addPushRule(new Method(m),new Method(callee));
+                }
             }
         }
     }
-
-    private class CalledMethodsCalleeListener implements CalleeListener<Unit,SootMethod>{
-    	Unit u;
-    	SootMethod m;
-		Collection<SootMethod> calledMethods;
-
-    	CalledMethodsCalleeListener(Unit u, SootMethod m, Collection<SootMethod> calledMethods){
-    		this.u = u;
-    		this.m = m;
-    		this.calledMethods = calledMethods;
-		}
-
-		@Override
-		public Unit getObservedCaller() {
-			return u;
-		}
-
-		@Override
-		public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-			calledMethods.add(sootMethod);
-		}
-
-		@Override
-		public boolean equals(Object o) {
-			if (this == o) return true;
-			if (o == null || getClass() != o.getClass()) return false;
-			CalledMethodsCalleeListener that = (CalledMethodsCalleeListener) o;
-			return Objects.equals(u, that.u) &&
-					Objects.equals(m, that.m);
-		}
-
-		@Override
-		public int hashCode() {
-
-			return Objects.hash(u, m, CalledMethodsCalleeListener.class);
-		}
-	}
-
-	private class AddPushRuleCalleeListener implements CalleeListener<Unit,SootMethod>{
-		Unit u;
-		SootMethod m;
-
-		AddPushRuleCalleeListener(Unit u, SootMethod m){
-			this.u = u;
-			this.m = m;
-		}
-
-		@Override
-		public Unit getObservedCaller() {
-			return u;
-		}
-
-		@Override
-		public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-			if (sootMethod.hasActiveBody()){
-				addPushRule(new Method(m), new Method(sootMethod));
-			}
-		}
-
-		@Override
-		public boolean equals(Object o) {
-			if (this == o) return true;
-			if (o == null || getClass() != o.getClass()) return false;
-			AddPushRuleCalleeListener that = (AddPushRuleCalleeListener) o;
-			return Objects.equals(u, that.u) &&
-					Objects.equals(m, that.m);
-		}
-
-		@Override
-		public int hashCode() {
-
-			return Objects.hash(u, m, AddPushRuleCalleeListener.class);
-		}
-	}
 
     private void addPushRule(Method caller, Method callee) {
         pds.addRule(new PushRule<>(wrap(Reachable.v()),caller,wrap(Reachable.v()),callee,caller, Weight.NO_WEIGHT_ONE));
@@ -214,7 +149,7 @@ public abstract class SeedFactory<W extends Weight> {
         return new SingleNode<>(r);
     }
 
-    public abstract ObservableICFG<Unit,SootMethod> icfg();
+    public abstract BiDiInterproceduralCFG<Unit,SootMethod> icfg();
 
 	public Collection<SootMethod> getMethodScope(Query query) {
 		Set<SootMethod> scope = Sets.newHashSet();
@@ -284,14 +219,6 @@ public abstract class SeedFactory<W extends Weight> {
 		private SeedFactory getOuterType() {
 			return SeedFactory.this;
 		}
-	}
-
-	public Collection<SootMethod> getAnyMethodScope() {
-		Set<SootMethod> out = Sets.newHashSet();
-		for(Query q : seedToTransition.keySet()) {
-			out.addAll(getMethodScope(q));
-		}
-		return out;
 	}
 
 

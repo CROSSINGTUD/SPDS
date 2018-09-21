@@ -11,23 +11,24 @@
  *******************************************************************************/
 package boomerang;
 
-import boomerang.callgraph.ObservableStaticICFG;
-import boomerang.jimple.AllocVal;
-import boomerang.jimple.Statement;
-import boomerang.seedfactory.SimpleSeedFactory;
-import soot.SootMethod;
-import soot.jimple.AssignStmt;
-import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
-import wpds.impl.Weight;
-
 import java.util.Collection;
 import java.util.Collections;
+
+import boomerang.jimple.AllocVal;
+import boomerang.jimple.Statement;
+import boomerang.seedfactory.SeedFactory;
+import soot.SootMethod;
+import soot.Unit;
+import soot.jimple.AssignStmt;
+import soot.jimple.Stmt;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
+import wpds.impl.Weight;
 
 public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBoomerang<W>{
 	private int reachableMethodCount;
 	private int allocationSites;
-	private SimpleSeedFactory seedFactory;
+	private SeedFactory<W> seedFactory;
 
 	public WholeProgramBoomerang(BoomerangOptions opts){
 		super(opts);
@@ -37,30 +38,33 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 		this(new DefaultBoomerangOptions());
 	}
 
-	@Override
-	public SimpleSeedFactory getSeedFactory() {
-		if (seedFactory == null){
-			seedFactory = new SimpleSeedFactory(icfg()) {
-
-				@Override
-				protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
-					if(u instanceof AssignStmt){
-						AssignStmt assignStmt = (AssignStmt) u;
-						if(options.isAllocationVal(assignStmt.getRightOp())){
-							return Collections.singleton(new ForwardQuery(new Statement(u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp(),new Statement((Stmt) u, method))));
-						}
-					}
-					return Collections.emptySet();
-				}
-			};
-		}
-		return seedFactory;
-	}
-
 	public void wholeProgramAnalysis(){
 		long before = System.currentTimeMillis();
+		seedFactory = new SeedFactory<W>() {
+			BiDiInterproceduralCFG<Unit, SootMethod> icfg = new JimpleBasedInterproceduralCFG();
 
-		for(Query s :getSeedFactory().computeSeeds()){
+			@Override
+			protected Collection<? extends Query> generate(SootMethod method, Stmt u,
+					Collection<SootMethod> calledMethods) {
+				if(u instanceof AssignStmt){
+					AssignStmt assignStmt = (AssignStmt) u;
+					if(options.isAllocationVal(assignStmt.getRightOp())){
+						return Collections.singleton(new ForwardQuery(new Statement((Stmt) u, method), new AllocVal(assignStmt.getLeftOp(),method,assignStmt.getRightOp(),new Statement((Stmt) u, method))));
+					}
+				}
+				return Collections.emptySet();
+			}
+
+			@Override
+			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+				return icfg;
+			}
+			@Override
+			protected boolean analyseClassInitializers() {
+				return true;
+			}
+		};
+		for(Query s :seedFactory.computeSeeds()){
 			solve((ForwardQuery)s);
 		}
 		

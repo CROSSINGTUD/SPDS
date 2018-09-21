@@ -114,11 +114,6 @@ public class ExampleMain {
 					public ObservableICFG<Unit, SootMethod> icfg() {
 						return icfg;
 					}
-					
-					@Override
-					public SimpleSeedFactory getSeedFactory() {
-						return null;
-					}
 				};
 
 				//2. Submit a query to the solver.

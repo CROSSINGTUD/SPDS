@@ -315,11 +315,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					return VISUALIZATION ? new IDEVizDebugger(ideVizFile, icfg()) :
 							new CallGraphDebugger(dotFile, dynamicIcfg.getCallGraphCopy());
 				}
-
-				@Override
-				public SimpleSeedFactory getSeedFactory() {
-					return null;
-				}
 			};
 			if(query instanceof BackwardQuery){
 				setupSolver(solver);

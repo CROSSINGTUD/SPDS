@@ -202,11 +202,6 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 			public Debugger createDebugger() {
 				return new IDEVizDebugger(ideVizFile, icfg());
 			}
-
-			@Override
-			public SimpleSeedFactory getSeedFactory() {
-				return seedFactory;
-			}
 		};
 		for (final Query query : queryForCallSites) {
 			if(query instanceof BackwardQuery){

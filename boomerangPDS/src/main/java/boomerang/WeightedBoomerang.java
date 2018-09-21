@@ -1174,10 +1174,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		return debugger;
 	}
 
-	public SimpleSeedFactory getSeedFactory() {
-		return null;
-	}
-
 	public IBoomerangStats<W> getStats() {
 		return stats;
 	}
