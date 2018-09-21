@@ -46,7 +46,8 @@ public abstract class SeedFactory<W extends Weight> {
 
     private final WeightedPushdownSystem<Method, INode<Reachable>, Weight.NoWeight> pds = new WeightedPushdownSystem<>();
     private final Multimap<Query,Transition<Method, INode<Reachable>>> seedToTransition = HashMultimap.create();
-
+    private final Multimap<SootMethod, Query> seedsPerMethod = HashMultimap.create();
+    
     private final WeightedPAutomaton<Method,  INode<Reachable>, Weight.NoWeight> automaton = new WeightedPAutomaton<Method,  INode<Reachable>, Weight.NoWeight>(wrap(Reachable.entry())) {
         @Override
         public INode<Reachable> createState(INode<Reachable> reachable, Method loc) {
@@ -74,7 +75,7 @@ public abstract class SeedFactory<W extends Weight> {
             return Weight.NO_WEIGHT_ONE;
         }
     };
-	private Collection<Method> processed = Sets.newHashSet();
+	private Collection<SootMethod> processed = Sets.newHashSet();
 	private Multimap<Query, SootMethod> queryToScope = HashMultimap.create();
 
     public Collection<Query> computeSeeds(){
@@ -92,9 +93,9 @@ public abstract class SeedFactory<W extends Weight> {
         
         if(analyseClassInitializers()){
         	Set<SootClass> sootClasses = Sets.newHashSet();
-        	for(Method p : Sets.newHashSet(processed)){
-        		if(sootClasses.add(p.getMethod().getDeclaringClass())){
-        			addStaticInitializerFor(p.getMethod().getDeclaringClass());
+        	for(SootMethod p : Sets.newHashSet(processed)){
+        		if(sootClasses.add(p.getDeclaringClass())){
+        			addStaticInitializerFor(p.getDeclaringClass());
         		}
         	}
         }
@@ -120,17 +121,24 @@ public abstract class SeedFactory<W extends Weight> {
 	
     private void process(Transition<Method, INode<Reachable>> t) {
         Method curr = t.getLabel();
-    	if(!processed.add(curr))
-    		return;
         SootMethod m = curr.getMethod();
     	if(!m.hasActiveBody())
     	    return;
+    	computeQueriesPerMethod(m);
+    	for(Query q : seedsPerMethod.get(m)){
+    		seedToTransition.put(q, t);
+    	}
+    }
+
+    private void computeQueriesPerMethod(SootMethod m) {
+    	if(!processed.add(m)) {
+    		return;
+    	}
+    	Set<Query> seeds = Sets.newHashSet();
     	for(Unit u : m.getActiveBody().getUnits()) {
             Collection<SootMethod> calledMethods = (icfg().isCallStmt(u) ? icfg().getCalleesOfCallAt(u)
                     : new HashSet<SootMethod>());
-            for (Query seed : generate(m, (Stmt) u, calledMethods)) {
-                seedToTransition.put(seed, t);
-            }
+            seeds.addAll(generate(m, (Stmt) u, calledMethods));
             if (icfg().isCallStmt(u)) {
                 for (SootMethod callee : icfg().getCalleesOfCallAt(u)) {
                     if (!callee.hasActiveBody())
@@ -139,9 +147,10 @@ public abstract class SeedFactory<W extends Weight> {
                 }
             }
         }
-    }
+    	seedsPerMethod.putAll(m, seeds);
+	}
 
-    private void addPushRule(Method caller, Method callee) {
+	private void addPushRule(Method caller, Method callee) {
         pds.addRule(new PushRule<>(wrap(Reachable.v()),caller,wrap(Reachable.v()),callee,caller, Weight.NO_WEIGHT_ONE));
     }
 
