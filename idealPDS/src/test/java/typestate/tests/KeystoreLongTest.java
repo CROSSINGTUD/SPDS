@@ -23,7 +23,7 @@ import test.IDEALTestingFramework;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.impl.statemachines.KeyStoreStateMachine;
 
-public class KeystoreTest extends IDEALTestingFramework {
+public class KeystoreLongTest extends IDEALTestingFramework {
 
 	@Test
 	public void test1() throws KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException {

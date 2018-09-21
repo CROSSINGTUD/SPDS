@@ -106,9 +106,7 @@
 						<version>2.21.0</version>
 						<configuration>
 							<excludes>
-								<exclude>**/PrintStreamTest.java</exclude>
-								<exclude>**/InputStreamTest.java</exclude>
-								<exclude>**/PrintWriterTest.java</exclude>
+								<exclude>**/*LongTest.java</exclude>
 							</excludes>
 						</configuration>
 					</plugin>
