@@ -88,9 +88,6 @@ public class TransitionFunction extends Weight {
 				}
 			}
 		}
-		if(ress.isEmpty()){
-			return zero();
-		}
 		return new TransitionFunction(ress,newStateChangeStatements);
 	}
 

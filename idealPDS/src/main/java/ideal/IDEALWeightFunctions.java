@@ -61,22 +61,10 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		if (isObjectFlowPhase() &&!weight.equals(getOne())){	
 			addOtherThanOneWeight(curr, weight);
 		}
-//		if(isValueFlowPhase() && curr.fact().isStatic()){
-//			if(potentialStrongUpdates.containsKey(curr.stmt())){
-//				W w = potentialStrongUpdates.get(curr.stmt());
-//				System.err.println("Potential strong update "+ curr + "  " + w);
-//				if(!weakUpdates.contains(curr.stmt()) && strongUpdates && !strongUpdateNodes.contains(curr)){
-//					System.err.println("Strong update " + curr + w + " was " + weight);
-//					return w;
-//				}
-//				weight = (W) weight.combineWith(w);
-//				System.err.println("No strong update" + weight);
-//			}
-//		}
 		return weight;
 	}
-
-	public void addOtherThanOneWeight(Node<Statement, Val> curr, W weight) {
+	
+	void addOtherThanOneWeight(Node<Statement, Val> curr, W weight) {
 		if(nonOneFlowNodes.put(curr, weight)){
 			for(NonOneFlowListener<W> l : Lists.newArrayList(listeners)){
 				l.nonOneFlow(curr,weight);
@@ -90,19 +78,6 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		if (isObjectFlowPhase() && curr.stmt().isCallsite() && !weight.equals(getOne())){
 			addOtherThanOneWeight(curr, weight);
 		}
-		
-//		if(isValueFlowPhase()){
-//			if(potentialStrongUpdates.containsKey(curr.stmt())){
-//				W w = potentialStrongUpdates.get(curr.stmt());
-//				System.err.println("Potential strong update "+ curr + "  " + w);
-//				if(!weakUpdates.contains(curr.stmt()) && strongUpdates && !strongUpdateNodes.contains(curr)){
-//					System.err.println("Strong update " + curr + w + " was " + weight);
-//					return getZero();
-//				}
-//				weight = (W) weight.combineWith(w);
-//				System.err.println("No strong update" + weight);
-//			}
-//		}
 		return weight;
 	}
 
@@ -170,11 +145,6 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	}
 
 	public boolean isKillFlow(Node<Statement, Val> node) {
-		if(node.toString().contains("close")) {
-		System.out.println("NON KILL FLOW" + node);
-		System.out.println("NON KILL FLOW" + !nodesWithStrongUpdate.contains(node));
-		System.out.println("NON KILL FLOW" + !indirectAlias.values().contains(node));
-		}
 		return !nodesWithStrongUpdate.contains(node) && !indirectAlias.containsValue(node);
 	}
 

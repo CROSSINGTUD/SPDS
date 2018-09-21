@@ -182,6 +182,21 @@ public class IDEALSeedSolver<W extends Weight> {
 		if (phase.equals(Phases.ValueFlow)) {
 			registerIndirectFlowListener(boomerang.getSolvers().getOrCreate(seed));
 		}
+        callAutomaton.registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
+
+            @Override
+            public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
+                if (!callSite.getMethod().equals(returnedFact.fact().m()))
+                    return;
+                if (!callSite.getMethod().equals(returnSite.getMethod()))
+                    return;
+                if (!w.equals(one)) {
+                    idealWeightFunctions.addOtherThanOneWeight(new Node<Statement, Val>(callSite, returnedFact.fact()),
+                            w);
+                }
+            }
+        });
+
 		ForwardBoomerangResults<W> res = boomerang.solve((ForwardQuery) seed);
 		idealWeightFunctions.registerListener(new NonOneFlowListener<W>() {
 			@Override

@@ -31,7 +31,9 @@ public class SocketTest extends IDEALTestingFramework {
 		Socket socket = new Socket();
 		socket.connect(new SocketAddress() {
 		});
+		int x = 1;
 		socket.sendUrgentData(2);
+		int y = 1;
 		mustBeInAcceptingState(socket);
 	}
 

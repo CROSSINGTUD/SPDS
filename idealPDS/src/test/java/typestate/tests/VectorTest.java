@@ -19,7 +19,6 @@ import test.IDEALTestingFramework;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.impl.statemachines.VectorStateMachine;
 
-@SuppressWarnings("deprecation")
 public class VectorTest extends IDEALTestingFramework {
 
 	@Test

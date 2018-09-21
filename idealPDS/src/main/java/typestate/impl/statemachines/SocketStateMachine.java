@@ -49,9 +49,8 @@ public class SocketStateMachine extends TypeStateMachineWeightFunctions{
 		}
 	}
 	public SocketStateMachine() {
-		addTransition(
-				new MatcherTransition(States.INIT, socketConstructor(), Parameter.This, States.INIT, Type.OnReturn));
 		addTransition(new MatcherTransition(States.INIT, connect(), Parameter.This, States.CONNECTED, Type.OnReturn));
+		addTransition(new MatcherTransition(States.ERROR, connect(), Parameter.This, States.ERROR, Type.OnReturn));
 		addTransition(new MatcherTransition(States.CONNECTED, useMethods(), Parameter.This, States.CONNECTED, Type.OnReturn));
 		addTransition(new MatcherTransition(States.INIT, useMethods(), Parameter.This, States.ERROR, Type.OnReturn));
 		addTransition(new MatcherTransition(States.ERROR, useMethods(), Parameter.This, States.ERROR, Type.OnReturn));
