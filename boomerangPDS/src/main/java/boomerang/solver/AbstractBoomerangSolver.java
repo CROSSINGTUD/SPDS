@@ -41,6 +41,7 @@ import boomerang.jimple.Val;
 import boomerang.util.RegExAccessPath;
 import heros.InterproceduralCFG;
 import pathexpression.IRegEx;
+import soot.NullType;
 import soot.RefType;
 import soot.Scene;
 import soot.SootMethod;
@@ -48,6 +49,7 @@ import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.AssignStmt;
+import soot.jimple.CastExpr;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
@@ -568,6 +570,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			return false;
 		}
 		if(!(targetVal instanceof RefType) || !(sourceVal instanceof RefType)){
+			if(targetVal instanceof NullType && isCastNode(t.getStart().fact())) {
+				//A null pointer cannot be cast to any object 
+				return true;
+			}
 			return false;//!allocVal.value().getType().equals(varVal.value().getType());
 		}
 
@@ -587,6 +593,19 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		return !castFails;
 	}
 	
+
+	private boolean isCastNode(Node<Statement, Val> node) {
+		Stmt stmt = node.stmt().getUnit().get();
+		AssignStmt x;
+		if(stmt instanceof AssignStmt && (x = (AssignStmt) stmt).getRightOp() instanceof CastExpr) {
+			CastExpr c = (CastExpr) x.getRightOp();
+			if(c.getOp().equals(node.fact().value())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 
 	public void addReachable(SootMethod m) {
 		if (reachableMethods.add(m)) {
