@@ -300,7 +300,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				}
 				Optional<AllocVal> allocNode = isAllocationNode(node.stmt(), node.fact());
 				if (allocNode.isPresent()) {
-					System.out.println("solver  + " + solver + allocNode);
 					ForwardQuery q = new ForwardQuery(node.stmt(), allocNode.get());
 					final AbstractBoomerangSolver<W> forwardSolver = forwardSolve(q);
 					solver.registerReachableMethodListener(new ReachableMethodListener<W>() {
@@ -1087,21 +1086,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	public abstract Debugger<W> createDebugger();
 
 	public void debugOutput() {
-		// for (Query q : queryToSolvers.keySet()) {
-		// System.out.println(q +" Nodes: " +
-		// queryToSolvers.getOrCreate(q).getReachedStates().size());
-		// System.out.println(q +" Field Aut: " +
-		// queryToSolvers.getOrCreate(q).getFieldAutomaton().getTransitions().size());
-		// System.out.println(q +" Field Aut (failed Additions): " +
-		// queryToSolvers.getOrCreate(q).getFieldAutomaton().failedAdditions);
-		// System.out.println(q +" Field Aut (failed Direct Additions): " +
-		// queryToSolvers.getOrCreate(q).getFieldAutomaton().failedDirectAdditions);
-		// System.out.println(q +" Call Aut: " +
-		// queryToSolvers.getOrCreate(q).getCallAutomaton().getTransitions().size());
-		// System.out.println(q +" Call Aut (failed Additions): " +
-		// queryToSolvers.getOrCreate(q).getCallAutomaton().failedAdditions);
-		// }
-
 		if (!DEBUG)
 			return;
 

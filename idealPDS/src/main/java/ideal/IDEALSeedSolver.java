@@ -30,12 +30,10 @@ import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import boomerang.poi.BaseSolverContext;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
-import heros.utilities.DefaultValueMap;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
@@ -51,7 +49,6 @@ import wpds.impl.PAutomaton;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
-import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public class IDEALSeedSolver<W extends Weight> {
@@ -165,7 +162,6 @@ public class IDEALSeedSolver<W extends Weight> {
 					.isKillFlow(new Node<Statement, Val>(t.getLabel(), t.getStart().fact()))) {
 				if ((t.getStart() instanceof GeneratedState)) {
 				} else {
-					System.out.println("PREVENT ADDING " + t);
 					return true;
 				}
 			}
@@ -213,8 +209,6 @@ public class IDEALSeedSolver<W extends Weight> {
 				}
 				Map<ForwardQuery, PAutomaton<Statement, INode<Val>>> allocationSites = backwardSolveUnderScope
 						.getAllocationSites();
-				System.out.println("NON ONE FLOW  " + curr + weight);
-
 				addAffectedPotentialStrongUpdate(curr,curr.stmt());
 				idealWeightFunctions.potentialStrongUpdate(curr.stmt());
 				AbstractBoomerangSolver<W> s = boomerang.getSolvers().getOrCreate(seed);
@@ -225,7 +219,6 @@ public class IDEALSeedSolver<W extends Weight> {
 
 					@Override
 					public void stackElement(Statement callSite, Statement parent) {
-						System.out.println("Transitively Strong Update at " + callSite + parent);
 						for(Statement cs : s.getPredsOf(parent)) {
 							addAffectedPotentialStrongUpdate(curr,cs);
 							
@@ -244,8 +237,6 @@ public class IDEALSeedSolver<W extends Weight> {
 													// Commented out as of typestate.tests.FileMustBeClosedTest.simpleAlias()
 													if (t.getLabel().equals(returnSite) /*&& !t.getStart().fact().equals(returnedFact.fact())*/) {
 														idealWeightFunctions.addNonKillFlow(new Node<Statement, Val>(cs, returnedFact.fact()));
-														System.out
-																.println("RETURN INDIRECT ALIASES " + new Node<Statement, Val>(returnSite, returnedFact.fact()));
 														idealWeightFunctions.addIndirectFlow(new Node<Statement, Val>(returnSite, returnedFact.fact()),
 																new Node<Statement, Val>(returnSite, t.getStart().fact()));
 													}
@@ -275,7 +266,6 @@ public class IDEALSeedSolver<W extends Weight> {
 
 				for (ForwardQuery e : allocationSites.keySet()) {
 					AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
-					System.out.println("ALLOC " + e +" \n for query " + query);
 					solver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
 						@Override
 						public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
@@ -284,11 +274,6 @@ public class IDEALSeedSolver<W extends Weight> {
 								// Commented out as of typestate.tests.FileMustBeClosedTest.simpleAlias()
 								if (t.getLabel().equals(succ) /*&& !t.getStart().fact().equals(curr.fact())*/) {
 									idealWeightFunctions.addNonKillFlow(curr);
-
-									System.out
-											.println("CURR ALIASES " + curr);
-									System.out
-											.println("INDIRECT ALIASES " + new Node<Statement, Val>(succ, curr.fact()));
 									idealWeightFunctions.addIndirectFlow(new Node<Statement, Val>(succ, curr.fact()),
 											new Node<Statement, Val>(succ, t.getStart().fact()));
 								}
@@ -298,7 +283,7 @@ public class IDEALSeedSolver<W extends Weight> {
 				}
 			}
 		});
-		boomerang.debugOutput();
+//		boomerang.debugOutput();
 		analysisStopwatch.stop();
 		return res;
 	}
@@ -332,14 +317,7 @@ public class IDEALSeedSolver<W extends Weight> {
 					return;
 				Node<Statement, Val> source = new Node<Statement, Val>(t.getLabel(), t.getStart().fact());
 				Collection<Node<Statement, Val>> indirectFlows = idealWeightFunctions.getAliasesFor(source);
-				if (!indirectFlows.isEmpty())
-					System.out.println("GET INDIRECT ALIASES " + source);
 				for (Node<Statement, Val> indirect : indirectFlows) {
-					System.out.println("ADDING " + new Transition<Statement, INode<Val>>(
-							new SingleNode<>(indirect.fact()), t.getLabel(), t.getTarget()));
-					// callAutomaton.addWeightForTransition(new Transition<Statement,
-					// INode<Val>>(new SingleNode<>(indirect.fact()), t.getLabel(),
-					// t.getTarget()),w);
 					solver.addNormalCallFlow(source, indirect);
 					for (Statement pred : solver.getPredsOf(t.getLabel())) {
 						solver.addNormalFieldFlow(new Node<Statement, Val>(pred, indirect.fact()), indirect);
