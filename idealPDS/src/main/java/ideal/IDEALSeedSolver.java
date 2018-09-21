@@ -14,9 +14,15 @@ package ideal;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 
+import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
@@ -24,10 +30,12 @@ import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.poi.BaseSolverContext;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
+import heros.utilities.DefaultValueMap;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
@@ -58,167 +66,8 @@ public class IDEALSeedSolver<W extends Weight> {
 	private final Stopwatch analysisStopwatch = Stopwatch.createUnstarted();
 	private final SeedFactory<W> seedFactory;
 	private WeightedBoomerang<W> timedoutSolver;
-
-	private final class ImportFieldAut implements WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> {
-		private final Node<Statement, Val> curr;
-		private WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> importTo;
-		private WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> importFrom;
-		private AbstractBoomerangSolver<W> forwardSolver;
-
-		private ImportFieldAut(AbstractBoomerangSolver<W> forwardSolver, Node<Statement, Val> curr,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> importFrom,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> importTo) {
-			this.forwardSolver = forwardSolver;
-			this.curr = curr;
-			this.importFrom = importFrom;
-			this.importTo = importTo;
-		}
-
-		@Override
-		public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-			if (t.getStart().fact().equals(curr)) {
-				if (t.getLabel().equals(Field.empty())) {
-					System.out.println("SOLVING");
-					System.out.println(new Transition<Field, INode<Node<Statement, Val>>>(t.getStart(),
-							t.getLabel(), importTo.getInitialState()));
-					for(Statement pred : forwardSolver.getPredsOf(t.getStart().fact().stmt())) {
-						importTo.addTransition(new Transition<Field, INode<Node<Statement, Val>>>(new SingleNode<Node<Statement,Val>>(new Node<>(pred,t.getStart().fact().fact())),
-							t.getLabel(), importTo.getInitialState()));
-					}
-				} else {
-					System.out.println("SOLVINGB");
-					System.out.println(t);
-					for(Statement pred : forwardSolver.getPredsOf(t.getStart().fact().stmt())) {
-						importTo.addTransition(new Transition<Field, INode<Node<Statement, Val>>>(new SingleNode<Node<Statement,Val>>(new Node<>(pred,t.getStart().fact().fact())),
-							t.getLabel(), t.getTarget()));
-					}
-					importFrom.registerListener(new ImportFieldAutTrans(t.getTarget(), importFrom, importTo));
-				}
-			}
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = 1;
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((curr == null) ? 0 : curr.hashCode());
-			result = prime * result + ((importFrom == null) ? 0 : importFrom.hashCode());
-			result = prime * result + ((importTo == null) ? 0 : importTo.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (obj == null)
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			ImportFieldAut other = (ImportFieldAut) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (curr == null) {
-				if (other.curr != null)
-					return false;
-			} else if (!curr.equals(other.curr))
-				return false;
-			if (importFrom == null) {
-				if (other.importFrom != null)
-					return false;
-			} else if (!importFrom.equals(other.importFrom))
-				return false;
-			if (importTo == null) {
-				if (other.importTo != null)
-					return false;
-			} else if (!importTo.equals(other.importTo))
-				return false;
-			return true;
-		}
-
-		private IDEALSeedSolver getOuterType() {
-			return IDEALSeedSolver.this;
-		}
-
-	}
-
-	private final class ImportFieldAutTrans extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
-		private WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> importFrom;
-		private WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> importTo;
-
-		public ImportFieldAutTrans(INode<Node<Statement, Val>> target,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> importFrom,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> importTo) {
-			super(target);
-			this.importFrom = importFrom;
-			this.importTo = importTo;
-		}
-
-		@Override
-		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if (t.getLabel().equals(Field.empty())) {
-
-				System.out.println("SOLVINGB");
-				System.out.println(new Transition<Field, INode<Node<Statement, Val>>>(t.getStart(), t.getLabel(),
-						importTo.getInitialState()));
-				importTo.addTransition(new Transition<Field, INode<Node<Statement, Val>>>(t.getStart(), t.getLabel(),
-						importTo.getInitialState()));
-			} else {
-
-				System.out.println("SOLVINGBD");
-				System.out.println(t);
-				importTo.addTransition(t);
-				importFrom.registerListener(new ImportFieldAutTrans(t.getTarget(), importFrom, importTo));
-			}
-		}
-
-		@Override
-		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-		}
-
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((importFrom == null) ? 0 : importFrom.hashCode());
-			result = prime * result + ((importTo == null) ? 0 : importTo.hashCode());
-			return result;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			ImportFieldAutTrans other = (ImportFieldAutTrans) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (importFrom == null) {
-				if (other.importFrom != null)
-					return false;
-			} else if (!importFrom.equals(other.importFrom))
-				return false;
-			if (importTo == null) {
-				if (other.importTo != null)
-					return false;
-			} else if (!importTo.equals(other.importTo))
-				return false;
-			return true;
-		}
-
-		private IDEALSeedSolver getOuterType() {
-			return IDEALSeedSolver.this;
-		}
-
-	}
+	private Multimap<Node<Statement,Val>, Statement> affectedStrongUpdateStmt = HashMultimap.create();
+	private Set<Node<Statement,Val>> weakUpdates = Sets.newHashSet();
 
 	public enum Phases {
 		ObjectFlow, ValueFlow
@@ -312,8 +161,8 @@ public class IDEALSeedSolver<W extends Weight> {
 
 	protected boolean preventStrongUpdateFlows(Transition<Statement, INode<Val>> t, W weight) {
 		if (idealWeightFunctions.isStrongUpdateStatement(t.getLabel())) {
-			if (!idealWeightFunctions
-					.containsIndirectFlow(new Node<Statement, Val>(t.getLabel(), t.getStart().fact()))) {
+			if (idealWeightFunctions
+					.isKillFlow(new Node<Statement, Val>(t.getLabel(), t.getStart().fact()))) {
 				if ((t.getStart() instanceof GeneratedState)) {
 				} else {
 					System.out.println("PREVENT ADDING " + t);
@@ -329,21 +178,6 @@ public class IDEALSeedSolver<W extends Weight> {
 		idealWeightFunctions.setPhase(phase);
 		final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = boomerang.getSolvers().getOrCreate(seed)
 				.getCallAutomaton();
-		callAutomaton.registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
-
-			@Override
-			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
-				if (!callSite.getMethod().equals(returnedFact.fact().m()))
-					return;
-				if (!callSite.getMethod().equals(returnSite.getMethod()))
-					return;
-				if (!w.equals(one)) {
-					System.out.println("RECONNECT " + callSite);
-					idealWeightFunctions.addOtherThanOneWeight(new Node<Statement, Val>(callSite, returnedFact.fact()),
-							w);
-				}
-			}
-		});
 
 		if (phase.equals(Phases.ValueFlow)) {
 			registerIndirectFlowListener(boomerang.getSolvers().getOrCreate(seed));
@@ -355,33 +189,73 @@ public class IDEALSeedSolver<W extends Weight> {
 				if (phase.equals(Phases.ValueFlow)) {
 					return;
 				}
-				idealWeightFunctions.potentialStrongUpdate(curr.stmt());
-				WeightedBoomerang<W>.AccessPathBackwardQuery query = boomerang.new AccessPathBackwardQuery(curr.stmt(),
-						curr.fact(),seed.var());
-				boomerang.getSolvers().get(seed).getFieldAutomaton().registerListener(new ImportFieldAut(boomerang.getSolvers().get(seed),curr,
-						boomerang.getSolvers().get(seed).getFieldAutomaton(), query.getFieldAutomaton()));
+				BackwardQuery query = new BackwardQuery(curr.stmt(),
+						curr.fact());
 				BackwardBoomerangResults<W> backwardSolveUnderScope = boomerang.backwardSolveUnderScope(query, seed,
 						curr);
 				if (!res.getAnalysisWatch().isRunning()) {
 					res.getAnalysisWatch().start();
 				}
+				Map<ForwardQuery, PAutomaton<Statement, INode<Val>>> allocationSites = backwardSolveUnderScope
+						.getAllocationSites();
 				System.out.println("NON ONE FLOW  " + curr + weight);
 
+				addAffectedPotentialStrongUpdate(curr,curr.stmt());
+				idealWeightFunctions.potentialStrongUpdate(curr.stmt());
+				AbstractBoomerangSolver<W> s = boomerang.getSolvers().getOrCreate(seed);
+				s.getCallAutomaton().registerListener(s.getCallAutomaton().new StackListener(new SingleNode<Val>(curr.fact()),curr.stmt()) {
+					@Override
+					public void anyContext(Statement end) {
+					}
+
+					@Override
+					public void stackElement(Statement callSite, Statement parent) {
+						System.out.println("Transitively Strong Update at " + callSite + parent);
+						for(Statement cs : s.getPredsOf(parent)) {
+							addAffectedPotentialStrongUpdate(curr,cs);
+							
+							for (ForwardQuery e : allocationSites.keySet()) {
+								AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
+								solver.getCallAutomaton().registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
+
+									@Override
+									public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
+										if(callSite.equals(cs)) {
+											solver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
+												@Override
+												public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
+													WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+													if (t.getLabel().equals(returnSite) && !t.getStart().fact().equals(returnedFact.fact())) {
+														idealWeightFunctions.addNonKillFlow(new Node<Statement, Val>(cs, returnedFact.fact()));
+														System.out
+																.println("RETURN INDIRECT ALIASES " + new Node<Statement, Val>(returnSite, returnedFact.fact()));
+														idealWeightFunctions.addIndirectFlow(new Node<Statement, Val>(returnSite, returnedFact.fact()),
+																new Node<Statement, Val>(returnSite, t.getStart().fact()));
+													}
+												}
+											});
+										}
+									}
+								});
+							}
+							
+							
+						}
+					}
+				});
 				for (final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()) {
 					if (e.getKey() instanceof ForwardQuery) {
 						e.getValue().synchedEmptyStackReachable(curr, new EmptyStackWitnessListener<Statement, Val>() {
 							@Override
 							public void witnessFound(Node<Statement, Val> targetFact) {
 								if (!e.getKey().asNode().equals(seed.asNode())) {
-									idealWeightFunctions.weakUpdate(curr.stmt());
+									setWeakUpdate(curr);
 								}
 							}
 						});
 					}
 				}
 
-				Map<ForwardQuery, PAutomaton<Statement, INode<Val>>> allocationSites = backwardSolveUnderScope
-						.getAllocationSites();
 				for (ForwardQuery e : allocationSites.keySet()) {
 					AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
 					System.out.println("ALLOC " + e +" \n for query " + query);
@@ -392,6 +266,9 @@ public class IDEALSeedSolver<W extends Weight> {
 							for (Statement succ : solver.getSuccsOf(curr.stmt())) {
 								if (t.getLabel().equals(succ) && !t.getStart().fact().equals(curr.fact())) {
 									idealWeightFunctions.addNonKillFlow(curr);
+
+									System.out
+											.println("CURR ALIASES " + curr);
 									System.out
 											.println("INDIRECT ALIASES " + new Node<Statement, Val>(succ, curr.fact()));
 									idealWeightFunctions.addIndirectFlow(new Node<Statement, Val>(succ, curr.fact()),
@@ -406,6 +283,24 @@ public class IDEALSeedSolver<W extends Weight> {
 		boomerang.debugOutput();
 		analysisStopwatch.stop();
 		return res;
+	}
+
+	protected void addAffectedPotentialStrongUpdate(Node<Statement, Val> curr, Statement stmt) {
+		if(affectedStrongUpdateStmt.put(curr,stmt)) {
+			idealWeightFunctions.potentialStrongUpdate(stmt);
+			if(weakUpdates.contains(curr)) {
+				idealWeightFunctions.weakUpdate(stmt);
+			}
+		}
+	}
+
+
+	private void setWeakUpdate(Node<Statement, Val> curr) {
+		if(weakUpdates.add(curr)) {
+			for(Statement s : Lists.newArrayList(affectedStrongUpdateStmt.get(curr))) {
+				idealWeightFunctions.weakUpdate(s);
+			}
+		}	
 	}
 
 	private void registerIndirectFlowListener(AbstractBoomerangSolver<W> solver) {

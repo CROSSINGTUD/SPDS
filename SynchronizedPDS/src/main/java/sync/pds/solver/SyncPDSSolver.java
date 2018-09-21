@@ -416,21 +416,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		processNode(curr);
 	}
 	
-	public void solve(Node<Stmt, Fact> curr, WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> fieldAut) {
-		fieldAut.registerListener(new WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, W>() {
-			@Override
-			public void onWeightAdded(Transition<Field, INode<Node<Stmt, Fact>>> t, W w,
-					WeightedPAutomaton<Field, INode<Node<Stmt, Fact>>, W> aut) {
-				fieldAutomaton.addTransition(t);
-			}
-		});
-		Transition<Stmt, INode<Fact>> callTrans = createInitialCallTransition(curr);
-		callAutomaton
-				.addWeightForTransition(callTrans,getCallWeights().getOne());
-		callAutomaton.computeValues(callTrans, getCallWeights().getOne());
-		processNode(curr);
-	}
-	
 	public void solve(Node<Stmt, Fact> curr) {
 		solve(curr,getCallWeights().getOne());
 	}

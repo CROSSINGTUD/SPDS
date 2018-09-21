@@ -839,14 +839,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
 		if (unit.isPresent()) {
 			for (Unit succ : bwicfg().getSuccsOf(unit.get())) {
-				if(query instanceof WeightedBoomerang.AccessPathBackwardQuery) {
-					WeightedBoomerang<W>.AccessPathBackwardQuery q = (WeightedBoomerang<W>.AccessPathBackwardQuery) query;
-					solver.solve(new Node<Statement, Val>(new Statement((Stmt) succ, icfg().getMethodOf(succ)),
-							query.asNode().fact()), q.getFieldAutomaton());
-				} else {
-					solver.solve(new Node<Statement, Val>(new Statement((Stmt) succ, icfg().getMethodOf(succ)),
-							query.asNode().fact()));
-				}
+				solver.solve(new Node<Statement, Val>(new Statement((Stmt) succ, icfg().getMethodOf(succ)),
+						query.asNode().fact()));
 			}
 		}
 	}
@@ -1184,84 +1178,4 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		return this.options;
 	}
 
-	public class AccessPathBackwardQuery extends BackwardQuery{
-		private final WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W> fieldAutomaton;
-		private final Val correctVar;
-		public AccessPathBackwardQuery(Statement stmt, Val variable, Val correctVar) {
-			super(stmt, variable);
-			this.correctVar = correctVar;
-			this.fieldAutomaton = new WeightedPAutomaton<Field, INode<Node<Statement,Val>>, W>(new AllocNode<>(new Node<Statement,Val>(this.stmt(),this.correctVar()))) {
-				@Override
-				public INode<Node<Statement,Val>> createState(INode<Node<Statement,Val>> d, Field loc) {
-					if (loc.equals(Field.empty()))
-						return d;
-					return new GeneratedState<Node<Statement,Val>,Field>(d,loc);
-				}
-
-				@Override
-				public Field epsilon() {
-					return Field.epsilon();
-				}
-
-				@Override
-				public boolean nested() {
-					return false;
-				};
-				
-				@Override
-				public W getZero() {
-					return WeightedBoomerang.this.getForwardFieldWeights().getZero();
-				}
-
-				@Override
-				public W getOne() {
-					return WeightedBoomerang.this.getForwardFieldWeights().getOne();
-				}
-				@Override
-				public boolean isGeneratedState(INode<Node<Statement, Val>> d) {
-					return d instanceof GeneratedState;
-				}
-			};
-		}
-		private Val correctVar() {
-			return correctVar;
-		}
-		public WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> getFieldAutomaton() {
-			return fieldAutomaton;
-		}
-		@Override
-		public int hashCode() {
-			final int prime = 31;
-			int result = super.hashCode();
-			result = prime * result + getOuterType().hashCode();
-			result = prime * result + ((fieldAutomaton == null) ? 0 : fieldAutomaton.hashCode());
-			return result;
-		}
-		@Override
-		public boolean equals(Object obj) {
-			if (this == obj)
-				return true;
-			if (!super.equals(obj))
-				return false;
-			if (getClass() != obj.getClass())
-				return false;
-			AccessPathBackwardQuery other = (AccessPathBackwardQuery) obj;
-			if (!getOuterType().equals(other.getOuterType()))
-				return false;
-			if (fieldAutomaton == null) {
-				if (other.fieldAutomaton != null)
-					return false;
-			} else if (!fieldAutomaton.equals(other.fieldAutomaton))
-				return false;
-			return true;
-		}
-		private WeightedBoomerang getOuterType() {
-			return WeightedBoomerang.this;
-		}
-		
-		@Override
-		public String toString() {
-			return "Access PATH " + super.toString();
-		}
-	}
 }
