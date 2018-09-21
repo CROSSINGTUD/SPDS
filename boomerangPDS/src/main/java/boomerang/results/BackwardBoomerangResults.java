@@ -353,7 +353,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 		AbstractBoomerangSolver<W> solver = queryToSolvers.get(query);
 		Set<Type> types = Sets.newHashSet();
 		for(Transition<Statement, INode<Val>> t :solver.getCallAutomaton().getTransitions()) {
-			types.add(t.getStart().fact().value().getType());
+			types.add(t.getStart().fact().getType());
 		}
 		return types;
 	}

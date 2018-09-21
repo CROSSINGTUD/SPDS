@@ -12,7 +12,9 @@
 package boomerang.jimple;
 
 import soot.Local;
+import soot.NullType;
 import soot.SootMethod;
+import soot.Type;
 import soot.Value;
 
 public class Val {
@@ -45,6 +47,10 @@ public class Val {
 
 	public Value value(){
 		return v;
+	}
+	
+	public Type getType() {
+		return v == null ? NullType.v() : v.getType();
 	}
 	
 	public SootMethod m(){

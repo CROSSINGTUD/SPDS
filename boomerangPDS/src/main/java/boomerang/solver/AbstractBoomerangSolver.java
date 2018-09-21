@@ -44,6 +44,7 @@ import pathexpression.IRegEx;
 import soot.RefType;
 import soot.Scene;
 import soot.SootMethod;
+import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.AssignStmt;
@@ -558,20 +559,20 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		}
 		Val target = t.getTarget().fact().fact();
 		Val source = t.getStart().fact().fact();
-		Value sourceVal = source.value();
-		Value targetVal = target.value();
-		if(sourceVal.getType().equals(targetVal.getType())){
+		Type sourceVal = source.getType();
+		Type targetVal = target.getType();
+		if(sourceVal.equals(targetVal)){
 			return false;
 		}
 		if(source.isStatic()){
 			return false;
 		}
-		if(!(targetVal.getType() instanceof RefType) || !(sourceVal.getType() instanceof RefType)){
+		if(!(targetVal instanceof RefType) || !(sourceVal instanceof RefType)){
 			return false;//!allocVal.value().getType().equals(varVal.value().getType());
 		}
 
-		RefType targetType = (RefType) targetVal.getType(); 
-		RefType sourceType = (RefType) sourceVal.getType(); 
+		RefType targetType = (RefType) targetVal; 
+		RefType sourceType = (RefType) sourceVal; 
 		if(targetType.getSootClass().isPhantom() || sourceType.getSootClass().isPhantom())
 			return false;
 		if(target instanceof AllocVal && ((AllocVal) target).allocationValue() instanceof NewExpr){
