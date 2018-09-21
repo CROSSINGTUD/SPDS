@@ -105,6 +105,7 @@
 						<artifactId>maven-surefire-plugin</artifactId>
 						<version>2.21.0</version>
 						<configuration>
+                    			<argLine>-Xmx8G -Xss128m</argLine>
 							<excludes>
 								<exclude>**/*LongTest.java</exclude>
 							</excludes>
