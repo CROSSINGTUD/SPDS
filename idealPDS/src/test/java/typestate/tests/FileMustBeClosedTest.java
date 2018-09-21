@@ -68,6 +68,8 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		if(!staticallyUnknown()){
 			File alias = file;
 			recursive(alias);
+			//TODO Commenting out this line introduces a bug
+			int z = 2;
 		}
 	}
 	private void escape(File other) {
@@ -149,18 +151,19 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		File file = new File();
 		File alias = file;
 		call(alias);
+		int x = 1;
 		file.close();
 		mustBeInAcceptingState(file);
 		mustBeInAcceptingState(alias);
 	}
 	@Test
 	public void simpleAlias() {
-		File file = new File();
-		File alias = file;
-		alias.open();
-		file.close();
-		mustBeInAcceptingState(file);
-		mustBeInAcceptingState(alias);
+		File y = new File();
+		File x = y;
+		x.open();
+		y.close();
+		mustBeInAcceptingState(x);
+		mustBeInAcceptingState(y);
 	}
 	private static void call(File alias) {
 		alias.open();

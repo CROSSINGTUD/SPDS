@@ -225,7 +225,9 @@ public class IDEALSeedSolver<W extends Weight> {
 												@Override
 												public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
 													WeightedPAutomaton<Statement, INode<Val>, W> aut) {
-													if (t.getLabel().equals(returnSite) && !t.getStart().fact().equals(returnedFact.fact())) {
+
+													// Commented out as of typestate.tests.FileMustBeClosedTest.simpleAlias()
+													if (t.getLabel().equals(returnSite) /*&& !t.getStart().fact().equals(returnedFact.fact())*/) {
 														idealWeightFunctions.addNonKillFlow(new Node<Statement, Val>(cs, returnedFact.fact()));
 														System.out
 																.println("RETURN INDIRECT ALIASES " + new Node<Statement, Val>(returnSite, returnedFact.fact()));
@@ -264,7 +266,8 @@ public class IDEALSeedSolver<W extends Weight> {
 						public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
 								WeightedPAutomaton<Statement, INode<Val>, W> aut) {
 							for (Statement succ : solver.getSuccsOf(curr.stmt())) {
-								if (t.getLabel().equals(succ) && !t.getStart().fact().equals(curr.fact())) {
+								// Commented out as of typestate.tests.FileMustBeClosedTest.simpleAlias()
+								if (t.getLabel().equals(succ) /*&& !t.getStart().fact().equals(curr.fact())*/) {
 									idealWeightFunctions.addNonKillFlow(curr);
 
 									System.out
