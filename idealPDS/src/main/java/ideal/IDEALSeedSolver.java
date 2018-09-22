@@ -49,6 +49,7 @@ import wpds.impl.PAutomaton;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
+import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public class IDEALSeedSolver<W extends Weight> {
@@ -199,90 +200,121 @@ public class IDEALSeedSolver<W extends Weight> {
 				if (phase.equals(Phases.ValueFlow)) {
 					return;
 				}
-				BackwardQuery query = new BackwardQuery(curr.stmt(),
-						curr.fact());
-				BackwardBoomerangResults<W> backwardSolveUnderScope = boomerang.backwardSolveUnderScope(query, seed,
-						curr);
-				if (!res.getAnalysisWatch().isRunning()) {
-					res.getAnalysisWatch().start();
-				}
-				Map<ForwardQuery, PAutomaton<Statement, INode<Val>>> allocationSites = backwardSolveUnderScope
-						.getAllocationSites();
-				addAffectedPotentialStrongUpdate(curr,curr.stmt());
-				idealWeightFunctions.potentialStrongUpdate(curr.stmt());
 				AbstractBoomerangSolver<W> s = boomerang.getSolvers().getOrCreate(seed);
-				s.getCallAutomaton().registerListener(s.getCallAutomaton().new StackListener(new SingleNode<Val>(curr.fact()),curr.stmt()) {
-					@Override
-					public void anyContext(Statement end) {
-					}
+				s.getFieldAutomaton().registerListener(new WPAStateListener<Field, INode<Node<Statement,Val>>,W>(new SingleNode<Node<Statement,Val>>(curr)) {
 
 					@Override
-					public void stackElement(Statement callSite, Statement parent) {
-						for(Statement cs : s.getPredsOf(parent)) {
-							addAffectedPotentialStrongUpdate(curr,cs);
-							
-							for (ForwardQuery e : allocationSites.keySet()) {
-								AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
-								solver.getCallAutomaton().registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
+					public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+						if(t.getLabel().equals(Field.empty())) {
 
-									@Override
-									public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
-										if(callSite.equals(cs)) {
-											solver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
+							BackwardQuery query = new BackwardQuery(curr.stmt(),
+									curr.fact());
+							BackwardBoomerangResults<W> backwardSolveUnderScope = boomerang.backwardSolveUnderScope(query, seed,
+									curr);
+							if (!res.getAnalysisWatch().isRunning()) {
+								res.getAnalysisWatch().start();
+							}
+							Map<ForwardQuery, PAutomaton<Statement, INode<Val>>> allocationSites = backwardSolveUnderScope
+									.getAllocationSites();
+							addAffectedPotentialStrongUpdate(curr,curr.stmt());
+							idealWeightFunctions.potentialStrongUpdate(curr.stmt());
+							s.getCallAutomaton().registerListener(s.getCallAutomaton().new StackListener(new SingleNode<Val>(curr.fact()),curr.stmt()) {
+								@Override
+								public void anyContext(Statement end) {
+								}
+
+								@Override
+								public void stackElement(Statement callSite, Statement parent) {
+									for(Statement cs : s.getPredsOf(parent)) {
+										addAffectedPotentialStrongUpdate(curr,cs);
+										
+										for (ForwardQuery e : allocationSites.keySet()) {
+											AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
+											solver.getCallAutomaton().registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
+
 												@Override
-												public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
-													WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+												public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
+													if(callSite.equals(cs)) {
+														solver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
+															@Override
+															public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
+																WeightedPAutomaton<Statement, INode<Val>, W> aut) {
 
-													// Commented out as of typestate.tests.FileMustBeClosedTest.simpleAlias()
-													if (t.getLabel().equals(returnSite) /*&& !t.getStart().fact().equals(returnedFact.fact())*/) {
-														idealWeightFunctions.addNonKillFlow(new Node<Statement, Val>(cs, returnedFact.fact()));
-														idealWeightFunctions.addIndirectFlow(new Node<Statement, Val>(returnSite, returnedFact.fact()),
-																new Node<Statement, Val>(returnSite, t.getStart().fact()));
+																// Commented out as of typestate.tests.FileMustBeClosedTest.simpleAlias()
+																if (t.getLabel().equals(returnSite) /*&& !t.getStart().fact().equals(returnedFact.fact())*/) {
+																	idealWeightFunctions.addNonKillFlow(new Node<Statement, Val>(cs, returnedFact.fact()));
+																	idealWeightFunctions.addIndirectFlow(new Node<Statement, Val>(returnSite, returnedFact.fact()),
+																			new Node<Statement, Val>(returnSite, t.getStart().fact()));
+																}
+															}
+														});
 													}
 												}
 											});
 										}
+										
+										
+									}
+								}
+							});
+							for (final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()) {
+								if (e.getKey() instanceof ForwardQuery) {
+									e.getValue().synchedEmptyStackReachable(curr, new EmptyStackWitnessListener<Statement, Val>() {
+										@Override
+										public void witnessFound(Node<Statement, Val> targetFact) {
+											if (!e.getKey().asNode().equals(seed.asNode())) {
+												setWeakUpdate(curr);
+											}
+										}
+									});
+								}
+							}
+
+							for (ForwardQuery e : allocationSites.keySet()) {
+								AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
+								solver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
+									@Override
+									public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
+											WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+										
+										for (Statement succ : solver.getSuccsOf(curr.stmt())) {
+											
+											// Commented out as of typestate.tests.FileMustBeClosedTest.simpleAlias()
+											if (t.getLabel().equals(succ) /*&& !t.getStart().fact().equals(curr.fact())*/) {
+												idealWeightFunctions.addNonKillFlow(curr);
+												idealWeightFunctions.addIndirectFlow(new Node<Statement, Val>(succ, curr.fact()),
+														new Node<Statement, Val>(succ, t.getStart().fact()));
+											}
+										}
 									}
 								});
 							}
-							
-							
 						}
+					}
+
+					@Override
+					public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+							WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+						// TODO Auto-generated method stub
+						
+					}
+					
+					@Override
+					public int hashCode() {
+						return System.identityHashCode(this);
+					}
+					
+					@Override
+					public boolean equals(Object obj) {
+						return this == obj;
 					}
 				});
-				for (final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()) {
-					if (e.getKey() instanceof ForwardQuery) {
-						e.getValue().synchedEmptyStackReachable(curr, new EmptyStackWitnessListener<Statement, Val>() {
-							@Override
-							public void witnessFound(Node<Statement, Val> targetFact) {
-								if (!e.getKey().asNode().equals(seed.asNode())) {
-									setWeakUpdate(curr);
-								}
-							}
-						});
-					}
-				}
-
-				for (ForwardQuery e : allocationSites.keySet()) {
-					AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
-					solver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
-						@Override
-						public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
-								WeightedPAutomaton<Statement, INode<Val>, W> aut) {
-							for (Statement succ : solver.getSuccsOf(curr.stmt())) {
-								// Commented out as of typestate.tests.FileMustBeClosedTest.simpleAlias()
-								if (t.getLabel().equals(succ) /*&& !t.getStart().fact().equals(curr.fact())*/) {
-									idealWeightFunctions.addNonKillFlow(curr);
-									idealWeightFunctions.addIndirectFlow(new Node<Statement, Val>(succ, curr.fact()),
-											new Node<Statement, Val>(succ, t.getStart().fact()));
-								}
-							}
-						}
-					});
-				}
 			}
 		});
-//		boomerang.debugOutput();
+		if(phase.equals(Phases.ValueFlow)) {
+			boomerang.debugOutput();
+		}
 		analysisStopwatch.stop();
 		return res;
 	}
