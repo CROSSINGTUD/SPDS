@@ -54,7 +54,6 @@ import soot.jimple.NewExpr;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import sync.pds.solver.SyncPDSSolver;
-import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -96,7 +95,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			Query query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
 			BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
 			 NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries) {
-		super(new SingleNode<Val>(query.asNode().fact()), new AllocNode<Node<Statement, Val>>(query.asNode()),
+		super(new SingleNode<Val>(query.asNode().fact()), new SingleNode<Node<Statement, Val>>(query.asNode()),
 				options.callSummaries(), callSummaries, options.fieldSummaries(), fieldSummaries);
 		this.options = options;
 		this.icfg = icfg;
