@@ -94,7 +94,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		PackManager.v().getPack("wjtp").add(new Transform("wjtp.prepare", new PreTransformBodies()));
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				icfg = new JimpleBasedInterproceduralCFG(true);
+				icfg = new JimpleBasedInterproceduralCFG(false);
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				

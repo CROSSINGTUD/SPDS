@@ -62,13 +62,6 @@ public class PrintStreamStateMachine extends TypeStateMachineWeightFunctions {
 		addTransition(new MatcherTransition(States.ERROR, closeMethods(), Parameter.This, States.ERROR,
 				Type.OnReturn));
 
-
-		addTransition(new MatcherTransition(States.OPEN, closeMethods(), Parameter.This, States.CLOSED,
-				Type.OnCallToReturn));
-		addTransition(new MatcherTransition(States.ERROR, closeMethods(), Parameter.This, States.ERROR,
-				Type.OnCallToReturn));
-		addTransition(new MatcherTransition(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED,
-				Type.OnCallToReturn));
 	}
 
 	private Set<SootMethod> closeMethods() {
@@ -81,7 +74,7 @@ public class PrintStreamStateMachine extends TypeStateMachineWeightFunctions {
 		Set<SootMethod> out = new HashSet<>();
 		for (SootClass c : subclasses) {
 			for (SootMethod m : c.getMethods())
-				if (m.isPublic() && !closeMethods.contains(m) && !m.isStatic())
+				if (m.isPublic() && !closeMethods.contains(m) && !m.isStatic() && !m.isConstructor())
 					out.add(m);
 		}
 		return out;
