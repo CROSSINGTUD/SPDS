@@ -94,7 +94,10 @@
     </repositories>
     <profiles>
 		<profile>
-			<id>slimTestSet</id>
+			<id>defaultTestSet</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
 			<build>
 				<plugins>
 					<plugin>
