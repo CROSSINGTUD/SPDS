@@ -27,15 +27,12 @@ import typestate.impl.statemachines.SocketStateMachine;
 
 public class SocketLongTest extends IDEALTestingFramework {
 
-	@Ignore("This test case seems to fail as there is a call inside socket.connect(...) to one method that update the typestate of the Socket object to early.")
 	@Test
 	public void test1() throws IOException {
 		Socket socket = new Socket();
 		socket.connect(new SocketAddress() {
 		});
-		int x = 1;
 		socket.sendUrgentData(2);
-		int y = 1;
 		mustBeInAcceptingState(socket);
 	}
 
@@ -55,7 +52,6 @@ public class SocketLongTest extends IDEALTestingFramework {
 	}
 	
 	
-	@Ignore("This test case seems to fail as there is a call inside socket.connect(...) to one method that update the typestate of the Socket object to early.")
 	@Test
 	public void test4() throws IOException {
 		Collection<Socket> sockets = createSockets();
