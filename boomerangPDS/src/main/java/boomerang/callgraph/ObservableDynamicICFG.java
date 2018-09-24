@@ -414,4 +414,13 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
         return numberOfEdgesTakenFromPrecomputedCallGraph;
     }
 
+    @Override
+    public void resetCallGraph() {
+        demandDrivenCallGraph = new CallGraph();
+        numberOfEdgesTakenFromPrecomputedCallGraph = 0;
+        methodsWithCallFlow.clear();
+        calleeListeners.clear();
+        callerListeners.clear();
+    }
+
 }

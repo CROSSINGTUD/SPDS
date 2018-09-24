@@ -111,4 +111,11 @@ public interface ObservableICFG<N,M> {
 
 	int getNumberOfEdgesTakenFromPrecomputedGraph();
 
+    /**
+     * Resets the call graph. Only affects the call graph if it was built demand-driven, otherwise
+     * graph will remain unchanged. Demand-driven call graph will keep intraprocedual information, but reset
+     * start with an empty call graph again.
+     */
+	void resetCallGraph();
+
 }

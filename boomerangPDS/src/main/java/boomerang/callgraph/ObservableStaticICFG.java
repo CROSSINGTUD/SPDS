@@ -158,5 +158,8 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
         return -1;
     }
 
-
+    @Override
+    public void resetCallGraph() {
+        //Static call graph does not need to be reset, ignore this
+    }
 }
