@@ -37,6 +37,7 @@ import boomerang.Query;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
+import boomerang.jimple.UnbalancedVal;
 import boomerang.jimple.Val;
 import boomerang.util.RegExAccessPath;
 import heros.InterproceduralCFG;
@@ -132,7 +133,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		if (t.getStart() instanceof GeneratedState)
 			return false;
 		Val fact = t.getStart().fact();
+		
 		if(fact.isStatic())
+			return false;
+		if (callAutomaton.isUnbalancedState(t.getStart()) && callAutomaton.isUnbalancedState(t.getTarget()))
 			return false;
 		SootMethod m = fact.m();
 		SootMethod method = t.getLabel().getMethod();

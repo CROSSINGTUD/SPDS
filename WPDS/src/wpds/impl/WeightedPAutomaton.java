@@ -80,10 +80,12 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	public int failedDirectAdditions;
 	private WeightedPAutomaton<N, D, W> initialAutomaton;
 	private PathExpressionComputer<D,N> pathExpressionComputer;
+	protected Set<D> unbalancedStates = Sets.newHashSet();
 	
 
 	public WeightedPAutomaton(D initialState) {
 		this.initialState = initialState;
+		this.unbalancedStates.add(initialState);
 	}
 
 	public abstract D createState(D d, N loc);
@@ -807,5 +809,13 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		public void onInTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton) {
 		}
 		public abstract void stackElement(N child, N parent);
+	}
+	
+	public boolean isUnbalancedState(D target) {
+		return unbalancedStates.contains(target);
+	} 
+	
+	public void addUnbalancedState(D state) {
+		unbalancedStates.add(state);
 	} 
 }

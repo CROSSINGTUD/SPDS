@@ -40,6 +40,7 @@ import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.StaticFieldVal;
+import boomerang.jimple.UnbalancedVal;
 import boomerang.jimple.Val;
 import boomerang.poi.AbstractPOI;
 import boomerang.poi.BaseSolverContext;
@@ -136,15 +137,13 @@ public abstract class WeightedBoomerang<W extends Weight> {
 										solver.submit(callStatement.getMethod(), new Runnable() {
 											@Override
 											public void run() {
-
-												Node<Statement, Val> returnedVal = new Node<Statement, Val>(
-														callStatement, returningFact.fact());
-												solver.setCallingContextReachable(returnedVal);
+												SingleNode<Val> unbalancedState = new SingleNode<Val>(new UnbalancedVal(returningFact.fact(), callStatement));
+												solver.getCallAutomaton().addUnbalancedState(unbalancedState);
 												solver.getCallAutomaton()
 														.addWeightForTransition(
-																new Transition<Statement, INode<Val>>(returningFact,
+																new Transition<Statement, INode<Val>>(solver.getCallAutomaton().getInitialState(),
 																		callStatement,
-																		solver.getCallAutomaton().getInitialState()),
+																		unbalancedState),
 																weight);
 
 											}

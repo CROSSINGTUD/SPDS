@@ -142,7 +142,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 				continue;
 			
 			if(queryToSolvers.getOrCreate(fw).getReachedStates().contains(el.asNode())) {
-				for(Transition<Field, INode<Node<Statement, Val>>> t :queryToSolvers.getOrCreate(fw).getFieldAutomaton().getTransitions()){
+				for(Transition<Field, INode<Node<Statement, Val>>> t : queryToSolvers.getOrCreate(fw).getFieldAutomaton().getTransitions()){
 					if(t.getStart() instanceof GeneratedState){
 						continue;
 					}
