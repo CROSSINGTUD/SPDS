@@ -411,7 +411,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		Transition<Stmt, INode<Fact>> callTrans = createInitialCallTransition(curr);
 		callAutomaton
 				.addWeightForTransition(callTrans,weight);
-		callAutomaton.computeValues(callTrans, weight);
 		processNode(curr);
 	}
 	
@@ -623,7 +622,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 
-	public void setCallingContextReachable(Node<Stmt,Fact> node) {
+	private void setCallingContextReachable(Node<Stmt,Fact> node) {
 		if (!callingContextReachable.add(node))
 			return;
 		if (fieldContextReachable.contains(node)) {

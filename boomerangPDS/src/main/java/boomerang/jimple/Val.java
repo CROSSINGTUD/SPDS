@@ -20,11 +20,16 @@ import soot.Value;
 public class Val {
 	protected final SootMethod m;
 	private final Value v;
-	private final String rep; 
+	private final String rep;
+	private final Statement unbalancedStmt; 
 
 	private static Val zeroInstance;
 	
 	public Val(Value v, SootMethod m){
+		this(v, m, null);
+	}
+	
+	protected Val(Value v, SootMethod m, Statement unbalanced) {
 		if(v == null)
 			throw new RuntimeException("Value must not be null!");
 		this.v = v;
@@ -37,12 +42,14 @@ public class Val {
 				throw new RuntimeException("Creating a Local with wrong method." +v + " "+  m);
 			}
 		}
+		this.unbalancedStmt = unbalanced;
 	}
 	
 	private Val(String rep){
 		this.rep = rep;
 		this.m = null;
 		this.v = null;
+		this.unbalancedStmt = null;
 	}
 
 	public Value value(){
@@ -63,6 +70,7 @@ public class Val {
 //		result = prime * result + ((m == null) ? 0 : m.hashCode());
 		result = prime * result + ((rep == null) ? 0 : rep.hashCode());
 		result = prime * result + ((v == null) ? 0 : v.hashCode());
+		result = prime * result + ((unbalancedStmt == null) ? 0 : unbalancedStmt.hashCode());
 		return result;
 	}
 
@@ -86,6 +94,11 @@ public class Val {
 				return false;
 		} else if (!v.equals(other.v))
 			return false;
+		if (unbalancedStmt == null) {
+			if (other.unbalancedStmt != null)
+				return false;
+		} else if (!unbalancedStmt.equals(other.unbalancedStmt))
+			return false;
 		return true;
 	}
 
@@ -93,7 +106,7 @@ public class Val {
 	public String toString() {
 		if(rep != null)
 			return rep;
-		return v.toString()+ " (" + m.getDeclaringClass().getShortName() +"." + m.getName() +")";
+		return v.toString()+ " (" + m.getDeclaringClass().getShortName() +"." + m.getName() +")" + (isUnbalanced() ? " unbalanaced " + unbalancedStmt : "");
 	}
 
 	public static Val zero() {
@@ -109,5 +122,12 @@ public class Val {
 	public boolean isNewExpr(){
 		return false;
 	}
+	
+	public boolean isUnbalanced() {
+		return unbalancedStmt != null && rep == null;
+	}
 
+	public Val asUnbalanced(Statement stmt) {
+		return new Val(v,m,stmt); 
+	}
 }

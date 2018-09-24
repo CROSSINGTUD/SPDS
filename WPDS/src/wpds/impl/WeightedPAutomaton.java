@@ -562,13 +562,11 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		
 		
 	}
-	public void computeValues(Transition<N, D> callTrans, W weight) {
-//		transitionsToFinalWeights.put(callTrans, weight);
-
-	}
 
 	public Map<Transition<N,D>, W> getTransitionsToFinalWeights() {
-		registerListener(new ValueComputationListener(initialState,getOne()));
+		for(D s : unbalancedStates) {
+			registerListener(new ValueComputationListener(s,getOne()));
+		}
 		return transitionsToFinalWeights;
 	}
 	

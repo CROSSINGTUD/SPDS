@@ -1,12 +1,10 @@
 package boomerang;
 
 import boomerang.jimple.Statement;
-import boomerang.jimple.UnbalancedVal;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import soot.jimple.Stmt;
 import sync.pds.solver.nodes.INode;
-import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
@@ -36,13 +34,14 @@ public class UnbalancedPopHandler<W extends Weight>{
 			@Override
 			public void run() {
 				for (Statement returnSite : solver.getSuccsOf(callStatement)) {
-					SingleNode<Val> unbalancedState = new SingleNode<Val>(new UnbalancedVal(returningFact.fact(), callStatement));
+					Val unbalancedFact = returningFact.fact().asUnbalanced(callStatement);
+					SingleNode<Val> unbalancedState = new SingleNode<Val>(unbalancedFact);
 					solver.getCallAutomaton().addUnbalancedState(unbalancedState);
 					solver.getCallAutomaton().addWeightForTransition(
 							new Transition<Statement, INode<Val>>(trans.getTarget(), returnSite,
 									unbalancedState
 									),
-							weight);
+							solver.getCallAutomaton().getOne());
 				}
 			}
 

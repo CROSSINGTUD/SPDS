@@ -386,6 +386,7 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 	@Test
 	public void unbalancedReturn2() {
 		File first = createOpenedFile();
+		int x= 1;
 		clse(first);
 		mustBeInAcceptingState(first);
 		File second = createOpenedFile();
@@ -393,6 +394,13 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		mustBeInErrorState(second);
 	}
 
+	@Test
+	public void unbalancedReturnAndBalanced() {
+		File first = createOpenedFile();
+		int x= 1;
+		clse(first);
+		mustBeInAcceptingState(first);
+	}
 	private static void clse(File first) {
 		first.close();
 	}
@@ -400,6 +408,7 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 	public static File createOpenedFile() {
 		File f = new File();
 		f.open();
+		mustBeInErrorState(f);
 		return f;
 	}
 
