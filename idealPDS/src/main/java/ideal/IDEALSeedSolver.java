@@ -126,11 +126,6 @@ public class IDEALSeedSolver<W extends Weight> {
 			protected WeightFunctions<Statement, Val, Statement, W> getBackwardCallWeights() {
 				return new OneWeightFunctions<>(zero, one);
 			}
-			
-			@Override
-			public SimpleSeedFactory getSeedFactory() {
-				return seedFactory;
-			}
 		};
 	}
 
