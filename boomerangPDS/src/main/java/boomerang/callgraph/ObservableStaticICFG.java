@@ -156,5 +156,8 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
         //No need to keep track of that since we rely on the precomputed graph
 	}
 
-
+    @Override
+    public void resetCallGraph() {
+        //Static call graph does not need to be reset, ignore this
+    }
 }

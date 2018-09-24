@@ -403,4 +403,12 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
         methodsWithCallFlow.add(method);
     }
 
+    @Override
+    public void resetCallGraph() {
+        demandDrivenCallGraph = new CallGraph();
+        methodsWithCallFlow.clear();
+        calleeListeners.clear();
+        callerListeners.clear();
+    }
+
 }
