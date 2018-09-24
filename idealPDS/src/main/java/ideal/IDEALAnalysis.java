@@ -93,6 +93,9 @@ public class IDEALAnalysis<W extends Weight> {
 			ForwardBoomerangResults<W> res = run(seed);
 =======
 			ForwardBoomerangResults<W> res;
+			//Reset the call graph when dealing with a new seed. Will only affect demand-driven call graphs.
+			if (analysisDefinition.icfg() != null)
+				analysisDefinition.icfg().resetCallGraph();
 			try {
 				res = run(seed);
 			} catch(IDEALSeedTimeout e){
