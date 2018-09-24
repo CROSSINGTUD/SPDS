@@ -242,7 +242,6 @@ public class AbstractBoomerangResults<W extends Weight> {
 		}
 		public void computeUnmatchedClosingContext() {
 			for(INode<Val> v : unbalancedClosingContexts) {
-				System.out.println("UNBALANCED " + v);
 				queryToSolvers.get(forwardQuery).getCallAutomaton().registerListener(new ClosingCallStackExtracter(v, v, this, queryToSolvers.get(forwardQuery)));
 			}
 	
