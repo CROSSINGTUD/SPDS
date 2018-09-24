@@ -81,8 +81,8 @@ public class Val {
 		if (obj == null)
 			return false;
 		//Removed this as AllocVal.equals(Val)
-		if (getClass() != obj.getClass())
-			return false;
+//		if (getClass() != obj.getClass())
+//			return false;
 		Val other = (Val) obj;
 		if (rep == null) {
 			if (other.rep != null)
