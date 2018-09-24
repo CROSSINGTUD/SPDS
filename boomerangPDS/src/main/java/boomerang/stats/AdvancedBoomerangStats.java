@@ -34,7 +34,6 @@ import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
 import soot.SootMethod;
 import sync.pds.solver.SyncPDSUpdateListener;
-import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.Rule;
@@ -66,7 +65,6 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
 	private Set<SootMethod> fieldVisitedMethods = Sets.newHashSet();
 	private int arrayFlows;
 	private int staticFlows;
-	private int callSitePOIs;
 	private int fieldWritePOIs;
 	private int fieldReadPOIs;
 	private boolean COUNT_TOP_METHODS = false;
@@ -147,16 +145,16 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
 			}
 		});
 
-		solver.registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
+		solver.registerListener(new SyncPDSUpdateListener<Statement, Val>() {
 
 			@Override
-			public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+			public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
 				if(solver instanceof ForwardBoomerangSolver) {
-					if (!reachedForwardNodes.add(reachableNode.asNode())) {
+					if (!reachedForwardNodes.add(reachableNode)) {
 						reachedForwardNodeCollisions++;
 					}
 				} else {
-					if (!reachedBackwardNodes.add(reachableNode.asNode())) {
+					if (!reachedBackwardNodes.add(reachableNode)) {
 						reachedBackwardNodeCollisions++;
 					}
 				}
@@ -172,10 +170,6 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
 		map.put(method,++i);
 	}
 
-	@Override
-	public void registerCallSitePOI(WeightedBoomerang<W>.ForwardCallSitePOI key) {
-		callSitePOIs++;
-	}
 
 	@Override
 	public void registerFieldWritePOI(WeightedBoomerang<W>.FieldWritePOI key) {
@@ -202,7 +196,6 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
 		s+= String.format("Visited Methods (Field/Call): \t\t %s/%s\n", fieldVisitedMethods.size(), callVisitedMethods.size());
 		s+= String.format("Reached Forward Nodes(Collisions): \t\t %s (%s)\n", reachedForwardNodes.size(),reachedForwardNodeCollisions);
 		s+= String.format("Reached Backward Nodes(Collisions): \t\t %s (%s)\n", reachedBackwardNodes.size(),reachedBackwardNodeCollisions);
-		s+= String.format("Point of Indirections (Store/Load/Callsite): \t\t %s/%s/%s\n", fieldWritePOIs,fieldReadPOIs,callSitePOIs);
 		s+= String.format("Global Field Rules(Collisions): \t\t %s (%s)\n", globalFieldRules.size(),fieldRulesCollisions);
 		s+= String.format("Global Field Transitions(Collisions): \t\t %s (%s)\n", globalFieldTransitions.size(),fieldTransitionCollisions);
 		s+= String.format("Global Call Rules(Collisions): \t\t %s (%s)\n", globalCallRules.size(),callRulesCollisions);

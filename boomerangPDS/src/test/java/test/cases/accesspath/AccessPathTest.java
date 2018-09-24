@@ -20,10 +20,14 @@ import test.core.selfrunning.AllocatedObject;
 public class AccessPathTest extends AbstractBoomerangTest {
 	private static class A{
 		B b = null;
+		A g;
+	}
+	private static class AllocA extends A implements AllocatedObject{
 	}
 	private static class B implements AllocatedObject{
 		B c = null;
 		B d = null;
+		public B b;
 	}
 	private static class C{
 		B b = null;
@@ -36,6 +40,15 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		B alloc = new B();
 		a.b = alloc;
 		accessPathQueryFor(alloc,"a[b]");
+	}
+	@Test
+	public void sameField(){
+		AllocA alloc = new AllocA();
+		A b = new A();
+		A c = new A();
+		b.g = alloc;
+		c.g = b;
+		accessPathQueryFor(alloc,"b[g];c[g,g]");
 	}
 	@Test
 	public void getAllAliasesBranched(){
@@ -123,6 +136,8 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		C b = new C();
 		taintMe(b);
 	}
+	
+	@Ignore
 	@Test
 	public void threeLevelTest() {
 		C b = new C();

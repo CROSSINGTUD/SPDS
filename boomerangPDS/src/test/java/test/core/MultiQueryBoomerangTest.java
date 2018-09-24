@@ -22,6 +22,7 @@ import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
+import boomerang.seedfactory.SeedFactory;
 import boomerang.seedfactory.SimpleSeedFactory;
 import com.google.common.base.Joiner;
 import com.google.common.collect.HashMultimap;
@@ -35,6 +36,7 @@ import soot.jimple.*;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.nodes.Node;
 import test.core.selfrunning.AbstractTestingFramework;
+import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
 
 import java.util.*;
@@ -53,7 +55,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 	protected Multimap<Query,Query> expectedAllocsForQuery = HashMultimap.create();
 	protected Collection<Error> unsoundErrors = Sets.newHashSet();
 	protected Collection<Error> imprecisionErrors = Sets.newHashSet();
-	private SimpleSeedFactory seedFactory;
+	private SeedFactory<Weight.NoWeight> seedFactory;
 
 	protected int analysisTimeout = 300 *1000;
 
@@ -64,7 +66,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				staticIcfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
-				seedFactory = new SimpleSeedFactory(staticIcfg) {
+				seedFactory = new SeedFactory<Weight.NoWeight>() {
 
 					@Override
 					protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
@@ -78,6 +80,10 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 						return Collections.emptySet();
 					}
 
+					@Override
+					public ObservableICFG<Unit, SootMethod> icfg() {
+						return staticIcfg;
+					}
 
 				};
 				queryForCallSites = seedFactory.computeSeeds();
@@ -204,7 +210,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 			}
 
 			@Override
-			public SimpleSeedFactory getSeedFactory() {
+			public SeedFactory<Weight.NoWeight> getSeedFactory() {
 				return seedFactory;
 			}
 		};

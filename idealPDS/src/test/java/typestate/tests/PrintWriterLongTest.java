@@ -11,45 +11,28 @@
  *******************************************************************************/
 package typestate.tests;
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
-import typestate.impl.statemachines.alloc.InputStreamStateMachine;
+import typestate.impl.statemachines.PrintWriterStateMachine;
 
-public class InputStreamTest extends IDEALTestingFramework {
+public class PrintWriterLongTest extends IDEALTestingFramework {
 
 	@Test
-	public void test1() throws IOException {
-		InputStream inputStream = new FileInputStream("");
+	public void test1() throws FileNotFoundException {
+		PrintWriter inputStream = new PrintWriter("");
 		inputStream.close();
-		inputStream.read();
+		inputStream.flush();
 		mustBeInErrorState(inputStream);
-	}
-
-	@Test
-	public void test2() throws IOException {
-	    InputStream inputStream = new FileInputStream("");
-	    inputStream.close();
-	    inputStream.close();
-	    inputStream.read();
-	    mustBeInErrorState(inputStream);
-	}
-
-	@Test
-	public void test3() throws IOException {
-	    InputStream inputStream = new FileInputStream("");
-	    inputStream.read();
-	    inputStream.close();
-	    mustBeInAcceptingState(inputStream);
 	}
 
 	@Override
 	protected TypeStateMachineWeightFunctions getStateMachine() {
-		return new InputStreamStateMachine();
+		return new PrintWriterStateMachine();
 	}
+
 }

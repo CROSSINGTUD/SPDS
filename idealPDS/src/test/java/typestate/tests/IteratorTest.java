@@ -18,6 +18,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
@@ -39,7 +40,7 @@ public class IteratorTest extends IDEALTestingFramework {
 	}
 
 	@Test
-	public void  test2() {
+	public void test2() {
 		MyLinkedList<Object> list = new MyLinkedList<>();
 		list.add(new Object());
 		java.util.Iterator<Object> iterator = list.iterator();
@@ -49,6 +50,7 @@ public class IteratorTest extends IDEALTestingFramework {
 		mustBeInErrorState(iterator);
 	}
 
+	@Ignore("Fails when Exception analysis is off, requires JimpleBasedInterproceduralICFG(true)")
 	@Test
 	public void test3() {
 		LinkedList<Object> list = new LinkedList<>();
@@ -83,13 +85,45 @@ public class IteratorTest extends IDEALTestingFramework {
 	}
 
 	@Test
-	public void test5(){
-		Map variableNames = new HashMap();
-		variableNames.put(new Object(), new Object());
-		if (!variableNames.isEmpty()){
-			Iterator i = variableNames.keySet().iterator();
-			i.next();
-			mustBeInErrorState(i);
+	public void chartTest() {
+		AxisCollection col = new AxisCollection();
+		col.add(new Object());
+		Iterator iterator = col.getAxesAtBottom().iterator();
+		while(iterator.hasNext()){
+			Object next = iterator.next();
+			next.hashCode();
+		}
+		iterator = col.getAxesAtTop().iterator();
+		mustBeInAcceptingState(iterator);
+		while(iterator.hasNext()){
+			mustBeInAcceptingState(iterator);
+			Object next = iterator.next();
+			next.hashCode();
+			mustBeInAcceptingState(iterator);
+		}
+		mustBeInAcceptingState(iterator);
+	}
+
+	private static class AxisCollection {
+		private ArrayList axesAtTop;
+		private ArrayList axesAtBottom;
+
+		public AxisCollection() {
+			this.axesAtTop = new java.util.ArrayList();
+			this.axesAtBottom = new java.util.ArrayList();
+		}
+		public void add(Object object) {
+			if(1+1 == 2){
+				this.axesAtBottom.add(object);
+			} else {
+				this.axesAtTop.add(object);
+			}
+		}
+		public ArrayList getAxesAtBottom() {
+			return axesAtBottom;
+		}
+		public ArrayList getAxesAtTop() {
+			return axesAtTop;
 		}
 	}
 

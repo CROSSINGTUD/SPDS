@@ -11,8 +11,14 @@
  *******************************************************************************/
 package ideal;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.Set;
 
 import com.google.common.collect.HashMultimap;
@@ -25,18 +31,24 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import ideal.IDEALSeedSolver.Phases;
 import sync.pds.solver.WeightFunctions;
+import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import wpds.impl.NormalRule;
+import wpds.impl.Rule;
 import wpds.impl.Weight;
 
 public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<Statement,Val,Statement,W> {
 
+	private static final Logger logger = LogManager.getLogger();
 	private WeightFunctions<Statement,Val,Statement,W> delegate;
 	private Set<NonOneFlowListener<W>> listeners = Sets.newHashSet(); 
-	private Map<Statement, W> potentialStrongUpdates = Maps.newHashMap();
+	private Set<Statement> potentialStrongUpdates = Sets.newHashSet();
 	private Set<Statement> weakUpdates = Sets.newHashSet();
 	private Multimap<Node<Statement,Val>, W> nonOneFlowNodes = HashMultimap.create();
 	private Phases phase;
-	private boolean strongUpdates; 
+	private boolean strongUpdates;
+	private Multimap<Node<Statement,Val>, Node<Statement,Val>> indirectAlias = HashMultimap.create(); 
+	private Set<Node<Statement,Val>> nodesWithStrongUpdate = Sets.newHashSet();
 
 	public IDEALWeightFunctions(WeightFunctions<Statement,Val,Statement,W>  delegate, boolean strongUpdates) {
 		this.delegate = delegate;
@@ -49,22 +61,10 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		if (isObjectFlowPhase() &&!weight.equals(getOne())){	
 			addOtherThanOneWeight(curr, weight);
 		}
-		if(isValueFlowPhase() && curr.fact().isStatic()){
-			if(potentialStrongUpdates.containsKey(curr.stmt())){
-				W w = potentialStrongUpdates.get(curr.stmt());
-//				System.err.println("Potential strong update "+ curr + "  " + w);
-				if(!weakUpdates.contains(curr.stmt()) && strongUpdates){
-//					System.err.println("Strong update " + curr + w + " was " + weight);
-					return w;
-				}
-				weight = (W) weight.combineWith(w);
-//				System.err.println("No strong update" + weight);
-			}
-		}
 		return weight;
 	}
-
-	public void addOtherThanOneWeight(Node<Statement, Val> curr, W weight) {
+	
+	void addOtherThanOneWeight(Node<Statement, Val> curr, W weight) {
 		if(nonOneFlowNodes.put(curr, weight)){
 			for(NonOneFlowListener<W> l : Lists.newArrayList(listeners)){
 				l.nonOneFlow(curr,weight);
@@ -77,19 +77,6 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		W weight = delegate.normal(curr, succ);
 		if (isObjectFlowPhase() && curr.stmt().isCallsite() && !weight.equals(getOne())){
 			addOtherThanOneWeight(curr, weight);
-		}
-		
-		if(isValueFlowPhase()){
-			if(potentialStrongUpdates.containsKey(curr.stmt())){
-				W w = potentialStrongUpdates.get(curr.stmt());
-//				System.err.println("Potential strong update "+ curr + "  " + w);
-				if(!weakUpdates.contains(curr.stmt()) && strongUpdates){
-//					System.err.println("Strong update " + curr + w + " was " + weight);
-					return w;
-				}
-				weight = (W) weight.combineWith(w);
-//				System.err.println("No strong update" + weight);
-			}
 		}
 		return weight;
 	}
@@ -132,10 +119,8 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		return "[IDEAL-Wrapped Weights] " + delegate.toString();
 	}
 
-	public void potentialStrongUpdate(Statement stmt, W weight) {
-		W w = potentialStrongUpdates.get(stmt);
-		W newWeight = (w == null ? weight : (W) w.combineWith(weight)); 
-		potentialStrongUpdates.put(stmt, newWeight);
+	public void potentialStrongUpdate(Statement stmt) {
+		potentialStrongUpdates.add(stmt);
 	}
 	
 	public void weakUpdate(Statement stmt) {
@@ -144,5 +129,26 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 
 	public void setPhase(Phases phase) {
 		this.phase = phase;
+	}
+
+	public void addIndirectFlow(Node<Statement, Val> source, Node<Statement, Val> target) {
+		logger.trace("Alias flow detected "+  source+ " " + target);
+		indirectAlias.put(source, target);
+	}
+
+	public Collection<Node<Statement, Val>> getAliasesFor(Node<Statement, Val> node) {
+		return indirectAlias.get(node);
+	}
+	
+	public boolean isStrongUpdateStatement(Statement stmt) {
+		return potentialStrongUpdates.contains(stmt) && !weakUpdates.contains(stmt) && strongUpdates;
+	}
+
+	public boolean isKillFlow(Node<Statement, Val> node) {
+		return !nodesWithStrongUpdate.contains(node) && !indirectAlias.containsValue(node);
+	}
+
+	public void addNonKillFlow(Node<Statement, Val> curr) {
+		nodesWithStrongUpdate.add(curr);
 	}
 }

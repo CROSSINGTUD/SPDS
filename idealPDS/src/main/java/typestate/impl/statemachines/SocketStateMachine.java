@@ -49,11 +49,11 @@ public class SocketStateMachine extends TypeStateMachineWeightFunctions{
 		}
 	}
 	public SocketStateMachine() {
-		addTransition(
-				new MatcherTransition(States.INIT, socketConstructor(), Parameter.This, States.INIT, Type.OnReturn));
 		addTransition(new MatcherTransition(States.INIT, connect(), Parameter.This, States.CONNECTED, Type.OnReturn));
+		addTransition(new MatcherTransition(States.ERROR, connect(), Parameter.This, States.ERROR, Type.OnReturn));
 		addTransition(new MatcherTransition(States.CONNECTED, useMethods(), Parameter.This, States.CONNECTED, Type.OnReturn));
 		addTransition(new MatcherTransition(States.INIT, useMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+		addTransition(new MatcherTransition(States.CONNECTED, connect(), Parameter.This, States.CONNECTED, Type.OnReturn));
 		addTransition(new MatcherTransition(States.ERROR, useMethods(), Parameter.This, States.ERROR, Type.OnReturn));
 	}
 
@@ -78,7 +78,7 @@ public class SocketStateMachine extends TypeStateMachineWeightFunctions{
 		Set<SootMethod> out = new HashSet<>();
 		for (SootClass c : subclasses) {
 			for (SootMethod m : c.getMethods())
-				if (m.isPublic() && !connectMethod.contains(m) && !m.isStatic())
+				if (!m.isConstructor() && m.isPublic() && !connectMethod.contains(m) && !m.isStatic() && !m.getName().startsWith("is"))
 					out.add(m);
 		}
 		return out;

@@ -11,11 +11,14 @@
  *******************************************************************************/
 package boomerang;
 
+import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
+import boomerang.seedfactory.SeedFactory;
 import boomerang.seedfactory.SimpleSeedFactory;
 import soot.SootMethod;
+import soot.Unit;
 import soot.jimple.AssignStmt;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
@@ -27,7 +30,7 @@ import java.util.Collections;
 public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBoomerang<W>{
 	private int reachableMethodCount;
 	private int allocationSites;
-	private SimpleSeedFactory seedFactory;
+	private SeedFactory<W> seedFactory;
 
 	public WholeProgramBoomerang(BoomerangOptions opts){
 		super(opts);
@@ -38,9 +41,9 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 	}
 
 	@Override
-	public SimpleSeedFactory getSeedFactory() {
+	public SeedFactory<W> getSeedFactory() {
 		if (seedFactory == null){
-			seedFactory = new SimpleSeedFactory(new ObservableStaticICFG(new JimpleBasedInterproceduralCFG())) {
+			seedFactory = new SeedFactory<W>() {
 
 				@Override
 				protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
@@ -51,6 +54,11 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 						}
 					}
 					return Collections.emptySet();
+				}
+
+				@Override
+				public ObservableICFG<Unit, SootMethod> icfg() {
+					return new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
 				}
 			};
 		}

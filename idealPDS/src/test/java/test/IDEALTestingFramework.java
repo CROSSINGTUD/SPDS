@@ -28,11 +28,11 @@ import boomerang.WeightedForwardQuery;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
-import boomerang.debugger.CallGraphDebugger;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.preanalysis.BoomerangPretransformer;
 import boomerang.results.ForwardBoomerangResults;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
@@ -79,7 +79,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			@Override
 			public Debugger<TransitionFunction> debugger(IDEALSeedSolver<TransitionFunction> solver) {
 				return VISUALIZATION ? new IDEVizDebugger<>(new File(ideVizFile.getAbsolutePath().replace(".json",
-						" " + solver.getSeed() +".json")),icfg) : new CallGraphDebugger(dotFile, icfg);
+						" " + solver.getSeed() +".json")),icfg) : new Debugger<>();
 			}
 			
 			@Override
@@ -105,7 +105,9 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 	protected SceneTransformer createAnalysisTransformer() throws ImprecisionException {
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				staticIcfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
+				BoomerangPretransformer.v().reset();
+				BoomerangPretransformer.v().apply();
+				staticIcfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(false));
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				

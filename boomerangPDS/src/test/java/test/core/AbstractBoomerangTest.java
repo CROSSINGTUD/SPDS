@@ -11,7 +11,27 @@
  *******************************************************************************/
 package test.core;
 
-import boomerang.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
+
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+
+import boomerang.BackwardQuery;
+import boomerang.Boomerang;
+import boomerang.DefaultBoomerangOptions;
+import boomerang.ForwardQuery;
+import boomerang.IntAndStringBoomerangOptions;
+import boomerang.Query;
+import boomerang.WeightedBoomerang;
+import boomerang.WholeProgramBoomerang;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.callgraph.ObservableICFG;
@@ -23,17 +43,26 @@ import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import boomerang.preanalysis.PreTransformBodies;
+import boomerang.preanalysis.BoomerangPretransformer;
 import boomerang.results.BackwardBoomerangResults;
+import boomerang.seedfactory.SeedFactory;
 import boomerang.seedfactory.SimpleSeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.util.AccessPath;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import heros.utilities.DefaultValueMap;
-import soot.*;
-import soot.jimple.*;
+import soot.Body;
+import soot.Local;
+import soot.RefType;
+import soot.Scene;
+import soot.SceneTransformer;
+import soot.SootClass;
+import soot.SootMethod;
+import soot.Unit;
+import soot.jimple.AssignStmt;
+import soot.jimple.IntConstant;
+import soot.jimple.NewExpr;
+import soot.jimple.ReturnStmt;
+import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
@@ -42,12 +71,10 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import test.core.selfrunning.AbstractTestingFramework;
 import wpds.impl.Transition;
+import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
-
-import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class AbstractBoomerangTest extends AbstractTestingFramework {
 
@@ -71,16 +98,16 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 	protected AnalysisMode[] getAnalyses() {
 		return new AnalysisMode[] {
+//				AnalysisMode.WholeProgram,
 				AnalysisMode.DemandDrivenBackward
 				};
 	}
 
 	protected SceneTransformer createAnalysisTransformer() {
-		PackManager.v().getPack("wjtp").add(new Transform("wjtp.prepare", new PreTransformBodies()));
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-
+				BoomerangPretransformer.v().apply();
 				staticIcfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
 				queryDetector = new QueryForCallSiteDetector(staticIcfg);
 				queryForCallSites = queryDetector.computeSeeds();
@@ -91,27 +118,33 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				} else{
 					allocationSites = extractQuery(new AllocationSiteOf());
 				}
-				for (AnalysisMode analysis : getAnalyses()) {
-					switch (analysis) {
-					case WholeProgram:
-						if(!queryDetector.integerQueries)
-							runWholeProgram();
-						break;
-					case DemandDrivenBackward:
-						runDemandDrivenBackward();
-						break;
+				for(int i = 0; i< getIterations();i++) {
+					for (AnalysisMode analysis : getAnalyses()) {
+						switch (analysis) {
+						case WholeProgram:
+							if(!queryDetector.integerQueries)
+								runWholeProgram();
+							break;
+						case DemandDrivenBackward:
+							runDemandDrivenBackward();
+							break;
+						}
 					}
-				}
-				if(queryDetector.resultsMustNotBeEmpty)
-					return;
-				if (!unsoundErrors.isEmpty()) {
-					throw new RuntimeException(Joiner.on("\n").join(unsoundErrors));
-				}
-				if (!imprecisionErrors.isEmpty() && FAIL_ON_IMPRECISE) {
-					throw new AssertionError(Joiner.on("\n").join(imprecisionErrors));
+					if(queryDetector.resultsMustNotBeEmpty)
+						return;
+					if (!unsoundErrors.isEmpty()) {
+						throw new RuntimeException(Joiner.on("\n").join(unsoundErrors));
+					}
+					if (!imprecisionErrors.isEmpty() && FAIL_ON_IMPRECISE) {
+						throw new AssertionError(Joiner.on("\n").join(imprecisionErrors));
+					}
 				}
 			}
 		};
+	}
+
+	public int getIterations() {
+		return 1;
 	}
 
 	private void runDemandDrivenBackward() {
@@ -273,11 +306,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				@Override
 				public Debugger createDebugger() {
 					return VISUALIZATION ? new IDEVizDebugger(ideVizFile, icfg()) :
-							new CallGraphDebugger(dotFile, dynamicIcfg);
+							new Debugger();
 				}
 
 				@Override
-				public SimpleSeedFactory getSeedFactory() {
+				public SeedFactory<NoWeight> getSeedFactory() {
 					return null;
 				}
 			};
@@ -336,8 +369,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
 			@Override
 			public Debugger createDebugger() {
-				return VISUALIZATION ? new IDEVizDebugger(ideVizFile, dynamicIcfg) : new CallGraphDebugger(dotFile,
-						dynamicIcfg);
+				return VISUALIZATION ? new IDEVizDebugger(ideVizFile, dynamicIcfg) : new Debugger<>();
 			}
 
 			@Override
@@ -365,8 +397,8 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 			}
 
 			@Override
-			public SimpleSeedFactory getSeedFactory() {
-				return new SimpleSeedFactory(staticIcfg) {
+			public SeedFactory<Weight.NoWeight> getSeedFactory() {
+				return new SeedFactory<Weight.NoWeight>() {
 
 						@Override
 						protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
@@ -377,6 +409,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 								}
 							}
 							return Collections.emptySet();
+						}
+
+						@Override
+						public ObservableICFG<Unit, SootMethod> icfg() {
+							return staticIcfg;
 						}
 					};
 			}

@@ -23,7 +23,7 @@ import test.IDEALTestingFramework;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.impl.statemachines.KeyStoreStateMachine;
 
-public class KeystoreTest extends IDEALTestingFramework {
+public class KeystoreLongTest extends IDEALTestingFramework {
 
 	@Test
 	public void test1() throws KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException {
@@ -40,7 +40,15 @@ public class KeystoreTest extends IDEALTestingFramework {
 		}
 		mustBeInAcceptingState(ks);
 	}
-
+	@Test
+	public void test4() throws KeyStoreException, NoSuchAlgorithmException, CertificateException, IOException {
+		KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+		KeyStore x = ks;
+		java.io.FileInputStream fis = null;
+		ks.load(fis, null);
+		mustBeInAcceptingState(ks);
+		mustBeInAcceptingState(x);
+	}
 	@Test
 	public void test2() throws KeyStoreException {
 		KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());

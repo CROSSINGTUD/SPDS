@@ -17,6 +17,7 @@ import boomerang.WeightedForwardQuery;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.results.ForwardBoomerangResults;
+import boomerang.seedfactory.SeedFactory;
 import boomerang.seedfactory.SimpleSeedFactory;
 import com.google.common.base.Stopwatch;
 import org.apache.logging.log4j.LogManager;
@@ -37,7 +38,7 @@ public class IDEALAnalysis<W extends Weight> {
 	public static boolean PRINT_OPTIONS = false;
 
 	protected final IDEALAnalysisDefinition<W> analysisDefinition;
-	private final SimpleSeedFactory seedFactory;
+	private final SeedFactory<W> seedFactory;
 	private int seedCount;
 	private Map<WeightedForwardQuery<W>, Stopwatch> analysisTime = new HashMap<>();
 	private Set<WeightedForwardQuery<W>> timedoutSeeds = new HashSet<>();
@@ -46,11 +47,16 @@ public class IDEALAnalysis<W extends Weight> {
 	public IDEALAnalysis(final IDEALAnalysisDefinition<W> analysisDefinition) {
 		this.analysisDefinition = analysisDefinition;
 		ObservableICFG<Unit, SootMethod> staticICFG = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
-		this.seedFactory = new SimpleSeedFactory(staticICFG){
+		this.seedFactory = new SeedFactory<W>(){
 
 			@Override
 			protected Collection<WeightedForwardQuery<W>> generate(SootMethod method, Stmt stmt, Collection<SootMethod> calledMethods) {
 				return analysisDefinition.generate(method, stmt, calledMethods);
+			}
+
+			@Override
+			public ObservableICFG<Unit, SootMethod> icfg() {
+				return staticICFG;
 			}
 		};
 	}
@@ -86,7 +92,7 @@ public class IDEALAnalysis<W extends Weight> {
 	}
 
 	public ForwardBoomerangResults<W> run(ForwardQuery seed) {
-		IDEALSeedSolver<W> idealAnalysis = new IDEALSeedSolver<>(analysisDefinition, seed, seedFactory);
+		IDEALSeedSolver<W> idealAnalysis = new IDEALSeedSolver<W>(analysisDefinition, seed, seedFactory);
 		return idealAnalysis.run();
 	}
 	private void printOptions() {

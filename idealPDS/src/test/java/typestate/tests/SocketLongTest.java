@@ -18,13 +18,14 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.impl.statemachines.SocketStateMachine;
 
-public class SocketTest extends IDEALTestingFramework {
+public class SocketLongTest extends IDEALTestingFramework {
 
 	@Test
 	public void test1() throws IOException {
@@ -49,7 +50,8 @@ public class SocketTest extends IDEALTestingFramework {
 		socket.sendUrgentData(2);
 		mustBeInErrorState(socket);
 	}
-
+	
+	
 	@Test
 	public void test4() throws IOException {
 		Collection<Socket> sockets = createSockets();

@@ -24,9 +24,21 @@ public class StaticFieldVal extends Val {
 		this.field = field;
 	}
 
+
+	private StaticFieldVal(Value v, SootField field, SootMethod m, Statement unbalanced) {
+		super(v, m, unbalanced);
+		this.field = field;
+	}
+
+	
 	@Override
 	public int hashCode() {
-		return field.hashCode();
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((m == null) ? 0 : m.hashCode());
+		result = prime * result + ((field == null) ? 0 : field.hashCode());
+		result = prime * result + ((unbalancedStmt == null) ? 0 : unbalancedStmt.hashCode());
+		return result;
 	}
 
 	@Override
@@ -46,6 +58,11 @@ public class StaticFieldVal extends Val {
 				return false;
 		} else if (!m.equals(other.m))
 			return false;
+		if (unbalancedStmt == null) {
+			if (other.unbalancedStmt != null)
+				return false;
+		} else if (!unbalancedStmt.equals(other.unbalancedStmt))
+			return false;
 		return true;
 	}
 
@@ -60,4 +77,9 @@ public class StaticFieldVal extends Val {
 	public SootField field() {
 		return field;
 	};
+	
+	@Override
+	public Val asUnbalanced(Statement stmt) {
+		return new StaticFieldVal(this.value(), field, m, stmt);
+	}
 }

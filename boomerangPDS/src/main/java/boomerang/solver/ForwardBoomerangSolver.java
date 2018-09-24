@@ -11,6 +11,7 @@
  *******************************************************************************/
 package boomerang.solver;
 
+import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -29,23 +30,27 @@ import boomerang.jimple.StaticFieldVal;
 import boomerang.jimple.Val;
 import soot.Body;
 import soot.Local;
+import soot.NullType;
 import soot.SootMethod;
-import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.CastExpr;
+import soot.jimple.IfStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
+import soot.jimple.NullConstant;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.ThrowStmt;
+import soot.jimple.internal.JEqExpr;
+import soot.jimple.internal.JNeExpr;
 import sync.pds.solver.nodes.CallPopNode;
-import sync.pds.solver.nodes.CastNode;
 import sync.pds.solver.nodes.ExclusionNode;
+import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.NodeWithLocation;
@@ -92,6 +97,14 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		return out;
 	}
 	
+
+	public INode<Node<Statement,Val>> generateFieldState(final INode<Node<Statement, Val>> d, final Field loc) {
+		Entry<INode<Node<Statement,Val>>, Field> e = new AbstractMap.SimpleEntry<>(d, loc);
+		if (!generatedFieldState.containsKey(e)) {
+			generatedFieldState.put(e, new GeneratedState<Node<Statement,Val>,Field>(fieldAutomaton.getInitialState(),loc));
+		}
+		return generatedFieldState.get(e);
+	}
 	
 
 	@Override
@@ -180,9 +193,51 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			} else if(rightOp instanceof CastExpr){
 				CastExpr castExpr = (CastExpr) rightOp;
 				if (castExpr.getOp().equals(fact.value())) {
-					out.add(new CastNode<Statement,Val, Type>(new Statement(succ, method), new Val(leftOp,method),castExpr.getCastType()));
+					out.add(new Node<Statement,Val>(new Statement(succ, method), new Val(leftOp,method)));
 				}
 				
+			}
+		}
+		
+		if(curr instanceof IfStmt && query.getType() instanceof NullType) {
+			IfStmt ifStmt = (IfStmt) curr;
+			Stmt target = ifStmt.getTarget();
+			Value condition = ifStmt.getCondition();
+			if(condition instanceof JEqExpr) {
+				JEqExpr eqExpr = (JEqExpr) condition;
+				Value op1 = eqExpr.getOp1();
+				Value op2 = eqExpr.getOp2();
+				if(op1 instanceof NullConstant) {
+					if(op2.equals(fact.value())) {
+						if(!succ.equals(target)) {
+							return Collections.emptySet();
+						}
+					}
+				} else if(op2 instanceof NullConstant) {
+					if(op1.equals(fact.value())) {
+						if(!succ.equals(target)) {
+							return Collections.emptySet();
+						}
+					}
+				}
+			}		
+			if(condition instanceof JNeExpr) {
+				JNeExpr eqExpr = (JNeExpr) condition;
+				Value op1 = eqExpr.getOp1();
+				Value op2 = eqExpr.getOp2();
+				if(op1 instanceof NullConstant) {
+					if(op2.equals(fact.value())) {
+						if(succ.equals(target)) {
+							return Collections.emptySet();
+						}
+					}
+				} else if(op2 instanceof NullConstant) {
+					if(op1.equals(fact.value())) {
+						if(succ.equals(target)) {
+							return Collections.emptySet();
+						}
+					}
+				}
 			}
 		}
 		return out;

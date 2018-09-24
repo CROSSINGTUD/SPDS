@@ -62,8 +62,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 			NewArrayExpr expr = (NewArrayExpr) val;
 			return expr.getBaseType() instanceof RefType;
 		} else if(val instanceof NewMultiArrayExpr){
-			NewMultiArrayExpr expr = (NewMultiArrayExpr) val;
-			return expr.getBaseType().getArrayElementType() instanceof RefType;
+			return true;
 		}
 		return false;
 	}
@@ -206,4 +205,8 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		return true;
 	}
 
+	@Override
+	public boolean killNullAtCast() {
+		return false;
+	}
 }

@@ -42,7 +42,6 @@ public class ArrayTest extends AbstractBoomerangTest {
 		queryFor(query);
 	}
 
-	@Ignore
 	@Test
 	public void doubleArray() {
 		Object[][] array = new Object[3][3];

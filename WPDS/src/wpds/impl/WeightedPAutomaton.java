@@ -11,6 +11,7 @@
  *******************************************************************************/
 package wpds.impl;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,6 +38,7 @@ import pathexpression.IRegEx;
 import pathexpression.LabeledGraph;
 import pathexpression.PathExpressionComputer;
 import pathexpression.RegEx;
+import wpds.interfaces.Empty;
 import wpds.interfaces.ForwardDFSEpsilonVisitor;
 import wpds.interfaces.ForwardDFSVisitor;
 import wpds.interfaces.Location;
@@ -78,10 +80,12 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	public int failedDirectAdditions;
 	private WeightedPAutomaton<N, D, W> initialAutomaton;
 	private PathExpressionComputer<D,N> pathExpressionComputer;
+	protected Set<D> unbalancedStates = Sets.newHashSet();
 	
 
 	public WeightedPAutomaton(D initialState) {
 		this.initialState = initialState;
+		this.unbalancedStates.add(initialState);
 	}
 
 	public abstract D createState(D d, N loc);
@@ -558,13 +562,11 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		
 		
 	}
-	public void computeValues(Transition<N, D> callTrans, W weight) {
-//		transitionsToFinalWeights.put(callTrans, weight);
-
-	}
 
 	public Map<Transition<N,D>, W> getTransitionsToFinalWeights() {
-		registerListener(new ValueComputationListener(initialState,getOne()));
+		for(D s : unbalancedStates) {
+			registerListener(new ValueComputationListener(s,getOne()));
+		}
 		return transitionsToFinalWeights;
 	}
 	
@@ -698,6 +700,10 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			visited.add(pop);
 			Collection<Transition<N, D>> inTrans = transitionsInto.get(pop);
 			for(Transition<N, D> t : inTrans) {
+				if(t.getLabel().equals(this.epsilon()))
+					continue;
+				if(!isGeneratedState(t.getStart()))
+					continue;
 				if(visited.contains(t.getStart())) {
 					return true;
 				}
@@ -707,4 +713,107 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		return false;
 	}
 	
+	public Set<N> getLongestPath() {
+		//Performs a backward DFS
+		LinkedList<D> worklist = Lists.newLinkedList();
+		worklist.add(initialState);
+		Map<D,Set<N>> pathReachingD = Maps.newHashMap();
+		while(!worklist.isEmpty()) {
+			D pop = worklist.pop();
+			Set<N> atCurr = getOrCreate(pathReachingD,pop);
+			Collection<Transition<N, D>> inTrans = transitionsInto.get(pop);
+			for(Transition<N, D> t : inTrans) {
+				if(t.getLabel().equals(this.epsilon()))
+					continue;
+				D next = t.getStart();
+				if(!isGeneratedState(next))
+					continue;
+				if(next.equals(pop))
+					continue;
+				Set<N> atNext = getOrCreate(pathReachingD,next);
+				Set<N> newAtCurr = Sets.newHashSet(atCurr);
+				if(newAtCurr.add(t.getLabel())) {
+					boolean addAll = atNext.addAll(newAtCurr);
+					if(addAll) {
+						worklist.add(next);
+					}
+				}
+			}
+		}
+		Set<N> longest = Sets.newHashSet();
+		for(Set<N> l : pathReachingD.values()) {
+			if(longest.size() < l.size()) {
+				longest = l;
+			}
+		}
+		return longest;
+	}
+
+	private Set<N> getOrCreate(Map<D,Set<N>> pathReachingD, D pop) {
+		Set<N> collection = pathReachingD.get(pop);
+		if(collection == null) {
+			collection = Sets.newHashSet();
+			pathReachingD.put(pop, collection);
+		}
+		return collection;
+	}
+	
+	public abstract class StackListener extends WPAStateListener<N, D, W>{
+		private N source;
+		public StackListener(D state, N source) {
+			super(state);
+			this.source = source;
+		}
+		@Override
+		public void onOutTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton) {
+			if(isGeneratedState(t.getTarget()) && t.getLabel().equals(source)) {
+				WeightedPAutomaton.this.registerListener(new SubStackListener(t.getTarget(),source) {
+					@Override
+					public void stackElement(N child, N parent) {
+						StackListener.this.stackElement(child, parent);
+					}
+				});
+			}
+			if(initialState.equals(t.getTarget()) && t.getLabel().equals(source)) {
+				anyContext(source);
+			}
+		}
+		@Override
+		public void onInTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton) {
+		}
+		public abstract void stackElement(N child, N parent);
+		public abstract void anyContext(N end);
+	} 
+	private abstract class SubStackListener extends WPAStateListener<N, D, W>{
+		private N source;
+		public SubStackListener(D state, N source) {
+			super(state);
+			this.source = source;
+		}
+		@Override
+		public void onOutTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton) {
+			stackElement(source, t.getLabel());
+			if(isGeneratedState(t.getTarget())) {
+				WeightedPAutomaton.this.registerListener(new SubStackListener(t.getTarget(),t.getLabel()) {
+					@Override
+					public void stackElement(N child, N parent) {
+						SubStackListener.this.stackElement(child, parent);
+					}
+				});
+			}
+		}
+
+		@Override
+		public void onInTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton) {
+		}
+		public abstract void stackElement(N child, N parent);
+	}
+	
+	public boolean isUnbalancedState(D target) {
+		return unbalancedStates.contains(target);
+	} 
+	
+	public void addUnbalancedState(D state) {
+		unbalancedStates.add(state);
+	} 
 }

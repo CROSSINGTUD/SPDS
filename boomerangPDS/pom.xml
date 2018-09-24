@@ -89,11 +89,17 @@
 			<id>soot-snapshot</id>
 			<name>soot snapshots</name>
 			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
 		</repository>
 		<repository>
 			<id>soot-release</id>
 			<name>soot release</name>
 			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
+			<snapshots>
+				<enabled>false</enabled>
+			</snapshots>
 		</repository>
 	</repositories>
 
@@ -110,6 +116,7 @@
 						<artifactId>maven-surefire-plugin</artifactId>
 						<version>2.21.0</version>
 						<configuration>
+                    			<argLine>-Xmx8G -Xss128m</argLine>
 							<includes>
 								<include>test.core.**</include>
 								<include>test.cases.basic.**</include>

@@ -11,18 +11,45 @@
  *******************************************************************************/
 package sync.pds.solver;
 
-import com.google.common.collect.*;
+import java.util.AbstractMap;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import sync.pds.solver.nodes.*;
-import wpds.impl.*;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
+
+import sync.pds.solver.nodes.CallPopNode;
+import sync.pds.solver.nodes.ExclusionNode;
+import sync.pds.solver.nodes.GeneratedState;
+import sync.pds.solver.nodes.INode;
+import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.NodeWithLocation;
+import sync.pds.solver.nodes.PopNode;
+import sync.pds.solver.nodes.PushNode;
+import sync.pds.solver.nodes.SingleNode;
+import wpds.impl.NestedAutomatonListener;
+import wpds.impl.NestedWeightedPAutomatons;
+import wpds.impl.NormalRule;
+import wpds.impl.PopRule;
+import wpds.impl.PushRule;
+import wpds.impl.Rule;
+import wpds.impl.Transition;
+import wpds.impl.Weight;
+import wpds.impl.WeightedPAutomaton;
+import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
-
-import java.util.*;
-import java.util.Map.Entry;
 
 public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends Location, W extends Weight> {
 	
@@ -43,11 +70,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			return "Field " + super.toString();
 		};
 	};
-	private final Set<WitnessNode<Stmt,Fact,Field>> reachedStates = Sets.newHashSet();
+	private final Set<Node<Stmt,Fact>> reachedStates = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> callingContextReachable = Sets.newHashSet();
 	private final Set<Node<Stmt, Fact>> fieldContextReachable = Sets.newHashSet();
-	private final Set<SyncPDSUpdateListener<Stmt, Fact, Field>> updateListeners = Sets.newHashSet();
-	private final Multimap<WitnessNode<Stmt,Fact,Field>, SyncStatePDSUpdateListener<Stmt, Fact, Field>> reachedStateUpdateListeners = HashMultimap.create();
+	private final Set<SyncPDSUpdateListener<Stmt, Fact>> updateListeners = Sets.newHashSet();
+	private final Multimap<Node<Stmt,Fact>, SyncStatePDSUpdateListener<Stmt, Fact>> reachedStateUpdateListeners = HashMultimap.create();
 	protected final WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> fieldAutomaton;
 	protected final WeightedPAutomaton<Stmt, INode<Fact>,W> callAutomaton;
 
@@ -392,10 +419,9 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		Transition<Stmt, INode<Fact>> callTrans = createInitialCallTransition(curr);
 		callAutomaton
 				.addWeightForTransition(callTrans,weight);
-		WitnessNode<Stmt, Fact, Field> startNode = new WitnessNode<>(curr.stmt(),curr.fact());
-		callAutomaton.computeValues(callTrans, weight);
-		processNode(startNode);
+		processNode(curr);
 	}
+	
 	public void solve(Node<Stmt, Fact> curr) {
 		solve(curr,getCallWeights().getOne());
 	}
@@ -404,10 +430,9 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		return new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), callAutomaton.getInitialState());
 	}
 	
-	protected void processNode(WitnessNode<Stmt, Fact,Field> witnessNode) {
-		if(!addReachableState(witnessNode))
+	protected void processNode(Node<Stmt, Fact> curr) {
+		if(!addReachableState(curr))
 			return;
-		Node<Stmt, Fact> curr = witnessNode.asNode();
 		computeSuccessor(curr);
 	}
 	
@@ -429,14 +454,14 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 
-	private boolean addReachableState(WitnessNode<Stmt,Fact,Field> curr) {
+	private boolean addReachableState(Node<Stmt,Fact> curr) {
 		if (reachedStates.contains(curr))
 			return false;
 		reachedStates.add(curr);
-		for (SyncPDSUpdateListener<Stmt, Fact, Field> l : Lists.newLinkedList(updateListeners)) {
+		for (SyncPDSUpdateListener<Stmt, Fact> l : Lists.newLinkedList(updateListeners)) {
 			l.onReachableNodeAdded(curr);
 		}
-		for(SyncStatePDSUpdateListener<Stmt, Fact, Field> l : Lists.newLinkedList(reachedStateUpdateListeners.get(curr))){
+		for(SyncStatePDSUpdateListener<Stmt, Fact> l : Lists.newLinkedList(reachedStateUpdateListeners.get(curr))){
 			l.reachable();
 		}
 		return true;
@@ -485,10 +510,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		});
 	}
 	public void synchedReachable(final Node<Stmt,Fact> sourceNode, final WitnessListener<Stmt,Fact,Field> listener){
-		registerListener(new SyncPDSUpdateListener<Stmt, Fact, Field>() {
+		registerListener(new SyncPDSUpdateListener<Stmt, Fact>() {
 			@Override
-			public void onReachableNodeAdded(WitnessNode<Stmt, Fact, Field> reachableNode) {
-				if(!reachableNode.asNode().equals(sourceNode))
+			public void onReachableNodeAdded(Node<Stmt, Fact> reachableNode) {
+				if(!reachableNode.equals(sourceNode))
 					return;
 				fieldAutomaton.registerListener(new WPAUpdateListener<Field, INode<Node<Stmt,Fact>>, W>() {
 					@Override
@@ -516,16 +541,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		});
 	}
 	public void addNormalFieldFlow(final Node<Stmt,Fact> curr, final Node<Stmt, Fact> succ) {
-		if(succ instanceof CastNode){
-			addFieldRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
-					fieldWildCard(), asFieldFact(succ), fieldWildCard(), getFieldWeights().normal(curr,succ)){
-				@Override
-				public boolean canBeApplied(Transition<Field, INode<Node<Stmt, Fact>>> t, W weight) {
-					return canCastBeApplied(curr,t,(CastNode)succ,weight);
-				}
-			});
-			return;
-		}
 		if (succ instanceof ExclusionNode) {
 			ExclusionNode<Stmt, Fact, Field> exNode = (ExclusionNode) succ;
 			addFieldRule(new NormalRule<Field, INode<Node<Stmt,Fact>>, W>(asFieldFact(curr),
@@ -536,10 +551,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				fieldWildCard(), asFieldFact(succ), fieldWildCard(), getFieldWeights().normal(curr,succ)));
 	}
 
-
-	protected boolean canCastBeApplied(Node<Stmt, Fact> curr, Transition<Field, INode<Node<Stmt, Fact>>> t, CastNode<Stmt, Fact,?> succ, W weight){
-		return true;
-	}
 	protected INode<Node<Stmt,Fact>> asFieldFact(Node<Stmt, Fact> node) {
 		return new SingleNode<Node<Stmt,Fact>>(new Node<Stmt,Fact>(node.stmt(), node.fact()));
 	}
@@ -620,37 +631,33 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 
 
-	public void setCallingContextReachable(Node<Stmt,Fact> node) {
+	private void setCallingContextReachable(Node<Stmt,Fact> node) {
 		if (!callingContextReachable.add(node))
 			return;
 		if (fieldContextReachable.contains(node)) {
-			processNode(createWitness(node));
+			processNode(node);
 		}
 	}
 	
 
-	private WitnessNode<Stmt, Fact, Field> createWitness(Node<Stmt, Fact> node) {
-		WitnessNode<Stmt, Fact, Field> witnessNode = new WitnessNode<Stmt,Fact,Field>(node.stmt(),node.fact());
-		return witnessNode;
-	}
-	public void setFieldContextReachable(Node<Stmt,Fact> node) {
+	private void setFieldContextReachable(Node<Stmt,Fact> node) {
 		if (!fieldContextReachable.add(node)) {
 			return;
 		}
 		if (callingContextReachable.contains(node)) {
-			processNode(createWitness(node));		
+			processNode(node);		
 		}
 	}
 
-	public void registerListener(SyncPDSUpdateListener<Stmt, Fact, Field> listener) {
+	public void registerListener(SyncPDSUpdateListener<Stmt, Fact> listener) {
 		if (!updateListeners.add(listener)) {
 			return;
 		}
-		for (WitnessNode<Stmt, Fact, Field> reachableNode : Lists.newArrayList(reachedStates)) {
+		for (Node<Stmt, Fact> reachableNode : Lists.newArrayList(reachedStates)) {
 			listener.onReachableNodeAdded(reachableNode);
 		}
 	}
-	public void registerListener(SyncStatePDSUpdateListener<Stmt, Fact, Field> listener) {
+	public void registerListener(SyncStatePDSUpdateListener<Stmt, Fact> listener) {
 		if (!reachedStateUpdateListeners.put(listener.getNode(), listener)){
 			return;
 		}
@@ -702,15 +709,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	public abstract Field fieldWildCard();
 
 	public Set<Node<Stmt, Fact>> getReachedStates() {
-		Set<Node<Stmt,Fact>> res = Sets.newHashSet();
-		for(WitnessNode<Stmt, Fact, Field> s : reachedStates)
-			res.add(s.asNode());
-		return res;
+		return Sets.newHashSet(reachedStates);
 	}
 
 	public void debugOutput() {
-		System.out.println(this.getClass());
-		System.out.println("All reachable states");
+		logger.debug(this.getClass());
+		logger.debug("All reachable states");
 		prettyPrintSet(getReachedStates());
 
 		HashSet<Node<Stmt, Fact>> notFieldReachable = Sets.newHashSet(callingContextReachable);
@@ -718,30 +722,31 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		HashSet<Node<Stmt, Fact>> notCallingContextReachable = Sets.newHashSet(fieldContextReachable);
 		notCallingContextReachable.removeAll(getReachedStates());
 		if (!notFieldReachable.isEmpty()) {
-			System.out.println("Calling context reachable");
+			logger.debug("Calling context reachable");
 			prettyPrintSet(notFieldReachable);
 		}
 		if (!notCallingContextReachable.isEmpty()) {
-			System.out.println("Field matching reachable");
+			logger.debug("Field matching reachable");
 			prettyPrintSet(notCallingContextReachable);
 		}
-		System.out.println(fieldPDS);
-		System.out.println(fieldAutomaton.toDotString());
-		System.out.println(callingPDS);
-		System.out.println(callAutomaton.toDotString());
-		System.out.println("===== end === "+ this.getClass());
+		logger.debug(fieldPDS);
+		logger.debug(fieldAutomaton.toDotString());
+		logger.debug(callingPDS);
+		logger.debug(callAutomaton.toDotString());
+		logger.debug("===== end === "+ this.getClass());
 	}
 
 	private void prettyPrintSet(Collection<? extends Object> set) {
 		int j = 0;
+		String  s ="";
 		for (Object reachableState : set) {
-			System.out.print(reachableState);
-			System.out.print("\t");
+			s += reachableState;
+			s +="\t";
 			 if(j++ > 5){
-				 System.out.print("\n");
+				 s+= "\n";
 				 j = 0;
 			 }
 		}
-		System.out.println();
+		logger.debug(s);
 	}
 }

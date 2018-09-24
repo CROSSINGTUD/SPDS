@@ -21,7 +21,7 @@ public class CallPOITest extends AbstractBoomerangTest {
 		B b = new B();
 	}
 	private static class B{
-		AllocObj c = new AllocObj();
+		AllocObj c;// = new AllocObj();
 	}
 	private static class AllocObj implements AllocatedObject{
 		
@@ -114,6 +114,14 @@ public class CallPOITest extends AbstractBoomerangTest {
 		AllocObj alias = loadedFromB.c;
 		queryFor(alias);
 	}
+	private void allocationIndirect(A innerA, AllocObj d) {
+		B innerB = new B();
+		A a2 = innerA;
+		a2.b = innerB;
+		B intermediate = a2.b;
+		intermediate.c = d;
+		AllocObj AndMe = innerA.b.c;
+	}
 	@Test
 	public void whyRecursiveCallPOIIsNecessarySimpler(){
 		A a = new A();
@@ -121,14 +129,6 @@ public class CallPOITest extends AbstractBoomerangTest {
 		allocationIndirect(a,alloc);
 		AllocObj alias = a.b.c;
 		queryFor(alias);
-	}
-	private void allocationIndirect(A a, AllocObj d) {
-		B b = new B();
-		A a2 = a;
-		a2.b = b;
-		B intermediate = a2.b;
-		intermediate.c = d;
-		AllocObj AndMe = a.b.c;
 	}
 	@Test
 	public void whyRecursiveCallPOIIsNecessarySimpler2(){

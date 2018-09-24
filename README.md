@@ -1,16 +1,12 @@
 
 # WPDS
 
-<!--[![Run Status](https://api.shippable.com/projects/5a2536b9cf141c0700b92668/badge?branch=master)](https://app.shippable.com/github/johspaeth/WPDS) -->
+[![Build Status](http://soot-build.cs.uni-paderborn.de/jenkins/job/boomerang/job/WPDS/badge/icon)](http://soot-build.cs.uni-paderborn.de/jenkins/job/boomerang/job/WPDS/)
 
 This repository contains a Java implementation of Weighted Pushdown Systems.
 Additionally, it contains an implementation of [Boomerang](boomerangPDS) and [IDEal](idealPDS) based on a Weighted Pushdown System.
 
 # Checkout, Build and Install
-
-This repository contains a git submodules that is required for the build. To clone this repository use:
-
-```git clone --recurse-submodules https://github.com/CROSSINGTUD/WPDS.git```
 
 To build and install WPDS into you local repository, run 
 
