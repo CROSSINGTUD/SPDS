@@ -21,7 +21,7 @@ public class Val {
 	protected final SootMethod m;
 	private final Value v;
 	private final String rep;
-	private final Statement unbalancedStmt; 
+	protected final Statement unbalancedStmt; 
 
 	private static Val zeroInstance;
 	

@@ -43,7 +43,7 @@ import wpds.interfaces.WPAUpdateListener;
 public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomerangResults<W> implements PointsToSet{
 
 	private final BackwardQuery query;
-	private Map<ForwardQuery,PAutomaton<Statement, INode<Val>>> allocationSites;
+	private Map<ForwardQuery,AbstractBoomerangResults<W>.Context> allocationSites;
 	private final boolean timedout;
 	private final IBoomerangStats<W> stats;
 	private Stopwatch analysisWatch;
@@ -58,7 +58,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 		stats.terminated(query, this);
 		maxMemory = Util.getReallyUsedMemory();
 	}
-	public Map<ForwardQuery,PAutomaton<Statement, INode<Val>>> getAllocationSites(){
+	public Map<ForwardQuery, AbstractBoomerangResults<W>.Context> getAllocationSites(){
 		computeAllocations();
 		return allocationSites;
 	}
@@ -87,7 +87,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 		}
 		allocationSites = Maps.newHashMap();
 		for(ForwardQuery q : results) {
-			PAutomaton<Statement,INode<Val>> context = constructContextGraph(q,query.var());
+			AbstractBoomerangResults<W>.Context context = constructContextGraph(q,query.asNode());
 			assert allocationSites.get(q) == null;
 //			System.out.println(context.toRegEx(new SingleNode<Val>(query.var()), new SingleNode<Val>(q.asNode().fact())));
 			allocationSites.put(q, context);
@@ -309,10 +309,10 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 			throw new RuntimeException("Expected a points-to set of type " + BackwardBoomerangResults.class.getName());
 		}
 		BackwardBoomerangResults<W> otherRes = (BackwardBoomerangResults<W>) other;
-		Map<ForwardQuery, PAutomaton<Statement, INode<Val>>> otherAllocs = otherRes.getAllocationSites();
+		Map<ForwardQuery, AbstractBoomerangResults<W>.Context> otherAllocs = otherRes.getAllocationSites();
 		boolean intersection = false;
-		for(Entry<ForwardQuery, PAutomaton<Statement, INode<Val>>> a : getAllocationSites().entrySet()) {
-			for(Entry<ForwardQuery, PAutomaton<Statement, INode<Val>>> b : otherAllocs.entrySet()) {
+		for(Entry<ForwardQuery, AbstractBoomerangResults<W>.Context> a : getAllocationSites().entrySet()) {
+			for(Entry<ForwardQuery, AbstractBoomerangResults<W>.Context> b : otherAllocs.entrySet()) {
 				if(a.getKey().equals(b.getKey()) && contextMatch(a.getValue(),b.getValue())) {
 					intersection = true;
 				}
@@ -321,7 +321,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 		return intersection;
 	}
 	
-	private boolean contextMatch(PAutomaton<Statement, INode<Val>> pAutomaton, PAutomaton<Statement, INode<Val>> pAutomaton2) {
+	private boolean contextMatch(AbstractBoomerangResults<W>.Context context, AbstractBoomerangResults<W>.Context context2) {
 		return true;
 	}
 	

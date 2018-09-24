@@ -29,12 +29,12 @@ import soot.jimple.AssignStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.LengthExpr;
-import soot.jimple.NullConstant;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.PAutomaton;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
@@ -191,7 +191,7 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 		return invokedMethodsOnInstance;
 	}
 
-	public Map<Node<Statement, Val>, PAutomaton<Statement, INode<Val>>> getPotentialNullPointerDereferences() {
+	public Map<Node<Statement, Val>, AbstractBoomerangResults<W>.Context> getPotentialNullPointerDereferences() {
 		Set<Node<Statement, Val>> res = Sets.newHashSet();
 		queryToSolvers.get(query).getFieldAutomaton()
 				.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
@@ -233,12 +233,16 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 					}
 				});
 
-		Map<Node<Statement, Val>, PAutomaton<Statement, INode<Val>>> resWithContext = Maps.newHashMap();
+		Map<Node<Statement, Val>, AbstractBoomerangResults<W>.Context> resWithContext = Maps.newHashMap();
 		for (Node<Statement, Val> r : res) {
-			PAutomaton<Statement, INode<Val>> context = constructContextGraph(query, r.fact());
+			AbstractBoomerangResults<W>.Context context = constructContextGraph(query, r);
 			resWithContext.put(r, context);
 		}
 		return resWithContext;
+	}
+	
+	public Context getContext(Node<Statement,Val> node) {
+		return constructContextGraph(query, node);
 	}
 
 	public boolean containsCallRecursion() {
@@ -262,4 +266,5 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 	public long getMaxMemory() {
 		return maxMemory;
 	}
+	
 }

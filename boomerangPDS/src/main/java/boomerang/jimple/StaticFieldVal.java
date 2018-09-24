@@ -37,6 +37,7 @@ public class StaticFieldVal extends Val {
 		int result = 1;
 		result = prime * result + ((m == null) ? 0 : m.hashCode());
 		result = prime * result + ((field == null) ? 0 : field.hashCode());
+		result = prime * result + ((unbalancedStmt == null) ? 0 : unbalancedStmt.hashCode());
 		return result;
 	}
 
@@ -56,6 +57,11 @@ public class StaticFieldVal extends Val {
 			if (other.m != null)
 				return false;
 		} else if (!m.equals(other.m))
+			return false;
+		if (unbalancedStmt == null) {
+			if (other.unbalancedStmt != null)
+				return false;
+		} else if (!unbalancedStmt.equals(other.unbalancedStmt))
 			return false;
 		return true;
 	}

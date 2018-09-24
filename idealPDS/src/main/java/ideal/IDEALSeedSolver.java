@@ -30,6 +30,7 @@ import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.results.AbstractBoomerangResults;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
@@ -215,7 +216,7 @@ public class IDEALSeedSolver<W extends Weight> {
 							if (!res.getAnalysisWatch().isRunning()) {
 								res.getAnalysisWatch().start();
 							}
-							Map<ForwardQuery, PAutomaton<Statement, INode<Val>>> allocationSites = backwardSolveUnderScope
+							Map<ForwardQuery, AbstractBoomerangResults<W>.Context> allocationSites = backwardSolveUnderScope
 									.getAllocationSites();
 							addAffectedPotentialStrongUpdate(curr,curr.stmt());
 							idealWeightFunctions.potentialStrongUpdate(curr.stmt());
