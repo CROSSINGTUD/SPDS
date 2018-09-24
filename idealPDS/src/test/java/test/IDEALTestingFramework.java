@@ -93,7 +93,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				BoomerangPretransformer.v().reset();
 				BoomerangPretransformer.v().apply();
-				icfg = new JimpleBasedInterproceduralCFG(true);
+				icfg = new JimpleBasedInterproceduralCFG(false);
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 				

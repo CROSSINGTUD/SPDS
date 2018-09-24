@@ -11,16 +11,17 @@
  *******************************************************************************/
 package sync.pds.solver;
 
+import sync.pds.solver.nodes.Node;
 import wpds.interfaces.Location;
 
-public abstract class SyncStatePDSUpdateListener<Stmt extends Location, Fact, Field extends Location>  {
+public abstract class SyncStatePDSUpdateListener<Stmt extends Location, Fact>  {
 	
-	private WitnessNode<Stmt, Fact, Field> node;
-	public SyncStatePDSUpdateListener(WitnessNode<Stmt,Fact, Field> node){
+	private Node<Stmt, Fact> node;
+	public SyncStatePDSUpdateListener(Node<Stmt,Fact> node){
 		this.node = node;
 	}
 	public abstract void reachable();
-	public WitnessNode<Stmt, Fact, Field> getNode(){
+	public Node<Stmt, Fact> getNode(){
 		return node;
 	}
 

@@ -1,6 +1,5 @@
 package boomerang.results;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +28,6 @@ import soot.Type;
 import soot.jimple.ClassConstant;
 import soot.jimple.NewExpr;
 import sync.pds.solver.SyncPDSUpdateListener;
-import sync.pds.solver.WitnessNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -86,7 +84,6 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 				continue;
 			}
 			fw.getValue().getFieldAutomaton().registerListener(new ExtractAllocationSiteStateListener(fw.getValue().getFieldAutomaton().getInitialState(), query, (ForwardQuery) fw.getKey(), results));
-			
 		}
 		allocationSites = Maps.newHashMap();
 		for(ForwardQuery q : results) {
@@ -121,7 +118,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 		@Override
 		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if(t.getLabel().equals(Field.empty()) && t.getStart().fact().equals(bwQuery.asNode())){
+			if(t.getStart().fact().equals(bwQuery.asNode()) && t.getLabel().equals(Field.empty())){
 				results.add(query);
 			}
 		}
@@ -164,10 +161,10 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 		for (final Query fw : getAllocationSites().keySet()) {
 			if(fw instanceof BackwardQuery)
 				continue;
-			queryToSolvers.getOrCreate(fw).registerListener(new SyncPDSUpdateListener<Statement, Val, Field>() {
+			queryToSolvers.getOrCreate(fw).registerListener(new SyncPDSUpdateListener<Statement, Val>() {
 				
 				@Override
-				public void onReachableNodeAdded(WitnessNode<Statement, Val, Field> reachableNode) {
+				public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
 					if(reachableNode.stmt().equals(query.stmt())){
 						Val base = reachableNode.fact();
 						final INode<Node<Statement, Val>> allocNode = queryToSolvers.getOrCreate(fw).getFieldAutomaton().getInitialState();			
@@ -370,5 +367,4 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 	public long getMaxMemory() {
 		return maxMemory;
 	}
-	
 }

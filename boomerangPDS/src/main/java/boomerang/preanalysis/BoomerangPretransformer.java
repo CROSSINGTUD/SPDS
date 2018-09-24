@@ -31,6 +31,7 @@ import soot.jimple.AssignStmt;
 import soot.jimple.Constant;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.ReturnStmt;
+import soot.jimple.ReturnVoidStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.internal.JAssignStmt;
@@ -102,6 +103,15 @@ public class BoomerangPretransformer extends BodyTransformer {
 
 	private void addNopStmtToMethods(Body b) {
 		b.getUnits().addFirst(new JNopStmt());
+		Set<Unit> returnStmts = Sets.newHashSet();
+		for(Unit u : b.getUnits()) {
+			if(u instanceof ReturnStmt || u instanceof ReturnVoidStmt) {
+				returnStmts.add(u);
+			}
+		}
+		for(Unit rets : returnStmts) {
+			b.getUnits().insertBefore(new JNopStmt(), rets);
+		}
 	}
 
 	private Set<Unit> getStmtsWithConstants(Body methodBody) {

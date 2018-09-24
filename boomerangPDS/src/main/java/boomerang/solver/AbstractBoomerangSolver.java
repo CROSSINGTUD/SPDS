@@ -58,8 +58,6 @@ import soot.jimple.NewExpr;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import sync.pds.solver.SyncPDSSolver;
-import sync.pds.solver.WitnessNode;
-import sync.pds.solver.nodes.AllocNode;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -90,8 +88,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			.create();
 	private Multimap<Statement, StatementBasedFieldTransitionListener<W>> perStatementFieldTransitionsListener = HashMultimap
 			.create();
-	private Multimap<Statement, Transition<Statement, INode<Val>>> perStatementCallTransitions = HashMultimap
-			.create();
+	private HashBasedTable<Statement, Transition<Statement, INode<Val>>,W> perStatementCallTransitions = HashBasedTable.create();
 	private Multimap<Statement, StatementBasedCallTransitionListener<W>> perStatementCallTransitionsListener = HashMultimap
 			.create();
 	private Set<ReachableMethodListener<W>> reachableMethodListeners = Sets.newHashSet();
@@ -102,7 +99,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			Query query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
 			BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
 			 NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries) {
-		super(new SingleNode<Val>(query.asNode().fact()), new AllocNode<Node<Statement, Val>>(query.asNode()),
+		super(new SingleNode<Val>(query.asNode().fact()), new SingleNode<Node<Statement, Val>>(query.asNode()),
 				options.callSummaries(), callSummaries, options.fieldSummaries(), fieldSummaries);
 		this.options = options;
 		this.icfg = icfg;
@@ -121,7 +118,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			@Override
 			public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
 					WeightedPAutomaton<Statement, INode<Val>, W> aut) {
-				addCallTransitionToStatement(t.getLabel(),t);
+				addCallTransitionToStatement(t.getLabel(),t, w);
 			}
 		});
 		// TODO recap, I assume we can implement this more easily.
@@ -213,20 +210,32 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		}
 	}
 	
-	private void addCallTransitionToStatement(Statement s, Transition<Statement, INode<Val>> t) {
-		if (perStatementCallTransitions.put(s, t)) {
+	private void addCallTransitionToStatement(Statement s, Transition<Statement, INode<Val>> t, W w) {
+		W put = perStatementCallTransitions.get(s, t);
+		if(put != null) {
+			W combineWith = (W) put.combineWith(w);
+			if(!combineWith.equals(put)) {
+				perStatementCallTransitions.put(s, t,combineWith);
+				for (StatementBasedCallTransitionListener<W> l : Lists
+						.newArrayList(perStatementCallTransitionsListener.get(s))) {
+					l.onAddedTransition(t,w);
+				}
+			}
+		} else {
+			perStatementCallTransitions.put(s, t,w);
 			for (StatementBasedCallTransitionListener<W> l : Lists
 					.newArrayList(perStatementCallTransitionsListener.get(s))) {
-				l.onAddedTransition(t);
+				l.onAddedTransition(t,w);
 			}
 		}
 	}
 
 	public void registerStatementCallTransitionListener(StatementBasedCallTransitionListener<W> l) {
 		if (perStatementCallTransitionsListener.put(l.getStmt(), l)) {
-			for (Transition<Statement, INode<Val>> t : Lists
-					.newArrayList(perStatementCallTransitions.get(l.getStmt()))) {
-				l.onAddedTransition(t);
+			Map<Transition<Statement, INode<Val>>, W> row = perStatementCallTransitions.row(l.getStmt());
+			for (Entry<Transition<Statement, INode<Val>>, W> t : Lists
+					.newArrayList(row.entrySet())) {
+				l.onAddedTransition(t.getKey(),t.getValue());
 			}
 		}
 	}
@@ -504,7 +513,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	}
 
 	@Override
-	protected void processNode(final WitnessNode<Statement, Val, Field> witnessNode) {
+	protected void processNode(final Node<Statement, Val> witnessNode) {
 		submit(witnessNode.stmt().getMethod(), new Runnable() {
 			@Override
 			public void run() {

@@ -11,7 +11,6 @@
  *******************************************************************************/
 package typestate.tests;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
@@ -69,6 +68,8 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		if(!staticallyUnknown()){
 			File alias = file;
 			recursive(alias);
+			//TODO Commenting out this line introduces a bug
+			int z = 2;
 		}
 	}
 	private void escape(File other) {
@@ -144,18 +145,40 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 	public void summaryTest() {
 		File file1 = new File();
 		call(file1);
+		int y = 1;
 		file1.close();
 		mustBeInAcceptingState(file1);
 		File file = new File();
 		File alias = file;
 		call(alias);
+		int x = 1;
 		file.close();
 		mustBeInAcceptingState(file);
 		mustBeInAcceptingState(alias);
 	}
-
+	@Test
+	public void simpleAlias() {
+		File y = new File();
+		File x = y;
+		x.open();
+		y.close();
+		mustBeInAcceptingState(x);
+		mustBeInAcceptingState(y);
+	}
 	private static void call(File alias) {
 		alias.open();
+	}
+
+	@Test
+	public void wrappedOpenCall() {
+		File file1 = new File();
+		call3(file1, file1);
+		mustBeInErrorState(file1);
+	}
+
+	private static void call3(File other, File alias) {
+		alias.open();
+		mustBeInErrorState(alias);
 	}
 
 	@Test
@@ -213,10 +236,22 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		container.field = new File();
 		File field = container.field;
 		field.open();
+		File f2 = container.field;
+		mustBeInErrorState(f2);
+	}
+	
+	@Test
+	public void flowViaFieldDirect2() {
+		ObjectWithField container = new ObjectWithField();
+		container.field = new File();
+		File field = container.field;
+		field.open();
+		mustBeInErrorState(container.field);
 		File field2 = container.field;
 		field2.close();
 		mustBeInAcceptingState(container.field);
 	}
+	
 	@Test
 	public void flowViaFieldNotUnbalanced() {
 		ObjectWithField container = new ObjectWithField();
@@ -281,6 +316,8 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 
 	private void call(File file1, File file2) {
 		file1.open();
+		//TODO: This test case fails if we comment out the next line
+		int x = 1;
 		file2.close();
 		mustBeInAcceptingState(file1);
 	}
@@ -384,7 +421,8 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 	private void bar(ObjectWithField a, File file) {
 		file.open();
 		a.field = file;
-		mustBeInErrorState(a.field);
+		File whoAmI = a.field;
+		mustBeInErrorState(whoAmI);
 	}
 
 	@Test
@@ -437,11 +475,24 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		wrappedParamClose(file);
 		mustBeInAcceptingState(file);
 	}
+	
+	@Test
+	public void wrappedOpen2() {
+		File file = new File();
+		wrappedParamOpen(file);
+		mustBeInErrorState(file);
+	}
+	private void wrappedParamOpen(File a) {
+		openCall(a);
+	}
+	private void openCall(File f) {
+		f.open();
+	}
 	@Test
 	public void wrappedClose1() {
 		File file = new File();
 		file.open();
-//		mustBeInErrorState(file);
+		mustBeInErrorState(file);
 		cls(file);
 		mustBeInAcceptingState(file);
 	}
@@ -466,13 +517,9 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		File file = new File();
 		file.open();
 		mustBeInErrorState(file);
-		int x = 1;
-		System.out.println(x);
 		mustBeInErrorState(file);
 		file.close();
 		mustBeInAcceptingState(file);
-		x = 1;
-		System.out.println(x);
 		mustBeInAcceptingState(file);
 	}
 
@@ -536,13 +583,36 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		mustBeInErrorState(file);
 	}
 
-	private static class InnerObject{
-		private final File file;
+	public static class InnerObject{
+		public File file;
 
 		public InnerObject(){
 			this.file = new File();
 			this.file.open();
 		}
+
+		public InnerObject(String string) {
+			this.file = new File();
+		}
+
+		public void doClose() {
+			mustBeInErrorState(file);
+			this.file.close();
+			mustBeInAcceptingState(file);
+		}
+
+		public void doOpen() {
+			this.file.open();
+			mustBeInErrorState(file);
+		}
+	}
+	
+	@Test
+	public void storedInObject2(){
+		InnerObject o = new InnerObject("");
+		o.doOpen();
+		o.doClose();
+		mustBeInAcceptingState(o.file);
 	}
 	@Override
 	protected TypeStateMachineWeightFunctions getStateMachine() {

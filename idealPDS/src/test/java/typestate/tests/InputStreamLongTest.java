@@ -11,43 +11,45 @@
  *******************************************************************************/
 package typestate.tests;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 
 import org.junit.Test;
 
 import test.IDEALTestingFramework;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
-import typestate.impl.statemachines.alloc.PrintStreamStateMachine;
+import typestate.impl.statemachines.alloc.InputStreamStateMachine;
 
-public class PrintStreamTest extends IDEALTestingFramework {
+public class InputStreamLongTest extends IDEALTestingFramework {
 
 	@Test
-	public void test1() throws FileNotFoundException {
-		PrintStream inputStream = new PrintStream("");
+	public void test1() throws IOException {
+		InputStream inputStream = new FileInputStream("");
 		inputStream.close();
-		inputStream.flush();
+		inputStream.read();
 		mustBeInErrorState(inputStream);
 	}
 
 	@Test
-	public void test(){
-		try {
-			FileOutputStream out = new FileOutputStream("foo.txt");
-			PrintStream p = new PrintStream(out);
-			p.close();
-			p.println("foo!");
-			p.write(42);
-			mustBeInErrorState(p);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+	public void test2() throws IOException {
+	    InputStream inputStream = new FileInputStream("");
+	    inputStream.close();
+	    inputStream.close();
+	    inputStream.read();
+	    mustBeInErrorState(inputStream);
 	}
 
-	
+	@Test
+	public void test3() throws IOException {
+	    InputStream inputStream = new FileInputStream("");
+	    inputStream.read();
+	    inputStream.close();
+	    mustBeInAcceptingState(inputStream);
+	}
+
 	@Override
 	protected TypeStateMachineWeightFunctions getStateMachine() {
-		return new PrintStreamStateMachine();
+		return new InputStreamStateMachine();
 	}
 }
