@@ -22,11 +22,6 @@ public class BackwardsObservableICFG implements ObservableICFG<Unit, SootMethod>
     }
 
     @Override
-    public Collection<Unit> getAllPrecomputedCallers(SootMethod sootMethod) {
-        return delegate.getAllPrecomputedCallers(sootMethod);
-    }
-
-    @Override
     public Collection<Unit> getStartPointsOf(SootMethod m) {
         return this.delegate.getEndPointsOf(m);
     }
@@ -100,16 +95,6 @@ public class BackwardsObservableICFG implements ObservableICFG<Unit, SootMethod>
     public void addCallerListener(CallerListener listener) {
         delegate.addCallerListener(listener);
     }
-
-    @Override
-	public boolean isMethodsWithCallFlow(SootMethod method) {
-		return delegate.isMethodsWithCallFlow(method);
-	}
-
-	@Override
-	public void addMethodWithCallFlow(SootMethod method) {
-		delegate.addMethodWithCallFlow(method);
-	}
 
     @Override
     public void resetCallGraph() {

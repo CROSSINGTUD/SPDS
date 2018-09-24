@@ -45,12 +45,6 @@ public interface ObservableICFG<N,M> {
     void addCallerListener(CallerListener<N,M> listener);
 
     /**
-     * Returns all precomputed callers for a given method.
-     * Behaviour from {@link #addCalleeListener(CalleeListener)} only differs when using dynamic call graph.
-     */
-    Collection<N> getAllPrecomputedCallers(M m);
-
-    /**
      * Returns all call sites within a given method.
      */
     Set<N> getCallsFromWithin(M m);
@@ -104,10 +98,6 @@ public interface ObservableICFG<N,M> {
     boolean isReachable(N u);
 
     CallGraph getCallGraphCopy();
-
-	boolean isMethodsWithCallFlow(SootMethod method);
-
-	void addMethodWithCallFlow(SootMethod method);
 
     /**
      * Resets the call graph. Only affects the call graph if it was built demand-driven, otherwise

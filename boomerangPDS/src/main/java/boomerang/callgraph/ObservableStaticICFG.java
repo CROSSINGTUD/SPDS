@@ -69,11 +69,6 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
     }
 
     @Override
-    public Collection<Unit> getAllPrecomputedCallers(SootMethod sootMethod) {
-        return precomputedGraph.getCallersOf(sootMethod);
-    }
-
-    @Override
     public Set<Unit> getCallsFromWithin(SootMethod sootMethod) {
         return precomputedGraph.getCallsFromWithin(sootMethod);
     }
@@ -145,16 +140,6 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
             }
         }
     }
-
-	@Override
-	public boolean isMethodsWithCallFlow(SootMethod method) {
-		return true;
-	}
-
-	@Override
-	public void addMethodWithCallFlow(SootMethod method) {
-        //No need to keep track of that since we rely on the precomputed graph
-	}
 
     @Override
     public void resetCallGraph() {

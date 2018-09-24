@@ -46,7 +46,7 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
     private CallGraph demandDrivenCallGraph = new CallGraph();
     private CallGraph precomputedCallGraph;
     private WeightedBoomerang<W> solver;
-    private Set<SootMethod> methodsWithCallFlow = Sets.newHashSet();
+    private Set<SootMethod> methodWithUnbalancedReturnFlow = Sets.newHashSet();
 
     private HashSet<CalleeListener<Unit, SootMethod>> calleeListeners = new HashSet<>();
     private HashSet<CallerListener<Unit, SootMethod>> callerListeners = new HashSet<>();
@@ -224,9 +224,17 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
     public void addCallerListener(CallerListener<Unit, SootMethod> listener) {
         if (callerListeners.add(listener)){
             SootMethod method = listener.getObservedCallee();
-
             logger.debug("Queried for callers of {}.", method);
 
+            if (demandDrivenCallGraph.size() == 0 || methodWithUnbalancedReturnFlow.remove(method)){
+                logger.debug("Getting precomputed callers of {}", method);
+                Iterator<Edge> precomputedCallers = precomputedCallGraph.edgesInto(method);
+                while (precomputedCallers.hasNext()){
+                    Edge methodCall = precomputedCallers.next();
+                    addCallIfNotInGraph(methodCall.srcUnit(), methodCall.tgt(), methodCall.kind());
+                    methodWithUnbalancedReturnFlow.add(methodCall.src());
+                }
+            }
             //Notify the new listener about what we already now
             Iterator<Edge> edgeIterator = demandDrivenCallGraph.edgesInto(method);
             while (edgeIterator.hasNext()){
@@ -260,19 +268,6 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
         return false;
     }
 
-    @Override
-    public Collection<Unit> getAllPrecomputedCallers(SootMethod sootMethod) {
-        logger.debug("Getting precomputed callers of {}", sootMethod);
-        Set<Unit> callers = new HashSet<>();
-        Iterator<Edge> precomputedCallers = precomputedCallGraph.edgesInto(sootMethod);
-        while (precomputedCallers.hasNext()){
-            Edge methodCall = precomputedCallers.next();
-            callers.add(methodCall.srcUnit());
-            addCallIfNotInGraph(methodCall.srcUnit(), methodCall.tgt(), methodCall.kind());
-        }
-        return callers;
-    }
-
     private void addCallIfNotInGraph(Unit caller, SootMethod callee, Kind kind) {
         if (isCallInGraph(caller, callee))
             return;
@@ -290,6 +285,15 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
         for (CallerListener<Unit, SootMethod> listener : Lists.newArrayList(callerListeners)){
             if (callee.equals(listener.getObservedCallee()))
                 listener.onCallerAdded(caller, callee);
+        }
+        findOutIfUnbalancedReturn(getMethodOf(caller));
+    }
+
+    private void findOutIfUnbalancedReturn(SootMethod caller) {
+        //If we have added a unit from this method as a caller, but there is no flow to the method containing
+        // the unit, this will be the seed method (or the caller of it, or a caller of that)
+        if (!demandDrivenCallGraph.edgesInto(caller).hasNext()){
+            methodWithUnbalancedReturnFlow.add(caller);
         }
     }
 
@@ -393,22 +397,11 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
         }
         return copy;
     }
-
-	@Override
-	public boolean isMethodsWithCallFlow(SootMethod method) {
-		return methodsWithCallFlow.contains(method);
-	}
-
-	public void addMethodWithCallFlow(SootMethod method) {
-        methodsWithCallFlow.add(method);
-    }
-
     @Override
     public void resetCallGraph() {
         demandDrivenCallGraph = new CallGraph();
-        methodsWithCallFlow.clear();
+        methodWithUnbalancedReturnFlow.clear();
         calleeListeners.clear();
         callerListeners.clear();
     }
-
 }
