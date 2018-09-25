@@ -30,6 +30,7 @@ import wpds.interfaces.WPAUpdateListener;
 
 public class HiddenFieldLoadAdvancedTest extends AbstractBoomerangTest{
 	@Test
+	@Ignore
 	public void run(){
 		A b = new A();
 		A a = b;
