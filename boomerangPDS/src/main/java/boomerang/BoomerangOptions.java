@@ -53,4 +53,6 @@ public interface BoomerangOptions {
 	 * At runtime, null can be cast to any RefType! Though a check (null instanceof Object) returns false.
 	 */
 	public boolean killNullAtCast();
+
+	boolean trackReturnOfInstanceOf();
 }
