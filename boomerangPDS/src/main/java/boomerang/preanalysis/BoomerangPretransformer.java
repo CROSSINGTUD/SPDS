@@ -105,9 +105,9 @@ public class BoomerangPretransformer extends BodyTransformer {
 		b.getUnits().addFirst(new JNopStmt());
 		Set<Unit> returnStmts = Sets.newHashSet();
 		for(Unit u : b.getUnits()) {
-			if(u instanceof ReturnStmt || u instanceof ReturnVoidStmt) {
+//			if(u instanceof ReturnStmt || u instanceof ReturnVoidStmt) {
 				returnStmts.add(u);
-			}
+//			}
 		}
 		for(Unit rets : returnStmts) {
 			b.getUnits().insertBefore(new JNopStmt(), rets);
