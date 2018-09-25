@@ -137,7 +137,6 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		taintMe(b);
 	}
 	
-	@Ignore
 	@Test
 	public void threeLevelTest() {
 		C b = new C();

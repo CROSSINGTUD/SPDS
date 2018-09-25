@@ -758,54 +758,5 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		return collection;
 	}
 	
-	public abstract class StackListener extends WPAStateListener<N, D, W>{
-		private N source;
-		public StackListener(D state, N source) {
-			super(state);
-			this.source = source;
-		}
-		@Override
-		public void onOutTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton) {
-			if(isGeneratedState(t.getTarget()) && t.getLabel().equals(source)) {
-				WeightedPAutomaton.this.registerListener(new SubStackListener(t.getTarget(),source) {
-					@Override
-					public void stackElement(N child, N parent) {
-						StackListener.this.stackElement(child, parent);
-					}
-				});
-			}
-			if(initialState.equals(t.getTarget()) && t.getLabel().equals(source)) {
-				anyContext(source);
-			}
-		}
-		@Override
-		public void onInTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton) {
-		}
-		public abstract void stackElement(N child, N parent);
-		public abstract void anyContext(N end);
-	} 
-	private abstract class SubStackListener extends WPAStateListener<N, D, W>{
-		private N source;
-		public SubStackListener(D state, N source) {
-			super(state);
-			this.source = source;
-		}
-		@Override
-		public void onOutTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton) {
-			stackElement(source, t.getLabel());
-			if(isGeneratedState(t.getTarget())) {
-				WeightedPAutomaton.this.registerListener(new SubStackListener(t.getTarget(),t.getLabel()) {
-					@Override
-					public void stackElement(N child, N parent) {
-						SubStackListener.this.stackElement(child, parent);
-					}
-				});
-			}
-		}
-
-		@Override
-		public void onInTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton) {
-		}
-		public abstract void stackElement(N child, N parent);
-	} 
+	
 }

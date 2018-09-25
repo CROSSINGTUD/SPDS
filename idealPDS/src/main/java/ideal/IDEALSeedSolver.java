@@ -46,6 +46,7 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.ConnectPushListener;
 import wpds.impl.PAutomaton;
+import wpds.impl.StackListener;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -219,7 +220,7 @@ public class IDEALSeedSolver<W extends Weight> {
 									.getAllocationSites();
 							addAffectedPotentialStrongUpdate(curr,curr.stmt());
 							idealWeightFunctions.potentialStrongUpdate(curr.stmt());
-							s.getCallAutomaton().registerListener(s.getCallAutomaton().new StackListener(new SingleNode<Val>(curr.fact()),curr.stmt()) {
+							s.getCallAutomaton().registerListener(new StackListener<Statement, INode<Val>, W>(s.getCallAutomaton(), new SingleNode<Val>(curr.fact()),curr.stmt()) {
 								@Override
 								public void anyContext(Statement end) {
 								}

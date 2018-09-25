@@ -86,11 +86,12 @@ public class Util {
 	}
 	
 	public static long getReallyUsedMemory() {
-		long before = getGcCount();
-		System.gc();
-		while (getGcCount() == before)
-			;
-		return getCurrentlyUsedMemory();
+		return 0;
+//		long before = getGcCount();
+//		System.gc();
+//		while (getGcCount() == before)
+//			;
+//		return getCurrentlyUsedMemory();
 	}
 
 	private static long getCurrentlyUsedMemory() {
