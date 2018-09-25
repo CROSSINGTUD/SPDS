@@ -11,6 +11,7 @@
  *******************************************************************************/
 package test.cases.fields;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import boomerang.SolverCreationListener;
