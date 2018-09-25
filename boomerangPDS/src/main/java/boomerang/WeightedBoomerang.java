@@ -618,17 +618,76 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 			@Override
 			public void anyContext(Statement end) {
-				for (Unit callSite : WeightedBoomerang.this.icfg().getCallersOf(end.getMethod())) {
+				bwSolver.registerListener(new CanUnbalancedReturn(end.getMethod(),bwSolver));
+			}
+		});
+		 return new BackwardBoomerangResults<W>(backwardQuery, false, this.queryToSolvers, getStats(), analysisWatch);
+	}
+	private class CanUnbalancedReturn implements SyncPDSUpdateListener<Statement, Val> {
+
+		private AbstractBoomerangSolver<W> bwSolver;
+		private SootMethod method;
+		private Collection<Unit> startPointsOf;
+
+		public CanUnbalancedReturn(SootMethod method, AbstractBoomerangSolver<W> bwSolver) {
+					this.method = method;
+					this.bwSolver = bwSolver;
+					this.startPointsOf = icfg().getStartPointsOf(method);
+		}
+
+		@Override
+		public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
+			if(startPointsOf.contains(reachableNode.stmt().getUnit().get())){
+				for (Unit callSite : WeightedBoomerang.this.icfg().getCallersOf(method)) {
 					if (!((Stmt) callSite).containsInvokeExpr())
 						continue;
 					final Statement callStatement = new Statement((Stmt) callSite,
 							WeightedBoomerang.this.icfg().getMethodOf(callSite));
 					Node<Statement,AbstractBoomerangSolver<W>> solverPair = new Node<>(callStatement,bwSolver);
-						triggerUnbalancedPop(solverPair);
+					triggerUnbalancedPop(solverPair);
+					bwSolver.registerListener(new CanUnbalancedReturn(callStatement.getMethod(), bwSolver));
 				}
 			}
-		});
-		 return new BackwardBoomerangResults<W>(backwardQuery, false, this.queryToSolvers, getStats(), analysisWatch);
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((bwSolver == null) ? 0 : bwSolver.hashCode());
+			result = prime * result + ((method == null) ? 0 : method.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			CanUnbalancedReturn other = (CanUnbalancedReturn) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (bwSolver == null) {
+				if (other.bwSolver != null)
+					return false;
+			} else if (!bwSolver.equals(other.bwSolver))
+				return false;
+			if (method == null) {
+				if (other.method != null)
+					return false;
+			} else if (!method.equals(other.method))
+				return false;
+			return true;
+		}
+
+		private WeightedBoomerang getOuterType() {
+			return WeightedBoomerang.this;
+		}
+
 	}
 
 	private final class ForwardHandleFieldWrite implements WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> {
