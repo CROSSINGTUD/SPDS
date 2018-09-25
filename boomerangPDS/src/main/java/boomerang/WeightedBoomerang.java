@@ -42,7 +42,6 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.StaticFieldVal;
 import boomerang.jimple.Val;
 import boomerang.poi.AbstractPOI;
-import boomerang.poi.BaseSolverContext;
 import boomerang.poi.ExecuteImportFieldStmtPOI;
 import boomerang.poi.PointOfIndirection;
 import boomerang.results.BackwardBoomerangResults;
@@ -76,11 +75,13 @@ import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.NestedWeightedPAutomatons;
+import wpds.impl.StackListener;
 import wpds.impl.SummaryNestedWeightedPAutomatons;
 import wpds.impl.Transition;
 import wpds.impl.UnbalancedPopListener;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
+import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
@@ -604,12 +605,20 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			}
 		});
 		
-		
-		fwSolver.getCallAutomaton().registerListener(new BaseSolverContext<W>(fwSolver, new SingleNode<>(node.fact()), node.stmt(), fwSolver) {
+		fwSolver.getCallAutomaton().registerListener(new StackListener<Statement,INode<Val>,W>(fwSolver.getCallAutomaton(), new SingleNode<>(node.fact()), node.stmt()) {
 
 			@Override
-			public void anyContext() {
-				for (Unit callSite : WeightedBoomerang.this.icfg().getCallersOf(node.stmt().getMethod())) {
+			public void stackElement(Statement child, Statement callSite) {
+				for(Statement realCall : fwSolver.getPredsOf(callSite)){
+					if(realCall.isCallsite()) {
+						triggerUnbalancedPop(new Node<Statement,AbstractBoomerangSolver<W>>(realCall,bwSolver));
+					}
+				}
+			}
+
+			@Override
+			public void anyContext(Statement end) {
+				for (Unit callSite : WeightedBoomerang.this.icfg().getCallersOf(end.getMethod())) {
 					if (!((Stmt) callSite).containsInvokeExpr())
 						continue;
 					final Statement callStatement = new Statement((Stmt) callSite,
@@ -618,15 +627,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 						triggerUnbalancedPop(solverPair);
 				}
 			}
-
-			@Override
-			public void callSiteFound(Statement callSite) {
-				for(Statement realCall : fwSolver.getPredsOf(callSite)){
-					if(realCall.isCallsite()) {
-						triggerUnbalancedPop(new Node<Statement,AbstractBoomerangSolver<W>>(realCall,bwSolver));
-					}
-				}
-			}});
+		});
 		 return new BackwardBoomerangResults<W>(backwardQuery, false, this.queryToSolvers, getStats(), analysisWatch);
 	}
 
