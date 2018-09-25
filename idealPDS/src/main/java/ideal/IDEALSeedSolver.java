@@ -28,6 +28,7 @@ import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -40,6 +41,7 @@ import boomerang.seedfactory.SimpleSeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import soot.SootMethod;
 import soot.Unit;
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
@@ -112,6 +114,8 @@ public class IDEALSeedSolver<W extends Weight> {
 			public ObservableICFG<Unit, SootMethod> icfg() {
 				if (analysisDefinition.icfg == null){
 					analysisDefinition.icfg = new ObservableDynamicICFG<W>(this);
+					//For Static ICFG use this line
+//					analysisDefinition.icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(false))
 				}
 				return analysisDefinition.icfg();
 			}
