@@ -141,8 +141,11 @@ public abstract class SeedFactory<W extends Weight> {
 					}
 
 					@Override
-					public void onCalleeAdded(Unit n, SootMethod m) {
+					public void onCalleeAdded(Unit n, SootMethod callee) {
 						calledMethods.add(m);
+						  if (!callee.hasActiveBody())
+		                        return;
+						  addPushRule(new Method(m),new Method(callee));
 					}
 				});
 			}
