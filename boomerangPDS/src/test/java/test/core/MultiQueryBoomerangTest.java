@@ -39,6 +39,7 @@ import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.preanalysis.BoomerangPretransformer;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import soot.Body;
@@ -83,6 +84,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 		return new SceneTransformer() {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
+				BoomerangPretransformer.v().apply();
 				icfg = new JimpleBasedInterproceduralCFG(true);
 				seedFactory = new SeedFactory<NoWeight>(){
 
