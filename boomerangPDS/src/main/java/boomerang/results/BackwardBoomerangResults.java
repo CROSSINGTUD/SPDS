@@ -256,7 +256,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((allocNode == null) ? 0 : allocNode.hashCode());
 			result = prime * result + ((base == null) ? 0 : base.hashCode());
-			result = prime * result + ((fields == null) ? 0 : fields.hashCode());
+//			result = prime * result + ((fields == null) ? 0 : fields.hashCode());
 			return result;
 		}
 
@@ -281,11 +281,11 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 					return false;
 			} else if (!base.equals(other.base))
 				return false;
-			if (fields == null) {
-				if (other.fields != null)
-					return false;
-			} else if (!fields.equals(other.fields))
-				return false;
+//			if (fields == null) {
+//				if (other.fields != null)
+//					return false;
+//			} else if (!fields.equals(other.fields))
+//				return false;
 			return true;
 		}
 

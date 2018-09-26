@@ -125,7 +125,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		this.generatedFieldState = genField;
 		addReachable(query.asNode().stmt().getMethod());
 	}
-	
 
 	@Override
 	protected boolean preventCallTransitionAdd(Transition<Statement, INode<Val>> t, W weight) {
