@@ -595,7 +595,12 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 	public BackwardBoomerangResults<W> backwardSolveUnderScope(BackwardQuery backwardQuery, ForwardQuery forwardQuery, Node<Statement, Val> node) {
 		scopedQueries.add(backwardQuery);
-		backwardSolve(backwardQuery);
+		boolean timedout = false;
+		try {
+			backwardSolve(backwardQuery);
+		} catch (BoomerangTimeoutException e) {
+			timedout = true;
+		}
 		final AbstractBoomerangSolver<W> bwSolver = queryToSolvers.getOrCreate(backwardQuery);
 		AbstractBoomerangSolver<W> fwSolver = queryToSolvers.getOrCreate(forwardQuery);
 		fwSolver.registerReachableMethodListener(new ReachableMethodListener<W>() {
@@ -621,7 +626,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				bwSolver.registerListener(new CanUnbalancedReturn(end.getMethod(),bwSolver));
 			}
 		});
-		 return new BackwardBoomerangResults<W>(backwardQuery, false, this.queryToSolvers, getStats(), analysisWatch);
+		 return new BackwardBoomerangResults<W>(backwardQuery, timedout, this.queryToSolvers, getStats(), analysisWatch);
 	}
 	private class CanUnbalancedReturn implements SyncPDSUpdateListener<Statement, Val> {
 
