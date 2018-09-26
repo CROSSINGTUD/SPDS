@@ -96,7 +96,7 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 				return;
 			}
 			Statement returnSiteOrExitStmt = t.getString();
-			if (!returnSiteOrExitStmt.getUnit().isPresent()) {
+			if (!returnSiteOrExitStmt.getUnit().isPresent() && returnSiteOrExitStmt.getUnit() != null) {
 				return;
 			}
 			boolean predIsCallStmt = false;
