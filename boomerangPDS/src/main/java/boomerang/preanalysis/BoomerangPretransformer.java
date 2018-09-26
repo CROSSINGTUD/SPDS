@@ -28,6 +28,7 @@ import soot.Unit;
 import soot.Value;
 import soot.ValueBox;
 import soot.jimple.AssignStmt;
+import soot.jimple.ClassConstant;
 import soot.jimple.Constant;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.ReturnStmt;
@@ -58,7 +59,7 @@ public class BoomerangPretransformer extends BodyTransformer {
 		for (Unit u : cwnc) {
 			if (u instanceof AssignStmt) {
 				AssignStmt assignStmt = (AssignStmt) u;
-				if (isFieldRef(assignStmt.getLeftOp()) && assignStmt.getRightOp() instanceof Constant) {
+				if (isFieldRef(assignStmt.getLeftOp()) && assignStmt.getRightOp() instanceof Constant && !(assignStmt.getRightOp() instanceof ClassConstant)) {
 					String label = "varReplacer" + new Integer(replaceCounter++).toString();
 					Local paramVal = new JimpleLocal(label, assignStmt.getRightOp().getType());
 					AssignStmt newUnit = new JAssignStmt(paramVal, assignStmt.getRightOp());
@@ -73,7 +74,7 @@ public class BoomerangPretransformer extends BodyTransformer {
 				Stmt stmt = (Stmt) u;
 				List<ValueBox> useBoxes = stmt.getInvokeExpr().getUseBoxes();
 				for (Value v : stmt.getInvokeExpr().getArgs()) {
-					if (v instanceof Constant) {
+					if (v instanceof Constant && !(v instanceof ClassConstant)) {
 						String label = "varReplacer" + new Integer(replaceCounter++).toString();
 						Local paramVal = new JimpleLocal(label, v.getType());
 						AssignStmt newUnit = new JAssignStmt(paramVal, v);
