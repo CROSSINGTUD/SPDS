@@ -51,6 +51,7 @@ import soot.jimple.Stmt;
 import soot.jimple.ThrowStmt;
 import soot.jimple.internal.JEqExpr;
 import soot.jimple.internal.JNeExpr;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.GeneratedState;
@@ -64,7 +65,7 @@ import wpds.impl.Weight;
 import wpds.interfaces.State;
 
 public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractBoomerangSolver<W> {
-	public ForwardBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg, ForwardQuery query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>,W> fieldSummaries) {
+	public ForwardBoomerangSolver(BiDiInterproceduralCFG<Unit, SootMethod> icfg, ForwardQuery query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>,W> fieldSummaries) {
 		super(icfg, query, genField, options, callSummaries, fieldSummaries);
 	}
 	

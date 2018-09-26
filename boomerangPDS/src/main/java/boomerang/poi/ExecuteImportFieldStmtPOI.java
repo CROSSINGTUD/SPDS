@@ -99,6 +99,9 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 			if (!returnSiteOrExitStmt.getUnit().isPresent() && returnSiteOrExitStmt.getUnit() != null) {
 				return;
 			}
+			if(!boomerang.icfg().isReachable(t.getString().getUnit().get())) {
+				return;
+			}
 			boolean predIsCallStmt = false;
 			for (Statement s : flowSolver.getPredsOf(returnSiteOrExitStmt)) {
 				predIsCallStmt |= s.isCallsite()

@@ -56,6 +56,7 @@ import soot.jimple.InvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
@@ -75,7 +76,7 @@ import wpds.interfaces.WPAUpdateListener;
 public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {
 
 	private static final Logger logger = LogManager.getLogger();
-	protected final InterproceduralCFG<Unit, SootMethod> icfg;
+	protected final BiDiInterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	private boolean INTERPROCEDURAL = true;
 	protected final Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> generatedFieldState;
@@ -94,7 +95,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Multimap<SootMethod, Runnable> queuedReachableMethod = HashMultimap.create();
 	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
 	protected final BoomerangOptions options;
-	public AbstractBoomerangSolver(InterproceduralCFG<Unit, SootMethod> icfg,
+	public AbstractBoomerangSolver(BiDiInterproceduralCFG<Unit, SootMethod> icfg,
 			Query query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
 			BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
 			 NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries) {
@@ -128,8 +129,12 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	@Override
 	protected boolean preventCallTransitionAdd(Transition<Statement, INode<Val>> t, W weight) {
+		if(t.getString().getUnit().isPresent() && !icfg.isReachable(t.getString().getUnit().get())) {
+			return true;
+		}
 		if (t.getStart() instanceof GeneratedState)
 			return false;
+
 		Val fact = t.getStart().fact();
 		
 		if(fact.isStatic())
