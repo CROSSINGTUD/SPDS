@@ -97,6 +97,11 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 	}
 
 	@Override
+	public boolean trackReturnOfInstanceOf() {
+		return true;
+	}
+	
+	@Override
 	public boolean onTheFlyCallGraph() {
 		return true;
 	}
@@ -170,5 +175,10 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 	@Override
 	public boolean aliasing() {
 		return true;
+	}
+
+	@Override
+	public boolean killNullAtCast() {
+		return false;
 	}
 }

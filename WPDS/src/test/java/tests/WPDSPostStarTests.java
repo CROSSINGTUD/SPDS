@@ -80,7 +80,6 @@ public class WPDSPostStarTests {
     assertEquals(fa.getWeightFor(t(1, "b", ACC)), w(2));
     assertEquals(fa.getWeightFor(t(1, "d", ACC)), w(11));
     assertEquals(fa.getWeightFor(t(1, "e", a(1,"c"))), w(1));
-    fa.computeValues(t(ACC, "a", ACC),w(0));
     Map<Transition<StackSymbol, Abstraction>, NumWeight> weights = fa.getTransitionsToFinalWeights();
     System.out.println(weights);
     assertEquals(weights.get(t(1, "e", a(1,"c"))), w(6));

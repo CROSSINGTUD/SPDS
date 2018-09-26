@@ -41,12 +41,15 @@ import boomerang.jimple.Val;
 import boomerang.util.RegExAccessPath;
 import heros.InterproceduralCFG;
 import pathexpression.IRegEx;
+import soot.NullType;
 import soot.RefType;
 import soot.Scene;
 import soot.SootMethod;
+import soot.Type;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.AssignStmt;
+import soot.jimple.CastExpr;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
@@ -128,7 +131,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		if (t.getStart() instanceof GeneratedState)
 			return false;
 		Val fact = t.getStart().fact();
+		
 		if(fact.isStatic())
+			return false;
+		if (callAutomaton.isUnbalancedState(t.getStart()) && callAutomaton.isUnbalancedState(t.getTarget()))
 			return false;
 		SootMethod m = fact.m();
 		SootMethod method = t.getLabel().getMethod();
@@ -567,20 +573,24 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		}
 		Val target = t.getTarget().fact().fact();
 		Val source = t.getStart().fact().fact();
-		Value sourceVal = source.value();
-		Value targetVal = target.value();
-		if(sourceVal.getType().equals(targetVal.getType())){
+		Type sourceVal = source.getType();
+		Type targetVal = target.getType();
+		if(sourceVal.equals(targetVal)){
 			return false;
 		}
 		if(source.isStatic()){
 			return false;
 		}
-		if(!(targetVal.getType() instanceof RefType) || !(sourceVal.getType() instanceof RefType)){
+		if(!(targetVal instanceof RefType) || !(sourceVal instanceof RefType)){
+			if(options.killNullAtCast() && targetVal instanceof NullType && isCastNode(t.getStart().fact())) {
+				//A null pointer cannot be cast to any object 
+				return true;
+			}
 			return false;//!allocVal.value().getType().equals(varVal.value().getType());
 		}
 
-		RefType targetType = (RefType) targetVal.getType(); 
-		RefType sourceType = (RefType) sourceVal.getType(); 
+		RefType targetType = (RefType) targetVal; 
+		RefType sourceType = (RefType) sourceVal; 
 		if(targetType.getSootClass().isPhantom() || sourceType.getSootClass().isPhantom())
 			return false;
 		if(target instanceof AllocVal && ((AllocVal) target).allocationValue() instanceof NewExpr){
@@ -595,6 +605,19 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		return !castFails;
 	}
 	
+
+	private boolean isCastNode(Node<Statement, Val> node) {
+		Stmt stmt = node.stmt().getUnit().get();
+		AssignStmt x;
+		if(stmt instanceof AssignStmt && (x = (AssignStmt) stmt).getRightOp() instanceof CastExpr) {
+			CastExpr c = (CastExpr) x.getRightOp();
+			if(c.getOp().equals(node.fact().value())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 
 	public void addReachable(SootMethod m) {
 		if (reachableMethods.add(m)) {

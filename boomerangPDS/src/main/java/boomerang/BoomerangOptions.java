@@ -45,4 +45,14 @@ public interface BoomerangOptions {
 	public IBoomerangStats statsFactory();
 
 	public boolean aliasing();
+	
+	
+	/**
+	 * Assume we propagate an object of soot.NullType in variable y and the propagation reaches a statement x = (Object) y.
+	 * @return If set to true, the propagation will NOT continue in x. This does not match the runtime semantics.   
+	 * At runtime, null can be cast to any RefType! Though a check (null instanceof Object) returns false.
+	 */
+	public boolean killNullAtCast();
+
+	boolean trackReturnOfInstanceOf();
 }

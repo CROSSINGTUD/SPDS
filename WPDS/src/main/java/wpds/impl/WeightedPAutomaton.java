@@ -80,10 +80,12 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	public int failedDirectAdditions;
 	private WeightedPAutomaton<N, D, W> initialAutomaton;
 	private PathExpressionComputer<D,N> pathExpressionComputer;
+	protected Set<D> unbalancedStates = Sets.newHashSet();
 	
 
 	public WeightedPAutomaton(D initialState) {
 		this.initialState = initialState;
+		this.unbalancedStates.add(initialState);
 	}
 
 	public abstract D createState(D d, N loc);
@@ -560,13 +562,11 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		
 		
 	}
-	public void computeValues(Transition<N, D> callTrans, W weight) {
-//		transitionsToFinalWeights.put(callTrans, weight);
-
-	}
 
 	public Map<Transition<N,D>, W> getTransitionsToFinalWeights() {
-		registerListener(new ValueComputationListener(initialState,getOne()));
+		for(D s : unbalancedStates) {
+			registerListener(new ValueComputationListener(s,getOne()));
+		}
 		return transitionsToFinalWeights;
 	}
 	
@@ -758,5 +758,11 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		return collection;
 	}
 	
+	public boolean isUnbalancedState(D target) {
+		return unbalancedStates.contains(target);
+	} 
 	
+	public void addUnbalancedState(D state) {
+		unbalancedStates.add(state);
+	} 
 }

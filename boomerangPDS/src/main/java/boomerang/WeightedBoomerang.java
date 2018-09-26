@@ -44,6 +44,7 @@ import boomerang.jimple.Val;
 import boomerang.poi.AbstractPOI;
 import boomerang.poi.ExecuteImportFieldStmtPOI;
 import boomerang.poi.PointOfIndirection;
+import boomerang.preanalysis.BoomerangPretransformer;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
@@ -87,7 +88,6 @@ import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedBoomerang<W extends Weight> {
-	public static boolean DEBUG = false;
 	private static final Logger logger = LogManager.getLogger();
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
@@ -101,12 +101,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		protected AbstractBoomerangSolver<W> createItem(final Query key) {
 			final AbstractBoomerangSolver<W> solver;
 			if (key instanceof BackwardQuery) {
-				if (DEBUG)
-					System.out.println("Backward solving query: " + key);
+				logger.debug("Backward solving query: " + key);
 				solver = createBackwardSolver((BackwardQuery) key);
 			} else {
-				if (DEBUG)
-					System.out.println("Forward solving query: " + key);
+				logger.debug("Forward solving query: " + key);
 				solver = createForwardSolver((ForwardQuery) key);
 			}
 			solver.getCallAutomaton()
@@ -139,16 +137,15 @@ public abstract class WeightedBoomerang<W extends Weight> {
 										solver.submit(callStatement.getMethod(), new Runnable() {
 											@Override
 											public void run() {
-
-												Node<Statement, Val> returnedVal = new Node<Statement, Val>(
-														callStatement, returningFact.fact());
-												solver.setCallingContextReachable(returnedVal);
+												Val unbalancedFact = returningFact.fact().asUnbalanced(callStatement);
+												SingleNode<Val> unbalancedState = new SingleNode<Val>(unbalancedFact);
+												solver.getCallAutomaton().addUnbalancedState(unbalancedState);
 												solver.getCallAutomaton()
 														.addWeightForTransition(
-																new Transition<Statement, INode<Val>>(returningFact,
+																new Transition<Statement, INode<Val>>(solver.getCallAutomaton().getInitialState(),
 																		callStatement,
-																		solver.getCallAutomaton().getInitialState()),
-																weight);
+																		unbalancedState),
+																solver.getCallAutomaton().getOne());
 
 											}
 										});
@@ -245,6 +242,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	public WeightedBoomerang(BoomerangOptions options) {
 		this.options = options;
 		this.stats = options.statsFactory();
+		if(!BoomerangPretransformer.v().isApplied()) {
+			throw new RuntimeException("Using WeightedBoomerang requires a call to BoomerangPretransformer.v().apply() prior constructing the ICFG");
+		}
 	}
 
 	public WeightedBoomerang() {
@@ -1143,9 +1143,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	public abstract Debugger<W> createDebugger();
 
 	public void debugOutput() {
-		if (!DEBUG)
+		if(!logger.isDebugEnabled())
 			return;
-
 		Debugger<W> debugger = getOrCreateDebugger();
 		debugger.done(queryToSolvers);
 		int totalRules = 0;

@@ -155,14 +155,15 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 		@Override
 		public void onOutTransitionAdded(final Transition<N, D> t, W weight, WeightedPAutomaton<N, D, W> aut) {
 			if(t.getLabel().equals(popLabel)){
-				if(fa.isGeneratedState(t.getTarget())){
+				if(fa.isGeneratedState(t.getTarget()) || fa.isUnbalancedState(t.getTarget())){
 					if(popLabel instanceof Empty){
 						throw new RuntimeException("IllegalState");
 					}
 					final W newWeight = (W) weight.extendWith(ruleWeight);
 					update(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget()), newWeight);
 					fa.registerListener(new UpdateTransitivePopListener(new Transition<N, D>(targetState, fa.epsilon(), t.getTarget()),newWeight));
-				} else{
+				}
+				if(fa.isUnbalancedState(t.getTarget())) {
 					fa.unbalancedPop(targetState,t,weight);
 				}
 			}

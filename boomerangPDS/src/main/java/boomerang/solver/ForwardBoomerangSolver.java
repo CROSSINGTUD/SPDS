@@ -24,25 +24,33 @@ import com.google.common.collect.Sets;
 import boomerang.BoomerangOptions;
 import boomerang.ForwardQuery;
 import boomerang.jimple.Field;
+import boomerang.jimple.ValWithFalseVariable;
 import boomerang.jimple.Statement;
 import boomerang.jimple.StaticFieldVal;
 import boomerang.jimple.Val;
 import heros.InterproceduralCFG;
 import soot.Body;
 import soot.Local;
+import soot.NullType;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.ArrayRef;
 import soot.jimple.AssignStmt;
 import soot.jimple.CastExpr;
+import soot.jimple.IfStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.InstanceOfExpr;
+import soot.jimple.IntConstant;
 import soot.jimple.InvokeExpr;
+import soot.jimple.NullConstant;
 import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.ThrowStmt;
+import soot.jimple.internal.JEqExpr;
+import soot.jimple.internal.JNeExpr;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.GeneratedState;
@@ -132,10 +140,13 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	@Override
 	public Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Val fact, Stmt succ) {
 		Set<State> out = Sets.newHashSet();
+
 		if (!isFieldWriteWithBase(curr, fact)) {
 			// always maintain data-flow if not a field write // killFlow has
 			// been taken care of
-			out.add(new Node<Statement, Val>(new Statement((Stmt) succ, method), fact));
+			if(!options.trackReturnOfInstanceOf() || !isInstanceOfStatement(curr,fact)) {
+				out.add(new Node<Statement, Val>(new Statement((Stmt) succ, method), fact));
+			}
 		} else {
 			out.add(new ExclusionNode<Statement, Val, Field>(new Statement(succ, method), fact,
 					getWrittenField(curr)));
@@ -190,10 +201,86 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 				if (castExpr.getOp().equals(fact.value())) {
 					out.add(new Node<Statement,Val>(new Statement(succ, method), new Val(leftOp,method)));
 				}
-				
+			} else if(rightOp instanceof InstanceOfExpr && query.getType() instanceof NullType && options.trackReturnOfInstanceOf()) {
+				InstanceOfExpr instanceOfExpr = (InstanceOfExpr) rightOp;
+				if (instanceOfExpr.getOp().equals(fact.value()) ) {
+					out.add(new Node<Statement,Val>(new Statement(succ, method), new ValWithFalseVariable(fact.value(),method,leftOp)));
+				}
+			}
+		}
+
+		if(curr instanceof IfStmt && query.getType() instanceof NullType) {
+			IfStmt ifStmt = (IfStmt) curr;
+			Stmt target = ifStmt.getTarget();
+			Value condition = ifStmt.getCondition();
+			if(condition instanceof JEqExpr) {
+				JEqExpr eqExpr = (JEqExpr) condition;
+				Value op1 = eqExpr.getOp1();
+				Value op2 = eqExpr.getOp2();
+				if(fact instanceof ValWithFalseVariable) {
+					ValWithFalseVariable valWithFalseVar = (ValWithFalseVariable) fact;
+					if(op1.equals(valWithFalseVar.getFalseVariable())){
+						if(op2.equals(IntConstant.v(0))) {
+							if(!succ.equals(target)) {
+								return Collections.emptySet();
+							}
+						}
+					}
+					if(op2.equals(valWithFalseVar.getFalseVariable())){
+						if(op1.equals(IntConstant.v(0))) {
+							if(!succ.equals(target)) {
+								return Collections.emptySet();
+							}
+						}
+					}
+				}
+				if(op1 instanceof NullConstant) {
+					if(op2.equals(fact.value())) {
+						if(!succ.equals(target)) {
+							return Collections.emptySet();
+						}
+					}
+				} else if(op2 instanceof NullConstant) {
+					if(op1.equals(fact.value())) {
+						if(!succ.equals(target)) {
+							return Collections.emptySet();
+						}
+					}
+				} 
+			}		
+			if(condition instanceof JNeExpr) {
+				JNeExpr eqExpr = (JNeExpr) condition;
+				Value op1 = eqExpr.getOp1();
+				Value op2 = eqExpr.getOp2();
+				if(op1 instanceof NullConstant) {
+					if(op2.equals(fact.value())) {
+						if(succ.equals(target)) {
+							return Collections.emptySet();
+						}
+					}
+				} else if(op2 instanceof NullConstant) {
+					if(op1.equals(fact.value())) {
+						if(succ.equals(target)) {
+							return Collections.emptySet();
+						}
+					}
+				}
 			}
 		}
 		return out;
+	}
+
+	private boolean isInstanceOfStatement(Stmt curr, Val fact) {
+		if(curr instanceof AssignStmt) {
+			AssignStmt as = (AssignStmt) curr;
+			if(as.getRightOp() instanceof InstanceOfExpr  && query.getType() instanceof NullType) {
+				InstanceOfExpr instanceOfExpr = (InstanceOfExpr) as.getRightOp();
+				if (instanceOfExpr.getOp().equals(fact.value())) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	@Override

@@ -26,7 +26,7 @@ import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import boomerang.preanalysis.PreTransformBodies;
+import boomerang.preanalysis.BoomerangPretransformer;
 import boomerang.results.ForwardBoomerangResults;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
@@ -34,10 +34,8 @@ import ideal.IDEALResultHandler;
 import ideal.IDEALSeedSolver;
 import ideal.StoreIDEALResultHandler;
 import soot.Body;
-import soot.PackManager;
 import soot.SceneTransformer;
 import soot.SootMethod;
-import soot.Transform;
 import soot.Unit;
 import soot.Value;
 import soot.jimple.InvokeExpr;
@@ -91,9 +89,10 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 
 	@Override
 	protected SceneTransformer createAnalysisTransformer() throws ImprecisionException {
-		PackManager.v().getPack("wjtp").add(new Transform("wjtp.prepare", new PreTransformBodies()));
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
+				BoomerangPretransformer.v().reset();
+				BoomerangPretransformer.v().apply();
 				icfg = new JimpleBasedInterproceduralCFG(false);
 				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
 				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
