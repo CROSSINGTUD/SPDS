@@ -5,4 +5,4 @@ jdk:
 
 build:
   ci:
-   - mvn verify --fail-at-end -B
+   - mvn verify -P shippableTestSet --fail-at-end -B
