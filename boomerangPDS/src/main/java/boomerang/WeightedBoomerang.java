@@ -631,14 +631,19 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		scopedQueries.add(backwardQuery);
 		boolean timedout = false;
 		try {
-			backwardSolve(backwardQuery);
+			analysisWatch = Stopwatch.createStarted();
+			backwardSolve(backwardQuery);		
+
+			final AbstractBoomerangSolver<W> bwSolver = queryToSolvers.getOrCreate(backwardQuery);
+			Collection<Context> callSiteOf = requester.getCallSiteOf(requester.initialContext(backwardQuery.stmt()));
+			for(Context c : callSiteOf) {
+				bwSolver.registerListener(new CanUnbalancedReturnToCallSite(backwardQuery.stmt().getMethod(), c, bwSolver, requester));
+			}
+			if (analysisWatch.isRunning()) {
+				analysisWatch.stop();
+			}
 		} catch (BoomerangTimeoutException e) {
 			timedout = true;
-		}
-		final AbstractBoomerangSolver<W> bwSolver = queryToSolvers.getOrCreate(backwardQuery);
-		Collection<Context> callSiteOf = requester.getCallSiteOf(requester.initialContext(backwardQuery.stmt()));
-		for(Context c : callSiteOf) {
-			bwSolver.registerListener(new CanUnbalancedReturnToCallSite(backwardQuery.stmt().getMethod(), c, bwSolver, requester));
 		}
 		
 		 return new BackwardBoomerangResults<W>(backwardQuery, timedout, this.queryToSolvers, getStats(), analysisWatch);
