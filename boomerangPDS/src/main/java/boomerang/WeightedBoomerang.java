@@ -101,10 +101,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		protected AbstractBoomerangSolver<W> createItem(final Query key) {
 			final AbstractBoomerangSolver<W> solver;
 			if (key instanceof BackwardQuery) {
-				logger.debug("Backward solving query: " + key);
+				System.out.println("Backward solving query: " + key);
 				solver = createBackwardSolver((BackwardQuery) key);
 			} else {
-				logger.debug("Forward solving query: " + key);
+				System.out.println("Forward solving query: " + key);
 				solver = createForwardSolver((ForwardQuery) key);
 			}
 			solver.getCallAutomaton()
@@ -664,6 +664,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
 			if(startPointsOf.contains(reachableNode.stmt().getUnit().get())){
 				Node<Statement,AbstractBoomerangSolver<W>> solverPair = new Node<>(callSite.getStmt(),bwSolver);
+				bwSolver.addReachable(callSite.getStmt().getMethod());
 				triggerUnbalancedPop(solverPair);
 				for(Context parent : req.getCallSiteOf(callSite)) {
 					bwSolver.registerListener(new CanUnbalancedReturnToCallSite(callSite.getStmt().getMethod(), parent, bwSolver, req));

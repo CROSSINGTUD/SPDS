@@ -156,7 +156,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 	}
 	
 	@Deprecated
-	public Set<AccessPath> getAllAliases() {
+	public Set<AccessPath> getAllAliases(Statement stmt) {
 		final Set<AccessPath> results = Sets.newHashSet();
 		for (final Query fw : getAllocationSites().keySet()) {
 			if(fw instanceof BackwardQuery)
@@ -165,14 +165,14 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 				
 				@Override
 				public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
-					if(reachableNode.stmt().equals(query.stmt())){
+					if(reachableNode.stmt().equals(stmt)){
 						Val base = reachableNode.fact();
 						final INode<Node<Statement, Val>> allocNode = queryToSolvers.getOrCreate(fw).getFieldAutomaton().getInitialState();			
 						queryToSolvers.getOrCreate(fw).getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 							@Override
 							public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-								if(t.getStart().fact().stmt().equals(query.stmt()) && !(t.getStart() instanceof GeneratedState) && t.getStart().fact().fact().equals(base)){
+								if(t.getStart().fact().stmt().equals(stmt) && !(t.getStart() instanceof GeneratedState) && t.getStart().fact().fact().equals(base)){
 									if (t.getLabel().equals(Field.empty())) {
 										if (t.getTarget().equals(allocNode)) {
 											results.add(new AccessPath(base));
@@ -193,7 +193,10 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 		}
 		return results;
 	}
-	
+	@Deprecated
+	public Set<AccessPath> getAllAliases() {
+		return getAllAliases(query.stmt());
+	}
 	private class ExtractAccessPathStateListener extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
 		private INode<Node<Statement, Val>> allocNode;
