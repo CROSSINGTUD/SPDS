@@ -101,10 +101,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		protected AbstractBoomerangSolver<W> createItem(final Query key) {
 			final AbstractBoomerangSolver<W> solver;
 			if (key instanceof BackwardQuery) {
-				System.out.println("Backward solving query: " + key);
+				logger.debug("Backward solving query: " + key);
 				solver = createBackwardSolver((BackwardQuery) key);
 			} else {
-				System.out.println("Forward solving query: " + key);
+				logger.debug("Forward solving query: " + key);
 				solver = createForwardSolver((ForwardQuery) key);
 			}
 			solver.getCallAutomaton()
