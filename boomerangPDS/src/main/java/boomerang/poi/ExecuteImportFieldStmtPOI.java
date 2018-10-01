@@ -79,7 +79,59 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 		}
 
 	}
+	private final class ImportOnReachStatement implements SyncPDSUpdateListener<Statement, Val> {
+		private final Statement callSiteOrExitStmt;
+		private AbstractBoomerangSolver<W> flowSolver;
+
+		private ImportOnReachStatement(AbstractBoomerangSolver<W> flowSolver, Statement callSiteOrExitStmt) {
+			this.flowSolver = flowSolver;
+			this.callSiteOrExitStmt = callSiteOrExitStmt;
+		}
+
+		@Override
+		public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
+			if(reachableNode.stmt().equals(callSiteOrExitStmt)) {
+				baseSolver.registerStatementFieldTransitionListener(
+						new CallSiteOrExitStmtImport(flowSolver, baseSolver, reachableNode));
+			}
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((callSiteOrExitStmt == null) ? 0 : callSiteOrExitStmt.hashCode());
+			result = prime * result + ((flowSolver == null) ? 0 : flowSolver.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ImportOnReachStatement other = (ImportOnReachStatement) obj;
+			if (callSiteOrExitStmt == null) {
+				if (other.callSiteOrExitStmt != null)
+					return false;
+			} else if (!callSiteOrExitStmt.equals(other.callSiteOrExitStmt))
+				return false;
+			if (flowSolver == null) {
+				if (other.flowSolver != null)
+					return false;
+			} else if (!flowSolver.equals(other.flowSolver))
+				return false;
+			return true;
+		}
+
+		
+	}
 	private class ForAnyCallSiteOrExitStmt implements WPAUpdateListener<Statement, INode<Val>, W> {
+
+		
 
 		private AbstractBoomerangSolver<W> baseSolver;
 
@@ -121,17 +173,7 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 		private void importSolvers(Statement callSiteOrExitStmt, INode<Val> node, W w) {
 			baseSolver.registerStatementCallTransitionListener(
 					new ImportTransitionFromCall(flowSolver, callSiteOrExitStmt, node, w));
-			baseSolver.registerListener(new SyncPDSUpdateListener<Statement, Val>() {
-				
-				@Override
-				public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
-					if(reachableNode.stmt().equals(callSiteOrExitStmt)) {
-						baseSolver.registerStatementFieldTransitionListener(
-								new CallSiteOrExitStmtImport(flowSolver, baseSolver, reachableNode));
-					}
-					
-				}
-			});
+			baseSolver.registerListener(new ImportOnReachStatement(flowSolver, callSiteOrExitStmt));
 		}
 
 		@Override
@@ -476,6 +518,9 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 	}
 
 	protected void importStartingFrom(Transition<Field, INode<Node<Statement, Val>>> t) {
+		if(t.getLabel().equals(Field.epsilon())) {
+			return;
+		}
 		if (t.getLabel().equals(Field.empty())) {
 			activate(t.getStart());
 		} else {
@@ -515,6 +560,8 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 		@Override
 		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
 				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+			if(t.getLabel().equals(Field.epsilon()))
+				return;
 			importStartingFrom(t);
 		}
 
