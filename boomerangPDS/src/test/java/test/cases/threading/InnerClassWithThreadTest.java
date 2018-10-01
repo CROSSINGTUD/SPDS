@@ -21,6 +21,7 @@ import test.core.selfrunning.AllocatedObject;
 
 public class InnerClassWithThreadTest extends AbstractBoomerangTest {
 	private static Alloc param;
+	@Ignore
 	@Test
 	public void runWithThreadStatic(){
 		param = new Alloc();

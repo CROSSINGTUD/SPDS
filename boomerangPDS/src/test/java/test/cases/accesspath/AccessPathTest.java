@@ -62,6 +62,7 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		}
 		accessPathQueryFor(alloc,"a[b];b[b]");
 	}
+	@Ignore
 	@Test
 	public void getAllAliasesLooped(){
 		A a = new A();
@@ -73,6 +74,7 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		}
 		accessPathQueryFor(alloc,"a[b];alloc[c]*");
 	}
+	@Ignore
 	@Test
 	public void getAllAliasesLoopedComplex(){
 		A a = new A();
