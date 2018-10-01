@@ -153,8 +153,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 								}
 							}
 						}
-
-
 					});
 			stats.registerSolver(key, solver);
 			solver.registerListener(new SyncPDSUpdateListener<Statement, Val>() {
@@ -628,6 +626,106 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		});
 		 return new BackwardBoomerangResults<W>(backwardQuery, timedout, this.queryToSolvers, getStats(), analysisWatch);
 	}
+	
+	public BackwardBoomerangResults<W> backwardSolveUnderScope(BackwardQuery backwardQuery, IContextRequester requester) {
+		scopedQueries.add(backwardQuery);
+		boolean timedout = false;
+		try {
+			if (analysisWatch.isRunning()) {
+				analysisWatch.stop();
+			}
+			analysisWatch = Stopwatch.createStarted();
+			backwardSolve(backwardQuery);		
+
+			final AbstractBoomerangSolver<W> bwSolver = queryToSolvers.getOrCreate(backwardQuery);
+			Collection<Context> callSiteOf = requester.getCallSiteOf(requester.initialContext(backwardQuery.stmt()));
+			for(Context c : callSiteOf) {
+				bwSolver.registerListener(new CanUnbalancedReturnToCallSite(backwardQuery.stmt().getMethod(), c, bwSolver, requester));
+			}
+			if (analysisWatch.isRunning()) {
+				analysisWatch.stop();
+			}
+		} catch (BoomerangTimeoutException e) {
+			timedout = true;
+		}
+		
+		 return new BackwardBoomerangResults<W>(backwardQuery, timedout, this.queryToSolvers, getStats(), analysisWatch);
+	}
+	
+	private class CanUnbalancedReturnToCallSite implements SyncPDSUpdateListener<Statement, Val> {
+
+		private AbstractBoomerangSolver<W> bwSolver;
+		private SootMethod method;
+		private Collection<Unit> startPointsOf;
+		private Context callSite;
+		private IContextRequester req;
+
+		public CanUnbalancedReturnToCallSite(SootMethod method, Context callSite, AbstractBoomerangSolver<W> bwSolver, IContextRequester req) {
+					this.method = method;
+					this.callSite = callSite;
+					this.bwSolver = bwSolver;
+					this.req = req;
+					this.startPointsOf = icfg().getStartPointsOf(method);
+		}
+
+		@Override
+		public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
+			if(startPointsOf.contains(reachableNode.stmt().getUnit().get())){
+				Node<Statement,AbstractBoomerangSolver<W>> solverPair = new Node<>(callSite.getStmt(),bwSolver);
+				bwSolver.addReachable(callSite.getStmt().getMethod());
+				triggerUnbalancedPop(solverPair);
+				for(Context parent : req.getCallSiteOf(callSite)) {
+					bwSolver.registerListener(new CanUnbalancedReturnToCallSite(callSite.getStmt().getMethod(), parent, bwSolver, req));
+				}
+			}
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((bwSolver == null) ? 0 : bwSolver.hashCode());
+			result = prime * result + ((method == null) ? 0 : method.hashCode());
+			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			CanUnbalancedReturnToCallSite other = (CanUnbalancedReturnToCallSite) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (bwSolver == null) {
+				if (other.bwSolver != null)
+					return false;
+			} else if (!bwSolver.equals(other.bwSolver))
+				return false;
+			if (method == null) {
+				if (other.method != null)
+					return false;
+			} else if (!method.equals(other.method))
+				return false;
+			if (callSite == null) {
+				if (other.callSite != null)
+					return false;
+			} else if (!callSite.equals(other.callSite))
+				return false;
+			return true;
+		}
+
+		private WeightedBoomerang getOuterType() {
+			return WeightedBoomerang.this;
+		}
+
+	}
+	
 	private class CanUnbalancedReturn implements SyncPDSUpdateListener<Statement, Val> {
 
 		private AbstractBoomerangSolver<W> bwSolver;
@@ -901,7 +999,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		if (unit.isPresent()) {
 			for (Unit succ : bwicfg().getSuccsOf(unit.get())) {
 				solver.solve(new Node<Statement, Val>(new Statement((Stmt) succ, icfg().getMethodOf(succ)),
-						query.asNode().fact()));
+						query.asNode().fact()), query.getFields());
 			}
 		}
 	}
@@ -942,7 +1040,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				}
 				if (query instanceof WeightedForwardQuery) {
 					WeightedForwardQuery<W> q = (WeightedForwardQuery<W>) query;
-					solver.solve(source, q.weight());
+					solver.solve(source, q.getFields(), q.weight());
 				} else {
 					solver.solve(source);
 				}
