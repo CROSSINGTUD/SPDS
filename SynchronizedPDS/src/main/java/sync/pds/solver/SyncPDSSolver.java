@@ -406,23 +406,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		}
 	}
 
-	public void solve(Node<Stmt, Fact> curr, List<Field> fields, W weight) {
-		INode<Node<Stmt, Fact>> start = null;
-		INode<Node<Stmt, Fact>> target = null;
-		for(int i = 0; i < fields.size(); i++) {
-			if(i == 0) {
-				start = asFieldFact(curr);
-			} else {
-				start = target;
-			}
-			if(i == (fields.size() -1)) {
-				target = fieldAutomaton.getInitialState();
-			} else {
-				target = this.generateFieldState(fieldAutomaton.getInitialState(), fields.get(i));
-			}
-			Transition<Field, INode<Node<Stmt,Fact>>> fieldTrans = new Transition<Field, INode<Node<Stmt,Fact>>>(start, fields.get(i), target);
-			fieldAutomaton.addTransition(fieldTrans);
-		}
+	public void solve(Node<Stmt, Fact> curr, W weight) {
+		INode<Node<Stmt, Fact>> start = asFieldFact(curr);
+		INode<Node<Stmt, Fact>> target = fieldAutomaton.getInitialState();
+		Transition<Field, INode<Node<Stmt,Fact>>> fieldTrans = new Transition<Field, INode<Node<Stmt,Fact>>>(start, emptyField(), target);
+		fieldAutomaton.addTransition(fieldTrans);
 		Transition<Stmt, INode<Fact>> callTrans = createInitialCallTransition(curr);
 		callAutomaton
 				.addWeightForTransition(callTrans,weight);
@@ -430,13 +418,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 	
 	public void solve(Node<Stmt, Fact> curr) {
-		List<Field> empty = Lists.newArrayList();
-		empty.add(emptyField());
-		solve(curr,empty,getCallWeights().getOne());
-	}
-
-	public void solve(Node<Stmt, Fact> curr, List<Field> fields) {
-		solve(curr,fields,getCallWeights().getOne());
+		solve(curr,getCallWeights().getOne());
 	}
 
 	private Transition<Stmt, INode<Fact>> createInitialCallTransition(Node<Stmt, Fact> curr){

@@ -999,7 +999,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		if (unit.isPresent()) {
 			for (Unit succ : bwicfg().getSuccsOf(unit.get())) {
 				solver.solve(new Node<Statement, Val>(new Statement((Stmt) succ, icfg().getMethodOf(succ)),
-						query.asNode().fact()), query.getFields());
+						query.asNode().fact()));
 			}
 		}
 	}
@@ -1040,7 +1040,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				}
 				if (query instanceof WeightedForwardQuery) {
 					WeightedForwardQuery<W> q = (WeightedForwardQuery<W>) query;
-					solver.solve(source, q.getFields(), q.weight());
+					solver.solve(source, q.weight());
 				} else {
 					solver.solve(source);
 				}

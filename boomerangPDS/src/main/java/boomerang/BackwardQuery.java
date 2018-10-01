@@ -11,9 +11,6 @@
  *******************************************************************************/
 package boomerang;
 
-import java.util.List;
-
-import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 
@@ -21,10 +18,7 @@ public class BackwardQuery extends Query {
 	public BackwardQuery(Statement stmt, Val variable) {
 		super(stmt, variable);
 	}
-	public BackwardQuery(Statement stmt, Val variable, List<Field> fields) {
-		super(stmt, variable, fields);
-	}
-	
+
 	@Override
 	public String toString() {
 		return "BackwardQuery: "+ super.toString();
