@@ -631,6 +631,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		scopedQueries.add(backwardQuery);
 		boolean timedout = false;
 		try {
+			if (analysisWatch.isRunning()) {
+				analysisWatch.stop();
+			}
 			analysisWatch = Stopwatch.createStarted();
 			backwardSolve(backwardQuery);		
 
