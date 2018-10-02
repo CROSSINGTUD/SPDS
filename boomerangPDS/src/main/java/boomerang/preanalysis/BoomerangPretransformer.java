@@ -32,7 +32,6 @@ import soot.jimple.ClassConstant;
 import soot.jimple.Constant;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.ReturnStmt;
-import soot.jimple.ReturnVoidStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.internal.JAssignStmt;

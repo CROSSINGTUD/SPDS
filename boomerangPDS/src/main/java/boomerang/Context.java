@@ -1,7 +1,6 @@
 package boomerang;
 
 import boomerang.jimple.Statement;
-import soot.Unit;
 
 /**
  * A context is stored within the context graph. And must at least have a statement associated with

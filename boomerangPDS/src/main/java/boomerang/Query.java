@@ -11,12 +11,6 @@
  *******************************************************************************/
 package boomerang;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import com.google.common.collect.Lists;
-
-import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import soot.Type;

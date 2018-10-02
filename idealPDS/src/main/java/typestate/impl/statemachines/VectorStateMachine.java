@@ -18,22 +18,16 @@ import java.util.Set;
 import java.util.Vector;
 
 import boomerang.WeightedForwardQuery;
-import boomerang.jimple.AllocVal;
-import boomerang.jimple.Statement;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
-import soot.Value;
-import soot.jimple.AssignStmt;
-import soot.jimple.NewExpr;
-import soot.jimple.Stmt;
 import typestate.TransitionFunction;
-import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
 import typestate.finiteautomata.State;
+import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public class VectorStateMachine extends TypeStateMachineWeightFunctions {
 

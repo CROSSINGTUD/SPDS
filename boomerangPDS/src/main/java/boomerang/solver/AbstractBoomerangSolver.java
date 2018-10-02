@@ -39,7 +39,6 @@ import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.util.RegExAccessPath;
-import heros.InterproceduralCFG;
 import pathexpression.IRegEx;
 import soot.NullType;
 import soot.RefType;

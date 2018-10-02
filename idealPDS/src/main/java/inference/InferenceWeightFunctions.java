@@ -11,7 +11,6 @@
  *******************************************************************************/
 package inference;
 
-import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import soot.Local;

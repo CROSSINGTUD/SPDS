@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Maps;
 
 import boomerang.ForwardQuery;
 import boomerang.Query;

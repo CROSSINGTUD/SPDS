@@ -12,18 +12,13 @@
 package ideal;
 
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Set;
-
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
@@ -31,11 +26,7 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import ideal.IDEALSeedSolver.Phases;
 import sync.pds.solver.WeightFunctions;
-import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import test.cases.sets.HashMapsLongTest;
-import wpds.impl.NormalRule;
-import wpds.impl.Rule;
 import wpds.impl.Weight;
 
 public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<Statement,Val,Statement,W> {

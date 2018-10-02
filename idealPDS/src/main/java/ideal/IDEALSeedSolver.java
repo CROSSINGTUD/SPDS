@@ -46,7 +46,6 @@ import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.ConnectPushListener;
-import wpds.impl.PAutomaton;
 import wpds.impl.StackListener;
 import wpds.impl.Transition;
 import wpds.impl.Weight;

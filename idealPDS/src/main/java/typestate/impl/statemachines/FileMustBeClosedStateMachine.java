@@ -13,15 +13,16 @@ package typestate.impl.statemachines;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Set;
 
 import boomerang.WeightedForwardQuery;
 import soot.SootMethod;
 import soot.Unit;
 import typestate.TransitionFunction;
-import typestate.finiteautomata.*;
+import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
+import typestate.finiteautomata.State;
+import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public class FileMustBeClosedStateMachine extends TypeStateMachineWeightFunctions{
 

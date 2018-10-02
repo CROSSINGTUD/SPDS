@@ -19,10 +19,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import boomerang.WeightedForwardQuery;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
 
+import boomerang.WeightedForwardQuery;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;

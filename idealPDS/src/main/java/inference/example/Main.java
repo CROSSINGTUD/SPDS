@@ -22,7 +22,6 @@ import java.util.Map.Entry;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Table;
 
-import afu.org.checkerframework.checker.units.qual.s;
 import boomerang.WeightedForwardQuery;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Statement;
@@ -49,7 +48,6 @@ import soot.jimple.NewExpr;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import soot.options.Options;
 import sync.pds.solver.WeightFunctions;
-import sync.pds.solver.nodes.Node;
 
 public class Main {
 	public static void main(String... args) {
