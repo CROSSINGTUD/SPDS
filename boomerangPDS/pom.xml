@@ -24,8 +24,6 @@
 				<version>2.21.0</version>
 				<configuration>
 					<argLine>-Xmx8G -Xss128m</argLine>
-					<forkCount>1.5C</forkCount>
-					<reuseForks>true</reuseForks>
                     <reportsDirectory>../shippable/testresults/boomerangPDS</reportsDirectory>
 				</configuration>
 			</plugin>
