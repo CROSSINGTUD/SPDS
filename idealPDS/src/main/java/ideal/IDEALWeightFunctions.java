@@ -33,6 +33,7 @@ import ideal.IDEALSeedSolver.Phases;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import test.cases.sets.HashMapsLongTest;
 import wpds.impl.NormalRule;
 import wpds.impl.Rule;
 import wpds.impl.Weight;
@@ -41,10 +42,10 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 
 	private static final Logger logger = LogManager.getLogger();
 	private WeightFunctions<Statement,Val,Statement,W> delegate;
-	private Set<NonOneFlowListener<W>> listeners = Sets.newHashSet(); 
+	private Set<NonOneFlowListener> listeners = Sets.newHashSet(); 
 	private Set<Statement> potentialStrongUpdates = Sets.newHashSet();
 	private Set<Statement> weakUpdates = Sets.newHashSet();
-	private Multimap<Node<Statement,Val>, W> nonOneFlowNodes = HashMultimap.create();
+	private Set<Node<Statement,Val>> nonOneFlowNodes = Sets.newHashSet();
 	private Phases phase;
 	private boolean strongUpdates;
 	private Multimap<Node<Statement,Val>, Node<Statement,Val>> indirectAlias = HashMultimap.create(); 
@@ -65,9 +66,9 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	}
 	
 	void addOtherThanOneWeight(Node<Statement, Val> curr, W weight) {
-		if(nonOneFlowNodes.put(curr, weight)){
-			for(NonOneFlowListener<W> l : Lists.newArrayList(listeners)){
-				l.nonOneFlow(curr,weight);
+		if(nonOneFlowNodes.add(curr)){
+			for(NonOneFlowListener l : Lists.newArrayList(listeners)){
+				l.nonOneFlow(curr);
 			}
 		}
 	}
@@ -94,10 +95,10 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 		return delegate.pop(curr, location);
 	}
 
-	public void registerListener(NonOneFlowListener<W> listener){
+	public void registerListener(NonOneFlowListener listener){
 		if(listeners.add(listener)){
-			for(Entry<Node<Statement, Val>, W> existing : Lists.newArrayList(nonOneFlowNodes.entries())){
-				listener.nonOneFlow(existing.getKey(),existing.getValue());
+			for(Node<Statement, Val> existing : Lists.newArrayList(nonOneFlowNodes)){
+				listener.nonOneFlow(existing);
 			}
 		}
 	}

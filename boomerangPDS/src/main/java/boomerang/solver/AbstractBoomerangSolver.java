@@ -720,5 +720,14 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	public Collection<SootMethod> getReachableMethods() {
 		return reachableMethods;
 	}
+
+	public void cleanup() {
+		this.callAutomaton.clearListener();
+		this.fieldAutomaton.clearListener();
+		this.queuedReachableMethod.clear();
+		this.perMethodFieldTransitionsListener.clear();
+		this.perStatementCallTransitionsListener.clear();
+		this.perStatementFieldTransitionsListener.clear();
+	}
 	
 }

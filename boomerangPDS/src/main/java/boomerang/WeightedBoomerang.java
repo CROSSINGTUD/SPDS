@@ -192,11 +192,11 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		
 	}
 
-	private void checkTimeout() {
+	public void checkTimeout() {
 		if (options.analysisTimeoutMS() > 0) {
 			long elapsed = analysisWatch.elapsed(TimeUnit.MILLISECONDS);
 			if (elapsed - lastTick > 15000) {
-				System.out.println("Alive " + elapsed);
+				System.out.println("Alive " + elapsed + "  " + options.analysisTimeoutMS());
 				lastTick = elapsed;
 			}
 			if (options.analysisTimeoutMS() < elapsed) {
@@ -606,37 +606,47 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		boolean timedout = false;
 		try {
 			backwardSolve(backwardQuery);
-		} catch (BoomerangTimeoutException e) {
-			timedout = true;
-		}
-		final AbstractBoomerangSolver<W> bwSolver = queryToSolvers.getOrCreate(backwardQuery);
-		AbstractBoomerangSolver<W> fwSolver = queryToSolvers.getOrCreate(forwardQuery);
-		fwSolver.registerReachableMethodListener(new ReachableMethodListener<W>() {
-			@Override
-			public void reachable(SootMethod m) {
-				bwSolver.addReachable(m);
-			}
-		});
-		
-		fwSolver.getCallAutomaton().registerListener(new StackListener<Statement,INode<Val>,W>(fwSolver.getCallAutomaton(), new SingleNode<>(node.fact()), node.stmt()) {
+			final AbstractBoomerangSolver<W> bwSolver = queryToSolvers.getOrCreate(backwardQuery);
+			AbstractBoomerangSolver<W> fwSolver = queryToSolvers.getOrCreate(forwardQuery);
+			fwSolver.registerReachableMethodListener(new ReachableMethodListener<W>() {
+				@Override
+				public void reachable(SootMethod m) {
+					bwSolver.addReachable(m);
+				}
+			});
+			
+			fwSolver.getCallAutomaton().registerListener(new StackListener<Statement,INode<Val>,W>(fwSolver.getCallAutomaton(), new SingleNode<>(node.fact()), node.stmt()) {
 
-			@Override
-			public void stackElement(Statement child, Statement callSite) {
-				for(Statement realCall : fwSolver.getPredsOf(callSite)){
-					if(realCall.isCallsite()) {
-						triggerUnbalancedPop(new Node<Statement,AbstractBoomerangSolver<W>>(realCall,bwSolver));
+				@Override
+				public void stackElement(Statement callSite) {
+					for(Statement realCall : fwSolver.getPredsOf(callSite)){
+						if(realCall.isCallsite()) {
+							triggerUnbalancedPop(new Node<Statement,AbstractBoomerangSolver<W>>(realCall,bwSolver));
+						}
 					}
 				}
-			}
 
-			@Override
-			public void anyContext(Statement end) {
-				bwSolver.registerListener(new CanUnbalancedReturn(end.getMethod(),bwSolver));
-			}
-		});
+				@Override
+				public void anyContext(Statement end) {
+					bwSolver.registerListener(new CanUnbalancedReturn(end.getMethod(),bwSolver));
+				}
+			});
+		} catch (BoomerangTimeoutException e) {
+			timedout = true;
+			cleanup();
+		}
+		
 		 return new BackwardBoomerangResults<W>(backwardQuery, timedout, this.queryToSolvers, getStats(), analysisWatch);
 	}
 	
+	private void cleanup() {
+		for(AbstractBoomerangSolver<W> solver : queryToSolvers.values()) {
+			solver.cleanup();
+		}
+		this.poiListeners.clear();
+		this.unbalancedListeners.clear();
+	}
+
 	public BackwardBoomerangResults<W> backwardSolveUnderScope(BackwardQuery backwardQuery, IContextRequester requester) {
 		scopedQueries.add(backwardQuery);
 		boolean timedout = false;
@@ -657,6 +667,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			}
 		} catch (BoomerangTimeoutException e) {
 			timedout = true;
+			cleanup();
 		}
 		
 		 return new BackwardBoomerangResults<W>(backwardQuery, timedout, this.queryToSolvers, getStats(), analysisWatch);
@@ -971,6 +982,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			logger.debug("Terminated forward analysis of: {}", query);
 		} catch (BoomerangTimeoutException e) {
 			timedout = true;
+			cleanup();
 			logger.debug("Timeout of query: {}", query);
 		}
 
@@ -992,6 +1004,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			logger.debug("Terminated backward analysis of: {}", query);
 		} catch (BoomerangTimeoutException e) {
 			timedout = true;
+			cleanup();
 			logger.debug("Timeout of query: {}", query);
 		}
 		if (analysisWatch.isRunning()) {

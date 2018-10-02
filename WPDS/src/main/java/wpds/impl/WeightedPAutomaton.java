@@ -764,5 +764,15 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	
 	public void addUnbalancedState(D state) {
 		unbalancedStates.add(state);
+	}
+
+	public void clearListener() {
+		this.conntectedPushListeners.clear();
+		this.nestedAutomataListeners.clear();
+		this.stateListeners.clear();
+		this.listeners.clear();
+		this.stateToEpsilonReachabilityListener.clear();
+		this.stateToReachabilityListener.clear();
+		this.unbalancedPopListeners.clear();
 	} 
 }
