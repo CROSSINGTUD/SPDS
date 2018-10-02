@@ -155,25 +155,21 @@ public abstract class WeightedBoomerang<W extends Weight> {
 						}
 					});
 			stats.registerSolver(key, solver);
-			solver.registerListener(new SyncPDSUpdateListener<Statement, Val>() {
-
+			solver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
 				@Override
-				public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
-					if (options.analysisTimeoutMS() > 0) {
-						long elapsed = analysisWatch.elapsed(TimeUnit.MILLISECONDS);
-						if (elapsed - lastTick > 15000) {
-							// System.err.println(stats);
-							lastTick = elapsed;
-						}
-						if (options.analysisTimeoutMS() < elapsed) {
-							if (analysisWatch.isRunning())
-								analysisWatch.stop();
-							throw new BoomerangTimeoutException(elapsed, stats);
-						}
-					}
+				public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
+						WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+					checkTimeout();
 				}
 			});
+			solver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement,Val>>, W>() {
 
+				@Override
+				public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
+						WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+					checkTimeout();
+				}
+			});
 			SeedFactory<W> seedFactory = getSeedFactory();
 			if (seedFactory != null) {
 				for (SootMethod m : seedFactory.getMethodScope(key)) {
@@ -195,7 +191,21 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		}
 		
 	}
-	
+
+	private void checkTimeout() {
+		if (options.analysisTimeoutMS() > 0) {
+			long elapsed = analysisWatch.elapsed(TimeUnit.MILLISECONDS);
+			if (elapsed - lastTick > 15000) {
+				System.out.println("Alive " + elapsed);
+				lastTick = elapsed;
+			}
+			if (options.analysisTimeoutMS() < elapsed) {
+				if (analysisWatch.isRunning())
+					analysisWatch.stop();
+				throw new BoomerangTimeoutException(elapsed, stats);
+			}
+		}
+	}
 	Multimap<Node<Statement,AbstractBoomerangSolver<W>>,UnbalancedPopHandler<W>> unbalancedListeners = HashMultimap.create();
 	Set<Node<Statement,AbstractBoomerangSolver<W>>> unbalancedPopPairs = Sets.newHashSet();
 	

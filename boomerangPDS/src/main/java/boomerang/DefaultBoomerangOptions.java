@@ -98,7 +98,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 
 	@Override
 	public boolean trackReturnOfInstanceOf() {
-		return true;
+		return false;
 	}
 	
 	@Override

@@ -520,6 +520,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	@Override
 	protected void processNode(final Node<Statement, Val> witnessNode) {
+		if(witnessNode.stmt().getUnit().isPresent() && !icfg.isReachable(witnessNode.stmt().getUnit().get()))
+			return;
 		submit(witnessNode.stmt().getMethod(), new Runnable() {
 			@Override
 			public void run() {
