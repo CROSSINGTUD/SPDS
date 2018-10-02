@@ -93,7 +93,9 @@ public class IDEALAnalysis<W extends Weight> {
 	}
 	public ForwardBoomerangResults<W> run(ForwardQuery seed) {
 		IDEALSeedSolver<W> idealAnalysis = new IDEALSeedSolver<W>(analysisDefinition, seed, seedFactory);
-		return idealAnalysis.run();
+		ForwardBoomerangResults<W> res = idealAnalysis.run();
+		analysisDefinition.getResultHandler().report((WeightedForwardQuery)seed,res);
+		return res;
 	}
 	private void printOptions() {
 		if(PRINT_OPTIONS) {
