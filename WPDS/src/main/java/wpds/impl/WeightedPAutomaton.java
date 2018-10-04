@@ -401,8 +401,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		return nested;
 	}
 
-	public void reconnectPush(N callSite, N returnSite,D returnedFact,  W combinedWeight, W returnedWeight) {
-		WeightedPAutomaton<N, D, W>.ReturnSiteWithWeights returnSiteWithWeights = new ReturnSiteWithWeights(callSite, returnSite, returnedFact,combinedWeight, returnedWeight);
+	public void reconnectPush(N callSite, N returnSite,D returnedFact, W returnedWeight) {
+		WeightedPAutomaton<N, D, W>.ReturnSiteWithWeights returnSiteWithWeights = new ReturnSiteWithWeights(callSite, returnSite, returnedFact, returnedWeight);
 		if(connectedPushes.add(returnSiteWithWeights )){
 			for(ConnectPushListener<N, D, W> l : Lists.newArrayList(conntectedPushListeners)){
 				l.connect(returnSiteWithWeights.callSite, returnSiteWithWeights.returnSite, returnSiteWithWeights.returnedFact, returnSiteWithWeights.returnedWeight);
@@ -490,16 +490,14 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private class ReturnSiteWithWeights{
 
 		private final N returnSite;
-		private final W combinedWeight;
 		private final W returnedWeight;
 		private final D returnedFact;
 		private final N callSite;
 
-		public ReturnSiteWithWeights(N callSite, N returnSite, D returnedFact, W combinedWeight, W returnedWeight) {
+		public ReturnSiteWithWeights(N callSite, N returnSite, D returnedFact, W returnedWeight) {
 			this.callSite =  callSite;
 			this.returnSite = returnSite;
 			this.returnedFact = returnedFact;
-			this.combinedWeight = combinedWeight;
 			this.returnedWeight = returnedWeight;
 		}
 
@@ -509,10 +507,8 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 			int result = 1;
 			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
-			result = prime * result + ((combinedWeight == null) ? 0 : combinedWeight.hashCode());
 			result = prime * result + ((returnSite == null) ? 0 : returnSite.hashCode());
 			result = prime * result + ((returnedFact == null) ? 0 : returnedFact.hashCode());
-			result = prime * result + ((returnedWeight == null) ? 0 : returnedWeight.hashCode());
 			return result;
 		}
 
@@ -531,11 +527,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 				if (other.callSite != null)
 					return false;
 			} else if (!callSite.equals(other.callSite))
-				return false;
-			if (combinedWeight == null) {
-				if (other.combinedWeight != null)
-					return false;
-			} else if (!combinedWeight.equals(other.combinedWeight))
 				return false;
 			if (returnSite == null) {
 				if (other.returnSite != null)

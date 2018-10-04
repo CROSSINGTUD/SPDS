@@ -369,12 +369,12 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 	}
 	
 	private class UpdateEpsilonOnPushListener extends WPAStateListener<N, D, W>{
-		private Transition<N, D> transition;
 		private N callSite;
+		private N succOfCallSite;
 
 		public UpdateEpsilonOnPushListener(Transition<N, D> transition, N callSite){
 			super(transition.getStart());
-			this.transition = transition;
+			this.succOfCallSite = transition.getLabel();
 			this.callSite = callSite;
 		}
 
@@ -385,8 +385,7 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 		@Override
 		public void onInTransitionAdded(Transition<N, D> t, W weight, WeightedPAutomaton<N, D, W> aut) {
 			if (t.getString().equals(fa.epsilon())) {
-				W newWeight = getWeightFor(transition);
-				fa.reconnectPush(callSite, transition.getLabel(),t.getStart(), newWeight, weight);
+				fa.reconnectPush(callSite, succOfCallSite,t.getStart(), weight);
 			}	
 		}
 
@@ -395,7 +394,7 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 			final int prime = 31;
 			int result = super.hashCode();
 			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
-			result = prime * result + ((transition == null) ? 0 : transition.hashCode());
+			result = prime * result + ((succOfCallSite == null) ? 0 : succOfCallSite.hashCode());
 			return result;
 		}
 
@@ -413,10 +412,10 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 					return false;
 			} else if (!callSite.equals(other.callSite))
 				return false;
-			if (transition == null) {
-				if (other.transition != null)
+			if (succOfCallSite == null) {
+				if (other.succOfCallSite != null)
 					return false;
-			} else if (!transition.equals(other.transition))
+			} else if (!succOfCallSite.equals(other.succOfCallSite))
 				return false;
 			return true;
 		}

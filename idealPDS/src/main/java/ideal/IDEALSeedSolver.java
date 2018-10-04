@@ -37,6 +37,7 @@ import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import soot.SootMethod;
 import soot.Unit;
+import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
@@ -152,6 +153,8 @@ public class IDEALSeedSolver<W extends Weight> {
 
 		@Override
 		public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
+			if(!solver.valueUsedInStatement((Stmt) callSite.getUnit().get(), returnedFact.fact()))
+				return;
 			if (callSite.equals(cs)) {
 				solver.getCallAutomaton().registerListener(new AddIndirectFlowAtCallSite(callSite, returnSite, returnedFact.fact()));
 			}
@@ -405,9 +408,10 @@ public class IDEALSeedSolver<W extends Weight> {
 					return;
 				if (!callSite.getMethod().equals(returnSite.getMethod()))
 					return;
+				if(!boomerang.getSolvers().getOrCreate(seed).valueUsedInStatement((Stmt) callSite.getUnit().get(), returnedFact.fact()))
+					return;
 				if (!w.equals(one)) {
-					idealWeightFunctions.addOtherThanOneWeight(new Node<Statement, Val>(callSite, returnedFact.fact()),
-							w);
+					idealWeightFunctions.addOtherThanOneWeight(new Node<Statement, Val>(callSite, returnedFact.fact()));
 				}
 			}
 		});

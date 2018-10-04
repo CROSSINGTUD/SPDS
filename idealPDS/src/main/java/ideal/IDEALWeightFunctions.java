@@ -51,12 +51,12 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	public W push(Node<Statement, Val> curr, Node<Statement, Val> succ, Statement calleeSp) {
 		W weight = delegate.push(curr, succ, calleeSp);
 		if (isObjectFlowPhase() &&!weight.equals(getOne())){	
-			addOtherThanOneWeight(curr, weight);
+			addOtherThanOneWeight(curr);
 		}
 		return weight;
 	}
 	
-	void addOtherThanOneWeight(Node<Statement, Val> curr, W weight) {
+	void addOtherThanOneWeight(Node<Statement, Val> curr) {
 		if(nonOneFlowNodes.add(curr)){
 			for(NonOneFlowListener l : Lists.newArrayList(listeners)){
 				l.nonOneFlow(curr);
@@ -68,7 +68,7 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	public W normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
 		W weight = delegate.normal(curr, succ);
 		if (isObjectFlowPhase() && curr.stmt().isCallsite() && !weight.equals(getOne())){
-			addOtherThanOneWeight(curr, weight);
+			addOtherThanOneWeight(curr);
 		}
 		return weight;
 	}
