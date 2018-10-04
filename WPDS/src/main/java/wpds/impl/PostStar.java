@@ -92,7 +92,7 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 
 		@Override
 		public void onOutTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> aut) {
-			if(!t.getLabel().equals(fa.epsilon()) && !t.getStart().equals(t.getTarget()))
+			if(!t.getLabel().equals(fa.epsilon()))
 				update(new Transition<N, D>(transition.getStart(), t.getLabel(), t.getTarget()),
 							(W) w.extendWith(newWeight));
 		}

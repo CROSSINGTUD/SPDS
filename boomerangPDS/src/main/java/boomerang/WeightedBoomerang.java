@@ -210,7 +210,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	
 	private void triggerUnbalancedPop(Node<Statement,AbstractBoomerangSolver<W>> unbalancedPopPair) {
 		if(unbalancedPopPairs.add(unbalancedPopPair)) {
-			for(UnbalancedPopHandler<W> unbalancedPopInfo : unbalancedListeners.get(unbalancedPopPair)) {
+			for(UnbalancedPopHandler<W> unbalancedPopInfo : Lists.newArrayList(unbalancedListeners.get(unbalancedPopPair))) {
 				unbalancedPopInfo.trigger(unbalancedPopPair.stmt(),unbalancedPopPair.fact());
 			}
 		}

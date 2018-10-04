@@ -626,7 +626,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	public void addReachable(SootMethod m) {
 		if (reachableMethods.add(m)) {
-			Collection<Runnable> collection = queuedReachableMethod.get(m);
+			Collection<Runnable> collection = Lists.newArrayList(queuedReachableMethod.get(m));
 			for (Runnable runnable : collection) {
 				runnable.run();
 			}
