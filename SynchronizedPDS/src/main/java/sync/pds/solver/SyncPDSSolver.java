@@ -116,6 +116,11 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 			public boolean isGeneratedState(INode<Node<Stmt, Fact>> d) {
 				return d instanceof GeneratedState;
 			}
+			
+			@Override
+			public void onManyStateListenerRegister() {
+				SyncPDSSolver.this.onManyStateListenerRegister();
+			}
 		};
 
 		callAutomaton = new WeightedPAutomaton<Stmt, INode<Fact>,W>(initialCallNode) {
@@ -165,6 +170,10 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		callingPDS.poststar(callAutomaton,callSummaries);
 		fieldPDS.poststar(fieldAutomaton,fieldSummaries);
 
+	}
+
+	protected void onManyStateListenerRegister() {
+		
 	}
 
 	private class FieldSummaryListener implements  NestedAutomatonListener<Field, INode<Node<Stmt, Fact>>, W>{

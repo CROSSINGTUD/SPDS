@@ -297,10 +297,22 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 		}
 	}
 
+	private static int count = 0;
+	private void increaseListenerCount(WPAStateListener<N, D, W> l) {
+		count++;
+		if(count % 100000 == 0) {
+			onManyStateListenerRegister();
+		}
+	}
+
+	public void onManyStateListenerRegister() {
+	}
+
 	public void registerListener(WPAStateListener<N, D, W> l) {
 		if (!stateListeners.put(l.getState(), l)) {
 			return;
 		}
+		increaseListenerCount(l);
 		for (Transition<N, D> t : Lists.newArrayList(transitionsOutOf.get(l.getState()))) {
 			l.onOutTransitionAdded(t,transitionToWeights.get(t), this);
 		}

@@ -81,7 +81,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 	
 	private class UpdateTransitivePopListener extends WPAStateListener<N, D, W> {
 
-		private D targetState;
 		private Transition<N, D> transition;
 		private W newWeight;
 
@@ -93,8 +92,9 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 
 		@Override
 		public void onOutTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> aut) {
-			update(new Transition<N, D>(transition.getStart(), t.getLabel(), t.getTarget()),
-						(W) w.extendWith(newWeight));
+			if(!t.getLabel().equals(fa.epsilon()) && !t.getStart().equals(t.getTarget()))
+				update(new Transition<N, D>(transition.getStart(), t.getLabel(), t.getTarget()),
+							(W) w.extendWith(newWeight));
 		}
 
 		@Override
@@ -105,7 +105,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 		public int hashCode() {
 			final int prime = 31;
 			int result = super.hashCode();
-			result = prime * result + ((targetState == null) ? 0 : targetState.hashCode());
 			result = prime * result + ((transition == null) ? 0 : transition.hashCode());
 			result = prime * result + ((newWeight == null) ? 0 : newWeight.hashCode());
 			return result;
@@ -120,11 +119,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
 			if (getClass() != obj.getClass())
 				return false;
 			UpdateTransitivePopListener other = (UpdateTransitivePopListener) obj;
-			if (targetState == null) {
-				if (other.targetState != null)
-					return false;
-			} else if (!targetState.equals(other.targetState))
-				return false;
 			if (transition == null) {
 				if (other.transition != null)
 					return false;

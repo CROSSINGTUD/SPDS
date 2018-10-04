@@ -201,15 +201,12 @@ public class IDEALSeedSolver<W extends Weight> {
 
 	private final class TriggerBackwardQuery extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
-		private final ForwardBoomerangResults<W> res;
 		private final AbstractBoomerangSolver<W> s;
 		private final WeightedBoomerang<W> boomerang;
 		private final Node<Statement, Val> curr;
 
-		private TriggerBackwardQuery(INode<Node<Statement, Val>> state, ForwardBoomerangResults<W> res,
-				AbstractBoomerangSolver<W> s, WeightedBoomerang<W> boomerang, Node<Statement, Val> curr) {
+		private TriggerBackwardQuery(INode<Node<Statement, Val>> state, AbstractBoomerangSolver<W> s, WeightedBoomerang<W> boomerang, Node<Statement, Val> curr) {
 			super(state);
-			this.res = res;
 			this.s = s;
 			this.boomerang = boomerang;
 			this.curr = curr;
@@ -223,9 +220,6 @@ public class IDEALSeedSolver<W extends Weight> {
 			}
 			BackwardQuery query = new BackwardQuery(curr.stmt(), curr.fact());
 			BackwardBoomerangResults<W> backwardSolveUnderScope = boomerang.backwardSolveUnderScope(query, seed, curr);
-			if (!res.getAnalysisWatch().isRunning()) {
-				res.getAnalysisWatch().start();
-			}
 			Map<ForwardQuery, AbstractBoomerangResults<W>.Context> allocationSites = backwardSolveUnderScope
 					.getAllocationSites();
 			addAffectedPotentialStrongUpdate(curr, curr.stmt());
@@ -416,7 +410,6 @@ public class IDEALSeedSolver<W extends Weight> {
 			}
 		});
 
-		ForwardBoomerangResults<W> res = boomerang.solve((ForwardQuery) seed);
 		idealWeightFunctions.registerListener(new NonOneFlowListener() {
 			@Override
 			public void nonOneFlow(final Node<Statement, Val> curr) {
@@ -425,9 +418,10 @@ public class IDEALSeedSolver<W extends Weight> {
 				}
 				AbstractBoomerangSolver<W> s = boomerang.getSolvers().getOrCreate(seed);
 				s.getFieldAutomaton().registerListener(
-						new TriggerBackwardQuery(new SingleNode<Node<Statement, Val>>(curr), res, s, boomerang, curr));
+						new TriggerBackwardQuery(new SingleNode<Node<Statement, Val>>(curr), s, boomerang, curr));
 			}
 		});
+		ForwardBoomerangResults<W> res = boomerang.solve((ForwardQuery) seed);
 		if (phase.equals(Phases.ValueFlow)) {
 			boomerang.debugOutput();
 		}

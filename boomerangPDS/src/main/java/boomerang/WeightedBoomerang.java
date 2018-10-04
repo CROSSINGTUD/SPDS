@@ -292,6 +292,11 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			protected WeightFunctions<Statement, Val, Statement, W> getCallWeights() {
 				return WeightedBoomerang.this.getBackwardCallWeights();
 			}
+			
+			@Override
+			protected void onManyStateListenerRegister() {
+				checkTimeout();
+			}
 
 		};
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val>() {
@@ -420,6 +425,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					return true;
 				}
 				return super.preventCallTransitionAdd(t, weight);
+			}
+			@Override
+			protected void onManyStateListenerRegister() {
+				checkTimeout();
 			}
 		};
 

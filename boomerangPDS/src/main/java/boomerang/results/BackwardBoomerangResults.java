@@ -29,8 +29,6 @@ import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
-import wpds.impl.WeightedPAutomaton;
-import wpds.interfaces.WPAStateListener;
 
 public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomerangResults<W> implements PointsToSet{
 
@@ -75,7 +73,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 			if(!(fw.getKey() instanceof ForwardQuery)) {
 				continue;
 			}
-			fw.getValue().getFieldAutomaton().registerListener(new ExtractAllocationSiteStateListener(fw.getValue().getFieldAutomaton().getInitialState(), query, (ForwardQuery) fw.getKey(), results));
+			fw.getValue().getFieldAutomaton().registerListener(new ExtractAllocationSiteStateListener<W>(fw.getValue().getFieldAutomaton().getInitialState(), query, (ForwardQuery) fw.getKey(), results));
 		}
 		allocationSites = Maps.newHashMap();
 		for(ForwardQuery q : results) {
@@ -88,45 +86,6 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 	
 	
 
-	
-	private class ExtractAllocationSiteStateListener extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
-		
-		private ForwardQuery query;
-		private Set<ForwardQuery> results;
-		private BackwardQuery bwQuery;
-
-		public ExtractAllocationSiteStateListener(INode<Node<Statement, Val>> state,  BackwardQuery bwQuery,ForwardQuery query, Set<ForwardQuery> results) {
-			super(state);
-			this.bwQuery = bwQuery;
-			this.query = query;
-			this.results = results;
-		}
-
-		@Override
-		public void onOutTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-		}
-		
-		@Override
-		public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
-				WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-			if(t.getStart().fact().equals(bwQuery.asNode()) && t.getLabel().equals(Field.empty())){
-				results.add(query);
-			}
-		}
-
-		@Override
-		public int hashCode() {
-			//Otherwise we cannot register this listener twice.
-			return System.identityHashCode(this);
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-			//Otherwise we cannot register this listener twice.
-			return this == obj;
-		}
-	}
 	
 	public boolean aliases(Query el) {
 		for (final Query fw : getAllocationSites().keySet()) {
