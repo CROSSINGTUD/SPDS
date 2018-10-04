@@ -8,3 +8,4 @@
 bin/
 surefire-reports/
 shippable/
+*.prefs
