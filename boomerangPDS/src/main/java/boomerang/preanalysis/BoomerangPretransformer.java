@@ -43,6 +43,7 @@ import soot.util.queue.QueueReader;
 
 public class BoomerangPretransformer extends BodyTransformer {
 
+	public static boolean TRANSFORM_CONSTANTS = true;
 	private static BoomerangPretransformer instance;
 	private int replaceCounter;
 	private boolean applied;
@@ -50,7 +51,8 @@ public class BoomerangPretransformer extends BodyTransformer {
 	@Override
 	protected void internalTransform(Body b, String phaseName, Map<String, String> options) {
 		addNopStmtToMethods(b);
-		transformConstantAtFieldWrites(b);
+		if(TRANSFORM_CONSTANTS)
+			transformConstantAtFieldWrites(b);
 	}
 
 	private void transformConstantAtFieldWrites(Body body) {
