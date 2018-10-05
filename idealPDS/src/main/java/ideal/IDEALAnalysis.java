@@ -76,14 +76,7 @@ public class IDEALAnalysis<W extends Weight> {
 			System.err.println("Analyzing "+ seed);
 			Stopwatch watch = Stopwatch.createStarted();
 			analysisTime.put(seed, watch);
-			ForwardBoomerangResults<W> res;
-			try {
-				res = run(seed);
-//				System.err.println(String.format("Seed Analysis finished in ms (Solver1/Solver2):  %s/%s", solver.getPhase1Solver().getAnalysisStopwatch().elapsed(), solver.getPhase2Solver().getAnalysisStopwatch().elapsed()));
-			} catch(IDEALSeedTimeout e){
-				res = (ForwardBoomerangResults<W>) e.getLastResults();
-				timedoutSeeds.add(seed);
-			}
+			ForwardBoomerangResults<W> res = run(seed);
 			watch.stop();
 			System.err.println("Analyzed (finished,timedout): \t (" + (seedCount -timedoutSeeds.size())+ "," + timedoutSeeds.size() + ") of "+ initialSeeds.size() + " seeds! ");
 			analysisDefinition.getResultHandler().report(seed,res);
@@ -92,7 +85,13 @@ public class IDEALAnalysis<W extends Weight> {
 	}
 	public ForwardBoomerangResults<W> run(ForwardQuery seed) {
 		IDEALSeedSolver<W> idealAnalysis = new IDEALSeedSolver<W>(analysisDefinition, seed, seedFactory);
-		ForwardBoomerangResults<W> res = idealAnalysis.run();
+		ForwardBoomerangResults<W> res;
+		try {
+			res = idealAnalysis.run();			
+		} catch(IDEALSeedTimeout e){
+			res = (ForwardBoomerangResults<W>) e.getLastResults();
+			timedoutSeeds.add((WeightedForwardQuery) seed);
+		}
 		analysisDefinition.getResultHandler().report((WeightedForwardQuery)seed,res);
 		return res;
 	}
