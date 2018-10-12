@@ -11,6 +11,8 @@
  *******************************************************************************/
 package typestate.tests;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Stack;
 
 import org.junit.Test;
@@ -54,7 +56,23 @@ public class StackTest extends IDEALTestingFramework {
 			s.pop();
 		mustBeInAcceptingState(s);
 	}
-
+@Test
+public void test6() {
+	ArrayList l = new ArrayList();
+	Stack s = new Stack();
+	if (staticallyUnknown()) {
+		s.push(new Object());
+		int x = 1;
+	}
+	if (staticallyUnknown()) {
+		s.push(new Object());			
+		int x = 1;
+	}
+	if(!s.isEmpty()) {
+		Object pop = s.pop();
+		mayBeInErrorState(s);
+	}
+}
 	@Test
 	public void test3() {
 		Stack s = new Stack();
@@ -84,6 +102,32 @@ public class StackTest extends IDEALTestingFramework {
 		mustBeInAcceptingState(c);
 	}
 
+	@Test
+	public void testInNewObject() {
+		OwithStack owithStack = new OwithStack();
+		owithStack.pushStack(new Object());
+		owithStack.get();
+		mustBeInAcceptingState(owithStack.stack);
+	}
+	
+	private static class OwithStack{
+		Stack stack;
+		public void pushStack(Object o){
+			if(this.stack == null) {
+				this.stack = new Stack();
+			}
+			this.stack.push(o);
+		}
+		
+		public Object get() {
+			if(stack == null || stack.empty()) {
+				return null;
+			}
+			Object peek = this.stack.peek();
+			mustBeInAcceptingState(this.stack);
+			return peek;
+		}
+	}
 	@Override
 	protected TypeStateMachineWeightFunctions getStateMachine() {
 		return new VectorStateMachine();
