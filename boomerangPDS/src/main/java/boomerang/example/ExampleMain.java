@@ -3,7 +3,7 @@
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -21,6 +21,7 @@ import boomerang.Boomerang;
 import boomerang.DefaultBoomerangOptions;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.preanalysis.BoomerangPretransformer;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import soot.G;
@@ -104,6 +105,7 @@ public class ExampleMain {
 		Transform transform = new Transform("wjtp.ifds", createAnalysisTransformer());
 		PackManager.v().getPack("wjtp").add(transform);
 		PackManager.v().getPack("cg").apply();
+		BoomerangPretransformer.v().apply();
 		PackManager.v().getPack("wjtp").apply();
 	}
 
@@ -112,7 +114,7 @@ public class ExampleMain {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				final JimpleBasedInterproceduralCFG icfg = new JimpleBasedInterproceduralCFG(true);
 				BackwardQuery query = createQuery(icfg);
-				
+
 				//1. Create a Boomerang solver.
 				Boomerang solver = new Boomerang(new DefaultBoomerangOptions(){
 					public boolean onTheFlyCallGraph() {
@@ -124,7 +126,7 @@ public class ExampleMain {
 					public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
 						return icfg;
 					}
-					
+
 					@Override
 					public SeedFactory<NoWeight> getSeedFactory() {
 						return null;

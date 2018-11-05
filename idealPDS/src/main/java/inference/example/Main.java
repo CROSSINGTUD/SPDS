@@ -3,7 +3,7 @@
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import boomerang.preanalysis.BoomerangPretransformer;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Table;
 
@@ -93,6 +94,7 @@ public class Main {
 		Transform transform = new Transform("wjtp.ifds", createAnalysisTransformer());
 		PackManager.v().getPack("wjtp").add(transform);
 		PackManager.v().getPack("cg").apply();
+		BoomerangPretransformer.v().apply();
 		PackManager.v().getPack("wjtp").apply();
 	}
 
@@ -100,9 +102,9 @@ public class Main {
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				JimpleBasedInterproceduralCFG icfg = new JimpleBasedInterproceduralCFG(true);
-				
+
 				StoreIDEALResultHandler<InferenceWeight> resultHandler = new StoreIDEALResultHandler<>();
-				
+
 				IDEALAnalysis<InferenceWeight> solver = new IDEALAnalysis<>(new IDEALAnalysisDefinition<InferenceWeight>() {
 
 					@Override
@@ -127,7 +129,7 @@ public class Main {
 					public WeightFunctions<Statement, Val, Statement, InferenceWeight> weightFunctions() {
 						return new InferenceWeightFunctions();
 					}
-					
+
 					@Override
 					public Debugger<InferenceWeight> debugger(IDEALSeedSolver<InferenceWeight> solver) {
 						return new Debugger<>();
