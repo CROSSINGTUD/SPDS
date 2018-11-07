@@ -109,6 +109,14 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		mustBeInAcceptingState(file);
 	}
 	@Test
+	public void test222() {
+		File file = new File();
+		if(staticallyUnknown()) {
+			file.open();
+		}
+		mayBeInAcceptingState(file);
+	}
+	@Test
 	public void branchingMay() {
 		File file = new File();
 		if (staticallyUnknown())

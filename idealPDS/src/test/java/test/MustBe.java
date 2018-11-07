@@ -42,11 +42,9 @@ public class MustBe extends ExpectedResults<TransitionFunction,Val> {
 		}
 		for(State s : states){
 			if(state == InternalState.ACCEPTING){
-				satisfied |= !s.isErrorState();
-				imprecise = states.size() > 1;
+				satisfied |= !s.isErrorState() && states.size() == 1;
 			} else if(state == InternalState.ERROR){
-				satisfied |= s.isErrorState();
-				imprecise = states.size() > 1;
+				satisfied |= s.isErrorState() && states.size() == 1;
 			}
 		}
 	}
