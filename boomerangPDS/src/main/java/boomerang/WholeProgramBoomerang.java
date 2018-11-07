@@ -14,14 +14,18 @@ package boomerang;
 import java.util.Collection;
 import java.util.Collections;
 
+import boomerang.debugger.Debugger;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
+import boomerang.jimple.Val;
+import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import sync.pds.solver.nodes.Node;
 import wpds.impl.Weight;
 
 public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBoomerang<W>{
@@ -83,5 +87,10 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 	
 	@Override
 	protected void backwardSolve(BackwardQuery query) {
+	}
+	@Override
+	public BackwardBoomerangResults<W> backwardSolveUnderScope(BackwardQuery backwardQuery, ForwardQuery forwardQuery,
+			Node<Statement, Val> node) {
+		return null;
 	}
 }
