@@ -233,15 +233,13 @@ public class IDEALSeedSolver<W extends Weight> {
 				@Override
 				public void stackElement(Statement callSite) {
 					boomerang.checkTimeout();
-					for (Statement cs : s.getPredsOf(callSite)) {
-						addAffectedPotentialStrongUpdate(curr, cs);
-						for (ForwardQuery e : allocationSites.keySet()) {
-							AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
-							solver.getCallAutomaton()
-									.registerConnectPushListener(new IndirectFlowsAtCallSite(solver, cs));
-						}
-
+					addAffectedPotentialStrongUpdate(curr, callSite);
+					for (ForwardQuery e : allocationSites.keySet()) {
+						AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
+						solver.getCallAutomaton()
+								.registerConnectPushListener(new IndirectFlowsAtCallSite(solver, callSite));
 					}
+
 				}
 			});
 			for (final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()) {

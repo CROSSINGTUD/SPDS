@@ -33,16 +33,14 @@ public class UnbalancedPopHandler<W extends Weight>{
 		solver.submit(callStatement.getMethod(), new Runnable() {
 			@Override
 			public void run() {
-				for (Statement returnSite : solver.getSuccsOf(callStatement)) {
-					Val unbalancedFact = returningFact.fact().asUnbalanced(callStatement);
-					SingleNode<Val> unbalancedState = new SingleNode<Val>(unbalancedFact);
-					solver.getCallAutomaton().addUnbalancedState(unbalancedState);
-					solver.getCallAutomaton().addWeightForTransition(
-							new Transition<Statement, INode<Val>>(trans.getTarget(), returnSite,
-									unbalancedState
-									),
-							solver.getCallAutomaton().getOne());
-				}
+				Val unbalancedFact = returningFact.fact().asUnbalanced(callStatement);
+				SingleNode<Val> unbalancedState = new SingleNode<Val>(unbalancedFact);
+				solver.getCallAutomaton().addUnbalancedState(unbalancedState);
+				solver.getCallAutomaton().addWeightForTransition(
+						new Transition<Statement, INode<Val>>(trans.getTarget(), callStatement,
+								unbalancedState
+								),
+						solver.getCallAutomaton().getOne());
 			}
 
 		});

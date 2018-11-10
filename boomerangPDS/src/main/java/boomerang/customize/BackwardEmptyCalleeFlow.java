@@ -24,6 +24,14 @@ import wpds.interfaces.State;
 
 public class BackwardEmptyCalleeFlow extends EmptyCalleeFlow {
 
+	public Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,
+			Stmt returnSite) {
+		if(isSystemArrayCopy(callSite.getInvokeExpr().getMethod())){
+			return systemArrayCopyFlow(caller, callSite, value, returnSite);
+		}
+		return Collections.emptySet();
+	}
+	
 	@Override
 	protected Collection<? extends State> systemArrayCopyFlow(SootMethod caller, Stmt callSite, Val value,
 			Stmt returnSite) {

@@ -155,10 +155,8 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 				return;
 			}
 			boolean predIsCallStmt = false;
-			for (Statement s : flowSolver.getPredsOf(returnSiteOrExitStmt)) {
-				predIsCallStmt |= s.isCallsite()
-						&& flowSolver.valueUsedInStatement(s.getUnit().get(), t.getStart().fact());
-			}
+			predIsCallStmt |= returnSiteOrExitStmt.isCallsite()
+					&& flowSolver.valueUsedInStatement(returnSiteOrExitStmt.getUnit().get(), t.getStart().fact());
 
 			if (predIsCallStmt) {
 				importSolvers(returnSiteOrExitStmt, t.getTarget(), w);

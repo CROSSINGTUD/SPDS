@@ -27,7 +27,6 @@ public interface BoomerangOptions {
 	public boolean staticFlows();
 	
 	public boolean arrayFlows();
-	public boolean fastForwardFlows();
 	public boolean typeCheck();
 	public boolean onTheFlyCallGraph();
 	public boolean throwFlows();
