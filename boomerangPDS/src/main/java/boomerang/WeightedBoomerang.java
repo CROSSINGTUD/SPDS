@@ -298,9 +298,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val>() {
 			@Override
 			public void onReachableNodeAdded(Node<Statement, Val> node) {
-//				if(node.fact().toString().contains("a1")) {
-//					System.out.println();
-//				}
 				if (hasNoMethod(node)) {
 					return;
 				}
@@ -1015,10 +1012,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
 		AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
 		if (unit.isPresent()) {
-			for (Unit succ : bwicfg().getSuccsOf(unit.get())) {
-				solver.solve(new Node<Statement, Val>(new Statement((Stmt) succ, icfg().getMethodOf(succ)),
-						query.asNode().fact()));
-			}
+			solver.solve(query.asNode());
 		}
 	}
 
@@ -1126,15 +1120,13 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			} else if (flowAllocation instanceof ForwardQuery) {
 				AbstractBoomerangSolver<W> baseSolver = queryToSolvers.get(baseAllocation);
 				AbstractBoomerangSolver<W> flowSolver = queryToSolvers.get(flowAllocation);
-				for(Statement succ : flowSolver.getSuccsOf(getStmt())) {
-					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(WeightedBoomerang.this,baseSolver, flowSolver, FieldWritePOI.this, succ){
-						public void activate(INode<Node<Statement,Val>> start) {
-							activateAllPois(new SolverPair(flowSolver,baseSolver),start);
-						};
+				ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(WeightedBoomerang.this,baseSolver, flowSolver, FieldWritePOI.this, getStmt()){
+					public void activate(INode<Node<Statement,Val>> start) {
+						activateAllPois(new SolverPair(flowSolver,baseSolver),start);
 					};
-					registerActivationListener(new SolverPair(flowSolver,baseSolver), exec);
-					exec.solve();
-				}
+				};
+				registerActivationListener(new SolverPair(flowSolver,baseSolver), exec);
+				exec.solve();
 			}
 		}
 

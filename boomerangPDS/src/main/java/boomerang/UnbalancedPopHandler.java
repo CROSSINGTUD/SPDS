@@ -3,6 +3,7 @@ package boomerang;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.solver.BackwardBoomerangSolver;
 import soot.jimple.Stmt;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.SingleNode;
@@ -33,14 +34,28 @@ public class UnbalancedPopHandler<W extends Weight>{
 		solver.submit(callStatement.getMethod(), new Runnable() {
 			@Override
 			public void run() {
-				Val unbalancedFact = returningFact.fact().asUnbalanced(callStatement);
-				SingleNode<Val> unbalancedState = new SingleNode<Val>(unbalancedFact);
-				solver.getCallAutomaton().addUnbalancedState(unbalancedState);
-				solver.getCallAutomaton().addWeightForTransition(
-						new Transition<Statement, INode<Val>>(trans.getTarget(), callStatement,
-								unbalancedState
-								),
-						solver.getCallAutomaton().getOne());
+				//Should be moved to BackwardBoomerangSolver/ForwardBoomerangSolver
+				if(solver instanceof BackwardBoomerangSolver) {
+					for (Statement returnSite : solver.getSuccsOf(callStatement)) {
+						Val unbalancedFact = returningFact.fact().asUnbalanced(returnSite);
+						SingleNode<Val> unbalancedState = new SingleNode<Val>(unbalancedFact);
+						solver.getCallAutomaton().addUnbalancedState(unbalancedState);
+						solver.getCallAutomaton().addWeightForTransition(
+								new Transition<Statement, INode<Val>>(trans.getTarget(), returnSite,
+										unbalancedState
+										),
+								solver.getCallAutomaton().getOne());
+					}
+				} else {
+					Val unbalancedFact = returningFact.fact().asUnbalanced(callStatement);
+					SingleNode<Val> unbalancedState = new SingleNode<Val>(unbalancedFact);
+					solver.getCallAutomaton().addUnbalancedState(unbalancedState);
+					solver.getCallAutomaton().addWeightForTransition(
+							new Transition<Statement, INode<Val>>(trans.getTarget(), callStatement,
+									unbalancedState
+									),
+							solver.getCallAutomaton().getOne());
+				}
 			}
 
 		});
