@@ -74,10 +74,10 @@ import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {
 
-	private static final Logger logger = LogManager.getLogger();
+	protected static final Logger logger = LogManager.getLogger();
 	protected final BiDiInterproceduralCFG<Unit, SootMethod> icfg;
 	protected final Query query;
-	private boolean INTERPROCEDURAL = true;
+	protected boolean INTERPROCEDURAL = true;
 	protected final Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> generatedFieldState;
 	private Multimap<SootMethod, Transition<Field, INode<Node<Statement, Val>>>> perMethodFieldTransitions = HashMultimap
 			.create();
@@ -252,73 +252,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		return generatedFieldState.get(e);
 	}
 
-	@Override
-	public Collection<? extends State> computeSuccessor(Node<Statement, Val> node) {
-		Statement stmt = node.stmt();
-		Optional<Stmt> unit = stmt.getUnit();
-		logger.trace("Computing successor for {} with solver {}", node, this);
-		if (unit.isPresent()) {
-			Stmt curr = unit.get();
-			Val value = node.fact();
-			SootMethod method = icfg.getMethodOf(curr);
-			if(method == null)
-				return Collections.emptySet();
-			if (killFlow(method, curr, value)) {
-				return Collections.emptySet();
-			}
-			if(options.isIgnoredMethod(method)){
-				return Collections.emptySet();
-			}
-			if (curr.containsInvokeExpr() && valueUsedInStatement(curr, value) && INTERPROCEDURAL) {
-				return callFlow(method, curr, curr.getInvokeExpr(), value);
-			} else if (icfg.isExitStmt(curr)) {
-				return returnFlow(method, curr, value);
-			} else {
-				return normalFlow(method, curr, value);
-			}
-		}
-		return Collections.emptySet();
-	}
 
-	protected abstract void callBypass(Statement callSite, Statement returnSite, Val value);
-
-	private Collection<State> normalFlow(SootMethod method, Stmt curr, Val value) {
-		Set<State> out = Sets.newHashSet();
-		for (Unit succ : icfg.getSuccsOf(curr)) {
-			if (curr.containsInvokeExpr()) {
-				callBypass(new Statement(curr, method), new Statement((Stmt) succ, method), value);
-			}
-			Collection<State> flow = computeNormalFlow(method, curr, value, (Stmt) succ);
-			if(options.fastForwardFlows() && isIdentityFlow(value,  (Stmt) succ,method, flow)){
-				flow = dfs( value,  (Stmt) succ,method);
-			}
-			out.addAll(flow);
-		}
-		return out;
-	}
-
-	private Collection<State> dfs(Val value, Stmt succ, SootMethod method) {
-		LinkedList<Unit> worklist = Lists.newLinkedList();
-		worklist.add(succ);
-		Set<Unit> visited = Sets.newHashSet();
-		Collection<State> out = Sets.newHashSet(); 
-		while(!worklist.isEmpty()){
-			Unit curr = worklist.poll();
-			if(!visited.add(curr))
-				continue;
-			for(Unit s : icfg.getSuccsOf(curr)){
-				Collection<State> flow = computeNormalFlow(method, (Stmt) curr, value, (Stmt) s);
-				if(!isIdentityFlow( value,  (Stmt) s,method, flow)){
-					out.add(new Node<Statement, Val>(new Statement((Stmt) curr, method), value));
-				} else{
-					worklist.add(s);
-				}
-			}
-		}
-		return out;
-	}
-
-	private boolean isIdentityFlow(Val value, Stmt succ, SootMethod method, Collection<State> out){
+	protected boolean isIdentityFlow(Val value, Stmt succ, SootMethod method, Collection<State> out){
 		if(out.size() != 1 || succ.containsInvokeExpr() || icfg.isExitStmt(succ))
 			return false;
 		if(value.isStatic()){
@@ -417,7 +352,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	protected abstract Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value,
 			Stmt callSite, Stmt returnSite);
 
-	private Collection<? extends State> returnFlow(SootMethod method, Stmt curr, Val value) {
+	protected Collection<? extends State> returnFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
 
 		if(method.isStaticInitializer() && value.isStatic()){
@@ -443,36 +378,12 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		return out;
 	}
 
-	private Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
-		assert icfg.isCallStmt(callSite);
-		Set<State> out = Sets.newHashSet();
-		boolean onlyStaticInitializer = false;
-		for (SootMethod callee : icfg.getCalleesOfCallAt(callSite)) {
-			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
-				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-					Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
-							new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
-					onCallFlow(callee, callSite, value, res);
-					out.addAll(res);
-				}
-			}
-			addReachable(callee);
-			onlyStaticInitializer |= !callee.isStaticInitializer();
-		}
-		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-			if (icfg.getCalleesOfCallAt(callSite).isEmpty() || (onlyStaticInitializer && value.isStatic())) {
-				out.addAll(computeNormalFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
-			}
-			out.addAll(getEmptyCalleeFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
-		}
-		return out;
-	}
 
 	protected abstract Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,
 			Stmt returnSite);
 
-	protected abstract Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite,
-			Statement callSite, InvokeExpr invokeExpr, Val value, SootMethod callee, Stmt calleeSp);
+//	protected abstract Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite,
+//			Statement callSite, InvokeExpr invokeExpr, Val value, SootMethod callee, Stmt calleeSp);
 
 	protected abstract Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Val value, Stmt succ);
 

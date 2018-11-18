@@ -82,10 +82,9 @@ public class IDEALSeedSolver<W extends Weight> {
 		@Override
 		public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
 				WeightedPAutomaton<Statement, INode<Val>, W> aut) {
-
 			// Commented out as of
 			// typestate.tests.FileMustBeClosedTest.simpleAlias()
-			if (t.getLabel().equals(returnSite) /*
+			if (t.getLabel().equals(callSite) /*
 												 * && !t.getStart().fact().equals( returnedFact.fact())
 												 */) {
 				idealWeightFunctions.addNonKillFlow(new Node<Statement, Val>(callSite, returnedFact));
@@ -152,11 +151,14 @@ public class IDEALSeedSolver<W extends Weight> {
 		}
 
 		@Override
-		public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
-			if(!solver.valueUsedInStatement((Stmt) callSite.getUnit().get(), returnedFact.fact()))
+		public void connect(Statement predOfCall, Statement callSite, INode<Val> returnedFact, W w) {
+			if(!solver.valueUsedInStatement((Stmt) callSite.getUnit().get(), returnedFact.fact())) {
 				return;
+			}
 			if (callSite.equals(cs)) {
-				solver.getCallAutomaton().registerListener(new AddIndirectFlowAtCallSite(callSite, returnSite, returnedFact.fact()));
+				for(Statement returnSite : solver.getSuccsOf(callSite)) {
+					solver.getCallAutomaton().registerListener(new AddIndirectFlowAtCallSite(callSite, returnSite, returnedFact.fact()));
+				}
 			}
 		}
 
@@ -233,15 +235,13 @@ public class IDEALSeedSolver<W extends Weight> {
 				@Override
 				public void stackElement(Statement callSite) {
 					boomerang.checkTimeout();
-					for (Statement cs : s.getPredsOf(callSite)) {
-						addAffectedPotentialStrongUpdate(curr, cs);
-						for (ForwardQuery e : allocationSites.keySet()) {
-							AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
-							solver.getCallAutomaton()
-									.registerConnectPushListener(new IndirectFlowsAtCallSite(solver, cs));
-						}
-
+					addAffectedPotentialStrongUpdate(curr, callSite);
+					for (ForwardQuery e : allocationSites.keySet()) {
+						AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
+						solver.getCallAutomaton()
+								.registerConnectPushListener(new IndirectFlowsAtCallSite(solver, callSite));
 					}
+
 				}
 			});
 			for (final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()) {
@@ -265,7 +265,7 @@ public class IDEALSeedSolver<W extends Weight> {
 							WeightedPAutomaton<Statement, INode<Val>, W> aut) {
 
 						for (Statement succ : solver.getSuccsOf(curr.stmt())) {
-
+							
 							// Commented out as of typestate.tests.FileMustBeClosedTest.simpleAlias()
 							if (t.getLabel().equals(succ) /* && !t.getStart().fact().equals(curr.fact()) */) {
 								idealWeightFunctions.addNonKillFlow(curr);
@@ -397,11 +397,11 @@ public class IDEALSeedSolver<W extends Weight> {
 		callAutomaton.registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
 
 			@Override
-			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
+			public void connect(Statement predOfCall, Statement callSite, INode<Val> returnedFact, W w) {
 				if (!callSite.getMethod().equals(returnedFact.fact().m()))
 					return;
-				if (!callSite.getMethod().equals(returnSite.getMethod()))
-					return;
+//				if (!callSite.getMethod().equals(returnSite.getMethod()))
+//					return;
 				if(!boomerang.getSolvers().getOrCreate(seed).valueUsedInStatement((Stmt) callSite.getUnit().get(), returnedFact.fact()))
 					return;
 				if (!w.equals(one)) {
@@ -462,7 +462,6 @@ public class IDEALSeedSolver<W extends Weight> {
 					for (Statement pred : solver.getPredsOf(t.getLabel())) {
 						solver.addNormalFieldFlow(new Node<Statement, Val>(pred, indirect.fact()), indirect);
 					}
-
 				}
 			}
 		});

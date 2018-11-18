@@ -24,13 +24,19 @@ import wpds.interfaces.State;
 
 public class ForwardEmptyCalleeFlow extends EmptyCalleeFlow {
 
-
+	public Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt curr, Val value,
+			Stmt callSite) {
+		if(isSystemArrayCopy(callSite.getInvokeExpr().getMethod())){
+			return systemArrayCopyFlow(caller, curr, value, callSite);
+		}
+		return Collections.emptySet();
+	}
 	@Override
-	protected Collection<? extends State> systemArrayCopyFlow(SootMethod caller, Stmt callSite, Val value,
-			Stmt returnSite) {
+	protected Collection<? extends State> systemArrayCopyFlow(SootMethod caller, Stmt curr, Val value,
+			Stmt callSite) {
 		if(value.equals(new Val(callSite.getInvokeExpr().getArg(0), caller))){
 			Value arg = callSite.getInvokeExpr().getArg(2);
-			return Collections.singleton(new Node<Statement, Val>(new Statement(returnSite, caller), new Val(arg,caller)));
+			return Collections.singleton(new Node<Statement, Val>(new Statement(callSite, caller), new Val(arg,caller)));
 		}
 		return Collections.emptySet();
 	}

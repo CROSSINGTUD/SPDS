@@ -56,11 +56,6 @@ public class FromFileBoomerangOptions extends DefaultBoomerangOptions {
 	}
 
 	@Override
-	public boolean fastForwardFlows() {
-		return true;
-	}
-
-	@Override
 	public boolean typeCheck() {
 		return getBooleanFromFile("typeCheck");
 	}

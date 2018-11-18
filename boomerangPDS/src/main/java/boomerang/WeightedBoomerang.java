@@ -264,10 +264,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				createFieldSummaries(backwardQuery, backwardFieldSummaries)) {
 
 			@Override
-			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
-			}
-
-			@Override
 			protected Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite,
 					Statement callSite, InvokeExpr invokeExpr, Val fact, SootMethod callee, Stmt calleeSp) {
 				return super.computeCallFlow(caller, returnSite, callSite, invokeExpr, fact, callee, calleeSp);
@@ -302,9 +298,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val>() {
 			@Override
 			public void onReachableNodeAdded(Node<Statement, Val> node) {
-//				if(node.fact().toString().contains("a1")) {
-//					System.out.println();
-//				}
 				if (hasNoMethod(node)) {
 					return;
 				}
@@ -395,18 +388,13 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				createFieldSummaries(sourceQuery, forwardFieldSummaries)) {
 
 			@Override
-			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
-					return;
-			}
-
-			@Override
 			protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
 			}
 
 			@Override
-			protected Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,
-					Stmt returnSite) {
-				return forwardEmptyCalleeFlow.getEmptyCalleeFlow(caller, callSite, value, returnSite);
+			protected Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt curr, Val value,
+					Stmt callSite) {
+				return forwardEmptyCalleeFlow.getEmptyCalleeFlow(caller, curr, value, callSite);
 			}
 
 			@Override
@@ -627,11 +615,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 				@Override
 				public void stackElement(Statement callSite) {
-					for(Statement realCall : fwSolver.getPredsOf(callSite)){
-						if(realCall.isCallsite()) {
-							triggerUnbalancedPop(new Node<Statement,AbstractBoomerangSolver<W>>(realCall,bwSolver));
-						}
-					}
+					triggerUnbalancedPop(new Node<Statement,AbstractBoomerangSolver<W>>(callSite,bwSolver));
 				}
 
 				@Override
@@ -1028,10 +1012,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
 		AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
 		if (unit.isPresent()) {
-			for (Unit succ : bwicfg().getSuccsOf(unit.get())) {
-				solver.solve(new Node<Statement, Val>(new Statement((Stmt) succ, icfg().getMethodOf(succ)),
-						query.asNode().fact()));
-			}
+			solver.solve(query.asNode());
 		}
 	}
 
@@ -1039,42 +1020,38 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		Optional<Stmt> unit = query.asNode().stmt().getUnit();
 		AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
 		if (unit.isPresent()) {
-			for (Unit succ : icfg().getSuccsOf(unit.get())) {
-				Node<Statement, Val> source = new Node<Statement, Val>(
-						new Statement((Stmt) succ, icfg().getMethodOf(succ)), query.asNode().fact());
-				if (isMultiArrayAllocation(unit.get()) && options.arrayFlows()) {
-					// TODO fix; adjust as below;
-					SingleNode<Node<Statement, Val>> sourveVal = new SingleNode<Node<Statement, Val>>(source);
-					GeneratedState<Node<Statement, Val>, Field> genState = new GeneratedState<Node<Statement, Val>, Field>(sourveVal, Field.array());
-					insertTransition(solver.getFieldAutomaton(),
-							new Transition<Field, INode<Node<Statement, Val>>>(
-									sourveVal, Field.array(),
-									genState));
-					insertTransition(solver.getFieldAutomaton(),
-							new Transition<Field, INode<Node<Statement, Val>>>(genState, Field.empty(),
-									solver.getFieldAutomaton().getInitialState()));
+			if (isMultiArrayAllocation(unit.get()) && options.arrayFlows()) {
+				// TODO fix; adjust as below;
+				SingleNode<Node<Statement, Val>> sourveVal = new SingleNode<Node<Statement, Val>>(query.asNode());
+				GeneratedState<Node<Statement, Val>, Field> genState = new GeneratedState<Node<Statement, Val>, Field>(sourveVal, Field.array());
+				insertTransition(solver.getFieldAutomaton(),
+						new Transition<Field, INode<Node<Statement, Val>>>(
+								sourveVal, Field.array(),
+								genState));
+				insertTransition(solver.getFieldAutomaton(),
+						new Transition<Field, INode<Node<Statement, Val>>>(genState, Field.empty(),
+								solver.getFieldAutomaton().getInitialState()));
+			}
+			if (isStringAllocation(unit.get())) {
+				// Scene.v().forceResolve("java.lang.String",
+				// SootClass.BODIES);
+				SootClass stringClass = Scene.v().getSootClass("java.lang.String");
+				if (stringClass.declaresField("char[] value")) {
+					SootField valueField = stringClass.getField("char[] value");
+					SingleNode<Node<Statement, Val>> s = new SingleNode<Node<Statement, Val>>(query.asNode());
+					INode<Node<Statement, Val>> irState = solver.getFieldAutomaton().createState(s,
+							new Field(valueField));
+					insertTransition(solver.getFieldAutomaton(), new Transition<Field, INode<Node<Statement, Val>>>(
+							new SingleNode<Node<Statement, Val>>(query.asNode()), new Field(valueField), irState));
+					insertTransition(solver.getFieldAutomaton(), new Transition<Field, INode<Node<Statement, Val>>>(
+							irState, Field.empty(), solver.getFieldAutomaton().getInitialState()));
 				}
-				if (isStringAllocation(unit.get())) {
-					// Scene.v().forceResolve("java.lang.String",
-					// SootClass.BODIES);
-					SootClass stringClass = Scene.v().getSootClass("java.lang.String");
-					if (stringClass.declaresField("char[] value")) {
-						SootField valueField = stringClass.getField("char[] value");
-						SingleNode<Node<Statement, Val>> s = new SingleNode<Node<Statement, Val>>(source);
-						INode<Node<Statement, Val>> irState = solver.getFieldAutomaton().createState(s,
-								new Field(valueField));
-						insertTransition(solver.getFieldAutomaton(), new Transition<Field, INode<Node<Statement, Val>>>(
-								new SingleNode<Node<Statement, Val>>(source), new Field(valueField), irState));
-						insertTransition(solver.getFieldAutomaton(), new Transition<Field, INode<Node<Statement, Val>>>(
-								irState, Field.empty(), solver.getFieldAutomaton().getInitialState()));
-					}
-				}
-				if (query instanceof WeightedForwardQuery) {
-					WeightedForwardQuery<W> q = (WeightedForwardQuery<W>) query;
-					solver.solve(source, q.weight());
-				} else {
-					solver.solve(source);
-				}
+			}
+			if (query instanceof WeightedForwardQuery) {
+				WeightedForwardQuery<W> q = (WeightedForwardQuery<W>) query;
+				solver.solve(q.asNode(), q.weight());
+			} else {
+				solver.solve(query.asNode());
 			}
 		}
 		return solver;
@@ -1143,15 +1120,13 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			} else if (flowAllocation instanceof ForwardQuery) {
 				AbstractBoomerangSolver<W> baseSolver = queryToSolvers.get(baseAllocation);
 				AbstractBoomerangSolver<W> flowSolver = queryToSolvers.get(flowAllocation);
-				for(Statement succ : flowSolver.getSuccsOf(getStmt())) {
-					ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(WeightedBoomerang.this,baseSolver, flowSolver, FieldWritePOI.this, succ){
-						public void activate(INode<Node<Statement,Val>> start) {
-							activateAllPois(new SolverPair(flowSolver,baseSolver),start);
-						};
+				ExecuteImportFieldStmtPOI<W> exec = new ExecuteImportFieldStmtPOI<W>(WeightedBoomerang.this,baseSolver, flowSolver, FieldWritePOI.this, getStmt()){
+					public void activate(INode<Node<Statement,Val>> start) {
+						activateAllPois(new SolverPair(flowSolver,baseSolver),start);
 					};
-					registerActivationListener(new SolverPair(flowSolver,baseSolver), exec);
-					exec.solve();
-				}
+				};
+				registerActivationListener(new SolverPair(flowSolver,baseSolver), exec);
+				exec.solve();
 			}
 		}
 

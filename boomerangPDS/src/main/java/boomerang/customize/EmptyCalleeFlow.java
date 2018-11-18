@@ -46,13 +46,8 @@ public abstract class EmptyCalleeFlow {
 	}
 	
 
-	public Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,
-			Stmt returnSite) {
-		if(isSystemArrayCopy(callSite.getInvokeExpr().getMethod())){
-			return systemArrayCopyFlow(caller, callSite, value, returnSite);
-		}
-		return Collections.emptySet();
-	}
+	public abstract Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt curr, Val value,
+			Stmt succ);
 
 	protected abstract Collection<? extends State> systemArrayCopyFlow(SootMethod caller, Stmt callSite, Val value,
 			Stmt returnSite);

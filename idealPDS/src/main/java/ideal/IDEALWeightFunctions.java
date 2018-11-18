@@ -50,7 +50,7 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	@Override
 	public W push(Node<Statement, Val> curr, Node<Statement, Val> succ, Statement calleeSp) {
 		W weight = delegate.push(curr, succ, calleeSp);
-		if (isObjectFlowPhase() &&!weight.equals(getOne())){	
+		if (isObjectFlowPhase() && !weight.equals(getOne())){	
 			addOtherThanOneWeight(curr);
 		}
 		return weight;

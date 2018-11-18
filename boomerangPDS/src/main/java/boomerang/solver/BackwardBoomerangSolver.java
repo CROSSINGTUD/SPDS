@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 
 import boomerang.BackwardQuery;
@@ -108,7 +109,68 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 		return out;
 	}
 
+	protected Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
+		assert icfg.isCallStmt(callSite);
+		Set<State> out = Sets.newHashSet();
+		boolean onlyStaticInitializer = false;
+		for (SootMethod callee : icfg.getCalleesOfCallAt(callSite)) {
+			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
+				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+					Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
+							new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
+					onCallFlow(callee, callSite, value, res);
+					out.addAll(res);
+				}
+			}
+			addReachable(callee);
+			onlyStaticInitializer |= !callee.isStaticInitializer();
+		}
+		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+			if (icfg.getCalleesOfCallAt(callSite).isEmpty() || (onlyStaticInitializer && value.isStatic())) {
+				out.addAll(computeNormalFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
+			}
+			out.addAll(getEmptyCalleeFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
+		}
+		return out;
+	}	
+	
+
 	@Override
+	public Collection<? extends State> computeSuccessor(Node<Statement, Val> node) {
+		Statement stmt = node.stmt();
+		Optional<Stmt> unit = stmt.getUnit();
+		logger.trace("Computing successor for {} with solver {}", node, this);
+		if (unit.isPresent()) {
+			Stmt curr = unit.get();
+			Val value = node.fact();
+			SootMethod method = icfg.getMethodOf(curr);
+			if(method == null)
+				return Collections.emptySet();
+			if (killFlow(method, curr, value)) {
+				return Collections.emptySet();
+			}
+			if(options.isIgnoredMethod(method)){
+				return Collections.emptySet();
+			}
+			if (curr.containsInvokeExpr() && valueUsedInStatement(curr, value) && INTERPROCEDURAL) {
+				return callFlow(method, curr, curr.getInvokeExpr(), value);
+			} else if (icfg.isExitStmt(curr)) {
+				return returnFlow(method, curr, value);
+			} else {
+				return normalFlow(method, curr, value);
+			}
+		}
+		return Collections.emptySet();
+	}
+	protected Collection<State> normalFlow(SootMethod method, Stmt curr, Val value) {
+		Set<State> out = Sets.newHashSet();
+		for (Unit succ : icfg.getSuccsOf(curr)) {
+			Collection<State> flow = computeNormalFlow(method, curr, value, (Stmt) succ);
+			out.addAll(flow);
+		}
+		return out;
+	}
+
 	protected Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite, Statement callSite,
 			InvokeExpr invokeExpr, Val fact, SootMethod callee, Stmt calleeSp) {
 		if (!callee.hasActiveBody())

@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 
 import boomerang.BoomerangOptions;
@@ -68,8 +69,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		super(icfg, query, genField, options, callSummaries, fieldSummaries);
 	}
 	
-	@Override
-	public Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite, Statement callSite, InvokeExpr invokeExpr,
+	public Collection<? extends State> computeCallFlow(SootMethod caller, Statement callSite, InvokeExpr invokeExpr,
 			Val fact, SootMethod callee, Stmt calleeSp) {
 		if (!callee.hasActiveBody() || callee.isStaticInitializer()){
 			return Collections.emptySet();
@@ -80,7 +80,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
 			if (iie.getBase().equals(fact.value()) && !callee.isStatic()) {
 				out.add(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
-						new Val(calleeBody.getThisLocal(),callee), returnSite, PDSSystem.CALLS));
+						new Val(calleeBody.getThisLocal(),callee), callSite, PDSSystem.CALLS));
 			}
 		}
 		int i = 0;
@@ -89,13 +89,13 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			if (arg.equals(fact.value()) && parameterLocals.size() > i) {
 				Local param = parameterLocals.get(i);
 				out.add(new PushNode<Statement,  Val, Statement>(new Statement(calleeSp, callee),
-						new Val(param,callee), returnSite, PDSSystem.CALLS));
+						new Val(param,callee), callSite, PDSSystem.CALLS));
 			}
 			i++;
 		}
 		if(fact.isStatic()){
 			out.add(new PushNode<Statement, Val, Statement>(new Statement(calleeSp, callee),
-					new StaticFieldVal(fact.value(),((StaticFieldVal) fact).field(), callee), returnSite, PDSSystem.CALLS));
+					new StaticFieldVal(fact.value(),((StaticFieldVal) fact).field(), callee), callSite, PDSSystem.CALLS));
 		}
 		return out;
 	}
@@ -138,21 +138,60 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	}
 
 	@Override
+	public Collection<? extends State> computeSuccessor(Node<Statement, Val> node) {
+		Statement stmt = node.stmt();
+		Optional<Stmt> unit = stmt.getUnit();
+		if (unit.isPresent()) {
+			Stmt curr = unit.get();
+			Val value = node.fact();
+			SootMethod method = icfg.getMethodOf(curr);
+			if(method == null)
+				return Collections.emptySet();
+			if (icfg.isExitStmt(curr)) {
+				return returnFlow(method, curr, value);
+			}
+			Set<State> out = Sets.newHashSet();
+			for(Unit next : icfg.getSuccsOf(curr)){
+				Stmt nextStmt = (Stmt) next; 
+				if (killFlow(method, nextStmt, value)) {
+					continue;
+				}
+				if (nextStmt.containsInvokeExpr() && valueUsedInStatement(nextStmt, value)) {
+					out.addAll(callFlow(method, curr, nextStmt, nextStmt.getInvokeExpr(), value));
+				} else {
+					out.addAll(computeNormalFlow(method, curr, value, nextStmt));
+				}
+			}
+			return out;
+		}
+		return Collections.emptySet();
+	}
+	
+	protected Collection<State> normalFlow(SootMethod method, Stmt curr, Val value) {
+		Set<State> out = Sets.newHashSet();
+		for (Unit succ : icfg.getSuccsOf(curr)) {
+			Collection<State> flow = computeNormalFlow(method, curr, value, (Stmt) succ);
+			out.addAll(flow);
+		}
+		return out;
+	}
+	
+	@Override
 	public Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Val fact, Stmt succ) {
 		Set<State> out = Sets.newHashSet();
 
-		if (!isFieldWriteWithBase(curr, fact)) {
+		if (!isFieldWriteWithBase(succ, fact)) {
 			// always maintain data-flow if not a field write // killFlow has
 			// been taken care of
-			if(!options.trackReturnOfInstanceOf() || !isInstanceOfStatement(curr,fact)) {
+			if(!options.trackReturnOfInstanceOf() || !isInstanceOfStatement(succ,fact)) {
 				out.add(new Node<Statement, Val>(new Statement((Stmt) succ, method), fact));
 			}
 		} else {
 			out.add(new ExclusionNode<Statement, Val, Field>(new Statement(succ, method), fact,
-					getWrittenField(curr)));
+					getWrittenField(succ)));
 		}
-		if (curr instanceof AssignStmt) {
-			AssignStmt assignStmt = (AssignStmt) curr;
+		if (succ instanceof AssignStmt) {
+			AssignStmt assignStmt = (AssignStmt) succ;
 			Value leftOp = assignStmt.getLeftOp();
 			Value rightOp = assignStmt.getRightOp();
 			if (rightOp.equals(fact.value())) {
@@ -209,8 +248,8 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			}
 		}
 
-		if(curr instanceof IfStmt && query.getType() instanceof NullType) {
-			IfStmt ifStmt = (IfStmt) curr;
+		if(succ instanceof IfStmt && query.getType() instanceof NullType) {
+			IfStmt ifStmt = (IfStmt) succ;
 			Stmt target = ifStmt.getTarget();
 			Value condition = ifStmt.getCondition();
 			if(condition instanceof JEqExpr) {
@@ -283,10 +322,32 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		return false;
 	}
 
+
+	protected Collection<State> callFlow(SootMethod caller, Stmt curr, Stmt callSite, InvokeExpr invokeExpr, Val value) {
+		assert icfg.isCallStmt(callSite);
+		Set<State> out = Sets.newHashSet();
+		boolean onlyStaticInitializer = false;
+		for (SootMethod callee : icfg.getCalleesOfCallAt(callSite)) {
+			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
+				Collection<? extends State> res = computeCallFlow(caller,
+						new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
+				onCallFlow(callee, callSite, value, res);
+				out.addAll(res);
+			}
+			addReachable(callee);
+			onlyStaticInitializer |= !callee.isStaticInitializer();
+		}
+		if (icfg.getCalleesOfCallAt(callSite).isEmpty() || (onlyStaticInitializer && value.isStatic())) {
+			out.addAll(computeNormalFlow(caller, curr, value, (Stmt) callSite));
+		}
+		out.addAll(getEmptyCalleeFlow(caller, curr, value, (Stmt) callSite));
+		return out;
+	}
+	
 	@Override
 	public Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite,
 			Stmt returnSite) {
-		Statement returnSiteStatement = new Statement(returnSite,icfg.getMethodOf(returnSite));
+		Statement returnSiteStatement = new Statement(callSite,icfg.getMethodOf(callSite));
 		if(curr instanceof ThrowStmt && !options.throwFlows()){
 			return Collections.emptySet();
 		}

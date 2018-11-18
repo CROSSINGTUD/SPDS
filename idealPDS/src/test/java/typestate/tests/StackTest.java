@@ -56,23 +56,23 @@ public class StackTest extends IDEALTestingFramework {
 			s.pop();
 		mustBeInAcceptingState(s);
 	}
-@Test
-public void test6() {
-	ArrayList l = new ArrayList();
-	Stack s = new Stack();
-	if (staticallyUnknown()) {
-		s.push(new Object());
-		int x = 1;
+
+	@Test
+	public void test6() {
+		ArrayList l = new ArrayList();
+		Stack s = new Stack();
+		if (staticallyUnknown()) {
+			s.push(new Object());
+		}
+		if (staticallyUnknown()) {
+			s.push(new Object());
+		}
+		if (!s.isEmpty()) {
+			Object pop = s.pop();
+			mayBeInErrorState(s);
+		}
 	}
-	if (staticallyUnknown()) {
-		s.push(new Object());			
-		int x = 1;
-	}
-	if(!s.isEmpty()) {
-		Object pop = s.pop();
-		mayBeInErrorState(s);
-	}
-}
+
 	@Test
 	public void test3() {
 		Stack s = new Stack();
@@ -81,6 +81,7 @@ public void test6() {
 		s.pop();
 		mustBeInErrorState(s);
 	}
+
 	@Test
 	public void test5() {
 		Stack s = new Stack();
@@ -109,18 +110,19 @@ public void test6() {
 		owithStack.get();
 		mustBeInAcceptingState(owithStack.stack);
 	}
-	
-	private static class OwithStack{
+
+	private static class OwithStack {
 		Stack stack;
-		public void pushStack(Object o){
-			if(this.stack == null) {
+
+		public void pushStack(Object o) {
+			if (this.stack == null) {
 				this.stack = new Stack();
 			}
 			this.stack.push(o);
 		}
-		
+
 		public Object get() {
-			if(stack == null || stack.empty()) {
+			if (stack == null || stack.empty()) {
 				return null;
 			}
 			Object peek = this.stack.peek();
@@ -128,6 +130,7 @@ public void test6() {
 			return peek;
 		}
 	}
+
 	@Override
 	protected TypeStateMachineWeightFunctions getStateMachine() {
 		return new VectorStateMachine();
