@@ -70,28 +70,28 @@ public class IDEALSeedSolver<W extends Weight> {
 	private Set<Node<Statement, Val>> weakUpdates = Sets.newHashSet();
 	private final class AddIndirectFlowAtCallSite implements WPAUpdateListener<Statement, INode<Val>, W> {
 		private final Statement callSite;
-		private final Statement returnSite;
+		private final Statement predOfCall;
 		private final Val returnedFact;
 
-		private AddIndirectFlowAtCallSite(Statement callSite, Statement returnSite, Val returnedFact) {
+		private AddIndirectFlowAtCallSite(Statement predOfCall, Statement callSite, Val returnedFact) {
 			this.callSite = callSite;
-			this.returnSite = returnSite;
+			this.predOfCall = predOfCall;
 			this.returnedFact = returnedFact;
 		}
 
 		@Override
 		public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
 				WeightedPAutomaton<Statement, INode<Val>, W> aut) {
-
 			// Commented out as of
 			// typestate.tests.FileMustBeClosedTest.simpleAlias()
-			if (t.getLabel().equals(returnSite) /*
+			if (t.getLabel().equals(predOfCall) /*
 												 * && !t.getStart().fact().equals( returnedFact.fact())
 												 */) {
-				idealWeightFunctions.addNonKillFlow(new Node<Statement, Val>(callSite, returnedFact));
+				System.out.println(callSite + "  " + returnedFact + " -> "+ t.getStart().fact());
+				idealWeightFunctions.addNonKillFlow(new Node<Statement, Val>(predOfCall, returnedFact));
 				idealWeightFunctions.addIndirectFlow(
-						new Node<Statement, Val>(returnSite, returnedFact),
-						new Node<Statement, Val>(returnSite, t.getStart().fact()));
+						new Node<Statement, Val>(callSite, returnedFact),
+						new Node<Statement, Val>(callSite, t.getStart().fact()));
 			}
 		}
 
@@ -101,7 +101,7 @@ public class IDEALSeedSolver<W extends Weight> {
 			int result = 1;
 			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
-			result = prime * result + ((returnSite == null) ? 0 : returnSite.hashCode());
+			result = prime * result + ((predOfCall == null) ? 0 : predOfCall.hashCode());
 			result = prime * result + ((returnedFact == null) ? 0 : returnedFact.hashCode());
 			return result;
 		}
@@ -122,10 +122,10 @@ public class IDEALSeedSolver<W extends Weight> {
 					return false;
 			} else if (!callSite.equals(other.callSite))
 				return false;
-			if (returnSite == null) {
-				if (other.returnSite != null)
+			if (predOfCall == null) {
+				if (other.predOfCall != null)
 					return false;
-			} else if (!returnSite.equals(other.returnSite))
+			} else if (!predOfCall.equals(other.predOfCall))
 				return false;
 			if (returnedFact == null) {
 				if (other.returnedFact != null)
@@ -152,11 +152,12 @@ public class IDEALSeedSolver<W extends Weight> {
 		}
 
 		@Override
-		public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
-			if(!solver.valueUsedInStatement((Stmt) callSite.getUnit().get(), returnedFact.fact()))
+		public void connect(Statement predOfCall, Statement callSite, INode<Val> returnedFact, W w) {
+			if(!solver.valueUsedInStatement((Stmt) callSite.getUnit().get(), returnedFact.fact())) {
 				return;
+			}
 			if (callSite.equals(cs)) {
-				solver.getCallAutomaton().registerListener(new AddIndirectFlowAtCallSite(callSite, returnSite, returnedFact.fact()));
+				solver.getCallAutomaton().registerListener(new AddIndirectFlowAtCallSite(predOfCall, callSite, returnedFact.fact()));
 			}
 		}
 
@@ -236,6 +237,7 @@ public class IDEALSeedSolver<W extends Weight> {
 					addAffectedPotentialStrongUpdate(curr, callSite);
 					for (ForwardQuery e : allocationSites.keySet()) {
 						AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
+						System.out.println("THIS"  + callSite);
 						solver.getCallAutomaton()
 								.registerConnectPushListener(new IndirectFlowsAtCallSite(solver, callSite));
 					}
@@ -263,7 +265,7 @@ public class IDEALSeedSolver<W extends Weight> {
 							WeightedPAutomaton<Statement, INode<Val>, W> aut) {
 
 						for (Statement succ : solver.getSuccsOf(curr.stmt())) {
-
+							
 							// Commented out as of typestate.tests.FileMustBeClosedTest.simpleAlias()
 							if (t.getLabel().equals(succ) /* && !t.getStart().fact().equals(curr.fact()) */) {
 								idealWeightFunctions.addNonKillFlow(curr);
@@ -395,11 +397,11 @@ public class IDEALSeedSolver<W extends Weight> {
 		callAutomaton.registerConnectPushListener(new ConnectPushListener<Statement, INode<Val>, W>() {
 
 			@Override
-			public void connect(Statement callSite, Statement returnSite, INode<Val> returnedFact, W w) {
+			public void connect(Statement predOfCall, Statement callSite, INode<Val> returnedFact, W w) {
 				if (!callSite.getMethod().equals(returnedFact.fact().m()))
 					return;
-				if (!callSite.getMethod().equals(returnSite.getMethod()))
-					return;
+//				if (!callSite.getMethod().equals(returnSite.getMethod()))
+//					return;
 				if(!boomerang.getSolvers().getOrCreate(seed).valueUsedInStatement((Stmt) callSite.getUnit().get(), returnedFact.fact()))
 					return;
 				if (!w.equals(one)) {
@@ -458,9 +460,10 @@ public class IDEALSeedSolver<W extends Weight> {
 				for (Node<Statement, Val> indirect : indirectFlows) {
 					solver.addNormalCallFlow(source, indirect);
 					for (Statement pred : solver.getPredsOf(t.getLabel())) {
+						System.out.println(source);
+						System.out.println(new Node<Statement, Val>(pred, indirect.fact()) + " ----->>> "+  indirect);
 						solver.addNormalFieldFlow(new Node<Statement, Val>(pred, indirect.fact()), indirect);
 					}
-
 				}
 			}
 		});
