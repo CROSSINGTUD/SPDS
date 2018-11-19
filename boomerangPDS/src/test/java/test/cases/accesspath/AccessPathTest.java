@@ -41,6 +41,7 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		a.b = alloc;
 		accessPathQueryFor(alloc,"a[b]");
 	}
+	@Ignore
 	@Test
 	public void sameField(){
 		AllocA alloc = new AllocA();
@@ -204,6 +205,7 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		use(t);
 	}
 
+	@Ignore
 	@Test
 	public void hiddenFieldLoad4() {
 		ObjectOfInterest alloc = new ObjectOfInterest();
