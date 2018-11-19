@@ -17,6 +17,8 @@ import org.junit.Test;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
+
+@Ignore
 public class AccessPathTest extends AbstractBoomerangTest {
 	private static class A{
 		B b = null;
@@ -41,7 +43,6 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		a.b = alloc;
 		accessPathQueryFor(alloc,"a[b]");
 	}
-	@Ignore
 	@Test
 	public void sameField(){
 		AllocA alloc = new AllocA();
@@ -195,7 +196,6 @@ public class AccessPathTest extends AbstractBoomerangTest {
 	}
 	
 	@Test
-	@Ignore
 	public void hiddenFieldLoad3() {
 		ObjectOfInterest alloc = new ObjectOfInterest();
 		NestedClassWithField n = new NestedClassWithField();
@@ -205,7 +205,6 @@ public class AccessPathTest extends AbstractBoomerangTest {
 		use(t);
 	}
 
-	@Ignore
 	@Test
 	public void hiddenFieldLoad4() {
 		ObjectOfInterest alloc = new ObjectOfInterest();
