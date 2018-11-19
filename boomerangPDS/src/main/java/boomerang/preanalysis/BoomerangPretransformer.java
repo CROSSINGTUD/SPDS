@@ -71,7 +71,7 @@ public class BoomerangPretransformer extends BodyTransformer {
 					body.getUnits().remove(u);
 				}
 			}
-			if (u instanceof Stmt && ((Stmt) u).containsInvokeExpr()) {
+			if (u instanceof Stmt && ((Stmt) u).containsInvokeExpr() && !u.toString().contains("test.assertions.Assertions:")) {
 				Stmt stmt = (Stmt) u;
 				List<ValueBox> useBoxes = stmt.getInvokeExpr().getUseBoxes();
 				for (Value v : stmt.getInvokeExpr().getArgs()) {
