@@ -1254,32 +1254,33 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	public void debugOutput() {
 		if(!logger.isDebugEnabled())
 			return;
-		Debugger<W> debugger = getOrCreateDebugger();
-		debugger.done(queryToSolvers);
-		int totalRules = 0;
-		for (Query q : queryToSolvers.keySet()) {
-			totalRules += queryToSolvers.getOrCreate(q).getNumberOfRules();
-		}
-		logger.debug("Total number of rules: " + totalRules);
-		for (Query q : queryToSolvers.keySet()) {
-			logger.debug("========================");
-			logger.debug(q);
-			logger.debug("========================");
-			queryToSolvers.getOrCreate(q).debugOutput();
-			for (SootMethod m : queryToSolvers.get(q).getReachableMethods()) {
-				logger.debug(m + "\n" + Joiner.on("\n\t").join(queryToSolvers.get(q).getResults(m).cellSet()));
-			}
-			queryToSolvers.getOrCreate(q).debugOutput();
-			for (FieldReadPOI p : fieldReads.values()) {
-				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
-			}
-			for (FieldWritePOI p : fieldWrites.values()) {
-				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
-				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {
-					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
-				}
-			}
-		}
+		throw new RuntimeException("Debug enabled!");
+//		Debugger<W> debugger = getOrCreateDebugger();
+//		debugger.done(queryToSolvers);
+//		int totalRules = 0;
+//		for (Query q : queryToSolvers.keySet()) {
+//			totalRules += queryToSolvers.getOrCreate(q).getNumberOfRules();
+//		}
+//		logger.debug("Total number of rules: " + totalRules);
+//		for (Query q : queryToSolvers.keySet()) {
+//			logger.debug("========================");
+//			logger.debug(q);
+//			logger.debug("========================");
+//			queryToSolvers.getOrCreate(q).debugOutput();
+//			for (SootMethod m : queryToSolvers.get(q).getReachableMethods()) {
+//				logger.debug(m + "\n" + Joiner.on("\n\t").join(queryToSolvers.get(q).getResults(m).cellSet()));
+//			}
+//			queryToSolvers.getOrCreate(q).debugOutput();
+//			for (FieldReadPOI p : fieldReads.values()) {
+//				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
+//			}
+//			for (FieldWritePOI p : fieldWrites.values()) {
+//				queryToSolvers.getOrCreate(q).debugFieldAutomaton(p.getStmt());
+//				for (Statement succ : queryToSolvers.getOrCreate(q).getSuccsOf(p.getStmt())) {
+//					queryToSolvers.getOrCreate(q).debugFieldAutomaton(succ);
+//				}
+//			}
+//		}
 	}
 
 	public Debugger<W> getOrCreateDebugger() {
