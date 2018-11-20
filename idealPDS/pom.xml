@@ -32,17 +32,7 @@
     <dependencies>
         <dependency>
             <groupId>de.fraunhofer.iem</groupId>
-            <artifactId>testCore</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>de.fraunhofer.iem</groupId>
             <artifactId>boomerangPDS</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>de.fraunhofer.iem</groupId>
-            <artifactId>WPDS</artifactId>
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
         <dependency>
@@ -60,16 +50,6 @@
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.12</version>
-        </dependency>
-        <dependency>
-            <groupId>ca.mcgill.sable</groupId>
-            <artifactId>soot</artifactId>
-            <version>3.0.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>de.fraunhofer.iem</groupId>
-            <artifactId>synchronizedPDS</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
         </dependency>
     </dependencies>
     <repositories>
