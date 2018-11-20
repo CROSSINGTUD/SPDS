@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.beust.jcommander.internal.Sets;
+import com.google.common.collect.Sets;
 
 import soot.Body;
 import soot.BodyTransformer;
