@@ -11,11 +11,12 @@
  *******************************************************************************/
 package typestate.test.helper;
 public class File {
-  public void open() {
-
+  public File open() {
+	  return this;
   }
 
-  public void close() {
+  public File close() {
+	  return this;
   };
 
   public int hashCode() {

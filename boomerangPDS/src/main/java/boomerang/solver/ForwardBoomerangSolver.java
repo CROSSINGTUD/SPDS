@@ -153,12 +153,9 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			Set<State> out = Sets.newHashSet();
 			for(Unit next : icfg.getSuccsOf(curr)){
 				Stmt nextStmt = (Stmt) next; 
-				if (killFlow(method, nextStmt, value)) {
-					continue;
-				}
 				if (nextStmt.containsInvokeExpr() && valueUsedInStatement(nextStmt, value)) {
 					out.addAll(callFlow(method, curr, nextStmt, nextStmt.getInvokeExpr(), value));
-				} else {
+				} else if (!killFlow(method, nextStmt, value)) {
 					out.addAll(computeNormalFlow(method, curr, value, nextStmt));
 				}
 			}
