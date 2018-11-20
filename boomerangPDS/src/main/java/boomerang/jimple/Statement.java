@@ -119,7 +119,11 @@ public class Statement implements Location {
 				InstanceInvokeExpr iie = (InstanceInvokeExpr) s.getInvokeExpr();
 				base = iie.getBase().toString()+".";
 			}
-			return base+s.getInvokeExpr().getMethod().getName() + "(" +Joiner.on(",").join(s.getInvokeExpr().getArgs())+")";
+			String assign = "";
+			if(s instanceof AssignStmt){
+				assign = ((AssignStmt)s).getLeftOp() + " = ";
+			}
+			return assign + base+s.getInvokeExpr().getMethod().getName() + "(" +Joiner.on(",").join(s.getInvokeExpr().getArgs())+")";
 		}
 		if(s instanceof IdentityStmt){
 			return "id";
