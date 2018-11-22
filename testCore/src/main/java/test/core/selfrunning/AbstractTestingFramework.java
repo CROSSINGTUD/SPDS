@@ -87,13 +87,7 @@ public abstract class AbstractTestingFramework {
 		Options.v().setPhaseOption("cg.spark", "on");
 		Options.v().setPhaseOption("cg.spark", "verbose:true");
 		Options.v().set_output_format(Options.output_format_none);
-		String userdir = System.getProperty("user.dir");
-		String sootCp = userdir + "/target/test-classes";
-		String javaHome = System.getProperty("java.home");
-		if (javaHome == null || javaHome.equals(""))
-			throw new RuntimeException("Could not get property java.home!");
-		sootCp += File.pathSeparator + javaHome + "/lib/rt.jar";
-		sootCp += File.pathSeparator + javaHome + "/lib/jce.jar";
+		
 //			Options.v().setPhaseOption("cg", "trim-clinit:false");
 		Options.v().set_no_bodies_for_excluded(true);
 		Options.v().set_allow_phantom_refs(true);
@@ -104,7 +98,7 @@ public abstract class AbstractTestingFramework {
 		Options.v().setPhaseOption("jb", "use-original-names:true");
 
 		Options.v().set_exclude(excludedPackages());
-		Options.v().set_soot_classpath(sootCp);
+		Options.v().set_soot_classpath(getSootClassPath());
 		// Options.v().set_main_class(this.getTargetClass());
 		SootClass sootTestCaseClass = Scene.v().forceResolve(getTestCaseClassName(), SootClass.BODIES);
 
@@ -138,6 +132,18 @@ public abstract class AbstractTestingFramework {
 		}
 		ePoints.add(methodByName);
 		Scene.v().setEntryPoints(ePoints);
+	}
+
+	protected String getSootClassPath() {
+		String userdir = System.getProperty("user.dir");
+		String javaHome = System.getProperty("java.home");
+		if (javaHome == null || javaHome.equals(""))
+			throw new RuntimeException("Could not get property java.home!");
+
+		String sootCp = userdir + "/target/test-classes";
+		sootCp += File.pathSeparator + javaHome + "/lib/rt.jar";
+		sootCp += File.pathSeparator + javaHome + "/lib/jce.jar";
+		return sootCp;
 	}
 
 	protected List<String> getIncludeList() {
