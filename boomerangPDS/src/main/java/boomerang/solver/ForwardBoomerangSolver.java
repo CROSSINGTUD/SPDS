@@ -32,6 +32,7 @@ import boomerang.jimple.ValWithFalseVariable;
 import soot.Body;
 import soot.Local;
 import soot.NullType;
+import soot.Scene;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
@@ -323,8 +324,13 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	protected Collection<State> callFlow(SootMethod caller, Stmt curr, Stmt callSite, InvokeExpr invokeExpr, Val value) {
 		assert icfg.isCallStmt(callSite);
 		Set<State> out = Sets.newHashSet();
-		boolean onlyStaticInitializer = false;
+		boolean onlyStaticInitializer = true;
+		boolean calleeExcluded = false;
 		for (SootMethod callee : icfg.getCalleesOfCallAt(callSite)) {
+			if(callee.isStaticInitializer()) {
+				continue;
+			}
+			onlyStaticInitializer = false;
 			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
 				Collection<? extends State> res = computeCallFlow(caller,
 						new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
@@ -332,9 +338,12 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 				out.addAll(res);
 			}
 			addReachable(callee);
-			onlyStaticInitializer |= !callee.isStaticInitializer();
+
+			if(Scene.v().isExcluded(callee.getDeclaringClass())) {
+				calleeExcluded = true;
+			}
 		}
-		if (icfg.getCalleesOfCallAt(callSite).isEmpty() || (onlyStaticInitializer && value.isStatic())) {
+		if (calleeExcluded || onlyStaticInitializer) {
 			out.addAll(computeNormalFlow(caller, curr, value, (Stmt) callSite));
 		}
 		out.addAll(getEmptyCalleeFlow(caller, curr, value, (Stmt) callSite));
