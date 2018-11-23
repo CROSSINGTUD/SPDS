@@ -33,7 +33,7 @@ public class Util {
 
 	public static boolean isReturnOperator(Val val, Statement returnStmt) {
 		Stmt stmt = returnStmt.getUnit().get();
-		return (stmt instanceof ReturnStmt && ((ReturnStmt) stmt).getOp().equals(val));
+		return (stmt instanceof ReturnStmt && ((ReturnStmt) stmt).getOp().equals(val.value()));
 	}
 
 	public static boolean isThisLocal(Val val, SootMethod m) {

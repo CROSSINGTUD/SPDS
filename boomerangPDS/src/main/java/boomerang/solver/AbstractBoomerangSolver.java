@@ -307,7 +307,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			AssignStmt as = (AssignStmt) curr;
 			if (as.getRightOp() instanceof InstanceFieldRef) {
 				InstanceFieldRef ifr = (InstanceFieldRef) as.getRightOp();
-				return ifr.getBase().equals(base);
+				return ifr.getBase().equals(base.value());
 			}
 		}
 		return false;
