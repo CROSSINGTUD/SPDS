@@ -27,6 +27,7 @@ import boomerang.jimple.Val;
 import ideal.IDEALSeedSolver.Phases;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.PushNode;
 import wpds.impl.Weight;
 
 public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<Statement,Val,Statement,W> {
@@ -50,8 +51,11 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	@Override
 	public W push(Node<Statement, Val> curr, Node<Statement, Val> succ, Statement calleeSp) {
 		W weight = delegate.push(curr, succ, calleeSp);
-		if (isObjectFlowPhase() && !weight.equals(getOne())){	
-			addOtherThanOneWeight(curr);
+		if (isObjectFlowPhase() && !weight.equals(getOne())){
+			if(succ instanceof PushNode) {
+				PushNode<Statement, Val, Statement> pushNode = (PushNode<Statement, Val, Statement>) succ;
+				addOtherThanOneWeight(new Node<Statement, Val>(pushNode.location(), curr.fact()));	
+			}
 		}
 		return weight;
 	}
@@ -67,8 +71,8 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	@Override
 	public W normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
 		W weight = delegate.normal(curr, succ);
-		if (isObjectFlowPhase() && curr.stmt().isCallsite() && !weight.equals(getOne())){
-			addOtherThanOneWeight(curr);
+		if (isObjectFlowPhase() && succ.stmt().isCallsite() && !weight.equals(getOne())){
+			addOtherThanOneWeight(succ);
 		}
 		return weight;
 	}

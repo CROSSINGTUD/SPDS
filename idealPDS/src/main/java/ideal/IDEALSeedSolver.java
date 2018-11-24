@@ -203,13 +203,13 @@ public class IDEALSeedSolver<W extends Weight> {
 
 	private final class TriggerBackwardQuery extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
-		private final AbstractBoomerangSolver<W> s;
+		private final AbstractBoomerangSolver<W> seedSolver;
 		private final WeightedBoomerang<W> boomerang;
 		private final Node<Statement, Val> curr;
 
-		private TriggerBackwardQuery(INode<Node<Statement, Val>> state, AbstractBoomerangSolver<W> s, WeightedBoomerang<W> boomerang, Node<Statement, Val> curr) {
-			super(state);
-			this.s = s;
+		private TriggerBackwardQuery(AbstractBoomerangSolver<W> seedSolver, WeightedBoomerang<W> boomerang, Node<Statement, Val> curr) {
+			super(new SingleNode<Node<Statement, Val>>(curr));
+			this.seedSolver = seedSolver;
 			this.boomerang = boomerang;
 			this.curr = curr;
 		}
@@ -220,13 +220,23 @@ public class IDEALSeedSolver<W extends Weight> {
 			if (!t.getLabel().equals(Field.empty())) {
 				return;
 			}
-			BackwardQuery query = new BackwardQuery(curr.stmt(), curr.fact());
-			BackwardBoomerangResults<W> backwardSolveUnderScope = boomerang.backwardSolveUnderScope(query, seed, curr);
-			Map<ForwardQuery, AbstractBoomerangResults<W>.Context> allocationSites = backwardSolveUnderScope
-					.getAllocationSites();
+
 			addAffectedPotentialStrongUpdate(curr, curr.stmt());
 			idealWeightFunctions.potentialStrongUpdate(curr.stmt());
-			s.getCallAutomaton().registerListener(new StackListener<Statement, INode<Val>, W>(s.getCallAutomaton(),
+			for(Unit u : analysisDefinition.icfg().getPredsOf(curr.stmt().getUnit().get())){
+				BackwardQuery query = new BackwardQuery(new Statement((Stmt)u, curr.stmt().getMethod()), curr.fact());
+				BackwardBoomerangResults<W> queryResults = boomerang.backwardSolveUnderScope(query, seed, curr);
+				Set<ForwardQuery> queryAllocationSites = queryResults
+						.getAllocationSites().keySet();
+				System.out.println(queryAllocationSites);
+				setWeakUpdateIfNecessary();
+				injectAliasesAtStrongUpdates(queryAllocationSites);
+				injectAliasesAtStrongUpdatesAtCallStack(queryAllocationSites);
+			}
+		}
+
+		private void injectAliasesAtStrongUpdatesAtCallStack(Set<ForwardQuery> queryAllocationSites) {
+			seedSolver.getCallAutomaton().registerListener(new StackListener<Statement, INode<Val>, W>(seedSolver.getCallAutomaton(),
 					new SingleNode<Val>(curr.fact()), curr.stmt()) {
 				@Override
 				public void anyContext(Statement end) {
@@ -236,7 +246,7 @@ public class IDEALSeedSolver<W extends Weight> {
 				public void stackElement(Statement callSite) {
 					boomerang.checkTimeout();
 					addAffectedPotentialStrongUpdate(curr, callSite);
-					for (ForwardQuery e : allocationSites.keySet()) {
+					for (ForwardQuery e : queryAllocationSites) {
 						AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
 						solver.getCallAutomaton()
 								.registerConnectPushListener(new IndirectFlowsAtCallSite(solver, callSite));
@@ -244,20 +254,10 @@ public class IDEALSeedSolver<W extends Weight> {
 
 				}
 			});
-			for (final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()) {
-				if (e.getKey() instanceof ForwardQuery) {
-					e.getValue().synchedEmptyStackReachable(curr, new EmptyStackWitnessListener<Statement, Val>() {
-						@Override
-						public void witnessFound(Node<Statement, Val> targetFact) {
-							if (!e.getKey().asNode().equals(seed.asNode())) {
-								setWeakUpdate(curr);
-							}
-						}
-					});
-				}
-			}
+		}
 
-			for (ForwardQuery e : allocationSites.keySet()) {
+		private void injectAliasesAtStrongUpdates(Set<ForwardQuery> queryAllocationSites) {
+			for (ForwardQuery e : queryAllocationSites) {
 				AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
 				solver.getCallAutomaton().registerListener(new WPAUpdateListener<Statement, INode<Val>, W>() {
 					@Override
@@ -275,6 +275,21 @@ public class IDEALSeedSolver<W extends Weight> {
 						}
 					}
 				});
+			}
+		}
+
+		private void setWeakUpdateIfNecessary() {
+			for (final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()) {
+				if (e.getKey() instanceof ForwardQuery) {
+					e.getValue().synchedEmptyStackReachable(curr, new EmptyStackWitnessListener<Statement, Val>() {
+						@Override
+						public void witnessFound(Node<Statement, Val> targetFact) {
+							if (!e.getKey().asNode().equals(seed.asNode())) {
+								setWeakUpdate(curr);
+							}
+						}
+					});
+				}
 			}
 		}
 
@@ -416,9 +431,9 @@ public class IDEALSeedSolver<W extends Weight> {
 				if (phase.equals(Phases.ValueFlow)) {
 					return;
 				}
-				AbstractBoomerangSolver<W> s = boomerang.getSolvers().getOrCreate(seed);
-				s.getFieldAutomaton().registerListener(
-						new TriggerBackwardQuery(new SingleNode<Node<Statement, Val>>(curr), s, boomerang, curr));
+				AbstractBoomerangSolver<W> seedSolver = boomerang.getSolvers().getOrCreate(seed);
+				seedSolver.getFieldAutomaton().registerListener(
+						new TriggerBackwardQuery(seedSolver, boomerang, curr));
 			}
 		});
 		ForwardBoomerangResults<W> res = boomerang.solve((ForwardQuery) seed);
