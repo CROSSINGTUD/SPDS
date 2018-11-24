@@ -55,6 +55,16 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 //		mustBeInAcceptingState(alias);
 		mustBeInAcceptingState(file);
 	}
+	
+	@Test
+	public void simpleStrongUpdate2() {
+		File x = new File();
+		File y = x;
+		x.open();
+		x.close();
+		mustBeInAcceptingState(x);
+		mustBeInAcceptingState(y);
+	}
 	@Test
 	public void recursion() {
 		File file = new File();
@@ -169,6 +179,7 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		File y = new File();
 		File x = y;
 		x.open();
+		int z = 1;
 		y.close();
 		mustBeInAcceptingState(x);
 		mustBeInAcceptingState(y);

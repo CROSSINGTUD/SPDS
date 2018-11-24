@@ -124,6 +124,8 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	}
 
 	public void addIndirectFlow(Node<Statement, Val> source, Node<Statement, Val> target) {
+		if(source.equals(target))
+			return;
 		logger.trace("Alias flow detected "+  source+ " " + target);
 		indirectAlias.put(source, target);
 	}
@@ -137,7 +139,7 @@ public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<S
 	}
 
 	public boolean isKillFlow(Node<Statement, Val> node) {
-		return !nodesWithStrongUpdate.contains(node) && !indirectAlias.containsValue(node);
+		return !nodesWithStrongUpdate.contains(node);
 	}
 
 	public void addNonKillFlow(Node<Statement, Val> curr) {
