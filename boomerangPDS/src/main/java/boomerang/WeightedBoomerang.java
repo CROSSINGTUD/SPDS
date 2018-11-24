@@ -76,6 +76,7 @@ import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.NestedWeightedPAutomatons;
+import wpds.impl.Rule;
 import wpds.impl.StackListener;
 import wpds.impl.SummaryNestedWeightedPAutomatons;
 import wpds.impl.Transition;
@@ -414,6 +415,14 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				}
 				return super.preventCallTransitionAdd(t, weight);
 			}
+			
+			@Override
+			public void addCallRule(Rule<Statement, INode<Val>, W> rule) {
+				if(preventCallRuleAdd(sourceQuery, rule)) {
+					return;
+				}
+				super.addCallRule(rule);
+			}
 			@Override
 			protected void onManyStateListenerRegister() {
 				checkTimeout();
@@ -491,6 +500,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 	public boolean preventForwardCallTransitionAdd(ForwardQuery sourceQuery,
 			Transition<Statement, INode<Val>> t, W weight) {
+		return false;
+	}
+	public boolean preventCallRuleAdd(ForwardQuery sourceQuery, Rule<Statement, INode<Val>, W> rule) {
 		return false;
 	}
 

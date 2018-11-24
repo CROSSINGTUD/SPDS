@@ -45,12 +45,15 @@ import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.ConnectPushListener;
+import wpds.impl.Rule;
 import wpds.impl.StackListener;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
+import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
@@ -70,12 +73,10 @@ public class IDEALSeedSolver<W extends Weight> {
 	private Set<Node<Statement, Val>> weakUpdates = Sets.newHashSet();
 	private final class AddIndirectFlowAtCallSite implements WPAUpdateListener<Statement, INode<Val>, W> {
 		private final Statement callSite;
-		private final Statement returnSite;
 		private final Val returnedFact;
 
-		private AddIndirectFlowAtCallSite(Statement callSite, Statement returnSite, Val returnedFact) {
+		private AddIndirectFlowAtCallSite(Statement callSite, Val returnedFact) {
 			this.callSite = callSite;
-			this.returnSite = returnSite;
 			this.returnedFact = returnedFact;
 		}
 
@@ -89,8 +90,8 @@ public class IDEALSeedSolver<W extends Weight> {
 												 */) {
 				idealWeightFunctions.addNonKillFlow(new Node<Statement, Val>(callSite, returnedFact));
 				idealWeightFunctions.addIndirectFlow(
-						new Node<Statement, Val>(returnSite, returnedFact),
-						new Node<Statement, Val>(returnSite, t.getStart().fact()));
+						new Node<Statement, Val>(callSite, returnedFact),
+						new Node<Statement, Val>(callSite, t.getStart().fact()));
 			}
 		}
 
@@ -100,7 +101,6 @@ public class IDEALSeedSolver<W extends Weight> {
 			int result = 1;
 			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
-			result = prime * result + ((returnSite == null) ? 0 : returnSite.hashCode());
 			result = prime * result + ((returnedFact == null) ? 0 : returnedFact.hashCode());
 			return result;
 		}
@@ -120,11 +120,6 @@ public class IDEALSeedSolver<W extends Weight> {
 				if (other.callSite != null)
 					return false;
 			} else if (!callSite.equals(other.callSite))
-				return false;
-			if (returnSite == null) {
-				if (other.returnSite != null)
-					return false;
-			} else if (!returnSite.equals(other.returnSite))
 				return false;
 			if (returnedFact == null) {
 				if (other.returnedFact != null)
@@ -156,9 +151,7 @@ public class IDEALSeedSolver<W extends Weight> {
 				return;
 			}
 			if (callSite.equals(cs)) {
-				for(Statement returnSite : solver.getSuccsOf(callSite)) {
-					solver.getCallAutomaton().registerListener(new AddIndirectFlowAtCallSite(callSite, returnSite, returnedFact.fact()));
-				}
+				solver.getCallAutomaton().registerListener(new AddIndirectFlowAtCallSite(callSite, returnedFact.fact()));
 			}
 		}
 
@@ -205,13 +198,13 @@ public class IDEALSeedSolver<W extends Weight> {
 
 		private final AbstractBoomerangSolver<W> seedSolver;
 		private final WeightedBoomerang<W> boomerang;
-		private final Node<Statement, Val> curr;
+		private final Node<Statement, Val> strongUpdateNode;
 
 		private TriggerBackwardQuery(AbstractBoomerangSolver<W> seedSolver, WeightedBoomerang<W> boomerang, Node<Statement, Val> curr) {
 			super(new SingleNode<Node<Statement, Val>>(curr));
 			this.seedSolver = seedSolver;
 			this.boomerang = boomerang;
-			this.curr = curr;
+			this.strongUpdateNode = curr;
 		}
 
 		@Override
@@ -221,14 +214,12 @@ public class IDEALSeedSolver<W extends Weight> {
 				return;
 			}
 
-			addAffectedPotentialStrongUpdate(curr, curr.stmt());
-			idealWeightFunctions.potentialStrongUpdate(curr.stmt());
-			for(Unit u : analysisDefinition.icfg().getPredsOf(curr.stmt().getUnit().get())){
-				BackwardQuery query = new BackwardQuery(new Statement((Stmt)u, curr.stmt().getMethod()), curr.fact());
-				BackwardBoomerangResults<W> queryResults = boomerang.backwardSolveUnderScope(query, seed, curr);
+			addAffectedPotentialStrongUpdate(strongUpdateNode, strongUpdateNode.stmt());
+			for(Unit u : analysisDefinition.icfg().getPredsOf(strongUpdateNode.stmt().getUnit().get())){
+				BackwardQuery query = new BackwardQuery(new Statement((Stmt)u, strongUpdateNode.stmt().getMethod()), strongUpdateNode.fact());
+				BackwardBoomerangResults<W> queryResults = boomerang.backwardSolveUnderScope(query, seed, strongUpdateNode);
 				Set<ForwardQuery> queryAllocationSites = queryResults
 						.getAllocationSites().keySet();
-				System.out.println(queryAllocationSites);
 				setWeakUpdateIfNecessary();
 				injectAliasesAtStrongUpdates(queryAllocationSites);
 				injectAliasesAtStrongUpdatesAtCallStack(queryAllocationSites);
@@ -237,7 +228,7 @@ public class IDEALSeedSolver<W extends Weight> {
 
 		private void injectAliasesAtStrongUpdatesAtCallStack(Set<ForwardQuery> queryAllocationSites) {
 			seedSolver.getCallAutomaton().registerListener(new StackListener<Statement, INode<Val>, W>(seedSolver.getCallAutomaton(),
-					new SingleNode<Val>(curr.fact()), curr.stmt()) {
+					new SingleNode<Val>(strongUpdateNode.fact()), strongUpdateNode.stmt()) {
 				@Override
 				public void anyContext(Statement end) {
 				}
@@ -245,7 +236,7 @@ public class IDEALSeedSolver<W extends Weight> {
 				@Override
 				public void stackElement(Statement callSite) {
 					boomerang.checkTimeout();
-					addAffectedPotentialStrongUpdate(curr, callSite);
+					addAffectedPotentialStrongUpdate(strongUpdateNode, callSite);
 					for (ForwardQuery e : queryAllocationSites) {
 						AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
 						solver.getCallAutomaton()
@@ -264,14 +255,10 @@ public class IDEALSeedSolver<W extends Weight> {
 					public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
 							WeightedPAutomaton<Statement, INode<Val>, W> aut) {
 
-						for (Statement succ : solver.getSuccsOf(curr.stmt())) {
-							
-							// Commented out as of typestate.tests.FileMustBeClosedTest.simpleAlias()
-							if (t.getLabel().equals(succ) /* && !t.getStart().fact().equals(curr.fact()) */) {
-								idealWeightFunctions.addNonKillFlow(curr);
-								idealWeightFunctions.addIndirectFlow(new Node<Statement, Val>(succ, curr.fact()),
-										new Node<Statement, Val>(succ, t.getStart().fact()));
-							}
+						if (t.getLabel().equals(strongUpdateNode.stmt()) /* && !t.getStart().fact().equals(curr.fact()) */) {
+							idealWeightFunctions.addNonKillFlow(strongUpdateNode);
+							idealWeightFunctions.addIndirectFlow(strongUpdateNode,
+									new Node<Statement,Val>(strongUpdateNode.stmt(), t.getStart().fact()));
 						}
 					}
 				});
@@ -281,11 +268,11 @@ public class IDEALSeedSolver<W extends Weight> {
 		private void setWeakUpdateIfNecessary() {
 			for (final Entry<Query, AbstractBoomerangSolver<W>> e : boomerang.getSolvers().entrySet()) {
 				if (e.getKey() instanceof ForwardQuery) {
-					e.getValue().synchedEmptyStackReachable(curr, new EmptyStackWitnessListener<Statement, Val>() {
+					e.getValue().synchedEmptyStackReachable(strongUpdateNode, new EmptyStackWitnessListener<Statement, Val>() {
 						@Override
 						public void witnessFound(Node<Statement, Val> targetFact) {
 							if (!e.getKey().asNode().equals(seed.asNode())) {
-								setWeakUpdate(curr);
+								setWeakUpdate(strongUpdateNode);
 							}
 						}
 					});
@@ -380,15 +367,40 @@ public class IDEALSeedSolver<W extends Weight> {
 					Transition<Statement, INode<Val>> t, W weight) {
 				if (phase.equals(Phases.ValueFlow) && sourceQuery.equals(seed)) {
 					if (preventStrongUpdateFlows(t, weight)) {
-						return true;
+//						return true;
 					}
 				}
 				return super.preventForwardCallTransitionAdd(sourceQuery, t, weight);
 			}
+			@Override
+			public boolean preventCallRuleAdd(ForwardQuery sourceQuery, Rule<Statement, INode<Val>, W> rule) {
+				 if (phase.equals(Phases.ValueFlow) && sourceQuery.equals(seed)) {
+					 if (preventStrongUpdateFlows(rule)) {
+						 return true;
+					 }
+				 }
+				 return false;
+			}
+			
 		};
 	}
 
+	protected boolean preventStrongUpdateFlows(Rule<Statement, INode<Val>, W> rule) {
+		if(rule.getS1().equals(rule.getS2())) {
+			if (idealWeightFunctions.isStrongUpdateStatement(rule.getL2())) {
+				if (idealWeightFunctions.isKillFlow(new Node<Statement, Val>(rule.getL2(), rule.getS2().fact()))) {
+					return true;
+				}
+			}
+			
+		}
+		if(rule.toString().contains("><StaticField: <typestate.tests.FileMustBeClosedTest: typestate.test.helper.File v>;<typestate.tests.FileMustBeClosedTest: void staticFlowSimple()> $stack3.open()>"))
+			System.out.println(rule);
+		return false;
+	}
+
 	protected boolean preventStrongUpdateFlows(Transition<Statement, INode<Val>> t, W weight) {
+		
 		if (idealWeightFunctions.isStrongUpdateStatement(t.getLabel())) {
 			if (idealWeightFunctions.isKillFlow(new Node<Statement, Val>(t.getLabel(), t.getStart().fact()))) {
 				if ((t.getStart() instanceof GeneratedState)) {
@@ -444,10 +456,10 @@ public class IDEALSeedSolver<W extends Weight> {
 		return res;
 	}
 
-	protected void addAffectedPotentialStrongUpdate(Node<Statement, Val> curr, Statement stmt) {
-		if (affectedStrongUpdateStmt.put(curr, stmt)) {
+	protected void addAffectedPotentialStrongUpdate(Node<Statement, Val> strongUpdateNode, Statement stmt) {
+		if (affectedStrongUpdateStmt.put(strongUpdateNode, stmt)) {
 			idealWeightFunctions.potentialStrongUpdate(stmt);
-			if (weakUpdates.contains(curr)) {
+			if (weakUpdates.contains(strongUpdateNode)) {
 				idealWeightFunctions.weakUpdate(stmt);
 			}
 		}
@@ -471,12 +483,10 @@ public class IDEALSeedSolver<W extends Weight> {
 				if (t.getStart() instanceof GeneratedState)
 					return;
 				Node<Statement, Val> source = new Node<Statement, Val>(t.getLabel(), t.getStart().fact());
-				Collection<Node<Statement, Val>> indirectFlows = idealWeightFunctions.getAliasesFor(source);
-				for (Node<Statement, Val> indirect : indirectFlows) {
-					solver.addNormalCallFlow(source, indirect);
-					for (Statement pred : solver.getPredsOf(t.getLabel())) {
-						solver.addNormalFieldFlow(new Node<Statement, Val>(pred, indirect.fact()), indirect);
-					}
+				Collection<Node<Statement,Val>> indirectFlows = idealWeightFunctions.getAliasesFor(source);
+				for (Node<Statement,Val>  indirectFlow : indirectFlows) {
+					solver.addNormalCallFlow(source, indirectFlow);
+					solver.addNormalFieldFlow(source,indirectFlow);
 				}
 			}
 		});
