@@ -46,8 +46,10 @@ import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.PopNode;
+import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.ConnectPushListener;
+import wpds.impl.PushRule;
 import wpds.impl.Rule;
 import wpds.impl.StackListener;
 import wpds.impl.Transition;
@@ -361,17 +363,6 @@ public class IDEALSeedSolver<W extends Weight> {
 			public SeedFactory<W> getSeedFactory() {
 				return seedFactory;
 			}
-
-			@Override
-			public boolean preventForwardCallTransitionAdd(ForwardQuery sourceQuery,
-					Transition<Statement, INode<Val>> t, W weight) {
-				if (phase.equals(Phases.ValueFlow) && sourceQuery.equals(seed)) {
-					if (preventStrongUpdateFlows(t, weight)) {
-//						return true;
-					}
-				}
-				return super.preventForwardCallTransitionAdd(sourceQuery, t, weight);
-			}
 			@Override
 			public boolean preventCallRuleAdd(ForwardQuery sourceQuery, Rule<Statement, INode<Val>, W> rule) {
 				 if (phase.equals(Phases.ValueFlow) && sourceQuery.equals(seed)) {
@@ -392,19 +383,12 @@ public class IDEALSeedSolver<W extends Weight> {
 					return true;
 				}
 			}
-			
 		}
-		if(rule.toString().contains("><StaticField: <typestate.tests.FileMustBeClosedTest: typestate.test.helper.File v>;<typestate.tests.FileMustBeClosedTest: void staticFlowSimple()> $stack3.open()>"))
-			System.out.println(rule);
-		return false;
-	}
-
-	protected boolean preventStrongUpdateFlows(Transition<Statement, INode<Val>> t, W weight) {
-		
-		if (idealWeightFunctions.isStrongUpdateStatement(t.getLabel())) {
-			if (idealWeightFunctions.isKillFlow(new Node<Statement, Val>(t.getLabel(), t.getStart().fact()))) {
-				if ((t.getStart() instanceof GeneratedState)) {
-				} else {
+		if(rule instanceof PushRule) {
+			PushRule<Statement, INode<Val>, W> pushRule = (PushRule<Statement, INode<Val>, W>) rule;
+			Statement callSite = pushRule.getCallSite();
+			if (idealWeightFunctions.isStrongUpdateStatement(callSite)) {
+				if (idealWeightFunctions.isKillFlow(new Node<Statement, Val>(callSite, rule.getS1().fact()))) {
 					return true;
 				}
 			}

@@ -270,9 +270,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				return super.computeCallFlow(caller, returnSite, callSite, invokeExpr, fact, callee, calleeSp);
 			}
 
-			@Override
-			protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
-			}
 
 			@Override
 			protected Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,
@@ -389,10 +386,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				createFieldSummaries(sourceQuery, forwardFieldSummaries)) {
 
 			@Override
-			protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
-			}
-
-			@Override
 			protected Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt curr, Val value,
 					Stmt callSite) {
 				return forwardEmptyCalleeFlow.getEmptyCalleeFlow(caller, curr, value, callSite);
@@ -406,14 +399,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			@Override
 			protected WeightFunctions<Statement, Val, Field, W> getFieldWeights() {
 				return WeightedBoomerang.this.getForwardFieldWeights();
-			}
-			
-			@Override
-			protected boolean preventCallTransitionAdd(Transition<Statement, INode<Val>> t, W weight) {
-				if(preventForwardCallTransitionAdd(sourceQuery, t, weight)) {
-					return true;
-				}
-				return super.preventCallTransitionAdd(t, weight);
 			}
 			
 			@Override
@@ -498,10 +483,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 
-	public boolean preventForwardCallTransitionAdd(ForwardQuery sourceQuery,
-			Transition<Statement, INode<Val>> t, W weight) {
-		return false;
-	}
 	public boolean preventCallRuleAdd(ForwardQuery sourceQuery, Rule<Statement, INode<Val>, W> rule) {
 		return false;
 	}

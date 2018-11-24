@@ -124,7 +124,6 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
 					Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
 							new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
-					onCallFlow(callee, callSite, value, res);
 					out.addAll(res);
 				}
 			}

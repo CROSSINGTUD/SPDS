@@ -441,7 +441,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 
 	}
 
-	protected abstract void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res);
 
 	public Set<Statement> getSuccsOf(Statement stmt) {
 		Set<Statement> res = Sets.newHashSet();
