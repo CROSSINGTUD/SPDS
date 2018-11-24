@@ -20,23 +20,38 @@ import test.core.AbstractBoomerangTest;
 public class SimpleSingleton extends AbstractBoomerangTest {
 
 	@Test
-	@Ignore
-	public void singletonDirect(){
+	public void singletonDirect() {
 		Alloc singleton = alloc;
 		queryForAndNotEmpty(singleton);
 	}
+
 	private static Alloc alloc = new Alloc();
+
 	@Test
-	public void simpleWithAssign(){
+	public void staticInnerAccessDirect() {
+		Runnable r = new Runnable() {
+
+			@Override
+			public void run() {
+				Alloc singleton = alloc;
+				queryForAndNotEmpty(singleton);
+			}
+		};
+		r.run();
+	}
+
+	@Test
+	public void simpleWithAssign() {
 		alloc = new Alloc();
-	    Object b = alloc;
+		Object b = alloc;
 		queryFor(b);
 	}
+
 	@Test
-	public void simpleWithAssign2(){
+	public void simpleWithAssign2() {
 		alloc = new Alloc();
-	    Object b = alloc;
-	    Object a = alloc;
+		Object b = alloc;
+		Object a = alloc;
 		queryFor(b);
 	}
 }
