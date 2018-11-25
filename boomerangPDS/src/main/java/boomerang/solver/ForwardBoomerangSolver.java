@@ -334,7 +334,6 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
 				Collection<? extends State> res = computeCallFlow(caller,
 						new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
-				onCallFlow(callee, callSite, value, res);
 				out.addAll(res);
 			}
 			addReachable(callee);

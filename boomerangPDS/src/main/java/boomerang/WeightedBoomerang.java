@@ -76,6 +76,7 @@ import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.NestedWeightedPAutomatons;
+import wpds.impl.Rule;
 import wpds.impl.StackListener;
 import wpds.impl.SummaryNestedWeightedPAutomatons;
 import wpds.impl.Transition;
@@ -269,9 +270,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				return super.computeCallFlow(caller, returnSite, callSite, invokeExpr, fact, callee, calleeSp);
 			}
 
-			@Override
-			protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
-			}
 
 			@Override
 			protected Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,
@@ -388,10 +386,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				createFieldSummaries(sourceQuery, forwardFieldSummaries)) {
 
 			@Override
-			protected void onCallFlow(SootMethod callee, Stmt callSite, Val value, Collection<? extends State> res) {
-			}
-
-			@Override
 			protected Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt curr, Val value,
 					Stmt callSite) {
 				return forwardEmptyCalleeFlow.getEmptyCalleeFlow(caller, curr, value, callSite);
@@ -408,11 +402,11 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			}
 			
 			@Override
-			protected boolean preventCallTransitionAdd(Transition<Statement, INode<Val>> t, W weight) {
-				if(preventForwardCallTransitionAdd(sourceQuery, t, weight)) {
-					return true;
+			public void addCallRule(Rule<Statement, INode<Val>, W> rule) {
+				if(preventCallRuleAdd(sourceQuery, rule)) {
+					return;
 				}
-				return super.preventCallTransitionAdd(t, weight);
+				super.addCallRule(rule);
 			}
 			@Override
 			protected void onManyStateListenerRegister() {
@@ -489,8 +483,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 
-	public boolean preventForwardCallTransitionAdd(ForwardQuery sourceQuery,
-			Transition<Statement, INode<Val>> t, W weight) {
+	public boolean preventCallRuleAdd(ForwardQuery sourceQuery, Rule<Statement, INode<Val>, W> rule) {
 		return false;
 	}
 

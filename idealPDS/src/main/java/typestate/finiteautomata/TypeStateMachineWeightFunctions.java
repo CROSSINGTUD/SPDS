@@ -70,9 +70,9 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 	
 	@Override
 	public TransitionFunction normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
-		if(curr.stmt().getUnit().isPresent()){
-			if(curr.stmt().getUnit().get().containsInvokeExpr()){
-				return callToReturn(curr,succ, curr.stmt().getUnit().get().getInvokeExpr());
+		if(succ.stmt().getUnit().isPresent()){
+			if(succ.stmt().getUnit().get().containsInvokeExpr()){
+				return callToReturn(curr,succ, succ.stmt().getUnit().get().getInvokeExpr());
 			}
 		}
 		return getOne();
@@ -84,7 +84,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 		if(invokeExpr instanceof InstanceInvokeExpr){
 			SootMethod method = invokeExpr.getMethod();
 			InstanceInvokeExpr e = (InstanceInvokeExpr) invokeExpr;
-			if(e.getBase().equals(curr.fact().value())){
+			if(e.getBase().equals(succ.fact().value())){
 				for (MatcherTransition trans : transition) {
 					if(trans.matches(method) && trans.getType().equals(Type.OnCallToReturn)){
 						res.add(trans);
@@ -92,7 +92,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 				}	
 			}
 		}
-		return (res.isEmpty() ? getOne() : new TransitionFunction(res,Collections.singleton(curr.stmt())));
+		return (res.isEmpty() ? getOne() : new TransitionFunction(res,Collections.singleton(succ.stmt())));
 	}
 
 	private TransitionFunction getMatchingTransitions(Statement statement, Val node, Type type, Statement transitionStmt) {

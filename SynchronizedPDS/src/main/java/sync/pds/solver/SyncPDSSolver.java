@@ -554,7 +554,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 				fieldWildCard(), asFieldFact(succ), fieldWildCard(), getFieldWeights().normal(curr,succ)));
 	}
 
-	protected INode<Node<Stmt,Fact>> asFieldFact(Node<Stmt, Fact> node) {
+	public INode<Node<Stmt,Fact>> asFieldFact(Node<Stmt, Fact> node) {
 		return new SingleNode<Node<Stmt,Fact>>(new Node<Stmt,Fact>(node.stmt(), node.fact()));
 	}
 
