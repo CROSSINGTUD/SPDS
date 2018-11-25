@@ -92,8 +92,6 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		if(!staticallyUnknown()){
 			File alias = file;
 			recursive(alias);
-			//TODO Commenting out this line introduces a bug
-			int z = 2;
 		}
 	}
 	private void escape(File other) {
@@ -183,7 +181,6 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		File file = new File();
 		File alias = file;
 		call(alias);
-		int x = 1;
 		file.close();
 		mustBeInAcceptingState(file);
 		mustBeInAcceptingState(alias);
@@ -349,8 +346,6 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 
 	private void call(File file1, File file2) {
 		file1.open();
-		//TODO: This test case fails if we comment out the next line
-		int x = 1;
 		file2.close();
 		mustBeInAcceptingState(file1);
 	}
