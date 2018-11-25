@@ -41,6 +41,7 @@ import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
+import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
@@ -49,6 +50,7 @@ import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.ConnectPushListener;
+import wpds.impl.NormalRule;
 import wpds.impl.PushRule;
 import wpds.impl.Rule;
 import wpds.impl.StackListener;
@@ -85,11 +87,7 @@ public class IDEALSeedSolver<W extends Weight> {
 		@Override
 		public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
 				WeightedPAutomaton<Statement, INode<Val>, W> aut) {
-			// Commented out as of
-			// typestate.tests.FileMustBeClosedTest.simpleAlias()
-			if (t.getLabel().equals(callSite) /*
-												 * && !t.getStart().fact().equals( returnedFact.fact())
-												 */) {
+			if (t.getLabel().equals(callSite)) {
 				idealWeightFunctions.addNonKillFlow(new Node<Statement, Val>(callSite, returnedFact));
 				idealWeightFunctions.addIndirectFlow(
 						new Node<Statement, Val>(callSite, returnedFact),
@@ -411,8 +409,6 @@ public class IDEALSeedSolver<W extends Weight> {
 			public void connect(Statement predOfCall, Statement callSite, INode<Val> returnedFact, W w) {
 				if (!callSite.getMethod().equals(returnedFact.fact().m()))
 					return;
-//				if (!callSite.getMethod().equals(returnSite.getMethod()))
-//					return;
 				if(!boomerang.getSolvers().getOrCreate(seed).valueUsedInStatement((Stmt) callSite.getUnit().get(), returnedFact.fact()))
 					return;
 				if (!w.equals(one)) {
@@ -469,8 +465,8 @@ public class IDEALSeedSolver<W extends Weight> {
 				Node<Statement, Val> source = new Node<Statement, Val>(t.getLabel(), t.getStart().fact());
 				Collection<Node<Statement,Val>> indirectFlows = idealWeightFunctions.getAliasesFor(source);
 				for (Node<Statement,Val>  indirectFlow : indirectFlows) {
-					solver.addNormalCallFlow(source, indirectFlow);
-					solver.addNormalFieldFlow(source,indirectFlow);
+					solver.addCallRule(new NormalRule<Statement,INode<Val>,W>(new SingleNode<Val>(source.fact()),source.stmt(),new SingleNode<Val>(indirectFlow.fact()),indirectFlow.stmt(),one));
+					solver.addFieldRule(new NormalRule<Field,INode<Node<Statement,Val>>,W>(solver.asFieldFact(source),solver.fieldWildCard(),solver.asFieldFact(indirectFlow),solver.fieldWildCard(),one));
 				}
 			}
 		});

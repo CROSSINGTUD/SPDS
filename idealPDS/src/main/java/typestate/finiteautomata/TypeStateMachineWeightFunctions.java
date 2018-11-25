@@ -70,9 +70,9 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 	
 	@Override
 	public TransitionFunction normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
-		if(curr.stmt().getUnit().isPresent()){
-			if(curr.stmt().getUnit().get().containsInvokeExpr()){
-				return callToReturn(curr,succ, curr.stmt().getUnit().get().getInvokeExpr());
+		if(succ.stmt().getUnit().isPresent()){
+			if(succ.stmt().getUnit().get().containsInvokeExpr()){
+				return callToReturn(curr,succ, succ.stmt().getUnit().get().getInvokeExpr());
 			}
 		}
 		return getOne();
