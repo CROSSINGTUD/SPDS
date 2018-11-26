@@ -150,6 +150,29 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 			}
 		}
 	}
+	
+	/**
+	 * Computes the set of statements (and variables at these statements) relevant for data-flow propagation. 
+	 * A statement s is relevant, if a propagated variable x is used at s. I.e., when propagting x @ y = x,   
+	 * the returned set contains  x @ y = x, whereas it will not contain a call site x @ y = foo(c), because x 
+	 * is not used at the statement.
+	 * @return The set of relevant statements during data-flow propagation
+	 */
+	public Set<Node<Statement,Val>> getDataFlowPath(){
+		Set<Node<Statement,Val>> dataFlowPath = Sets.newHashSet();
+		WeightedPAutomaton<Statement, INode<Val>, W> callAut = queryToSolvers.getOrCreate(query).getCallAutomaton();
+		for (Entry<Transition<Statement, INode<Val>>, W> e : callAut.getTransitionsToFinalWeights().entrySet()) {
+			Transition<Statement, INode<Val>> t = e.getKey();
+			if (t.getLabel().equals(Statement.epsilon()))
+				continue;
+			if (t.getStart().fact().value() instanceof Local
+					&& !t.getLabel().getMethod().equals(t.getStart().fact().m()))
+				continue;
+			if(queryToSolvers.getOrCreate(query).valueUsedInStatement(t.getLabel().getUnit().get(), t.getStart().fact()))
+				dataFlowPath.add(new Node<Statement,Val>(t.getLabel(), t.getStart().fact()));
+		}
+		return dataFlowPath;
+	}
 
 	public IBoomerangStats<W> getStats() {
 		return stats;
