@@ -154,7 +154,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			Set<State> out = Sets.newHashSet();
 			for(Unit next : icfg.getSuccsOf(curr)){
 				Stmt nextStmt = (Stmt) next; 
-				if(query.getType() instanceof NullType && killAtIfStmt(next, value, curr)) {
+				if(query.getType() instanceof NullType && curr instanceof IfStmt && killAtIfStmt((IfStmt) curr, value, next)) {
 					continue;
 				}
 				if (nextStmt.containsInvokeExpr() && valueUsedInStatement(nextStmt, value)) {
@@ -173,66 +173,63 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	 * is x = null and fact is the propagated aliased variable. (i.e., y after a statement y = x). 
 	 * If the if-stmt checks for if y != null or if y == null, data-flow propagation can be killed when along the true/false
 	 * branch. 
-	 * @param curr The 
-	 * @param fact
-	 * @param succ
-	 * @return
+	 * @param ifStmt The if-stmt the data-flow value fact bypasses
+	 * @param fact The data-flow value that bypasses the if-stmt
+	 * @param succ The successor statement of the if-stmt
+	 * @return true if the Val fact shall be killed
 	 */
-	private boolean killAtIfStmt(Unit curr, Val fact, Stmt succ) {
-		if(curr instanceof IfStmt) {
-			IfStmt ifStmt = (IfStmt) curr;
-			Stmt target = ifStmt.getTarget();
-			Value condition = ifStmt.getCondition();
-			if(condition instanceof JEqExpr) {
-				JEqExpr eqExpr = (JEqExpr) condition;
-				Value op1 = eqExpr.getOp1();
-				Value op2 = eqExpr.getOp2();
-				if(fact instanceof ValWithFalseVariable) {
-					ValWithFalseVariable valWithFalseVar = (ValWithFalseVariable) fact;
-					if(op1.equals(valWithFalseVar.getFalseVariable())){
-						if(op2.equals(IntConstant.v(0))) {
-							if(!succ.equals(target)) {
-								return true;
-							}
-						}
-					}
-					if(op2.equals(valWithFalseVar.getFalseVariable())){
-						if(op1.equals(IntConstant.v(0))) {
-							if(!succ.equals(target)) {
-								return true;
-							}
+	private boolean killAtIfStmt(IfStmt ifStmt, Val fact, Unit succ) {
+		Stmt target = ifStmt.getTarget();
+		Value condition = ifStmt.getCondition();
+		if(condition instanceof JEqExpr) {
+			JEqExpr eqExpr = (JEqExpr) condition;
+			Value op1 = eqExpr.getOp1();
+			Value op2 = eqExpr.getOp2();
+			if(fact instanceof ValWithFalseVariable) {
+				ValWithFalseVariable valWithFalseVar = (ValWithFalseVariable) fact;
+				if(op1.equals(valWithFalseVar.getFalseVariable())){
+					if(op2.equals(IntConstant.v(0))) {
+						if(!succ.equals(target)) {
+							return true;
 						}
 					}
 				}
-				if(op1 instanceof NullConstant) {
-					if(op2.equals(fact.value())) {
+				if(op2.equals(valWithFalseVar.getFalseVariable())){
+					if(op1.equals(IntConstant.v(0))) {
 						if(!succ.equals(target)) {
 							return true;
 						}
 					}
-				} else if(op2 instanceof NullConstant) {
-					if(op1.equals(fact.value())) {
-						if(!succ.equals(target)) {
-							return true;
-						}
+				}
+			}
+			if(op1 instanceof NullConstant) {
+				if(op2.equals(fact.value())) {
+					if(!succ.equals(target)) {
+						return true;
 					}
-				} 
-			}		
-			if(condition instanceof JNeExpr) {
-				JNeExpr eqExpr = (JNeExpr) condition;
-				Value op1 = eqExpr.getOp1();
-				Value op2 = eqExpr.getOp2();
-				if(op1 instanceof NullConstant) {
-					if(op2.equals(fact.value())) {
-						if(succ.equals(target)) {
-							return true;
-						}
+				}
+			} else if(op2 instanceof NullConstant) {
+				if(op1.equals(fact.value())) {
+					if(!succ.equals(target)) {
+						return true;
 					}
-				} else if(op2 instanceof NullConstant) {
-					if(op1.equals(fact.value())) {
-						if(succ.equals(target)) {
-							return true;
-						}
+				}
+			} 
+		}		
+		if(condition instanceof JNeExpr) {
+			JNeExpr eqExpr = (JNeExpr) condition;
+			Value op1 = eqExpr.getOp1();
+			Value op2 = eqExpr.getOp2();
+			if(op1 instanceof NullConstant) {
+				if(op2.equals(fact.value())) {
+					if(succ.equals(target)) {
+						return true;
+					}
+				}
+			} else if(op2 instanceof NullConstant) {
+				if(op1.equals(fact.value())) {
+					if(succ.equals(target)) {
+						return true;
 					}
 				}
 			}
