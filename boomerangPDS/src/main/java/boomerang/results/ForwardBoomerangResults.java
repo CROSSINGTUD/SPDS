@@ -227,12 +227,13 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 						Val fact = node.fact();
 						Statement curr = node.stmt();
 						for(Unit pred : icfg.getPredsOf(curr.getUnit().get())) {
+							Node<Statement,Val> nullPointerNode = new Node<Statement,Val>(new Statement((Stmt) pred, curr.getMethod()), fact);
 							if(pred instanceof Stmt && ((Stmt) pred).containsInvokeExpr()) {
 								Stmt callSite = (Stmt) pred;
 								if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
 									InstanceInvokeExpr e = (InstanceInvokeExpr) callSite.getInvokeExpr();
 									if (e.getBase().equals(fact.value())) {
-										res.add(node);
+										res.add(nullPointerNode);
 									}
 								}
 							}
@@ -241,13 +242,13 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 								if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
 									InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
 									if (ifr.getBase().equals(fact.value())) {
-										res.add(node);
+										res.add(nullPointerNode);
 									}
 								}
 								if (assignStmt.getRightOp() instanceof LengthExpr) {
 									LengthExpr lengthExpr = (LengthExpr) assignStmt.getRightOp();
 									if (lengthExpr.getOp().equals(fact.value())) {
-										res.add(node);
+										res.add(nullPointerNode);
 									}
 								}
 							}
