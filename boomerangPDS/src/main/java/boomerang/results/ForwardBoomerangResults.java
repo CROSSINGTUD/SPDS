@@ -226,31 +226,32 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 						Node<Statement, Val> node = t.getStart().fact();
 						Val fact = node.fact();
 						Statement curr = node.stmt();
-						if (curr.isCallsite()) {
-							Stmt callSite = (Stmt) curr.getUnit().get();
-							if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
-								InstanceInvokeExpr e = (InstanceInvokeExpr) callSite.getInvokeExpr();
-								if (e.getBase().equals(fact.value())) {
-									res.add(node);
+						for(Unit pred : icfg.getPredsOf(curr.getUnit().get())) {
+							if(pred instanceof Stmt && ((Stmt) pred).containsInvokeExpr()) {
+								Stmt callSite = (Stmt) pred;
+								if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
+									InstanceInvokeExpr e = (InstanceInvokeExpr) callSite.getInvokeExpr();
+									if (e.getBase().equals(fact.value())) {
+										res.add(node);
+									}
+								}
+							}
+							if (pred instanceof AssignStmt) {
+								AssignStmt assignStmt = (AssignStmt) pred;
+								if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
+									InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
+									if (ifr.getBase().equals(fact.value())) {
+										res.add(node);
+									}
+								}
+								if (assignStmt.getRightOp() instanceof LengthExpr) {
+									LengthExpr lengthExpr = (LengthExpr) assignStmt.getRightOp();
+									if (lengthExpr.getOp().equals(fact.value())) {
+										res.add(node);
+									}
 								}
 							}
 						}
-						if (curr.getUnit().get() instanceof AssignStmt) {
-							AssignStmt assignStmt = (AssignStmt) curr.getUnit().get();
-							if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
-								InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
-								if (ifr.getBase().equals(fact.value())) {
-									res.add(node);
-								}
-							}
-							if (assignStmt.getRightOp() instanceof LengthExpr) {
-								LengthExpr lengthExpr = (LengthExpr) assignStmt.getRightOp();
-								if (lengthExpr.getOp().equals(fact.value())) {
-									res.add(node);
-								}
-							}
-						}
-
 					}
 				});
 

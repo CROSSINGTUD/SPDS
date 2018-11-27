@@ -154,6 +154,9 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			Set<State> out = Sets.newHashSet();
 			for(Unit next : icfg.getSuccsOf(curr)){
 				Stmt nextStmt = (Stmt) next; 
+				if(query.getType() instanceof NullType && killAtIfStmt(next, value, curr)) {
+					continue;
+				}
 				if (nextStmt.containsInvokeExpr() && valueUsedInStatement(nextStmt, value)) {
 					out.addAll(callFlow(method, curr, nextStmt, nextStmt.getInvokeExpr(), value));
 				} else if (!killFlow(method, nextStmt, value)) {
@@ -165,6 +168,78 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		return Collections.emptySet();
 	}
 	
+	/**
+	 * This method kills a data-flow at an if-stmt, it is assumed that the propagated "allocation" site
+	 * is x = null and fact is the propagated aliased variable. (i.e., y after a statement y = x). 
+	 * If the if-stmt checks for if y != null or if y == null, data-flow propagation can be killed when along the true/false
+	 * branch. 
+	 * @param curr The 
+	 * @param fact
+	 * @param succ
+	 * @return
+	 */
+	private boolean killAtIfStmt(Unit curr, Val fact, Stmt succ) {
+		if(curr instanceof IfStmt) {
+			IfStmt ifStmt = (IfStmt) curr;
+			Stmt target = ifStmt.getTarget();
+			Value condition = ifStmt.getCondition();
+			if(condition instanceof JEqExpr) {
+				JEqExpr eqExpr = (JEqExpr) condition;
+				Value op1 = eqExpr.getOp1();
+				Value op2 = eqExpr.getOp2();
+				if(fact instanceof ValWithFalseVariable) {
+					ValWithFalseVariable valWithFalseVar = (ValWithFalseVariable) fact;
+					if(op1.equals(valWithFalseVar.getFalseVariable())){
+						if(op2.equals(IntConstant.v(0))) {
+							if(!succ.equals(target)) {
+								return true;
+							}
+						}
+					}
+					if(op2.equals(valWithFalseVar.getFalseVariable())){
+						if(op1.equals(IntConstant.v(0))) {
+							if(!succ.equals(target)) {
+								return true;
+							}
+						}
+					}
+				}
+				if(op1 instanceof NullConstant) {
+					if(op2.equals(fact.value())) {
+						if(!succ.equals(target)) {
+							return true;
+						}
+					}
+				} else if(op2 instanceof NullConstant) {
+					if(op1.equals(fact.value())) {
+						if(!succ.equals(target)) {
+							return true;
+						}
+					}
+				} 
+			}		
+			if(condition instanceof JNeExpr) {
+				JNeExpr eqExpr = (JNeExpr) condition;
+				Value op1 = eqExpr.getOp1();
+				Value op2 = eqExpr.getOp2();
+				if(op1 instanceof NullConstant) {
+					if(op2.equals(fact.value())) {
+						if(succ.equals(target)) {
+							return true;
+						}
+					}
+				} else if(op2 instanceof NullConstant) {
+					if(op1.equals(fact.value())) {
+						if(succ.equals(target)) {
+							return true;
+						}
+					}
+				}
+			}
+		}
+		return false;
+	}
+
 	protected Collection<State> normalFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
 		for (Unit succ : icfg.getSuccsOf(curr)) {
@@ -177,7 +252,6 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	@Override
 	public Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Val fact, Stmt succ) {
 		Set<State> out = Sets.newHashSet();
-
 		if (!isFieldWriteWithBase(succ, fact)) {
 			// always maintain data-flow if not a field write // killFlow has
 			// been taken care of
@@ -246,64 +320,6 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			}
 		}
 
-		if(succ instanceof IfStmt && query.getType() instanceof NullType) {
-			IfStmt ifStmt = (IfStmt) succ;
-			Stmt target = ifStmt.getTarget();
-			Value condition = ifStmt.getCondition();
-			if(condition instanceof JEqExpr) {
-				JEqExpr eqExpr = (JEqExpr) condition;
-				Value op1 = eqExpr.getOp1();
-				Value op2 = eqExpr.getOp2();
-				if(fact instanceof ValWithFalseVariable) {
-					ValWithFalseVariable valWithFalseVar = (ValWithFalseVariable) fact;
-					if(op1.equals(valWithFalseVar.getFalseVariable())){
-						if(op2.equals(IntConstant.v(0))) {
-							if(!succ.equals(target)) {
-								return Collections.emptySet();
-							}
-						}
-					}
-					if(op2.equals(valWithFalseVar.getFalseVariable())){
-						if(op1.equals(IntConstant.v(0))) {
-							if(!succ.equals(target)) {
-								return Collections.emptySet();
-							}
-						}
-					}
-				}
-				if(op1 instanceof NullConstant) {
-					if(op2.equals(fact.value())) {
-						if(!succ.equals(target)) {
-							return Collections.emptySet();
-						}
-					}
-				} else if(op2 instanceof NullConstant) {
-					if(op1.equals(fact.value())) {
-						if(!succ.equals(target)) {
-							return Collections.emptySet();
-						}
-					}
-				} 
-			}		
-			if(condition instanceof JNeExpr) {
-				JNeExpr eqExpr = (JNeExpr) condition;
-				Value op1 = eqExpr.getOp1();
-				Value op2 = eqExpr.getOp2();
-				if(op1 instanceof NullConstant) {
-					if(op2.equals(fact.value())) {
-						if(succ.equals(target)) {
-							return Collections.emptySet();
-						}
-					}
-				} else if(op2 instanceof NullConstant) {
-					if(op1.equals(fact.value())) {
-						if(succ.equals(target)) {
-							return Collections.emptySet();
-						}
-					}
-				}
-			}
-		}
 		return out;
 	}
 
