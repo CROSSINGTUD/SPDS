@@ -58,10 +58,7 @@ public class AbstractBoomerangResults<W extends Weight> {
 			}
 			if(t.getLabel().getMethod() != null) {
 				if(t.getStart() instanceof GeneratedState) {
-					Set<Statement> succsOf = solver.getPredsOf(t.getLabel());
-					for(Statement s : succsOf) {
-						context.getOpeningContext().addTransition(new Transition<Statement,INode<Val>>(source,s,t.getTarget()));
-					}
+					context.getOpeningContext().addTransition(new Transition<Statement,INode<Val>>(source,t.getLabel(),t.getTarget()));
 				} else {
 					weightedPAutomaton.registerListener(new OpeningCallStackExtracter(t.getTarget(),source, context, solver));
 					return;
