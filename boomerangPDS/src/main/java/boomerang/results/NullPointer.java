@@ -121,7 +121,7 @@ public class NullPointer {
 	 *  } else {
 	 *  	x = returnNotNull(); //b2
 	 *  }
-	 * 	x.toString() //<- Variable x is null here when the program executed along branch b1
+	 * 	x.toString() //<- Variable x is null here when the program executes along branch b1
 	 * }
 	 * Object returnNull(){
 	 * 	Object y = null;
