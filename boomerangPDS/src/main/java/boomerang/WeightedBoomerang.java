@@ -52,6 +52,7 @@ import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
 import boomerang.solver.ReachableMethodListener;
+import boomerang.solver.StatementBasedCallTransitionListener;
 import boomerang.stats.IBoomerangStats;
 import heros.utilities.DefaultValueMap;
 import soot.Local;
@@ -246,6 +247,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	private Debugger<W> debugger;
 	private Stopwatch analysisWatch = Stopwatch.createUnstarted();
 	private Set<BackwardQuery> scopedQueries = Sets.newHashSet();
+	private AbstractBoomerangSolver<W> backwardSolver;
 
 	public WeightedBoomerang(BoomerangOptions options) {
 		this.options = options;
@@ -260,7 +262,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 	protected AbstractBoomerangSolver<W> createBackwardSolver(final BackwardQuery backwardQuery) {
-		final BackwardBoomerangSolver<W> solver = new BackwardBoomerangSolver<W>(bwicfg(), backwardQuery, genField,
+		if(backwardSolver != null)
+			return backwardSolver;
+		BackwardBoomerangSolver<W> solver = new BackwardBoomerangSolver<W>(bwicfg(), backwardQuery, genField,
 				options, createCallSummaries(backwardQuery, backwardCallSummaries),
 				createFieldSummaries(backwardQuery, backwardFieldSummaries)) {
 
@@ -339,6 +343,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 		});
 
+		backwardSolver = solver;
 		return solver;
 	}
 
@@ -613,7 +618,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 				@Override
 				public void anyContext(Statement end) {
-					bwSolver.registerListener(new CanUnbalancedReturn(end.getMethod(),bwSolver));
+					for(Unit sP : icfg().getStartPointsOf(end.getMethod())) {
+						bwSolver.registerStatementCallTransitionListener(new CanUnbalancedReturn(end.getMethod(),new Statement((Stmt)sP, end.getMethod()),bwSolver) );
+					}
 				}
 			});
 		} catch (BoomerangTimeoutException e) {
@@ -732,21 +739,21 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 	}
 	
-	private class CanUnbalancedReturn implements SyncPDSUpdateListener<Statement, Val> {
+	private class CanUnbalancedReturn extends StatementBasedCallTransitionListener<W> {
 
 		private AbstractBoomerangSolver<W> bwSolver;
+		private Statement startPoint;
 		private SootMethod method;
-		private Collection<Unit> startPointsOf;
 
-		public CanUnbalancedReturn(SootMethod method, AbstractBoomerangSolver<W> bwSolver) {
-					this.method = method;
-					this.bwSolver = bwSolver;
-					this.startPointsOf = icfg().getStartPointsOf(method);
+		public CanUnbalancedReturn(SootMethod method, Statement startPoint, AbstractBoomerangSolver<W> bwSolver) {
+			super(startPoint);
+			this.method = method;
+			this.bwSolver = bwSolver;
+			this.startPoint = startPoint;
 		}
-
 		@Override
-		public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
-			if(startPointsOf.contains(reachableNode.stmt().getUnit().get())){
+		public void onAddedTransition(Transition<Statement, INode<Val>> t, W w) {
+			if(t.getLabel().equals(startPoint)){
 				for (Unit callSite : WeightedBoomerang.this.icfg().getCallersOf(method)) {
 					if (!((Stmt) callSite).containsInvokeExpr())
 						continue;
@@ -754,7 +761,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 							WeightedBoomerang.this.icfg().getMethodOf(callSite));
 					Node<Statement,AbstractBoomerangSolver<W>> solverPair = new Node<>(callStatement,bwSolver);
 					triggerUnbalancedPop(solverPair);
-					bwSolver.registerListener(new CanUnbalancedReturn(callStatement.getMethod(), bwSolver));
+					for(Unit sP : icfg().getStartPointsOf(callStatement.getMethod())) {
+						bwSolver.registerStatementCallTransitionListener(new CanUnbalancedReturn(callStatement.getMethod(),new Statement((Stmt)sP, callStatement.getMethod()),bwSolver) );
+					}
 				}
 			}
 		}
@@ -765,7 +774,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			int result = 1;
 			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((bwSolver == null) ? 0 : bwSolver.hashCode());
-			result = prime * result + ((method == null) ? 0 : method.hashCode());
+			result = prime * result + ((startPoint == null) ? 0 : startPoint.hashCode());
 			return result;
 		}
 
@@ -785,10 +794,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					return false;
 			} else if (!bwSolver.equals(other.bwSolver))
 				return false;
-			if (method == null) {
-				if (other.method != null)
+			if (startPoint == null) {
+				if (other.startPoint != null)
 					return false;
-			} else if (!method.equals(other.method))
+			} else if (!startPoint.equals(other.startPoint))
 				return false;
 			return true;
 		}

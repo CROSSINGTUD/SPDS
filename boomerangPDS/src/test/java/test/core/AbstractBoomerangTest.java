@@ -343,7 +343,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				}
 				
 				solver.debugOutput();
-//				System.out.println(res.getAllAliases());
 				if(accessPathQuery){
 					checkContainsAllExpectedAccessPath(res.getAllAliases());
 				}

@@ -335,8 +335,11 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 				Collection<? extends State> res = computeCallFlow(caller,
 						new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
 				out.addAll(res);
+
+				if(!res.isEmpty()) {
+					addReachable(callee);
+				}
 			}
-			addReachable(callee);
 
 			if(Scene.v().isExcluded(callee.getDeclaringClass())) {
 				calleeExcluded = true;

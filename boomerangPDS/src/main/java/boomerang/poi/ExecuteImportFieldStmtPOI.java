@@ -79,20 +79,25 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 		}
 
 	}
-	private final class ImportOnReachStatement implements SyncPDSUpdateListener<Statement, Val> {
+	private final class ImportOnReachStatement extends StatementBasedCallTransitionListener<W> {
 		private final Statement callSiteOrExitStmt;
 		private AbstractBoomerangSolver<W> flowSolver;
 
 		private ImportOnReachStatement(AbstractBoomerangSolver<W> flowSolver, Statement callSiteOrExitStmt) {
+			super(callSiteOrExitStmt);
 			this.flowSolver = flowSolver;
 			this.callSiteOrExitStmt = callSiteOrExitStmt;
 		}
 
+
 		@Override
-		public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
-			if(reachableNode.stmt().equals(callSiteOrExitStmt)) {
+		public void onAddedTransition(Transition<Statement, INode<Val>> t, W w) {
+			if(t.getStart() instanceof GeneratedState){
+				return;
+			} 
+			if(t.getLabel().equals(callSiteOrExitStmt)) {
 				baseSolver.registerStatementFieldTransitionListener(
-						new CallSiteOrExitStmtImport(flowSolver, baseSolver, reachableNode));
+						new CallSiteOrExitStmtImport(flowSolver, baseSolver, new Node<Statement, Val>(t.getLabel(), t.getStart().fact())));
 			}
 		}
 
@@ -127,12 +132,10 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 			return true;
 		}
 
+
 		
 	}
 	private class ForAnyCallSiteOrExitStmt implements WPAUpdateListener<Statement, INode<Val>, W> {
-
-		
-
 		private AbstractBoomerangSolver<W> baseSolver;
 
 		public ForAnyCallSiteOrExitStmt(AbstractBoomerangSolver<W> baseSolver) {
@@ -154,10 +157,9 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 			if(!boomerang.icfg().isReachable(t.getString().getUnit().get())) {
 				return;
 			}
-			boolean predIsCallStmt = false;
-			predIsCallStmt |= returnSiteOrExitStmt.isCallsite()
+			boolean predIsCallStmt = returnSiteOrExitStmt.isCallsite()
 					&& flowSolver.valueUsedInStatement(returnSiteOrExitStmt.getUnit().get(), t.getStart().fact());
-
+			
 			if (predIsCallStmt) {
 				importSolvers(returnSiteOrExitStmt, t.getTarget(), w);
 			} else	if (isBackward() && boomerang.icfg().isExitStmt(returnSiteOrExitStmt.getUnit().get())) {
@@ -169,9 +171,16 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 
 		
 		private void importSolvers(Statement callSiteOrExitStmt, INode<Val> node, W w) {
-			baseSolver.registerStatementCallTransitionListener(
-					new ImportTransitionFromCall(flowSolver, callSiteOrExitStmt, node, w));
-			baseSolver.registerListener(new ImportOnReachStatement(flowSolver, callSiteOrExitStmt));
+			baseSolver.submit(callSiteOrExitStmt.getMethod(), new Runnable() {
+				
+				@Override
+				public void run() {
+					baseSolver.registerStatementCallTransitionListener(new ImportOnReachStatement(flowSolver, callSiteOrExitStmt));
+					baseSolver.registerStatementCallTransitionListener(
+							new ImportTransitionFromCall(flowSolver, callSiteOrExitStmt, node, w));
+					
+				}
+			});
 		}
 
 		@Override
