@@ -247,7 +247,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	private Debugger<W> debugger;
 	private Stopwatch analysisWatch = Stopwatch.createUnstarted();
 	private Set<BackwardQuery> scopedQueries = Sets.newHashSet();
-	private AbstractBoomerangSolver<W> backwardSolver;
 
 	public WeightedBoomerang(BoomerangOptions options) {
 		this.options = options;
@@ -262,8 +261,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 	protected AbstractBoomerangSolver<W> createBackwardSolver(final BackwardQuery backwardQuery) {
-		if(backwardSolver != null)
-			return backwardSolver;
 		BackwardBoomerangSolver<W> solver = new BackwardBoomerangSolver<W>(bwicfg(), backwardQuery, genField,
 				options, createCallSummaries(backwardQuery, backwardCallSummaries),
 				createFieldSummaries(backwardQuery, backwardFieldSummaries)) {
@@ -343,7 +340,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 		});
 
-		backwardSolver = solver;
 		return solver;
 	}
 
