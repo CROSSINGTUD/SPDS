@@ -694,11 +694,6 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 	
 
-	public void addGeneratedFieldState(GeneratedState<Node<Stmt,Fact>,Field> state) {
-		Entry<INode<Node<Stmt,Fact>>, Field> e = new AbstractMap.SimpleEntry<>(state.node(), state.location());
-		generatedFieldState.put(e,state);
-	}
-
 	public abstract Collection<? extends State> computeSuccessor(Node<Stmt, Fact> node);
 
 	public abstract Field epsilonField();
