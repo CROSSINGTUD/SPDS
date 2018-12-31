@@ -34,7 +34,7 @@ import com.google.api.services.sheets.v4.model.ValueRange;
 
 public class GoogleSpreadsheetWriter {
 	private static final String APPLICATION_NAME = "SPDS-Performancewriter";
-	private static final String SPREADSHEET_ID = "1gGShiAtkcm_KI1qGHPVAG8xgP151DOg0-FtE83h3HOQ";
+	private static final String SPREADSHEET_ID = "1B_VNQW2JAvK0exMFWOVfGnbhCuvA4Qpe0rGO0SqphgQ";
 	private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
 	private static final String TOKENS_DIRECTORY_PATH = "tokens";
 
@@ -109,7 +109,7 @@ public class GoogleSpreadsheetWriter {
 	private static Sheets getService() throws IOException, GeneralSecurityException {
 		// Build a new authorized API client service.
 		final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-		return new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY,  new GoogleCredential().createScoped(SCOPES))
+		return new Sheets.Builder(HTTP_TRANSPORT, JSON_FACTORY,  getCredentials(HTTP_TRANSPORT))
 				.setApplicationName(APPLICATION_NAME).build();
 	}
 
