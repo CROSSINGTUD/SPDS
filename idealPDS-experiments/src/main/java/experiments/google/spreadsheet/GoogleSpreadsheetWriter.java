@@ -119,4 +119,20 @@ public class GoogleSpreadsheetWriter {
 		properties.load(new FileReader(new File(userDir+File.separator +"git.properties")));
 		return new GitRepositoryState(properties);
 	}
+
+	public static void computeMetrics() throws IOException, GeneralSecurityException {
+		Sheets service = getService();
+		String sheetID = getGitRepositoryState().commitId;
+		ArrayList<List<Object>> rows = Lists.newArrayList();
+		ArrayList<Object> content = Lists.newArrayList();
+		content.add(getGitRepositoryState().buildHost);
+		content.add(getGitRepositoryState().buildTime);
+		content.add(getGitRepositoryState().branch);
+		content.add(sheetID);
+		content.add("=GEOMITTEL('"+sheetID+"'!J2:J1004)");
+		rows.add(content);
+		ValueRange body = new ValueRange().setValues(rows);
+		service.spreadsheets().values().append(SPREADSHEET_ID, "history", body).setValueInputOption("USER_ENTERED")
+				.execute();
+	}
 }

@@ -19,6 +19,7 @@ public class IDEALDacapoRunner extends SootSceneSetupDacapo {
 		System.setProperty("rule", args[1]);
 		benchFolder = args[2];
 		project =  args[3];
+		System.setProperty("program", project);
 		new IDEALDacapoRunner(benchFolder,project).run();
 	}
 

@@ -117,17 +117,7 @@ protected IDEALAnalysis<TransitionFunction> createAnalysis() {
 							ForwardBoomerangResults<TransitionFunction> res) {
 						if(!printedSeeds.add(seed))
 							return;
-						try {
-							GoogleSpreadsheetWriter.createSheet(Arrays.asList(new String[] {
-									"Analysis","Rule","Seed","SeedStatement","SeedMethod","SeedClass","Is_In_Error","Timedout","AnalysisTimes","PropagationCount","VisitedMethod","ReachableMethods","CallRecursion","FieldLoop","MaxMemory"
-							}));
-						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						} catch (GeneralSecurityException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
+						
 						try {
 							GoogleSpreadsheetWriter.write(asCSVLine(seed, res));
 						} catch (IOException e) {
@@ -199,19 +189,21 @@ private String outputFile;
     		//("Analysis;Rule;Seed;SeedStatement;SeedMethod;SeedClass;Is_In_Error;Timedout;AnalysisTimes;PropagationCount;VisitedMethod;ReachableMethods;CallRecursion;FieldLoop;MaxAccessPath\n");
     		String analysis = "ideal";
     		String rule = System.getProperty("ruleIdentifier");
+    		String program = System.getProperty("program");
     		Stmt seedStmt = key.stmt().getUnit().get();
     		SootMethod seedMethod = key.stmt().getMethod();
     		SootClass seedClass = seedMethod.getDeclaringClass();
     		String isInErrorState = String.valueOf(isInErrorState(key,forwardBoomerangResults));
     		String isTimedout = String.valueOf(getAnalysis().isTimedout(key));
-    		String analysisTime =  String.valueOf(getAnalysis().getAnalysisTime(key).elapsed(TimeUnit.MILLISECONDS));
+    		long elapsed = getAnalysis().getAnalysisTime(key).elapsed(TimeUnit.MILLISECONDS);
+    		String analysisTime =  String.valueOf(elapsed < 0 ? 1 : elapsed);
     		String propagationCount =  String.valueOf(forwardBoomerangResults.getStats().getForwardReachesNodes().size());
     		String visitedMethods =  String.valueOf(forwardBoomerangResults.getStats().getCallVisitedMethods().size());
     		String reachableMethods =  String.valueOf(Scene.v().getReachableMethods().size());
     		String containsCallLoop =  String.valueOf(forwardBoomerangResults.containsCallRecursion());
     		String containsFieldLoop =  String.valueOf(forwardBoomerangResults.containsFieldLoop());
     		String usedMemory =  String.valueOf(forwardBoomerangResults.getMaxMemory());
-        return Arrays.asList(new String[] {analysis,rule,key.toString(),seedStmt.toString(),seedMethod.toString(),seedClass.toString(),isInErrorState,isTimedout,analysisTime,propagationCount,visitedMethods,reachableMethods,containsCallLoop,containsFieldLoop, usedMemory});
+        return Arrays.asList(new String[] {analysis,program,rule,key.toString(),seedStmt.toString(),seedMethod.toString(),seedClass.toString(),isInErrorState,isTimedout,analysisTime,propagationCount,visitedMethods,reachableMethods,containsCallLoop,containsFieldLoop, usedMemory});
     }
 
     private boolean isInErrorState(WeightedForwardQuery<TransitionFunction> key, ForwardBoomerangResults<TransitionFunction> forwardBoomerangResults) {
@@ -237,6 +229,6 @@ private String outputFile;
   }
   
   protected long getBudget(){
-	  return TimeUnit.MINUTES.toMillis(10);
+	  return TimeUnit.MINUTES.toMillis(1);
   }
 }
