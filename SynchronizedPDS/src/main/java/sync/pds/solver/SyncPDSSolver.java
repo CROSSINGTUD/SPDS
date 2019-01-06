@@ -408,7 +408,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 		@Override
 		public void onWeightAdded(Transition<Stmt, INode<Fact>> t, W w, WeightedPAutomaton<Stmt, INode<Fact>,W> aut) {
-			if(!(t.getStart() instanceof GeneratedState)){
+			if(!(t.getStart() instanceof GeneratedState) && !t.getLabel().equals(callAutomaton.epsilon())){
 				Node<Stmt, Fact> node = new Node<Stmt,Fact>(t.getString(),t.getStart().fact());
 				setCallingContextReachable(node);
 			}
@@ -625,7 +625,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		public void onWeightAdded(Transition<Field, INode<Node<Stmt,Fact>>> t,
 				W w, WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> aut) {
 			INode<Node<Stmt,Fact>> n = t.getStart();
-			if(!(n instanceof GeneratedState)){
+			if(!(n instanceof GeneratedState) && !t.getLabel().equals(fieldAutomaton.epsilon())){
 				Node<Stmt,Fact> fact = n.fact();
 				Node<Stmt, Fact> node = new Node<Stmt,Fact>(fact.stmt(), fact.fact());
 				setFieldContextReachable(node);
