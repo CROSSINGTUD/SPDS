@@ -12,10 +12,10 @@
 package test.cases.sets;
 
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import test.cases.fields.Alloc;
@@ -45,8 +45,30 @@ public class TreeSetsLongTest extends AbstractBoomerangTest{
 		queryFor(query2);
 		otherMap();
 		otherMap2();
+		hashMap();
 	}
 	
+	private void hashMap() {
+		HashSet<Object> map = new HashSet<Object>();
+		map.add(new Object());
+		map = new HashSet<Object>();
+		map.add(new Object());
+		map = new HashSet<Object>();
+		map.add(new Object());map = new HashSet<Object>();
+		map.add(new Object());map = new HashSet<Object>();
+		map.add(new Object());map = new HashSet<Object>();
+		map.add(new Object());map = new HashSet<Object>();
+		map.add(new Object());map = new HashSet<Object>();
+		map.add(new Object());map = new HashSet<Object>();
+		map.add(new Object());map = new HashSet<Object>();
+		map.add(new Object());map = new HashSet<Object>();
+		map.add(new Object());map = new HashSet<Object>();
+		map.add(new Object());map = new HashSet<Object>();
+		map.add(new Object());map = new HashSet<Object>();
+		map.add(new Object());map = new HashSet<Object>();
+		map.add(new Object());
+	}
+
 	private void otherMap2() {
 		Set<Object> set = new TreeSet<Object>();
 		Object alias = new Object();

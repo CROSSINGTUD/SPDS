@@ -298,6 +298,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				@Override
 				public ObservableICFG<Unit, SootMethod> icfg() {
 					if (dynamicIcfg == null){
+//						dynamicIcfg = staticIcfg;
 						dynamicIcfg = new ObservableDynamicICFG<>(this);
 					}
 					return dynamicIcfg;

@@ -144,8 +144,10 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	protected Collection<State> normalFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
 		for (Unit succ : icfg.getSuccsOf(curr)) {
-			Collection<State> flow = computeNormalFlow(method, curr, value, (Stmt) succ);
-			out.addAll(flow);
+			if(!killFlow(method, (Stmt) succ, value)) {
+				Collection<State> flow = computeNormalFlow(method, curr, value, (Stmt) succ);
+				out.addAll(flow);	
+			}
 		}
 		return out;
 	}

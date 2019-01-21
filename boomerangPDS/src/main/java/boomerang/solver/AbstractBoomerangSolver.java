@@ -267,13 +267,13 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 			SootMethod method = icfg.getMethodOf(curr);
 			if(method == null)
 				return;
-			if (killFlow(method, curr, value)) {
+			if (isBackward() && killFlow(method, curr, value)) {
 				return;
 			}
 			if(options.isIgnoredMethod(method)){
 				return;
 			}
-			Collection<? extends State> out;
+			Collection<? extends State> out = Sets.newHashSet();
 			if (curr.containsInvokeExpr() && valueUsedInStatement(curr, value) && INTERPROCEDURAL) {
 				out = callFlow(method, node);
 			} else if (icfg.isExitStmt(curr)) {
@@ -478,9 +478,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		assert icfg.isCallStmt(curr.stmt().getUnit().get());
 		Val value = curr.fact();
 		Stmt callSite = curr.stmt().getUnit().get();
-		if (!curr.fact().isStatic()){
-			icfg.addCalleeListener(new CallFlowCalleeListener(curr, caller));
-		}
+		icfg.addCalleeListener(new CallFlowCalleeListener(curr, caller));
 		Set<State> out = Sets.newHashSet();
 		//TODO Melanie: Revisited and check if the callFlow also needs to be added for static values
 		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
@@ -529,18 +527,43 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		}
 
 		@Override
-		public boolean equals(Object o) {
-			if (this == o) return true;
-			if (o == null || getClass() != o.getClass()) return false;
-			CallFlowCalleeListener that = (CallFlowCalleeListener) o;
-				return	Objects.equals(caller, that.caller);
-					
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((caller == null) ? 0 : caller.hashCode());
+			result = prime * result + ((curr == null) ? 0 : curr.hashCode());
+			return result;
 		}
 
 		@Override
-		public int hashCode() {
-			return Objects.hash(caller, curr);
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			CallFlowCalleeListener other = (CallFlowCalleeListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (caller == null) {
+				if (other.caller != null)
+					return false;
+			} else if (!caller.equals(other.caller))
+				return false;
+			if (curr == null) {
+				if (other.curr != null)
+					return false;
+			} else if (!curr.equals(other.curr))
+				return false;
+			return true;
 		}
+
+		private AbstractBoomerangSolver getOuterType() {
+			return AbstractBoomerangSolver.this;
+		}
+		
 	}
 
 	protected abstract Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,

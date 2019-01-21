@@ -159,10 +159,11 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
 			}
 			boolean predIsCallStmt = returnSiteOrExitStmt.isCallsite()
 					&& flowSolver.valueUsedInStatement(returnSiteOrExitStmt.getUnit().get(), t.getStart().fact());
+		
 			
 			if (predIsCallStmt) {
 				importSolvers(returnSiteOrExitStmt, t.getTarget(), w);
-			} else	if (isBackward() && boomerang.icfg().isExitStmt(returnSiteOrExitStmt.getUnit().get())) {
+			} else if (isBackward() && boomerang.icfg().isExitStmt(returnSiteOrExitStmt.getUnit().get())) {
 				for(Statement next : flowSolver.getSuccsOf(returnSiteOrExitStmt)) {
 					importSolvers(next, t.getTarget(), w);
 				}
