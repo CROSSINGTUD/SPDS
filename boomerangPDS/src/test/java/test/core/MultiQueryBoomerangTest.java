@@ -11,29 +11,11 @@
  *******************************************************************************/
 package test.core;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import org.junit.Rule;
-import org.junit.rules.Timeout;
-
-import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
-
-import boomerang.BackwardQuery;
-import boomerang.Boomerang;
-import boomerang.DefaultBoomerangOptions;
-import boomerang.ForwardQuery;
-import boomerang.Query;
-import boomerang.WeightedBoomerang;
+import boomerang.*;
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.ObservableDynamicICFG;
+import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.debugger.Debugger;
 import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
@@ -42,25 +24,24 @@ import boomerang.jimple.Val;
 import boomerang.preanalysis.BoomerangPretransformer;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
-import soot.Body;
-import soot.Local;
-import soot.RefType;
-import soot.Scene;
-import soot.SceneTransformer;
-import soot.SootClass;
-import soot.SootMethod;
-import soot.Unit;
-import soot.Value;
-import soot.jimple.AssignStmt;
-import soot.jimple.ClassConstant;
-import soot.jimple.InvokeExpr;
-import soot.jimple.NewExpr;
-import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import boomerang.seedfactory.SimpleSeedFactory;
+import com.google.common.base.Joiner;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
+import org.junit.Rule;
+import org.junit.rules.Timeout;
+import soot.*;
+import soot.jimple.*;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.nodes.Node;
 import test.core.selfrunning.AbstractTestingFramework;
+import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
+
+import java.util.*;
+import java.util.Map.Entry;
 
 public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 
@@ -68,13 +49,14 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 
 	@Rule
 	public Timeout timeout = new Timeout(10000000);
-	private JimpleBasedInterproceduralCFG icfg;
+	private ObservableICFG<Unit, SootMethod> dynamicIcfg;
+	private ObservableStaticICFG staticIcfg;
 	private Collection<? extends Query> allocationSites;
 	protected Collection<? extends Query> queryForCallSites;
 	protected Multimap<Query,Query> expectedAllocsForQuery = HashMultimap.create();
 	protected Collection<Error> unsoundErrors = Sets.newHashSet();
 	protected Collection<Error> imprecisionErrors = Sets.newHashSet();
-	private SeedFactory<NoWeight> seedFactory;
+	private SeedFactory<Weight.NoWeight> seedFactory;
 
 	protected int analysisTimeout = 300 *1000;
 
@@ -85,18 +67,12 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
 				BoomerangPretransformer.v().apply();
-				icfg = new JimpleBasedInterproceduralCFG(true);
-				seedFactory = new SeedFactory<NoWeight>(){
-
-
-					@Override
-					public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
-						return icfg;
-					}
+				staticIcfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
+				seedFactory = new SeedFactory<Weight.NoWeight>() {
 
 					@Override
-					protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection calledMethods) {
-						Optional<? extends Query> query = new FirstArgumentOf("queryFor.*").test(u);
+					protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
+						Optional<Query> query = new FirstArgumentOf("queryFor.*").test(u);
 
 						if(query.isPresent()){
 							ClassConstant arg = (ClassConstant) u.getInvokeExpr().getArg(1);
@@ -106,7 +82,11 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 						return Collections.emptySet();
 					}
 
-					
+					@Override
+					public ObservableICFG<Unit, SootMethod> icfg() {
+						return staticIcfg;
+					}
+
 				};
 				queryForCallSites = seedFactory.computeSeeds();
 				runDemandDrivenBackward();
@@ -126,7 +106,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 		public AllocationSiteOf(String type) {
 			this.type = type;
 		}
-		public Optional<? extends Query> test(Stmt unit) {
+		public Optional<Query> test(Stmt unit) {
 			if (unit instanceof AssignStmt) {
 				AssignStmt as = (AssignStmt) unit;
 				if (as.getLeftOp() instanceof Local && as.getRightOp() instanceof NewExpr) {
@@ -134,13 +114,13 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 					System.out.println(as + type);
 					if (allocatesObjectOfInterest(expr, type)) {
 						Local local = (Local) as.getLeftOp();
-						Statement statement = new Statement(unit, icfg.getMethodOf(unit));
-						ForwardQuery forwardQuery = new ForwardQuery(statement, new AllocVal(local, icfg.getMethodOf(unit), as.getRightOp(),statement));
+						Statement statement = new Statement(unit, staticIcfg.getMethodOf(unit));
+						ForwardQuery forwardQuery = new ForwardQuery(statement, new AllocVal(local, staticIcfg.getMethodOf(unit), as.getRightOp(),statement));
 						return Optional.<Query>of(forwardQuery);
 					}
 				}
 			}
-			return Optional.absent();
+			return Optional.empty();
 		}
 	}
 	private class FirstArgumentOf implements ValueOfInterestInUnit {
@@ -152,18 +132,18 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 		}
 
 		@Override
-		public Optional<? extends Query> test(Stmt unit) {
-			Stmt stmt = (Stmt) unit;
+		public Optional<Query> test(Stmt unit) {
+			Stmt stmt = unit;
 			if (!(stmt.containsInvokeExpr()))
-				return Optional.absent();
+				return Optional.empty();
 			InvokeExpr invokeExpr = stmt.getInvokeExpr();
 			if (!invokeExpr.getMethod().getName().matches(methodNameMatcher))
-				return Optional.absent();
+				return Optional.empty();
 			Value param = invokeExpr.getArg(0);
 			if (!(param instanceof Local))
-				return Optional.absent();
-			return Optional.<Query>of(new BackwardQuery(new Statement(unit, icfg.getMethodOf(unit)),
-					new Val(param, icfg.getMethodOf(unit))));
+				return Optional.empty();
+			return Optional.of(new BackwardQuery(new Statement(unit, staticIcfg.getMethodOf(unit)),
+					new Val(param, staticIcfg.getMethodOf(unit))));
 		}
 	}
 
@@ -211,20 +191,28 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 			public int analysisTimeoutMS() {
 				return analysisTimeout;
 			}
+
+			@Override
+			public boolean onTheFlyCallGraph(){
+				return false;
+			}
 		};
 		solver = new Boomerang(options) {
 			@Override
-			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
-				return icfg;
+			public ObservableICFG<Unit, SootMethod> icfg() {
+				if (dynamicIcfg == null){
+					dynamicIcfg = new ObservableDynamicICFG<>(this);
+				}
+				return dynamicIcfg;
 			}
 			
 			@Override
 			public Debugger createDebugger() {
-				return new IDEVizDebugger(ideVizFile,icfg);
+				return new IDEVizDebugger(ideVizFile, icfg());
 			}
 
 			@Override
-			public SeedFactory<NoWeight> getSeedFactory() {
+			public SeedFactory<Weight.NoWeight> getSeedFactory() {
 				return seedFactory;
 			}
 		};
@@ -253,21 +241,62 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 
 	private void extractQuery(SootMethod m, ValueOfInterestInUnit predicate, Collection<Query> queries, Stmt callSite,
 			Set<Node<SootMethod, Stmt>> visited) {
-		if (!m.hasActiveBody() || visited.contains(new Node<SootMethod, Stmt>(m, callSite)))
+		if (!m.hasActiveBody() || visited.contains(new Node<>(m, callSite)))
 			return;
-		visited.add(new Node<SootMethod, Stmt>(m, callSite));
+		visited.add(new Node<>(m, callSite));
 		Body activeBody = m.getActiveBody();
-		for (Unit cs : icfg.getCallsFromWithin(m)) {
-			for (SootMethod callee : icfg.getCalleesOfCallAt(cs))
-				extractQuery(callee, predicate, queries, (callSite == null ? (Stmt) cs : callSite), visited);
+		for (Unit cs : staticIcfg.getCallsFromWithin(m)) {
+			staticIcfg.addCalleeListener(new ExtractQueryCalleeListener(cs, predicate, queries, callSite, visited));
 		}
 		for (Unit u : activeBody.getUnits()) {
 			if (!(u instanceof Stmt))
 				continue;
-			Optional<? extends Query> optOfVal = predicate.test((Stmt) u);
+			Optional<Query> optOfVal = predicate.test((Stmt) u);
 			if (optOfVal.isPresent()) {
 				queries.add(optOfVal.get());
 			}
+		}
+	}
+
+	private class ExtractQueryCalleeListener implements CalleeListener<Unit,SootMethod> {
+		Unit p_cs;
+		ValueOfInterestInUnit p_predicate;
+		Collection<Query> p_queries;
+		Stmt p_callsite;
+		Set<Node<SootMethod, Stmt>> p_visited;
+
+		ExtractQueryCalleeListener(Unit cs, ValueOfInterestInUnit predicate, Collection<Query> queries, Stmt callsite,
+								   Set<Node<SootMethod, Stmt>> visited){
+			this.p_cs=cs;
+			this.p_predicate=predicate;
+			this.p_queries=queries;
+			this.p_callsite=callsite;
+			this.p_visited=visited;
+		}
+
+		public Unit getObservedCaller() {
+			return p_cs;
+		}
+
+		public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+			extractQuery(sootMethod, p_predicate, p_queries, (p_callsite == null ? (Stmt) p_cs : p_callsite), p_visited);
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			ExtractQueryCalleeListener that = (ExtractQueryCalleeListener) o;
+			return Objects.equals(p_cs, that.p_cs) &&
+					Objects.equals(p_predicate, that.p_predicate) &&
+					Objects.equals(p_queries, that.p_queries) &&
+					Objects.equals(p_callsite, that.p_callsite) &&
+					Objects.equals(p_visited, that.p_visited);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(p_cs, p_predicate, p_queries, p_callsite, p_visited);
 		}
 	}
 
@@ -305,8 +334,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 	/**
 	 * A call to this method flags the object as at the call statement as not
 	 * reachable by the analysis.
-	 * 
-	 * @param variable
+	 *
 	 */
 	protected void unreachable(Object variable) {
 
@@ -315,14 +343,13 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 	/**
 	 * This method can be used in test cases to create branching. It is not
 	 * optimized away.
-	 * 
-	 * @return
+	 *
 	 */
 	protected boolean staticallyUnknown() {
 		return true;
 	}
 
 	private interface ValueOfInterestInUnit {
-		Optional<? extends Query> test(Stmt unit);
+		Optional<Query> test(Stmt unit);
 	}
 }

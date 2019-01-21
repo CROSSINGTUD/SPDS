@@ -26,6 +26,9 @@ import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
+import boomerang.callgraph.ObservableDynamicICFG;
+import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -34,11 +37,16 @@ import boomerang.results.AbstractBoomerangResults;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
+import boomerang.seedfactory.SimpleSeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import soot.SootMethod;
 import soot.Unit;
+<<<<<<< HEAD
 import soot.jimple.Stmt;
 import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+=======
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
+>>>>>>> demand-driven-icfg
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.SyncPDSSolver;
@@ -50,10 +58,13 @@ import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.ConnectPushListener;
+<<<<<<< HEAD
 import wpds.impl.NormalRule;
 import wpds.impl.PushRule;
 import wpds.impl.Rule;
 import wpds.impl.StackListener;
+=======
+>>>>>>> demand-driven-icfg
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
@@ -326,7 +337,12 @@ public class IDEALSeedSolver<W extends Weight> {
 	private WeightedBoomerang<W> createSolver(Phases phase) {
 		return new WeightedBoomerang<W>(analysisDefinition.boomerangOptions()) {
 			@Override
-			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+			public ObservableICFG<Unit, SootMethod> icfg() {
+				if (analysisDefinition.icfg == null){
+					analysisDefinition.icfg = new ObservableDynamicICFG<W>(this);
+					//For Static ICFG use this line
+//					analysisDefinition.icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(false))
+				}
 				return analysisDefinition.icfg();
 			}
 
@@ -339,22 +355,22 @@ public class IDEALSeedSolver<W extends Weight> {
 			protected WeightFunctions<Statement, Val, Statement, W> getForwardCallWeights(ForwardQuery sourceQuery) {
 				if (sourceQuery.equals(seed))
 					return idealWeightFunctions;
-				return new OneWeightFunctions<Statement, Val, Statement, W>(zero, one);
+				return new OneWeightFunctions<>(zero, one);
 			}
 
 			@Override
 			protected WeightFunctions<Statement, Val, Field, W> getForwardFieldWeights() {
-				return new OneWeightFunctions<Statement, Val, Field, W>(zero, one);
+				return new OneWeightFunctions<>(zero, one);
 			}
 
 			@Override
 			protected WeightFunctions<Statement, Val, Field, W> getBackwardFieldWeights() {
-				return new OneWeightFunctions<Statement, Val, Field, W>(zero, one);
+				return new OneWeightFunctions<>(zero, one);
 			}
 
 			@Override
 			protected WeightFunctions<Statement, Val, Statement, W> getBackwardCallWeights() {
-				return new OneWeightFunctions<Statement, Val, Statement, W>(zero, one);
+				return new OneWeightFunctions<>(zero, one);
 			}
 
 			@Override

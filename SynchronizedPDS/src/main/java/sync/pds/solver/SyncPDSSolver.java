@@ -14,8 +14,6 @@ package sync.pds.solver;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -38,7 +36,16 @@ import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.*;
+import wpds.impl.NestedAutomatonListener;
+import wpds.impl.NestedWeightedPAutomatons;
+import wpds.impl.NormalRule;
+import wpds.impl.PopRule;
+import wpds.impl.PushRule;
+import wpds.impl.Rule;
+import wpds.impl.Transition;
+import wpds.impl.Weight;
+import wpds.impl.WeightedPAutomaton;
+import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
@@ -437,22 +444,23 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	protected void processNode(Node<Stmt, Fact> curr) {
 		if(!addReachableState(curr))
 			return;
-		Collection<? extends State> successors = computeSuccessor(curr);
-		for (State s : successors) {
-			if (s instanceof Node) {
-				Node<Stmt, Fact> succ = (Node<Stmt, Fact>) s;
-				if (succ instanceof PushNode) {
-					PushNode<Stmt, Fact, Location> pushNode = (PushNode<Stmt, Fact, Location>) succ;
-					PDSSystem system = pushNode.system();
-					Location location = pushNode.location();
-					processPush(curr, location, pushNode, system);
-				} else {
-					processNormal(curr, succ);
-				}
-			} else if (s instanceof PopNode) {
-				PopNode<Fact> popNode = (PopNode<Fact>) s;
-				processPop(curr, popNode);
+		computeSuccessor(curr);
+	}
+	
+	protected void propagate(Node<Stmt,Fact> curr, State s) {
+		if (s instanceof Node) {
+			Node<Stmt, Fact> succ = (Node<Stmt, Fact>) s;
+			if (succ instanceof PushNode) {
+				PushNode<Stmt, Fact, Location> pushNode = (PushNode<Stmt, Fact, Location>) succ;
+				PDSSystem system = pushNode.system();
+				Location location = pushNode.location();
+				processPush(curr, location, pushNode, system);
+			} else {
+				processNormal(curr, succ);
 			}
+		} else if (s instanceof PopNode) {
+			PopNode<Fact> popNode = (PopNode<Fact>) s;
+			processPop(curr, popNode);
 		}
 	}
 
@@ -694,7 +702,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	}
 	
 
-	public abstract Collection<? extends State> computeSuccessor(Node<Stmt, Fact> node);
+	public void addGeneratedFieldState(GeneratedState<Node<Stmt,Fact>,Field> state) {
+		Entry<INode<Node<Stmt,Fact>>, Field> e = new AbstractMap.SimpleEntry<>(state.node(), state.location());
+		generatedFieldState.put(e,state);
+	}
+
+	public abstract void computeSuccessor(Node<Stmt, Fact> node);
 
 	public abstract Field epsilonField();
 

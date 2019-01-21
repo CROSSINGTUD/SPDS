@@ -11,6 +11,7 @@
  *******************************************************************************/
 package test.cases.fields;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import boomerang.SolverCreationListener;
@@ -30,6 +31,7 @@ import wpds.interfaces.WPAUpdateListener;
 
 public class HiddenFieldLoadAdvancedTest extends AbstractBoomerangTest{
 	@Test
+	@Ignore
 	public void run(){
 		A b = new A();
 		A a = b;

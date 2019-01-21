@@ -11,33 +11,27 @@
  *******************************************************************************/
 package boomerang.seedfactory;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
+import boomerang.Query;
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.CallerListener;
+import boomerang.callgraph.ObservableICFG;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-
-import boomerang.Query;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.PushRule;
-import wpds.impl.Transition;
-import wpds.impl.Weight;
+import wpds.impl.*;
 import wpds.impl.Weight.NoWeight;
-import wpds.impl.WeightedPAutomaton;
-import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
+
+import java.util.*;
 
 /**
  * Created by johannesspath on 07.12.17.
@@ -138,18 +132,24 @@ public abstract class SeedFactory<W extends Weight> {
 		}
 		Set<Query> seeds = Sets.newHashSet();
 		for (Unit u : m.getActiveBody().getUnits()) {
-			if(!icfg().isReachable(u))
-				continue;
-			Collection<SootMethod> calledMethods = (icfg().isCallStmt(u) ? icfg().getCalleesOfCallAt(u)
-					: new HashSet<SootMethod>());
-			seeds.addAll(generate(m, (Stmt) u, calledMethods));
+			Collection<SootMethod> calledMethods = Sets.newHashSet();
 			if (icfg().isCallStmt(u)) {
-				for (SootMethod callee : icfg().getCalleesOfCallAt(u)) {
-					if (!callee.hasActiveBody())
-						continue;
-					addPushRule(new Method(m), new Method(callee));
-				}
+				icfg().addCalleeListener(new CalleeListener<Unit, SootMethod>() {
+					@Override
+					public Unit getObservedCaller() {
+						return u;
+					}
+
+					@Override
+					public void onCalleeAdded(Unit n, SootMethod callee) {
+						calledMethods.add(m);
+						  if (!callee.hasActiveBody())
+		                        return;
+						  addPushRule(new Method(m),new Method(callee));
+					}
+				});
 			}
+			seeds.addAll(generate(m, (Stmt) u, calledMethods));
 		}
 		seedsPerMethod.putAll(m, seeds);
 	}
@@ -163,7 +163,7 @@ public abstract class SeedFactory<W extends Weight> {
 		return new SingleNode<>(r);
 	}
 
-	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
+	public abstract ObservableICFG<Unit, SootMethod> icfg();
 
 	public Collection<SootMethod> getMethodScope(Query query) {
 		Set<SootMethod> scope = Sets.newHashSet();
@@ -233,6 +233,14 @@ public abstract class SeedFactory<W extends Weight> {
 		private SeedFactory getOuterType() {
 			return SeedFactory.this;
 		}
+	}
+
+	public Collection<SootMethod> getAnyMethodScope() {
+		Set<SootMethod> out = Sets.newHashSet();
+		for (Query q : seedToTransition.keySet()) {
+			out.addAll(getMethodScope(q));
+		}
+		return out;
 	}
 
 }

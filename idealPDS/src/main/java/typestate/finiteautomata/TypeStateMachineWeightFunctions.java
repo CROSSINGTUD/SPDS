@@ -220,6 +220,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 	}
 
 	public abstract Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod);
+
 	public TransitionFunction initialTransition(){
 		return new TransitionFunction(new Transition(initialState(),initialState()),Collections.emptySet());
 	}

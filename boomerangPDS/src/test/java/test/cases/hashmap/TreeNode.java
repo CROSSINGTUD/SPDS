@@ -175,27 +175,19 @@ class TreeNode<K,V> extends Entry<K,V> {
         TreeNode<K,V> root = null;
         for (TreeNode<K,V> x = this, next; x != null; x = next) {
             next = (TreeNode<K,V>)x.next;
-            System.out.println(2);
             x.left = x.right = null;
-            System.out.println(2);
             if (root == null) {
                 x.parent = null;
-                System.out.println(2);
                 x.red = false;
-                System.out.println(2);
                 root = x;
-                System.out.println(2);
             }
             else {
                 K k = x.key;
-                System.out.println(2);
                 int h = x.hash;
-                System.out.println(2);
                 Class<?> kc = null;
                 for (TreeNode<K,V> p = root;;) {
                     int dir = 0, ph;
                     K pk = p.key;
-                    System.out.println(2);
                     if ((ph = p.hash) > h)
                         dir = -1;
                     else if (ph < h)
@@ -209,14 +201,11 @@ class TreeNode<K,V> extends Entry<K,V> {
                     if ((p = (dir <= 0) ? p.left : p.right) == null) {
                         x.parent = xp;
                         int v =1;
-                        System.out.println(v);
                         if (dir <= 0){
                             xp.left = x;
-                            System.out.println(2);
                         }
                         else{
                             xp.right = x;
-                            System.out.println(2);
                         }
 //                        root = balanceInsertion(root, x);
                         break;

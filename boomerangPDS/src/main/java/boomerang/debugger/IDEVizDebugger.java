@@ -11,66 +11,50 @@
  *******************************************************************************/
 package boomerang.debugger;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
+import boomerang.BackwardQuery;
+import boomerang.Query;
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.CallerListener;
+import boomerang.callgraph.ObservableICFG;
+import boomerang.jimple.Statement;
+import boomerang.jimple.Val;
+import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.util.RegExAccessPath;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.*;
+import com.google.common.collect.Table.Cell;
 import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
-import com.google.common.collect.Table.Cell;
-
-import boomerang.BackwardQuery;
-import boomerang.Query;
-import boomerang.jimple.Statement;
-import boomerang.jimple.Val;
-import boomerang.solver.AbstractBoomerangSolver;
-import boomerang.util.RegExAccessPath;
-import heros.InterproceduralCFG;
 import soot.SootMethod;
 import soot.Unit;
-import soot.jimple.AssignStmt;
-import soot.jimple.InstanceFieldRef;
-import soot.jimple.InstanceInvokeExpr;
-import soot.jimple.InvokeExpr;
-import soot.jimple.StaticInvokeExpr;
-import soot.jimple.Stmt;
+import soot.jimple.*;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.NormalRule;
 import wpds.impl.Rule;
 import wpds.impl.Weight;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.*;
+import java.util.Map.Entry;
+
 public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 
 	private static boolean ONLY_CFG = false;
     private static final Logger logger = LogManager.getLogger();
 	private File ideVizFile;
-	private InterproceduralCFG<Unit, SootMethod> icfg;
+	private ObservableICFG<Unit, SootMethod> icfg;
 	private Table<Query, SootMethod, Set<Rule<Statement, INode<Val>, W>>> rules = HashBasedTable.create();
 	private Map<Object, Integer> objectToInteger = new HashMap<>();
 	private int charSize;
 	
 	
-	
-	public IDEVizDebugger(File ideVizFile, InterproceduralCFG<Unit, SootMethod> icfg) {
+	public IDEVizDebugger(File ideVizFile, ObservableICFG<Unit, SootMethod> icfg) {
 		this.ideVizFile = ideVizFile;
 		this.icfg = icfg;
 	}
@@ -105,12 +89,12 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 				callRules(q, solvers.get(q).getCallPDS().getAllRules());
 			}
 		}
-		for(Entry<Query, AbstractBoomerangSolver<W>> e : solvers.entrySet()){
+		for(Entry<Query, AbstractBoomerangSolver<W>> e : Lists.newArrayList(solvers.entrySet())){
 			logger.debug("Computing results for {}",e.getKey());
 			Query query = e.getKey();
 			JSONQuery queryJSON = new JSONQuery(query);
 			JSONArray data = new JSONArray();
-			for(SootMethod m : e.getValue().getReachableMethods()) {
+			for(SootMethod m : Lists.newArrayList(e.getValue().getReachableMethods())) {
 				Table<Statement, RegExAccessPath, W> results = e.getValue().getResults(m);
 				if(results.isEmpty())
 					continue;
@@ -140,7 +124,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			e.printStackTrace();
 			logger.info("Exception in writing to visualization file {}", ideVizFile.getAbsolutePath());
 		}
-		
+
 	}
 	
 
@@ -206,7 +190,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			nodeObj.put("data", additionalData);
 
 			data.add(nodeObj);
-			
+
 			esgNodes.put(new Node<Statement,Val>(statement,val.getVal()), val);
 		}
 
@@ -266,27 +250,14 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 			if (icfg.isCallStmt(u)) {
 				label.put("callSite", icfg.isCallStmt(u));
 				JSONArray callees = new JSONArray();
-				for (SootMethod callee : icfg.getCalleesOfCallAt(u)){
-					if(callee != null && callee.toString() != null){
-						callees.add(new JSONMethod(callee));
-					}
-				}
+				icfg.addCalleeListener(new JsonCalleeListener(u, callees));
 				label.put("callees", callees);
 			}
 			if (icfg.isExitStmt(u)) {
 				label.put("returnSite", icfg.isExitStmt(u));
 				JSONArray callees = new JSONArray();
 				Set<SootMethod> callers = new HashSet<>();
-				for (Unit callsite : icfg.getCallersOf(icfg.getMethodOf(u))){
-					try{
-						callers.add(icfg.getMethodOf(callsite));
-					} catch (Exception e){
-						
-					} catch(Error e){
-						
-					}
-				}
-	
+				icfg.addCallerListener(new JsonCallerListener(u, callers));
 				for (SootMethod caller : callers)
 					callees.add(new JSONMethod(caller));
 				label.put("callers", callees);
@@ -316,6 +287,77 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W>{
 		}
 		cfg.put("controlFlowNode", data);
 		return cfg;
+	}
+
+	private class JsonCalleeListener implements CalleeListener<Unit, SootMethod>{
+		Unit u;
+		JSONArray callees;
+
+		JsonCalleeListener(Unit u, JSONArray callees){
+			this.u = u;
+			this.callees = callees;
+		}
+
+		@Override
+		public Unit getObservedCaller() {
+			return u;
+		}
+
+		@Override
+		public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+			if (sootMethod != null && sootMethod.toString() != null){
+				callees.add(new JSONMethod(sootMethod));
+			}
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			JsonCalleeListener that = (JsonCalleeListener) o;
+			return Objects.equals(u, that.u) &&
+					Objects.equals(callees, that.callees);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(u, callees);
+		}
+	}
+
+	private class JsonCallerListener implements CallerListener<Unit,SootMethod>{
+		Unit u;
+		Set<SootMethod> callers;
+
+		JsonCallerListener(Unit u, Set<SootMethod> callers){
+			this.u = u;
+			this.callers = callers;
+		}
+
+		@Override
+		public SootMethod getObservedCallee() {
+			return icfg.getMethodOf(u);
+		}
+
+		@Override
+		public void onCallerAdded(Unit unit, SootMethod sootMethod) {
+			callers.add(icfg.getMethodOf(unit));
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			JsonCallerListener that = (JsonCallerListener) o;
+			return Objects.equals(u, that.u) &&
+					Objects.equals(callers, that.callers);
+		}
+
+		@Override
+		public int hashCode() {
+
+			return Objects.hash(u, callers);
+		}
 	}
 
 	private String getShortLabel(Unit u) {
