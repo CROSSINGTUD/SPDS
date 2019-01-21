@@ -11,7 +11,6 @@
  *******************************************************************************/
 package inference.example;
 
-<<<<<<< HEAD
 import java.io.File;
 import java.util.Collection;
 import java.util.Collections;
@@ -20,19 +19,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import boomerang.preanalysis.BoomerangPretransformer;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.google.common.base.Joiner;
 import com.google.common.collect.Table;
 
-=======
->>>>>>> demand-driven-icfg
 import boomerang.WeightedForwardQuery;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import boomerang.preanalysis.BoomerangPretransformer;
 import boomerang.results.ForwardBoomerangResults;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Table;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
 import ideal.IDEALResultHandler;
@@ -40,20 +38,20 @@ import ideal.IDEALSeedSolver;
 import ideal.StoreIDEALResultHandler;
 import inference.InferenceWeight;
 import inference.InferenceWeightFunctions;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import soot.*;
+import soot.G;
+import soot.PackManager;
+import soot.Scene;
+import soot.SceneTransformer;
+import soot.SootClass;
+import soot.SootMethod;
+import soot.Transform;
+import soot.Transformer;
+import soot.Unit;
 import soot.jimple.AssignStmt;
 import soot.jimple.NewExpr;
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import soot.options.Options;
 import sync.pds.solver.WeightFunctions;
-<<<<<<< HEAD
-=======
-
-import java.io.File;
-import java.util.*;
-import java.util.Map.Entry;
->>>>>>> demand-driven-icfg
 
 public class Main {
 
@@ -109,12 +107,6 @@ public class Main {
 	private static Transformer createAnalysisTransformer() {
 		return new SceneTransformer() {
 			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-<<<<<<< HEAD
-				JimpleBasedInterproceduralCFG icfg = new JimpleBasedInterproceduralCFG(true);
-
-=======
-				
->>>>>>> demand-driven-icfg
 				StoreIDEALResultHandler<InferenceWeight> resultHandler = new StoreIDEALResultHandler<>();
 
 				IDEALAnalysis<InferenceWeight> solver = new IDEALAnalysis<>(new IDEALAnalysisDefinition<InferenceWeight>() {
