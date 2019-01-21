@@ -55,12 +55,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private static final boolean ContextSensitive = true;
 	protected final WeightedPushdownSystem<Stmt, INode<Fact>, W> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, W>(){
 		public String toString() {
-			return "Call " + super.toString();
+			return "Call " + SyncPDSSolver.this.toString();
 		};
 	};
 	protected final WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W> fieldPDS = new WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W>(){
 		public String toString() {
-			return "Field " + super.toString();
+			return "Field " + SyncPDSSolver.this.toString();
 		};
 	};
 	private final Set<Node<Stmt,Fact>> reachedStates = Sets.newHashSet();
@@ -673,7 +673,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		return new SingleNode<Fact>(variable);
 	}
 
-	Map<Entry<INode<Fact>, Stmt>, INode<Fact>> generatedCallState = Maps.newHashMap();
+	protected Map<Entry<INode<Fact>, Stmt>, INode<Fact>> generatedCallState = Maps.newHashMap();
 
 	public INode<Fact> generateCallState(final INode<Fact> d, final Stmt loc) {
 		Entry<INode<Fact>, Stmt> e = new AbstractMap.SimpleEntry<>(d, loc);
