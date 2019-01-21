@@ -17,6 +17,7 @@ import com.google.common.collect.Table;
 import boomerang.BoomerangOptions;
 import boomerang.DefaultBoomerangOptions;
 import boomerang.WeightedForwardQuery;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
@@ -55,7 +56,6 @@ protected IDEALAnalysis<TransitionFunction> createAnalysis() {
     try {
 		BoomerangPretransformer.v().reset();
 		BoomerangPretransformer.v().apply();
-    	final JimpleBasedInterproceduralCFG icfg = new JimpleBasedInterproceduralCFG(false);
     	System.out.println("Reachable Methods" +  Scene.v().getReachableMethods().size());
 		final TypeStateMachineWeightFunctions genericsType = (TypeStateMachineWeightFunctions) Class.forName(className).getConstructor()
           .newInstance();
@@ -74,12 +74,11 @@ protected IDEALAnalysis<TransitionFunction> createAnalysis() {
 			public WeightFunctions<Statement, Val, Statement, TransitionFunction> weightFunctions() {
 				return genericsType;
 			}
-
+			
 			@Override
-			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+			public ObservableICFG<Unit, SootMethod> icfg() {
 				return icfg;
 			}
-			
 
 			@Override
 			public BoomerangOptions boomerangOptions() {

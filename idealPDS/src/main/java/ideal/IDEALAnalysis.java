@@ -11,7 +11,6 @@
  *******************************************************************************/
 package ideal;
 
-<<<<<<< HEAD
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,8 +19,6 @@ import java.util.Set;
 
 import com.google.common.base.Stopwatch;
 
-=======
->>>>>>> demand-driven-icfg
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedForwardQuery;
@@ -89,20 +86,9 @@ public class IDEALAnalysis<W extends Weight> {
 			logger.info("Analyzing "+ seed);
 			Stopwatch watch = Stopwatch.createStarted();
 			analysisTime.put(seed, watch);
-<<<<<<< HEAD
-			ForwardBoomerangResults<W> res = run(seed);
-=======
-			ForwardBoomerangResults<W> res;
-			//Reset the call graph when dealing with a new seed. Will only affect demand-driven call graphs.
 			if (analysisDefinition.icfg() != null)
 				analysisDefinition.icfg().resetCallGraph();
-			try {
-				res = run(seed);
-			} catch(IDEALSeedTimeout e){
-				res = (ForwardBoomerangResults<W>) e.getLastResults();
-				timedoutSeeds.add(seed);
-			}
->>>>>>> demand-driven-icfg
+			ForwardBoomerangResults<W> res = run(seed);
 			watch.stop();
 			System.out.println("Analyzed (finished,timedout): \t (" + (seedCount -timedoutSeeds.size())+ "," + timedoutSeeds.size() + ") of "+ initialSeeds.size() + " seeds! ");
 			analysisDefinition.getResultHandler().report(seed,res);

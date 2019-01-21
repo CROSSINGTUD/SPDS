@@ -12,7 +12,6 @@
 package ideal;
 
 import java.util.Collection;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -28,47 +27,32 @@ import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.callgraph.ObservableICFG;
-import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import boomerang.results.AbstractBoomerangResults;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
-import boomerang.seedfactory.SimpleSeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import soot.SootMethod;
 import soot.Unit;
-<<<<<<< HEAD
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-=======
-import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
->>>>>>> demand-driven-icfg
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
-import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import sync.pds.solver.nodes.PopNode;
-import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.ConnectPushListener;
-<<<<<<< HEAD
 import wpds.impl.NormalRule;
 import wpds.impl.PushRule;
 import wpds.impl.Rule;
 import wpds.impl.StackListener;
-=======
->>>>>>> demand-driven-icfg
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
-import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
