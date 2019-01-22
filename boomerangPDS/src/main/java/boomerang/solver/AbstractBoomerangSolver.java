@@ -460,18 +460,45 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 		}
 
 		@Override
-		public boolean equals(Object o) {
-			if (this == o) return true;
-			if (o == null || getClass() != o.getClass()) return false;
-			ReturnFlowCallerListener that = (ReturnFlowCallerListener) o;
-			return Objects.equals(method, that.method) &&
-					Objects.equals(curr, that.curr);
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((curr == null) ? 0 : curr.hashCode());
+			result = prime * result + ((method == null) ? 0 : method.hashCode());
+			return result;
 		}
 
+
 		@Override
-		public int hashCode() {
-			return Objects.hash(method, curr);
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ReturnFlowCallerListener other = (ReturnFlowCallerListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (curr == null) {
+				if (other.curr != null)
+					return false;
+			} else if (!curr.equals(other.curr))
+				return false;
+			if (method == null) {
+				if (other.method != null)
+					return false;
+			} else if (!method.equals(other.method))
+				return false;
+			return true;
 		}
+
+
+		private AbstractBoomerangSolver getOuterType() {
+			return AbstractBoomerangSolver.this;
+		}
+
 	}
 
 	private Collection<? extends State> callFlow(SootMethod caller, Node<Statement,Val> curr) {
