@@ -67,7 +67,6 @@ public class IDEALSeedSolver<W extends Weight> {
 	private final WeightedBoomerang<W> phase2Solver;
 	private final Stopwatch analysisStopwatch = Stopwatch.createUnstarted();
 	private final SeedFactory<W> seedFactory;
-	private WeightedBoomerang<W> timedoutSolver;
 	private Multimap<Node<Statement, Val>, Statement> affectedStrongUpdateStmt = HashMultimap.create();
 	private Set<Node<Statement, Val>> weakUpdates = Sets.newHashSet();
 	private final class AddIndirectFlowAtCallSite implements WPAUpdateListener<Statement, INode<Val>, W> {
@@ -213,6 +212,7 @@ public class IDEALSeedSolver<W extends Weight> {
 			for(Unit u : analysisDefinition.icfg().getPredsOf(strongUpdateNode.stmt().getUnit().get())){
 				BackwardQuery query = new BackwardQuery(new Statement((Stmt)u, strongUpdateNode.stmt().getMethod()), strongUpdateNode.fact());
 				BackwardBoomerangResults<W> queryResults = boomerang.backwardSolveUnderScope(query, seed, strongUpdateNode);
+				
 				Set<ForwardQuery> queryAllocationSites = queryResults
 						.getAllocationSites().keySet();
 				setWeakUpdateIfNecessary();
@@ -304,7 +304,6 @@ public class IDEALSeedSolver<W extends Weight> {
 			if (analysisStopwatch.isRunning()) {
 				analysisStopwatch.stop();
 			}
-			timedoutSolver = this.phase1Solver;
 			throw new IDEALSeedTimeout(this, this.phase1Solver, resultPhase1);
 		}
 		ForwardBoomerangResults<W> resultPhase2 = runPhase(this.phase2Solver, Phases.ValueFlow);
@@ -312,7 +311,6 @@ public class IDEALSeedSolver<W extends Weight> {
 			if (analysisStopwatch.isRunning()) {
 				analysisStopwatch.stop();
 			}
-			timedoutSolver = this.phase2Solver;
 			throw new IDEALSeedTimeout(this, this.phase2Solver, resultPhase2);
 		}
 		return resultPhase2;
@@ -482,14 +480,6 @@ public class IDEALSeedSolver<W extends Weight> {
 
 	public Stopwatch getAnalysisStopwatch() {
 		return analysisStopwatch;
-	}
-
-	public boolean isTimedOut() {
-		return timedoutSolver != null;
-	}
-
-	public WeightedBoomerang getTimedoutSolver() {
-		return timedoutSolver;
 	}
 
 	public Query getSeed() {
