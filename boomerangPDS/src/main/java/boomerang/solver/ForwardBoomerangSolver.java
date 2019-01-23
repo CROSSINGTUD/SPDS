@@ -24,7 +24,6 @@ import com.google.common.collect.Sets;
 
 import boomerang.BoomerangOptions;
 import boomerang.ForwardQuery;
-import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.StaticFieldVal;
@@ -67,12 +66,11 @@ import wpds.impl.Weight;
 import wpds.interfaces.State;
 
 public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractBoomerangSolver<W> {
-	public ForwardBoomerangSolver(ObservableICFG<Unit, SootMethod> icfg, ForwardQuery query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>,W> fieldSummaries) {
+	public ForwardBoomerangSolver(BiDiInterproceduralCFG<Unit, SootMethod> icfg, ForwardQuery query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>,W> fieldSummaries) {
 		super(icfg, query, genField, options, callSummaries, fieldSummaries);
 	}
 	
-	@Override
-	protected Collection<? extends State> computeCallFlow(SootMethod caller,  Statement returnSite, Statement callSite, InvokeExpr invokeExpr,
+	public Collection<? extends State> computeCallFlow(SootMethod caller, Statement callSite, InvokeExpr invokeExpr,
 			Val fact, SootMethod callee, Stmt calleeSp) {
 		if (!callee.hasActiveBody() || callee.isStaticInitializer()){
 			return Collections.emptySet();
@@ -140,14 +138,36 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 		return false;
 	}
 
+	@Override
+	public void computeSuccessor(Node<Statement, Val> node) {
+		Statement stmt = node.stmt();
+		Optional<Stmt> unit = stmt.getUnit();
+		if (unit.isPresent()) {
+			Stmt curr = unit.get();
+			Val value = node.fact();
+			SootMethod method = icfg.getMethodOf(curr);
+			if(method == null)
+				return;
+			if (icfg.isExitStmt(curr)) {
+				returnFlow(method, curr, value);
+				return;
+			}
+			for(Unit next : icfg.getSuccsOf(curr)){
+				Stmt nextStmt = (Stmt) next; 
+				if (nextStmt.containsInvokeExpr() && valueUsedInStatement(nextStmt, value)) {
+					callFlow(method, curr, nextStmt, nextStmt.getInvokeExpr(), value);
+				} else if (!killFlow(method, nextStmt, value)) {
+					computeNormalFlow(method, curr, value, nextStmt);
+				}
+			}
+		}
+	}
 	
 	protected Collection<State> normalFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
 		for (Unit succ : icfg.getSuccsOf(curr)) {
-			if(!killFlow(method, (Stmt) succ, value)) {
-				Collection<State> flow = computeNormalFlow(method, curr, value, (Stmt) succ);
-				out.addAll(flow);	
-			}
+			Collection<State> flow = computeNormalFlow(method, curr, value, (Stmt) succ);
+			out.addAll(flow);
 		}
 		return out;
 	}
@@ -299,7 +319,33 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	}
 
 
-	
+	protected Collection<State> callFlow(SootMethod caller, Stmt curr, Stmt callSite, InvokeExpr invokeExpr, Val value) {
+		assert icfg.isCallStmt(callSite);
+		Set<State> out = Sets.newHashSet();
+		boolean onlyStaticInitializer = true;
+		boolean calleeExcluded = false;
+		for (SootMethod callee : icfg.getCalleesOfCallAt(callSite)) {
+			if(callee.isStaticInitializer()) {
+				continue;
+			}
+			onlyStaticInitializer = false;
+			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
+				Collection<? extends State> res = computeCallFlow(caller,
+						new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
+				out.addAll(res);
+			}
+			addReachable(callee);
+
+			if(Scene.v().isExcluded(callee.getDeclaringClass())) {
+				calleeExcluded = true;
+			}
+		}
+		if (calleeExcluded || onlyStaticInitializer) {
+			out.addAll(computeNormalFlow(caller, curr, value, (Stmt) callSite));
+		}
+		out.addAll(getEmptyCalleeFlow(caller, curr, value, (Stmt) callSite));
+		return out;
+	}
 	
 	@Override
 	public Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value, Stmt callSite,

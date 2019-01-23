@@ -19,17 +19,18 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 
 import boomerang.BackwardQuery;
 import boomerang.BoomerangOptions;
-import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.StaticFieldVal;
 import boomerang.jimple.Val;
 import soot.Body;
 import soot.Local;
+import soot.Scene;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
@@ -43,6 +44,7 @@ import soot.jimple.ReturnStmt;
 import soot.jimple.StaticFieldRef;
 import soot.jimple.Stmt;
 import soot.jimple.ThrowStmt;
+import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.GeneratedState;
@@ -57,7 +59,7 @@ import wpds.interfaces.State;
 
 public abstract class BackwardBoomerangSolver<W extends Weight> extends AbstractBoomerangSolver<W>{
 
-	public BackwardBoomerangSolver(ObservableICFG<Unit, SootMethod> icfg, BackwardQuery query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries){
+	public BackwardBoomerangSolver(BiDiInterproceduralCFG<Unit, SootMethod> icfg, BackwardQuery query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries){
 		super(icfg, query, genField, options, callSummaries, fieldSummaries);
 	}
 
@@ -108,6 +110,65 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 		return out;
 	}
 
+	protected Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
+		assert icfg.isCallStmt(callSite);
+		Set<State> out = Sets.newHashSet();
+		boolean calleeExcluded = false;
+		boolean onlyStaticInitializer = true;
+		for (SootMethod callee : icfg.getCalleesOfCallAt(callSite)) {
+			if(callee.isStaticInitializer()) {
+				continue;
+			}
+			onlyStaticInitializer = false;
+			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
+				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+					Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
+							new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
+					out.addAll(res);
+				}
+			}
+			addReachable(callee);
+			if(Scene.v().isExcluded(callee.getDeclaringClass())) {
+				calleeExcluded = true;
+			}
+		}
+
+		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+			if (calleeExcluded || onlyStaticInitializer) {
+				out.addAll(computeNormalFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
+			}
+			out.addAll(getEmptyCalleeFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
+		}
+		return out;
+	}	
+	
+
+	@Override
+	public void computeSuccessor(Node<Statement, Val> node) {
+		Statement stmt = node.stmt();
+		Optional<Stmt> unit = stmt.getUnit();
+		logger.trace("Computing successor for {} with solver {}", node, this);
+		if (unit.isPresent()) {
+			Stmt curr = unit.get();
+			Val value = node.fact();
+			SootMethod method = icfg.getMethodOf(curr);
+			if(method == null)
+				return;
+			if (killFlow(method, curr, value)) {
+				return;
+			}
+			if(options.isIgnoredMethod(method)){
+				return;
+			}
+			if (curr.containsInvokeExpr() && valueUsedInStatement(curr, value) && INTERPROCEDURAL) {
+				callFlow(method, curr, curr.getInvokeExpr(), value);
+			} else if (icfg.isExitStmt(curr)) {
+				returnFlow(method, curr, value);
+			} else {
+				normalFlow(method, curr, value);
+			}
+		}
+	}
 	protected Collection<State> normalFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
 		for (Unit succ : icfg.getSuccsOf(curr)) {
