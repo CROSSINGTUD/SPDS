@@ -24,6 +24,8 @@ import com.google.common.collect.Sets;
 
 import boomerang.BackwardQuery;
 import boomerang.BoomerangOptions;
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.StaticFieldVal;
@@ -59,7 +61,94 @@ import wpds.interfaces.State;
 
 public abstract class BackwardBoomerangSolver<W extends Weight> extends AbstractBoomerangSolver<W>{
 
-	public BackwardBoomerangSolver(BiDiInterproceduralCFG<Unit, SootMethod> icfg, BackwardQuery query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries){
+	private final class CallSiteCalleeListener implements CalleeListener<Unit, SootMethod> {
+		private final Node<Statement, Val> curr;
+		private final SootMethod caller;
+		private final Statement callSite;
+
+		private CallSiteCalleeListener(Node<Statement, Val> curr, SootMethod caller, Statement callSite) {
+			this.curr = curr;
+			this.caller = caller;
+			this.callSite = callSite;
+		}
+
+		@Override
+		public Unit getObservedCaller() {
+			return callSite.getUnit().get();
+		}
+
+		@Override
+		public void onCalleeAdded(Unit callSite, SootMethod callee) {
+			if(callee.isStaticInitializer()) {
+				return;
+			}
+//				onlyStaticInitializer = false;
+
+			Set<State> out = Sets.newHashSet();
+			InvokeExpr invokeExpr = curr.stmt().getUnit().get().getInvokeExpr();
+			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
+				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+					Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
+							new Statement((Stmt) callSite, caller), invokeExpr, curr.fact(), callee, (Stmt) calleeSp);
+					out.addAll(res);
+				}
+			}
+			for(State o : out) {
+				BackwardBoomerangSolver.this.propagate(curr, o);
+			}
+			addReachable(callee);
+//				if(Scene.v().isExcluded(callee.getDeclaringClass())) {
+//					calleeExcluded = true;
+//				}	
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
+			result = prime * result + ((caller == null) ? 0 : caller.hashCode());
+			result = prime * result + ((curr == null) ? 0 : curr.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			CallSiteCalleeListener other = (CallSiteCalleeListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (callSite == null) {
+				if (other.callSite != null)
+					return false;
+			} else if (!callSite.equals(other.callSite))
+				return false;
+			if (caller == null) {
+				if (other.caller != null)
+					return false;
+			} else if (!caller.equals(other.caller))
+				return false;
+			if (curr == null) {
+				if (other.curr != null)
+					return false;
+			} else if (!curr.equals(other.curr))
+				return false;
+			return true;
+		}
+
+		private BackwardBoomerangSolver getOuterType() {
+			return BackwardBoomerangSolver.this;
+		}
+		
+	}
+
+	public BackwardBoomerangSolver(ObservableICFG<Unit, SootMethod> icfg, BackwardQuery query, Map<Entry<INode<Node<Statement,Val>>, Field>, INode<Node<Statement,Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries){
 		super(icfg, query, genField, options, callSummaries, fieldSummaries);
 	}
 
@@ -110,36 +199,17 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 		return out;
 	}
 
-	protected Collection<State> callFlow(SootMethod caller, Stmt callSite, InvokeExpr invokeExpr, Val value) {
-		assert icfg.isCallStmt(callSite);
-		Set<State> out = Sets.newHashSet();
-		boolean calleeExcluded = false;
-		boolean onlyStaticInitializer = true;
-		for (SootMethod callee : icfg.getCalleesOfCallAt(callSite)) {
-			if(callee.isStaticInitializer()) {
-				continue;
-			}
-			onlyStaticInitializer = false;
-			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
-				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-					Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
-							new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
-					out.addAll(res);
-				}
-			}
-			addReachable(callee);
-			if(Scene.v().isExcluded(callee.getDeclaringClass())) {
-				calleeExcluded = true;
-			}
-		}
+	protected void callFlow(SootMethod caller, Node<Statement,Val> curr) {
+		Statement callSite = curr.stmt();
+		icfg.addCalleeListener(new CallSiteCalleeListener(curr, caller, callSite));
 
-		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-			if (calleeExcluded || onlyStaticInitializer) {
-				out.addAll(computeNormalFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
-			}
-			out.addAll(getEmptyCalleeFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
-		}
-		return out;
+//		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+//			if (calleeExcluded || onlyStaticInitializer) {
+//				out.addAll(computeNormalFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
+//			}
+//			out.addAll(getEmptyCalleeFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
+//		}
+		return;
 	}	
 	
 
@@ -161,21 +231,25 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 				return;
 			}
 			if (curr.containsInvokeExpr() && valueUsedInStatement(curr, value) && INTERPROCEDURAL) {
-				callFlow(method, curr, curr.getInvokeExpr(), value);
+				callFlow(method, node);
 			} else if (icfg.isExitStmt(curr)) {
-				returnFlow(method, curr, value);
+				returnFlow(method, node);
 			} else {
-				normalFlow(method, curr, value);
+				normalFlow(method, node);
 			}
 		}
 	}
-	protected Collection<State> normalFlow(SootMethod method, Stmt curr, Val value) {
+	protected void normalFlow(SootMethod method, Node<Statement,Val> currNode) {
 		Set<State> out = Sets.newHashSet();
+		Stmt curr = currNode.stmt().getUnit().get();
+		Val value = currNode.fact();
 		for (Unit succ : icfg.getSuccsOf(curr)) {
 			Collection<State> flow = computeNormalFlow(method, curr, value, (Stmt) succ);
 			out.addAll(flow);
 		}
-		return out;
+		for(State s : out) {
+			propagate(currNode, s);
+		}
 	}
 
 	protected Collection<? extends State> computeCallFlow(SootMethod caller, Statement returnSite, Statement callSite,

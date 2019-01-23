@@ -305,13 +305,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				checkTimeout();
 			}
 
-
-			@Override
-			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
-				// TODO Auto-generated method stub
-				
-			}
-
 		};
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val>() {
 			@Override
@@ -433,10 +426,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				checkTimeout();
 			}
 
-			@Override
-			protected void callBypass(Statement callSite, Statement returnSite, Val value) {
-				
-			}
 		};
 
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val>() {
