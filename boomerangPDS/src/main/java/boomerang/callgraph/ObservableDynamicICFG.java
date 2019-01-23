@@ -176,27 +176,30 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
         InvokeExpr invokeExpr = stmt.getInvokeExpr();
         Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
         Val val = new Val(value, getMethodOf(stmt));
-        Statement statement = new Statement(stmt, getMethodOf(unit));
-        BackwardQuery query = new BackwardQuery(statement, val);
-
-        //Execute that query
-        BackwardBoomerangResults<W> results = solver.solve(query);
-
-        //Go through possible types an add edges to implementations in possible types
-        for (ForwardQuery forwardQuery : results.getAllocationSites().keySet()){
-            logger.debug("Found AllocationSite '{}'.", forwardQuery);
-            Type type = forwardQuery.getType();
-            if (type instanceof RefType){
-                SootMethod calleeMethod = getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) type).getSootClass());
-                if (calleeMethod != null)
-                    addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
-            } else if (type instanceof ArrayType){
-                Type base = ((ArrayType) type).baseType;
-                if (base instanceof RefType){
-                    SootMethod calleeMethod = getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) base).getSootClass());
-                    addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
-                }
-            }
+        for(Unit pred : getPredsOf(stmt)) {
+	        Statement statement = new Statement((Stmt)pred, getMethodOf(unit));
+	        
+	        BackwardQuery query = new BackwardQuery(statement, val);
+	
+	        //Execute that query
+	        BackwardBoomerangResults<W> results = solver.solve(query);
+	
+	        //Go through possible types an add edges to implementations in possible types
+	        for (ForwardQuery forwardQuery : results.getAllocationSites().keySet()){
+	            logger.debug("Found AllocationSite '{}'.", forwardQuery);
+	            Type type = forwardQuery.getType();
+	            if (type instanceof RefType){
+	                SootMethod calleeMethod = getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) type).getSootClass());
+	                if (calleeMethod != null)
+	                    addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
+	            } else if (type instanceof ArrayType){
+	                Type base = ((ArrayType) type).baseType;
+	                if (base instanceof RefType){
+	                    SootMethod calleeMethod = getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) base).getSootClass());
+	                    addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
+	                }
+	            }
+	        }
         }
     }
 

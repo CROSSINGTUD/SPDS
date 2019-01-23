@@ -134,6 +134,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 				return;
 			}
 //				onlyStaticInitializer = false;
+			icfg.addMethodWithCallFlow(callee);
 			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
 				Set<State> out = Sets.newHashSet();
 				Collection<? extends State> res = computeCallFlow(caller,
