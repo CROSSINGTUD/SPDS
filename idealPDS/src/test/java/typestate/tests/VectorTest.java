@@ -45,7 +45,7 @@ public class VectorTest extends IDEALTestingFramework {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		mustBeInErrorState(v);
+		mayBeInErrorState(v);
 	}
 
 	@Test

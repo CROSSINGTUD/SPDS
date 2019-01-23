@@ -181,20 +181,17 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 		return Collections.emptySet();
 	}
 	
-	protected Collection<WeightedForwardQuery<TransitionFunction>> generateThisAtAnyCallSitesOf(SootMethod m, Unit unit,
-			Collection<SootMethod> calledMethod, Set<SootMethod> hasToCall) {
-		for (SootMethod callee : calledMethod) {
-			if (hasToCall.contains(callee)) {
-				if (unit instanceof Stmt) {
-					if (((Stmt) unit).getInvokeExpr() instanceof InstanceInvokeExpr) {
-						InstanceInvokeExpr iie = (InstanceInvokeExpr) ((Stmt) unit).getInvokeExpr();
-						Local thisLocal = (Local) iie.getBase();
-						return Collections.singleton(new WeightedForwardQuery<>(new Statement((Stmt) unit,m),new AllocVal(thisLocal,m,iie,new Statement((Stmt) unit,m)),initialTransition()));
-					}
+	protected Collection<WeightedForwardQuery<TransitionFunction>> generateThisAtAnyCallSitesOf(SootMethod m, Unit unit, Collection<SootMethod> invokesMethod) {
+		if (unit instanceof Stmt) {
+			if (((Stmt) unit).containsInvokeExpr() && ((Stmt) unit).getInvokeExpr() instanceof InstanceInvokeExpr) {
+				InstanceInvokeExpr iie = (InstanceInvokeExpr) ((Stmt) unit).getInvokeExpr();
+				if(invokesMethod.contains(iie.getMethod())) {
+					Local thisLocal = (Local) iie.getBase();
+					return Collections.singleton(new WeightedForwardQuery<>(new Statement((Stmt) unit,m),new AllocVal(thisLocal,m,iie,new Statement((Stmt) unit,m)),initialTransition()));
 				}
-
 			}
 		}
+
 		return Collections.emptySet();
 	}
 	
