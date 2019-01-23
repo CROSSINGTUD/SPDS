@@ -27,6 +27,8 @@ import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
+import soot.jimple.InstanceInvokeExpr;
+import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.MatcherTransition;
@@ -116,9 +118,11 @@ public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
 	public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit, Collection<SootMethod> calledMethod) {
 		for (SootMethod m : calledMethod) {
 			if (retrieveIteratorConstructors().contains(m)) {
-				if (unit instanceof AssignStmt) {
-					AssignStmt stmt = (AssignStmt) unit;
-					return Collections.singleton(new WeightedForwardQuery<>(new Statement(stmt,method),new AllocVal(stmt.getLeftOp(), method, stmt.getRightOp(),new Statement((Stmt) unit,m)),initialTransition()));
+				Stmt stmt = ((Stmt) unit);
+				InvokeExpr invokeExpr = stmt.getInvokeExpr();
+				if(invokeExpr instanceof InstanceInvokeExpr) {
+					InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
+					return Collections.singleton(new WeightedForwardQuery<>(new Statement(stmt,method),new AllocVal(iie.getBase(), method, iie.getBase(),new Statement((Stmt) unit,m)),initialTransition()));
 				}
 			}
 		}
