@@ -117,6 +117,6 @@ public class InputStreamStateMachine extends TypeStateMachineWeightFunctions{
 
 	@Override
 	protected State initialState() {
-		return States.OPEN;
+		return States.CLOSED;
 	}
 }
