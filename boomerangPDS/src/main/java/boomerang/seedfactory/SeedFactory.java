@@ -12,8 +12,10 @@
 package boomerang.seedfactory;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.HashMultimap;
@@ -47,12 +49,15 @@ public abstract class SeedFactory<W extends Weight> {
 	private final WeightedPushdownSystem<Method, INode<Reachable>, Weight.NoWeight> pds = new WeightedPushdownSystem<>();
 	private final Multimap<Query, Transition<Method, INode<Reachable>>> seedToTransition = HashMultimap.create();
 	private final Multimap<SootMethod, Query> seedsPerMethod = HashMultimap.create();
-
+	private final Map<Method, INode<Reachable>> reachableMethods = new HashMap<Method, INode<Reachable>>();
 	private final WeightedPAutomaton<Method, INode<Reachable>, Weight.NoWeight> automaton = new WeightedPAutomaton<Method, INode<Reachable>, Weight.NoWeight>(
 			wrap(Reachable.entry())) {
 		@Override
 		public INode<Reachable> createState(INode<Reachable> reachable, Method loc) {
-			return new GeneratedState<>(reachable, loc);
+			if(!reachableMethods.containsKey(loc)) {
+				reachableMethods.put(loc,  new GeneratedState<>(reachable, loc));
+			}
+			return reachableMethods.get(loc);
 		}
 
 		@Override
