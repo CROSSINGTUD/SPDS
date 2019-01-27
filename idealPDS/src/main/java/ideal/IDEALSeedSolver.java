@@ -323,9 +323,9 @@ public class IDEALSeedSolver<W extends Weight> {
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
 				if (analysisDefinition.icfg == null){
-					analysisDefinition.icfg = new ObservableDynamicICFG<W>(this);
+//					analysisDefinition.icfg = new ObservableDynamicICFG<W>(this);
 					//For Static ICFG use this line
-//					analysisDefinition.icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(false));
+					analysisDefinition.icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(false));
 				}
 				return analysisDefinition.icfg();
 			}
