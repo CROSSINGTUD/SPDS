@@ -57,11 +57,11 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		return val instanceof NewExpr;
 	}
 
-	private boolean isThrowableAllocationType(Type type) {
+	protected boolean isThrowableAllocationType(Type type) {
 		return Scene.v().getOrMakeFastHierarchy().canStoreType(type, Scene.v().getType("java.lang.Throwable"));
 	}
 
-	private boolean isStringAllocationType(Type type) {
+	protected boolean isStringAllocationType(Type type) {
 		return type.toString().equals("java.lang.String") || type.toString().equals("java.lang.StringBuilder")
 				|| type.toString().equals("java.lang.StringBuffer");
 	}
