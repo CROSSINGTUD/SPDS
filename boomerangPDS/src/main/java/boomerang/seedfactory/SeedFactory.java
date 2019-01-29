@@ -118,7 +118,7 @@ public abstract class SeedFactory<W extends Weight> {
 	private void process(Transition<Method, INode<Reachable>> t) {
 		Method curr = t.getLabel();
 		SootMethod m = curr.getMethod();
-		if (!m.hasActiveBody())
+		if (!m.hasActiveBody() || !m.getDeclaringClass().isApplicationClass())
 			return;
 		computeQueriesPerMethod(m);
 		for (Query q : seedsPerMethod.get(m)) {
