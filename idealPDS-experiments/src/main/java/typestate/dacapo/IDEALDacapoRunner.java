@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 public class IDEALDacapoRunner extends SootSceneSetupDacapo {
 	private static String project;
 	private static String benchFolder;
+	private static String onTheFly;
 
 	public IDEALDacapoRunner(String benchmarkFolder, String benchFolder) {
 		super(benchmarkFolder, benchFolder);
@@ -19,6 +20,7 @@ public class IDEALDacapoRunner extends SootSceneSetupDacapo {
 		System.setProperty("rule", args[1]);
 		benchFolder = args[2];
 		project =  args[3];
+		onTheFly = args[4];
 		System.setProperty("program", project);
 		new IDEALDacapoRunner(benchFolder,project).run();
 	}
@@ -45,10 +47,11 @@ public class IDEALDacapoRunner extends SootSceneSetupDacapo {
 		System.setProperty("outputCsvFile", outputFile);
 		
 		System.out.println("Writing output to file " +outputFile);
-		if(analysis.equalsIgnoreCase("ideal")){
+		if(analysis.startsWith("ideal")){
 			System.setProperty("rule", Util.selectTypestateMachine(System.getProperty("rule")).getName());
 			System.out.println("running " + System.getProperty("rule"));
 			System.setProperty("dacapo", "true");
+			System.setProperty("demandDrivenCg", onTheFly);
 			new IDEALRunner(benchFolder,project).run(outputFile);
 		}
 

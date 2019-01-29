@@ -42,7 +42,7 @@ public class PerformanceTest {
 		GoogleSpreadsheetWriter.computeMetrics();
 	}
 
-	@Parameters(name = "{0} -> {1}")
+	@Parameters(name = "{0} -> {1} -> {2}")
 	public static Iterable<Object[]> data() {
 		String[] dacapo = new String[] { "antlr", "chart", "eclipse", "hsqldb", "jython", "luindex", "lusearch", "pmd",
 				"fop", "xalan", "bloat" };
@@ -50,15 +50,18 @@ public class PerformanceTest {
 				"PipedInputStream", "OutputStreamCloseThenWrite", "PipedOutputStream", "PrintStream", "PrintWriter",
 				"#Signature", "EmptyVector", };
 		ArrayList<Object[]> res = Lists.newArrayList();
+		ArrayList<Object[]> res2 = Lists.newArrayList();
 		for (String prog : dacapo) {
 			if(ignore(prog))
 				continue;
 			for (String rule : rules) {
 				if(ignore(rule))
 					continue;
-				res.add(new Object[] { prog, rule });
+				res.add(new Object[] { prog, rule, "true" });
+				res2.add(new Object[] { prog, rule, "false" });
 			}
 		}
+		res.addAll(res2);
 		return res;
 	}
 
@@ -67,10 +70,12 @@ public class PerformanceTest {
 	}
 	private String prog;
     private String rule;
+    private String demandDrivenCg;
 
-    public PerformanceTest(String prog, String rule) {
+    public PerformanceTest(String prog, String rule, String demandDrivenCg) {
         this.prog = prog;
         this.rule = rule;
+        this.demandDrivenCg = demandDrivenCg;
     }
 	@Test
 	public void test() {
@@ -81,7 +86,8 @@ public class PerformanceTest {
         String javaBin = javaHome +
                 File.separator + "bin" +
                 File.separator + "java";
-		ProcessBuilder builder = new ProcessBuilder(new String[] {javaBin, "-Xmx12g","-Xss164m","-cp",  System.getProperty("java.class.path"), IDEALDacapoRunner.class.getName(),"ideal", rule, dacapoPath, prog});
+        
+        ProcessBuilder builder = new ProcessBuilder(new String[] {javaBin, "-Xmx12g","-Xss164m","-cp",  System.getProperty("java.class.path"), IDEALDacapoRunner.class.getName(),"ideal-" + demandDrivenCg, rule, dacapoPath, prog, demandDrivenCg });
 		builder.inheritIO();
 		Process process;
 		try {

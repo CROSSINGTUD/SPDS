@@ -269,6 +269,8 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
         Iterator<Edge> precomputedCallers = precomputedCallGraph.edgesInto(sootMethod);
         while (precomputedCallers.hasNext()){
             Edge methodCall = precomputedCallers.next();
+            if(methodCall.srcUnit() == null)
+            		continue;
             callers.add(methodCall.srcUnit());
             boolean wasPrecomputedAdded = addCallIfNotInGraph(methodCall.srcUnit(), methodCall.tgt(), methodCall.kind());
             if (wasPrecomputedAdded)
