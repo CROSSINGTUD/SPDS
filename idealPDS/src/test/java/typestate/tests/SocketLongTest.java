@@ -14,9 +14,12 @@ package typestate.tests;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
+
+import javax.crypto.Cipher;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -61,6 +64,16 @@ public class SocketLongTest extends IDEALTestingFramework {
 	      talk(s);
 	      mustBeInAcceptingState(s);
 	    }
+
+		Collection<Socket> s1 = createOther();
+	}
+
+	private Collection<Socket> createOther() {
+		Collection<Socket> result = new ArrayList<>();
+		for (int i = 0; i < 5; i++) {
+			result.add(new Socket());
+		}
+		return result;
 	}
 
 	@Test

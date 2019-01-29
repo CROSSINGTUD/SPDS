@@ -432,13 +432,13 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 
 	protected void callFlow(SootMethod caller, Node<Statement,Val> currNode, Stmt callSite, InvokeExpr invokeExpr) {
 		assert icfg.isCallStmt(callSite);
-//		boolean onlyStaticInitializer = true;
-//		boolean calleeExcluded = false;
+		if (Scene.v().isExcluded(invokeExpr.getMethod().getDeclaringClass()) || invokeExpr.getMethod().isNative()) {
+			for(State s:  computeNormalFlow(caller, currNode.stmt().getUnit().get(), currNode.fact(), (Stmt) callSite)) {
+				propagate(currNode, s);
+			}
+		}
+			
 		icfg.addCalleeListener(new CallSiteCalleeListener(caller, callSite, currNode, invokeExpr));
-//		if (calleeExcluded || onlyStaticInitializer) {
-//			out.addAll(computeNormalFlow(caller, curr, value, (Stmt) callSite));
-//		}
-//		out.addAll(getEmptyCalleeFlow(caller, curr, value, (Stmt) callSite));
 	}
 	
 	@Override
