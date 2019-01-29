@@ -112,7 +112,7 @@ public class ExampleMain {
 						return false;
 					}
 				}) {
-					ObservableICFG<Unit,SootMethod> icfg = new ObservableDynamicICFG<>(this);
+					ObservableICFG<Unit,SootMethod> icfg = new ObservableDynamicICFG(this);
 					@Override
 					public ObservableICFG<Unit, SootMethod> icfg() {
 						return icfg;

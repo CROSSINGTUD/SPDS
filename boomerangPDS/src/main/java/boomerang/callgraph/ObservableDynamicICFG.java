@@ -1,8 +1,11 @@
 package boomerang.callgraph;
 
 import boomerang.BackwardQuery;
+import boomerang.Boomerang;
 import boomerang.ForwardQuery;
 import boomerang.WeightedBoomerang;
+import boomerang.debugger.Debugger;
+import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
@@ -28,6 +31,7 @@ import soot.toolkits.exceptions.UnitThrowAnalysis;
 import soot.toolkits.graph.BriefUnitGraph;
 import soot.toolkits.graph.DirectedGraph;
 import soot.toolkits.graph.ExceptionalUnitGraph;
+import sync.pds.solver.WeightFunctions;
 import wpds.impl.Weight;
 
 import java.util.*;
@@ -41,7 +45,7 @@ import java.util.*;
  *
  * @author Melanie Bruns on 04.05.2018
  */
-public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<Unit, SootMethod>{
+public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
     private static final Logger logger = LogManager.getLogger();
 
@@ -49,7 +53,7 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 
     private CallGraph demandDrivenCallGraph = new CallGraph();
     private CallGraph precomputedCallGraph;
-    private WeightedBoomerang<W> solver;
+    private WeightedBoomerang<? extends Weight> solver;
     private Set<SootMethod> methodsWithCallFlow = Sets.newHashSet();
 
     private Multimap<Unit, CalleeListener<Unit, SootMethod>> calleeListeners = HashMultimap.create();
@@ -98,11 +102,22 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
     });
 
 
-    public ObservableDynamicICFG(WeightedBoomerang<W> solver){
+    public ObservableDynamicICFG(boolean enableExceptions){
+    		this.enableExceptions = enableExceptions; 
+        this.solver = new Boomerang() {
+
+			@Override
+			public ObservableICFG<Unit, SootMethod> icfg() {
+				return ObservableDynamicICFG.this;
+			}};
+    }
+
+    
+    public ObservableDynamicICFG(WeightedBoomerang<? extends Weight> solver){
         this(solver, true);
     }
 
-    public ObservableDynamicICFG(WeightedBoomerang<W> solver, boolean enableExceptions) {
+    public ObservableDynamicICFG(WeightedBoomerang<? extends Weight> solver, boolean enableExceptions) {
         this.solver = solver;
         this.enableExceptions = enableExceptions;
 
@@ -162,7 +177,7 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
                 //If it was a special invoke, there is a single target
                 addCallIfNotInGraph(unit, ie.getMethod(), Kind.SPECIAL);
                 //If the precomputed graph has more edges than our graph, there may be more edges to find
-            } else if (potentiallyHasMoreEdges(precomputedCallGraph.edgesOutOf(unit),
+            } else if (precomputedCallGraph != null && potentiallyHasMoreEdges(precomputedCallGraph.edgesOutOf(unit),
                     demandDrivenCallGraph.edgesOutOf(unit))){
                 //Query for callees of the unit and add edges to the graph
                 queryForCallees(unit);
@@ -186,7 +201,7 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 	        BackwardQuery query = new BackwardQuery(statement, val);
 	
 	        //Execute that query
-	        BackwardBoomerangResults<W> results = solver.solve(query);
+	        BackwardBoomerangResults<? extends Weight> results = solver.solve(query);
 	
 	        //Go through possible types an add edges to implementations in possible types
 	        for (ForwardQuery forwardQuery : results.getAllocationSites().keySet()){
@@ -270,7 +285,9 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 
     @Override
     public Collection<Unit> getAllPrecomputedCallers(SootMethod sootMethod) {
-        logger.debug("Getting precomputed callers of {}", sootMethod);
+        if(precomputedCallGraph == null)
+        		return Collections.emptySet();
+    		logger.debug("Getting precomputed callers of {}", sootMethod);
         Set<Unit> callers = new HashSet<>();
         Iterator<Edge> precomputedCallers = precomputedCallGraph.edgesInto(sootMethod);
         while (precomputedCallers.hasNext()){

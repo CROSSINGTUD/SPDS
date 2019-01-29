@@ -42,8 +42,8 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public class IDEALRunner extends SootSceneSetupDacapo  {
 
-  public IDEALRunner(String benchmarkFolder, String benchFolder) {
-		super(benchmarkFolder, benchFolder);
+  public IDEALRunner(String benchmarkFolder, String project) {
+		super(benchmarkFolder, project);
 	}
 	private Collection<WeightedForwardQuery<TransitionFunction>> printedSeeds = Sets.newHashSet();
 

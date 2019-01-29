@@ -84,7 +84,6 @@ public class SootSceneSetupDacapo {
 		// Scene.v()
 		System.out.println(Scene.v().getSootClassPath());
 		System.out.println(Scene.v().getEntryPoints());
-
 	}
 
 	private List<String> getExclusions() {

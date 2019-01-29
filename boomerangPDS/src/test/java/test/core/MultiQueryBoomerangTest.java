@@ -201,7 +201,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
 				if (dynamicIcfg == null){
-					dynamicIcfg = new ObservableDynamicICFG<>(this);
+					dynamicIcfg = new ObservableDynamicICFG(this);
 				}
 				return dynamicIcfg;
 			}
