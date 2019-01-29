@@ -15,7 +15,10 @@ import boomerang.Query;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
+
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import soot.Scene;
@@ -32,6 +35,7 @@ import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by johannesspath on 07.12.17.
@@ -41,12 +45,16 @@ public abstract class SeedFactory<W extends Weight> {
 	private final WeightedPushdownSystem<Method, INode<Reachable>, Weight.NoWeight> pds = new WeightedPushdownSystem<>();
 	private final Multimap<Query, Transition<Method, INode<Reachable>>> seedToTransition = HashMultimap.create();
 	private final Multimap<SootMethod, Query> seedsPerMethod = HashMultimap.create();
+	private final Map<Method, INode<Reachable>> generatedStates = Maps.newHashMap();
 
 	private final WeightedPAutomaton<Method, INode<Reachable>, Weight.NoWeight> automaton = new WeightedPAutomaton<Method, INode<Reachable>, Weight.NoWeight>(
 			wrap(Reachable.entry())) {
 		@Override
 		public INode<Reachable> createState(INode<Reachable> reachable, Method loc) {
-			return new GeneratedState<>(reachable, loc);
+			if(generatedStates.get(loc) == null) {
+				generatedStates.put(loc,  new GeneratedState<>(reachable, loc));
+			}
+			return generatedStates.get(loc);
 		}
 
 		@Override
@@ -74,6 +82,8 @@ public abstract class SeedFactory<W extends Weight> {
 
 	public Collection<Query> computeSeeds() {
 		List<SootMethod> entryPoints = Scene.v().getEntryPoints();
+		System.out.print("Computing seeds starting at "+entryPoints.size() + " entry method(s).");
+		Stopwatch watch = Stopwatch.createStarted();
 		for (SootMethod m : entryPoints) {
 			automaton.addTransition(new Transition<>(wrap(Reachable.v()), new Method(m), automaton.getInitialState()));
 		}
@@ -94,7 +104,7 @@ public abstract class SeedFactory<W extends Weight> {
 				}
 			}
 		}
-
+		System.out.print("Seed finding took "+watch.elapsed(TimeUnit.SECONDS) + " second(s) and analyzed "+processed.size()+" method(s).");
 		return seedToTransition.keySet();
 	}
 
@@ -118,7 +128,7 @@ public abstract class SeedFactory<W extends Weight> {
 	private void process(Transition<Method, INode<Reachable>> t) {
 		Method curr = t.getLabel();
 		SootMethod m = curr.getMethod();
-		if (!m.hasActiveBody() || !m.getDeclaringClass().isApplicationClass())
+		if (!m.hasActiveBody())
 			return;
 		computeQueriesPerMethod(m);
 		for (Query q : seedsPerMethod.get(m)) {
