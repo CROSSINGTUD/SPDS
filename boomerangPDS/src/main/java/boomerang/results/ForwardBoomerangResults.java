@@ -214,9 +214,9 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 				});
 		return invokedMethodsOnInstance;
 	}
-
-	public Map<Node<Statement, Val>, AbstractBoomerangResults<W>.Context> getPotentialNullPointerDereferences() {
-		Set<Node<Statement, Val>> res = Sets.newHashSet();
+	
+	public Set<NullPointer> getPotentialNullPointerDereferences() {
+		Set<Node<Statement,Val>> res = Sets.newHashSet();
 		queryToSolvers.get(query).getFieldAutomaton()
 				.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 
@@ -228,39 +228,47 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 						}
 						Node<Statement, Val> node = t.getStart().fact();
 						Val fact = node.fact();
-						Statement curr = node.stmt();
-						if (curr.isCallsite()) {
-							Stmt callSite = (Stmt) curr.getUnit().get();
-							if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
-								InstanceInvokeExpr e = (InstanceInvokeExpr) callSite.getInvokeExpr();
-								if (e.getBase().equals(fact.value())) {
-									res.add(node);
-								}
-							}
-						}
-						if (curr.getUnit().get() instanceof AssignStmt) {
-							AssignStmt assignStmt = (AssignStmt) curr.getUnit().get();
-							if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
-								InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
-								if (ifr.getBase().equals(fact.value())) {
-									res.add(node);
-								}
-							}
-							if (assignStmt.getRightOp() instanceof LengthExpr) {
-								LengthExpr lengthExpr = (LengthExpr) assignStmt.getRightOp();
-								if (lengthExpr.getOp().equals(fact.value())) {
-									res.add(node);
-								}
-							}
-						}
+						SootMethod m = fact.m();
 
+						//A this variable can never be null.
+						if(m.hasActiveBody() && Util.isThisLocal(fact,m)) {
+							return;
+						}
+						Statement curr = node.stmt();
+						for(Unit pred : icfg.getPredsOf(curr.getUnit().get())) {
+							Node<Statement,Val> nullPointerNode = new Node<>(new Statement((Stmt) pred, curr.getMethod()), fact);
+							if(pred instanceof Stmt && ((Stmt) pred).containsInvokeExpr()) {
+								Stmt callSite = (Stmt) pred;
+								if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
+									InstanceInvokeExpr e = (InstanceInvokeExpr) callSite.getInvokeExpr();
+									if (e.getBase().equals(fact.value())) {
+										res.add(nullPointerNode);
+									}
+								}
+							}
+							if (pred instanceof AssignStmt) {
+								AssignStmt assignStmt = (AssignStmt) pred;
+								if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
+									InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
+									if (ifr.getBase().equals(fact.value())) {
+										res.add(nullPointerNode);
+									}
+								}
+								if (assignStmt.getRightOp() instanceof LengthExpr) {
+									LengthExpr lengthExpr = (LengthExpr) assignStmt.getRightOp();
+									if (lengthExpr.getOp().equals(fact.value())) {
+										res.add(nullPointerNode);
+									}
+								}
+							}
+						}
 					}
 				});
 
-		Map<Node<Statement, Val>, AbstractBoomerangResults<W>.Context> resWithContext = Maps.newHashMap();
+		Set<NullPointer> resWithContext = Sets.newHashSet();
 		for (Node<Statement, Val> r : res) {
 			AbstractBoomerangResults<W>.Context context = constructContextGraph(query, r);
-			resWithContext.put(r, context);
+			resWithContext.add(new NullPointer(query.stmt(),query.var(),r.stmt(),r.fact(), context.getOpeningContext(), context.getClosingContext()));
 		}
 		return resWithContext;
 	}

@@ -8,7 +8,9 @@ import boomerang.jimple.Val;
 import boomerang.results.BackwardBoomerangResults;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import heros.DontSynchronize;
 import heros.SynchronizedBy;
@@ -50,8 +52,8 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
     private WeightedBoomerang<W> solver;
     private Set<SootMethod> methodsWithCallFlow = Sets.newHashSet();
 
-    private HashSet<CalleeListener<Unit, SootMethod>> calleeListeners = new HashSet<>();
-    private HashSet<CallerListener<Unit, SootMethod>> callerListeners = new HashSet<>();
+    private Multimap<Unit, CalleeListener<Unit, SootMethod>> calleeListeners = HashMultimap.create();
+    private Multimap<SootMethod, CallerListener<Unit, SootMethod>> callerListeners = HashMultimap.create();
 
     private final boolean enableExceptions;
 
@@ -139,7 +141,9 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 
     @Override
     public void addCalleeListener(CalleeListener<Unit, SootMethod> listener) {
-        calleeListeners.add(listener);
+        if(!calleeListeners.put(listener.getObservedCaller(), listener)) {
+        	return;
+        }
 
         //Notify the new listener about edges we already know
         Unit unit = listener.getObservedCaller();
@@ -224,7 +228,9 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
 
     @Override
     public void addCallerListener(CallerListener<Unit, SootMethod> listener) {
-        callerListeners.add(listener);
+        if(!callerListeners.put(listener.getObservedCallee(), listener)) {
+        	return;
+        }
 
         SootMethod method = listener.getObservedCallee();
 
@@ -284,35 +290,21 @@ public class ObservableDynamicICFG<W extends Weight> implements ObservableICFG<U
      * change
      */
     private boolean addCallIfNotInGraph(Unit caller, SootMethod callee, Kind kind) {
-        if (isCallInGraph(caller, callee))
-            return false;
-
-        logger.debug("Added call from unit '{}' to method '{}'", caller, callee);
         Edge edge = new Edge(getMethodOf(caller), caller, callee, kind);
-        demandDrivenCallGraph.addEdge(edge);
+        if(!demandDrivenCallGraph.addEdge(edge)) {
+        	return false;
+        }
+        logger.debug("Added call from unit '{}' to method '{}'", caller, callee);
         //Notify all interested listeners, so ..
         //.. CalleeListeners interested in callees of the caller or the CallGraphExtractor that is interested in any
-        for (CalleeListener<Unit, SootMethod> listener : Lists.newArrayList(calleeListeners)){
-            if (caller.equals(listener.getObservedCaller()))
-                listener.onCalleeAdded(caller, callee);
+        for (CalleeListener<Unit, SootMethod> listener : Lists.newArrayList(calleeListeners.get(caller))){
+            listener.onCalleeAdded(caller, callee);
         }
         // .. CallerListeners interested in callers of the callee or the CallGraphExtractor that is interested in any
-        for (CallerListener<Unit, SootMethod> listener : Lists.newArrayList(callerListeners)){
-            if (callee.equals(listener.getObservedCallee()))
-                listener.onCallerAdded(caller, callee);
+        for (CallerListener<Unit, SootMethod> listener : Lists.newArrayList(callerListeners.get(callee))){
+            listener.onCallerAdded(caller, callee);
         }
         return true;
-    }
-
-    private boolean isCallInGraph(Unit caller, SootMethod callee) {
-        Iterator<Edge> edgesOutOfCaller = demandDrivenCallGraph.edgesOutOf(caller);
-        while(edgesOutOfCaller.hasNext()){
-            Edge edge = edgesOutOfCaller.next();
-            if (edge.tgt().equals(callee)){
-                return true;
-            }
-        }
-        return false;
     }
 
     @Override

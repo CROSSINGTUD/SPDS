@@ -1,6 +1,4 @@
 package typestate.dacapo;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.security.GeneralSecurityException;
@@ -37,8 +35,6 @@ import soot.SootMethod;
 import soot.Transform;
 import soot.Unit;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.WeightFunctions;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.ITransition;

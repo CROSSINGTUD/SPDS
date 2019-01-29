@@ -44,8 +44,8 @@ public class PerformanceTest {
 
 	@Parameters(name = "{0} -> {1} -> {2}")
 	public static Iterable<Object[]> data() {
-		String[] dacapo = new String[] { "antlr", "chart", "eclipse", "hsqldb", "jython", "luindex", "lusearch", "pmd",
-				"fop", "xalan", "bloat" };
+		String[] dacapo = new String[] { "#antlr", "#chart", "#eclipse", "#hsqldb", "jython", "luindex", "lusearch", "pmd",
+				"#fop", "#xalan", "#bloat" };
 		String[] rules = new String[] { "IteratorHasNext", "#KeyStore", "#URLConnection", "InputStreamCloseThenRead",
 				"PipedInputStream", "OutputStreamCloseThenWrite", "PipedOutputStream", "PrintStream", "PrintWriter",
 				"#Signature", "EmptyVector", };
@@ -78,23 +78,9 @@ public class PerformanceTest {
         this.demandDrivenCg = demandDrivenCg;
     }
 	@Test
-	public void test() {
+	public void test() throws Exception {
 		String userDir = System.getProperty("user.dir");
 		String dacapoPath = userDir+File.separator+"dacapo"+File.separator;
-
-		String javaHome = System.getProperty("java.home");
-        String javaBin = javaHome +
-                File.separator + "bin" +
-                File.separator + "java";
-        
-        ProcessBuilder builder = new ProcessBuilder(new String[] {javaBin, "-Xmx12g","-Xss164m","-cp",  System.getProperty("java.class.path"), IDEALDacapoRunner.class.getName(),"ideal-" + demandDrivenCg, rule, dacapoPath, prog, demandDrivenCg });
-		builder.inheritIO();
-		Process process;
-		try {
-			process = builder.start();
-			process.waitFor();
-		} catch (IOException | InterruptedException e) {
-			e.printStackTrace();
-		}
+		IDEALDacapoRunner.main(new String[] {"ideal-"+demandDrivenCg, rule, dacapoPath, prog,demandDrivenCg});
 	}
 }
