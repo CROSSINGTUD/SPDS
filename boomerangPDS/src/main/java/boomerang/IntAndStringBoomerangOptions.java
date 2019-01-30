@@ -54,14 +54,14 @@ public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 		if(as.getRightOp() instanceof LengthExpr){
 			return Optional.of(new AllocVal(as.getLeftOp(), m,as.getRightOp(), new Statement(stmt,m)));
 		}
+
 		if(as.containsInvokeExpr()){
-			for(SootMethod callee : icfg.getCalleesOfCallAt(as)){
-				for(Unit u : icfg.getEndPointsOf(callee)){
-					if(u instanceof ReturnStmt && isAllocationVal(((ReturnStmt) u).getOp())){
-						return Optional.of(new AllocVal(as.getLeftOp(), m,((ReturnStmt) u).getOp(),new Statement((Stmt) u,m)));
-					}
-				}
-			}
+            SootMethod method = as.getInvokeExpr().getMethod();
+            String sig = method.getSignature();
+            if (sig.equals("<java.math.BigInteger: java.math.BigInteger valueOf(long)>")){
+                Value arg = as.getInvokeExpr().getArg(0);
+    			return Optional.of(new AllocVal(as.getLeftOp(),m,arg, new Statement(stmt,m)));
+            }            
 		}
 		return super.getAllocationVal(m, stmt, fact, icfg);
 	}

@@ -11,6 +11,8 @@
  *******************************************************************************/
 package test.core;
 
+import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -166,7 +168,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				};
 				queryForCallSites = seedFactory.computeSeeds();
 				if(integerQueries){
-					allocationSites = extractQuery(new IntegerAllocationSiteOf());
 				} else{
 					allocationSites = extractQuery(new AllocationSiteOf());
 				}
@@ -204,7 +205,45 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 //		if (queryForCallSites.size() > 1)
 //			throw new RuntimeException("Found more than one backward query to execute!");
 		Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
-		compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
+		if(integerQueries) {
+			compareIntegerResults(backwardResults, AnalysisMode.DemandDrivenBackward);
+		} else {
+			compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
+		}
+	}
+
+	private void compareIntegerResults(Set<Node<Statement, Val>> backwardResults, AnalysisMode analysis) {
+		if(queryForCallSites.size() > 1)
+			throw new RuntimeException("Not implemented");
+		for(Query q : queryForCallSites) {
+			Statement stmt = q.stmt();
+			InvokeExpr ie = stmt.getUnit().get().getInvokeExpr();
+			Value arg = ie.getArg(1);
+			Collection<String> expectedResults = parse(arg);
+			boolean imprecise = false;
+			for(Node<Statement,Val> v : backwardResults) {
+				if(v.fact() instanceof AllocVal) {
+					AllocVal allocVal = (AllocVal) v.fact();
+					Value allocationValue = allocVal.allocationValue();
+					boolean remove = expectedResults.remove(allocationValue.toString());
+					if(!remove)
+						imprecise = true;
+				} else {
+					imprecise = true;
+				}
+			}
+			if (!expectedResults.isEmpty()) {
+				unsoundErrors.add(new Error(analysis + " Unsound results!"));
+			}
+			if (imprecise)
+				imprecisionErrors.add(new Error(analysis + " Imprecise results!"));
+		}
+	}
+
+	private ArrayList<String> parse(Value arg) {
+		StringConstant c = (StringConstant) arg;
+		String[] split = c.value.split(",");
+		return Lists.newArrayList(split);
 	}
 
 	private class AllocationSiteOf implements ValueOfInterestInUnit {
@@ -221,34 +260,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 					}
 				}
 			}
-			return Optional.absent();
-		}
-	}
-	private class IntegerAllocationSiteOf implements ValueOfInterestInUnit {
-		public Optional<? extends Query> test(Stmt unit) {
-			if (unit instanceof AssignStmt) {
-				AssignStmt as = (AssignStmt) unit;
-				if (as.getLeftOp().toString().equals("allocation")) {
-					Statement statement = new Statement(unit, icfg.getMethodOf(unit));
-					if (as.getLeftOp() instanceof Local && as.getRightOp() instanceof IntConstant) {
-						Local local = (Local) as.getLeftOp();
-						ForwardQuery forwardQuery = new ForwardQuery(statement, new AllocVal(local, icfg.getMethodOf(unit), as.getRightOp(),new Statement((Stmt) as,icfg.getMethodOf(unit))));
-						return Optional.<Query>of(forwardQuery);
-					}
-
-					if(as.containsInvokeExpr()){
-						for(SootMethod m : icfg.getCalleesOfCallAt(as)){
-							for(Unit u : icfg.getEndPointsOf(m)){
-								if(u instanceof ReturnStmt && ((ReturnStmt) u).getOp() instanceof IntConstant){
-									ForwardQuery forwardQuery = new ForwardQuery(statement, new AllocVal(as.getLeftOp(), icfg.getMethodOf(unit), ((ReturnStmt) u).getOp(),new Statement((Stmt) u,m)));
-									return Optional.<Query>of(forwardQuery);
-								}
-							}
-						}
-					}
-				}
-			}
-			
 			return Optional.absent();
 		}
 	}
@@ -507,7 +518,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	protected void queryForAndNotEmpty(Object variable) {
 
 	}
-	protected void intQueryFor(int variable) {
+	protected void intQueryFor(int variable, String value) {
+
+	}
+	protected void intQueryFor(BigInteger variable, String value) {
 
 	}
 
