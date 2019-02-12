@@ -110,6 +110,10 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 			public ObservableICFG<Unit, SootMethod> icfg() {
 				return ObservableDynamicICFG.this;
 			}};
+
+	        this.precomputedCallGraph = Scene.v().getCallGraph();
+
+	        initializeUnitToOwner();
     }
 
     

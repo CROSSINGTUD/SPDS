@@ -322,7 +322,7 @@ public class IDEALSeedSolver<W extends Weight> {
 		return new WeightedBoomerang<W>(analysisDefinition.boomerangOptions()) {
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
-				if (analysisDefinition.icfg == null){
+				if (analysisDefinition.icfg() == null){
 					//For Static ICFG use this line
 					if(System.getProperty("demandDrivenCg") != null && Boolean.parseBoolean(System.getProperty("demandDrivenCg"))) {
 						System.out.println("Using Demand Driven ICFG");
