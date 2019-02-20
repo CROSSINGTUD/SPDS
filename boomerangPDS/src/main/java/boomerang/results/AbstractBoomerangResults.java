@@ -1,8 +1,11 @@
 package boomerang.results;
 
 import java.util.Set;
+import java.util.Map.Entry;
 
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 
 import boomerang.ForwardQuery;
 import boomerang.Query;
@@ -10,6 +13,7 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import heros.utilities.DefaultValueMap;
+import soot.Local;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -33,6 +37,23 @@ public class AbstractBoomerangResults<W extends Weight> {
 		return context;
 	}
 	
+
+	public Table<Statement, Val, W> asStatementValWeightTable(ForwardQuery query) {
+		final Table<Statement, Val, W> results = HashBasedTable.create();
+		WeightedPAutomaton<Statement, INode<Val>, W> callAut = queryToSolvers.getOrCreate(query).getCallAutomaton();
+		for (Entry<Transition<Statement, INode<Val>>, W> e : callAut.getTransitionsToFinalWeights().entrySet()) {
+			Transition<Statement, INode<Val>> t = e.getKey();
+			W w = e.getValue();
+			if (t.getLabel().equals(Statement.epsilon()))
+				continue;
+			if (t.getStart().fact().value() instanceof Local
+					&& !t.getLabel().getMethod().equals(t.getStart().fact().m()))
+				continue;
+			if (t.getLabel().getUnit().isPresent())
+				results.put(t.getLabel(), t.getStart().fact(), w);
+		}
+		return results;
+	}
 
 	private class OpeningCallStackExtracter extends WPAStateListener<Statement, INode<Val>, W>{
 

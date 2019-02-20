@@ -73,8 +73,11 @@ public class BoomerangPretransformer extends BodyTransformer {
 					body.getUnits().remove(u);
 				}
 			}
-			if (u instanceof Stmt && ((Stmt) u).containsInvokeExpr() && !u.toString().contains("test.assertions.Assertions:")) {
+			if (u instanceof Stmt && ((Stmt) u).containsInvokeExpr() && !u.toString().contains("test.assertions.Assertions:") && !u.toString().contains("intQueryFor")) {
 				Stmt stmt = (Stmt) u;
+				if(stmt.getInvokeExpr().getMethod().getSignature().equals("<java.math.BigInteger: java.math.BigInteger valueOf(long)>")) {
+					continue;
+				}
 				List<ValueBox> useBoxes = stmt.getInvokeExpr().getUseBoxes();
 				for (Value v : stmt.getInvokeExpr().getArgs()) {
 					if (v instanceof Constant && !(v instanceof ClassConstant)) {

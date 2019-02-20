@@ -11,6 +11,8 @@
  *******************************************************************************/
 package test.core;
 
+import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -56,11 +58,14 @@ import soot.SceneTransformer;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
+import soot.Value;
 import soot.jimple.AssignStmt;
 import soot.jimple.IntConstant;
+import soot.jimple.InvokeExpr;
 import soot.jimple.NewExpr;
 import soot.jimple.ReturnStmt;
 import soot.jimple.Stmt;
+import soot.jimple.StringConstant;
 import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
@@ -148,7 +153,45 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	private void runDemandDrivenBackward() {
 		// Run backward analysis
 		Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
-		compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
+		if(queryDetector.integerQueries) {
+			compareIntegerResults(backwardResults, AnalysisMode.DemandDrivenBackward);
+		} else {
+			compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
+		}
+	}
+
+	private void compareIntegerResults(Set<Node<Statement, Val>> backwardResults, AnalysisMode analysis) {
+		if(queryForCallSites.size() > 1)
+			throw new RuntimeException("Not implemented");
+		for(Query q : queryForCallSites) {
+			Statement stmt = q.stmt();
+			InvokeExpr ie = stmt.getUnit().get().getInvokeExpr();
+			Value arg = ie.getArg(1);
+			Collection<String> expectedResults = parse(arg);
+			boolean imprecise = false;
+			for(Node<Statement,Val> v : backwardResults) {
+				if(v.fact() instanceof AllocVal) {
+					AllocVal allocVal = (AllocVal) v.fact();
+					Value allocationValue = allocVal.allocationValue();
+					boolean remove = expectedResults.remove(allocationValue.toString());
+					if(!remove)
+						imprecise = true;
+				} else {
+					imprecise = true;
+				}
+			}
+			if (!expectedResults.isEmpty()) {
+				unsoundErrors.add(new Error(analysis + " Unsound results!"));
+			}
+			if (imprecise)
+				imprecisionErrors.add(new Error(analysis + " Imprecise results!"));
+		}
+	}
+
+	private ArrayList<String> parse(Value arg) {
+		StringConstant c = (StringConstant) arg;
+		String[] split = c.value.split(",");
+		return Lists.newArrayList(split);
 	}
 
 	private class AllocationSiteOf implements ValueOfInterestInUnit {
@@ -559,7 +602,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	protected void queryForAndNotEmpty(Object variable) {
 
 	}
-	protected void intQueryFor(int variable) {
+	protected void intQueryFor(int variable, String value) {
+
+	}
+	protected void intQueryFor(BigInteger variable, String value) {
 
 	}
 

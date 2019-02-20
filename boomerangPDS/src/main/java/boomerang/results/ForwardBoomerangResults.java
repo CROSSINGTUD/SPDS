@@ -68,23 +68,6 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 		return timedout;
 	}
 
-	public Table<Statement, Val, W> asStatementValWeightTable() {
-		final Table<Statement, Val, W> results = HashBasedTable.create();
-		WeightedPAutomaton<Statement, INode<Val>, W> callAut = queryToSolvers.getOrCreate(query).getCallAutomaton();
-		for (Entry<Transition<Statement, INode<Val>>, W> e : callAut.getTransitionsToFinalWeights().entrySet()) {
-			Transition<Statement, INode<Val>> t = e.getKey();
-			W w = e.getValue();
-			if (t.getLabel().equals(Statement.epsilon()))
-				continue;
-			if (t.getStart().fact().value() instanceof Local
-					&& !t.getLabel().getMethod().equals(t.getStart().fact().m()))
-				continue;
-			if (t.getLabel().getUnit().isPresent())
-				results.put(t.getLabel(), t.getStart().fact(), w);
-		}
-		return results;
-	}
-
 	public Table<Statement, Val, W> getObjectDestructingStatements() {
 		AbstractBoomerangSolver<W> solver = queryToSolvers.get(query);
 		if (solver == null)
@@ -127,6 +110,10 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 		}
 
 		return destructingStatement;
+	}
+
+	public Table<Statement, Val, W> asStatementValWeightTable() {
+		return asStatementValWeightTable(query);
 	}
 
 	private void findLastUsage(Statement exitStmt, Map<Val, W> row, Table<Statement, Val, W> destructingStatement,

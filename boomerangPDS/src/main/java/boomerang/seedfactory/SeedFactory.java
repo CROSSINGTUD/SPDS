@@ -11,16 +11,21 @@
  *******************************************************************************/
 package boomerang.seedfactory;
 
-import boomerang.Query;
-import boomerang.callgraph.CalleeListener;
-import boomerang.callgraph.CallerListener;
-import boomerang.callgraph.ObservableICFG;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+
+import boomerang.Query;
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.ObservableICFG;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
@@ -29,13 +34,14 @@ import soot.jimple.Stmt;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.*;
+import wpds.impl.PushRule;
+import wpds.impl.Transition;
+import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
+import wpds.impl.WeightedPAutomaton;
+import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
-
-import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Created by johannesspath on 07.12.17.
@@ -45,16 +51,15 @@ public abstract class SeedFactory<W extends Weight> {
 	private final WeightedPushdownSystem<Method, INode<Reachable>, Weight.NoWeight> pds = new WeightedPushdownSystem<>();
 	private final Multimap<Query, Transition<Method, INode<Reachable>>> seedToTransition = HashMultimap.create();
 	private final Multimap<SootMethod, Query> seedsPerMethod = HashMultimap.create();
-	private final Map<Method, INode<Reachable>> generatedStates = Maps.newHashMap();
-
+	private final Map<Method, INode<Reachable>> reachableMethods = new HashMap<Method, INode<Reachable>>();
 	private final WeightedPAutomaton<Method, INode<Reachable>, Weight.NoWeight> automaton = new WeightedPAutomaton<Method, INode<Reachable>, Weight.NoWeight>(
 			wrap(Reachable.entry())) {
 		@Override
 		public INode<Reachable> createState(INode<Reachable> reachable, Method loc) {
-			if(generatedStates.get(loc) == null) {
-				generatedStates.put(loc,  new GeneratedState<>(reachable, loc));
+			if(!reachableMethods.containsKey(loc)) {
+				reachableMethods.put(loc,  new GeneratedState<>(reachable, loc));
 			}
-			return generatedStates.get(loc);
+			return reachableMethods.get(loc);
 		}
 
 		@Override
