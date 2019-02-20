@@ -176,4 +176,9 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 	public boolean killNullAtCast() {
 		return false;
 	}
+	
+	@Override
+	public boolean trackStaticFieldAtEntryPointToClinit() {
+		return false;
+	}
 }

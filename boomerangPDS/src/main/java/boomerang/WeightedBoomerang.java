@@ -320,7 +320,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				if (isBackwardEnterCall(node.stmt())) {
 					//TODO
 				}
-				if (isFirstStatementOfEntryPoint(node.stmt()) && node.fact().isStatic()) {
+				if (options.trackStaticFieldAtEntryPointToClinit() && node.fact().isStatic() && isFirstStatementOfEntryPoint(node.stmt())) {
 					StaticFieldVal val = (StaticFieldVal) node.fact();
 					for (SootMethod m : val.field().getDeclaringClass().getMethods()) {
 						if (m.isStaticInitializer()) {
