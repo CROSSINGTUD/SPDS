@@ -203,14 +203,10 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 	protected void callFlow(SootMethod caller, Node<Statement,Val> curr) {
 		Statement callSite = curr.stmt();
 		icfg.addCalleeListener(new CallSiteCalleeListener(curr, caller, callSite));
-
-//		for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-//			if (calleeExcluded || onlyStaticInitializer) {
-//				out.addAll(computeNormalFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
-//			}
-//			out.addAll(getEmptyCalleeFlow(caller, (Stmt) callSite, value, (Stmt) returnSite));
-//		}
-		return;
+		InvokeExpr invokeExpr = callSite.getUnit().get().getInvokeExpr();
+		if (Scene.v().isExcluded(invokeExpr.getMethod().getDeclaringClass()) || invokeExpr.getMethod().isNative()) {
+			normalFlow(caller, curr);
+		}
 	}	
 	
 

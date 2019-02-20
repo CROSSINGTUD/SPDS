@@ -51,6 +51,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
     private int numberOfEdgesTakenFromPrecomputedCallGraph=0;
 
+    private CallGraphOptions options = new CallGraphOptions();
     private CallGraph demandDrivenCallGraph = new CallGraph();
     private CallGraph precomputedCallGraph;
     private WeightedBoomerang<? extends Weight> solver;
@@ -103,17 +104,16 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
 
     public ObservableDynamicICFG(boolean enableExceptions){
-    		this.enableExceptions = enableExceptions; 
+    	this.enableExceptions = enableExceptions; 
         this.solver = new Boomerang() {
-
 			@Override
 			public ObservableICFG<Unit, SootMethod> icfg() {
 				return ObservableDynamicICFG.this;
 			}};
 
-	        this.precomputedCallGraph = Scene.v().getCallGraph();
+        this.precomputedCallGraph = Scene.v().getCallGraph();
 
-	        initializeUnitToOwner();
+        initializeUnitToOwner();
     }
 
     
@@ -208,7 +208,8 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 	        BackwardBoomerangResults<? extends Weight> results = solver.solve(query);
 	
 	        //Go through possible types an add edges to implementations in possible types
-	        for (ForwardQuery forwardQuery : results.getAllocationSites().keySet()){
+	        Set<ForwardQuery> keySet = results.getAllocationSites().keySet();
+	        for (ForwardQuery forwardQuery : keySet){
 	            logger.debug("Found AllocationSite '{}'.", forwardQuery);
 	            Type type = forwardQuery.getType();
 	            if (type instanceof RefType){
@@ -222,6 +223,17 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 	                    addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
 	                }
 	            }
+	        }
+
+	        //Fallback on Precompute if set was empty 
+	        if(options.fallbackOnPrecomputedOnEmpty() && keySet.isEmpty()) {
+	             Iterator<Edge> precomputedCallers = precomputedCallGraph.edgesOutOf(unit);
+	             while (precomputedCallers.hasNext()){
+	                 Edge methodCall = precomputedCallers.next();
+	                 if(methodCall.srcUnit() == null)
+	                 		continue;
+	                addCallIfNotInGraph(methodCall.srcUnit(), methodCall.tgt(), methodCall.kind());
+	             }
 	        }
         }
     }
@@ -290,8 +302,10 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     @Override
     public Collection<Unit> getAllPrecomputedCallers(SootMethod sootMethod) {
         if(precomputedCallGraph == null)
-        		return Collections.emptySet();
-    		logger.debug("Getting precomputed callers of {}", sootMethod);
+        	return Collections.emptySet();
+        if(!options.fallbackOnPrecomputedForUnbalanced())
+    		return Collections.emptySet();
+    	logger.debug("Getting precomputed callers of {}", sootMethod);
         Set<Unit> callers = new HashSet<>();
         Iterator<Edge> precomputedCallers = precomputedCallGraph.edgesInto(sootMethod);
         while (precomputedCallers.hasNext()){
