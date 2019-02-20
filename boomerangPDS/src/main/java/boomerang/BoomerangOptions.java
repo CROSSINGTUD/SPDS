@@ -54,4 +54,6 @@ public interface BoomerangOptions {
 	public boolean killNullAtCast();
 
 	boolean trackReturnOfInstanceOf();
+	
+	boolean trackStaticFieldAtEntryPointToClinit();
 }
