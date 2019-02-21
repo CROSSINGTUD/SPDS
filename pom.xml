@@ -58,10 +58,4 @@
         </plugin>
       </plugins>
     </reporting>
-    <distributionManagement>
-    <repository>
-      <id>soot-snapshot</id>
-      <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
-    </repository>
-  </distributionManagement>
 </project>
