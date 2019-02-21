@@ -38,7 +38,7 @@
         <dependency>
             <groupId>de.fraunhofer.iem</groupId>
             <artifactId>boomerangPDS</artifactId>
-            <version>1.0.2-SNAPSHOT</version>
+            <version>1.0.2-ocfg-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>de.fraunhofer.iem</groupId>
