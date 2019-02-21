@@ -19,17 +19,10 @@ pipeline {
 			    branch 'jenkins'
 			}
 	        steps {
-	            echo 'WHEN - Master Branch!'
-                withCredentials([
-                    [$class: 'StringBinding', credentialsId: 'nexusUsername', variable: 'MVN_SETTINGS_nexusUsername'],
-                    [$class: 'StringBinding', credentialsId: 'nexusPassword', variable: 'MVN_SETTINGS_nexusPassword']
-                  ]) {
-                    withEnv([
-                      'nexusPublic=https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/'
-                    ]) {
-                      sh 'mvn -s settings.xml clean build'
-                    }
-                  }
+				configFileProvider(
+	        		[configFile(fileId: 'MyGlobalSettings', variable: 'MAVEN_SETTINGS')]) {
+	      		  		sh 'mvn -s $MAVEN_SETTINGS clean package'
+				}
 	        }
 		}
 
