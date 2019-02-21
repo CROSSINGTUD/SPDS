@@ -8,10 +8,22 @@ pipeline {
             }
         }
 
+	    stage('Test') {
+	        steps {
+	            sh 'mvn test'
+	        }
+	        post {
+			    success {
+			    	junit 'target/surefire-reports/**/*.xml' 
+			    }
+			}
+		}
+
 
 		stage('Deploy'){
 		    when {
-			    branch 'jenkins'
+			    branch 'master'
+			    branch 'on-demand-icfg'
 			}
 	        steps {
 				configFileProvider(
