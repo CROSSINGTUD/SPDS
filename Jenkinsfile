@@ -13,17 +13,6 @@ pipeline {
             }
         }
 
-	    stage('Test') {
-	        steps {
-	            sh 'mvn test'
-	        }
-	        post {
-			    success {
-			    	junit 'target/surefire-reports/**/*.xml' 
-			    }
-			}
-		}
-
 
 		stage('Deploy'){
 		    when {
