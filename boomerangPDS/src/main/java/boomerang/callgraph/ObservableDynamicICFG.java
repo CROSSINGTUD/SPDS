@@ -195,7 +195,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     private void queryForCallees(Unit unit) {
         //Construct BackwardQuery, so we know which types the object might have
         logger.debug("Queried for callees of '{}'.", unit);
-        System.out.println(unit);
         Stmt stmt = (Stmt) unit;
         InvokeExpr invokeExpr = stmt.getInvokeExpr();
         Value value = ((InstanceInvokeExpr) invokeExpr).getBase();
@@ -212,7 +211,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 	        Set<ForwardQuery> keySet = results.getAllocationSites().keySet();
 	        for (ForwardQuery forwardQuery : keySet){
 	            logger.debug("Found AllocationSite '{}'.", forwardQuery);
-	            System.out.println(forwardQuery);
 	            Type type = forwardQuery.getType();
 	            if (type instanceof RefType){
 	                SootMethod calleeMethod = getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) type).getSootClass());
