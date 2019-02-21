@@ -206,6 +206,11 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 		InvokeExpr invokeExpr = callSite.getUnit().get().getInvokeExpr();
 		if (Scene.v().isExcluded(invokeExpr.getMethod().getDeclaringClass()) || invokeExpr.getMethod().isNative()) {
 			normalFlow(caller, curr);
+			for(Statement returnSite : getSuccsOf(callSite)) {
+				for(State s: getEmptyCalleeFlow(caller, callSite.getUnit().get(), curr.fact(), returnSite.getUnit().get())){
+					propagate(curr, s);	
+				}
+			}
 		}
 	}	
 	

@@ -436,6 +436,11 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			for(State s:  computeNormalFlow(caller, currNode.stmt().getUnit().get(), currNode.fact(), (Stmt) callSite)) {
 				propagate(currNode, s);
 			}
+			for(Statement returnSite : getSuccsOf(currNode.stmt())) {
+				for(State s: getEmptyCalleeFlow(caller, callSite, currNode.fact(), returnSite.getUnit().get())){
+					propagate(currNode, s);	
+				}
+			}
 		}
 			
 		icfg.addCalleeListener(new CallSiteCalleeListener(caller, callSite, currNode, invokeExpr));
