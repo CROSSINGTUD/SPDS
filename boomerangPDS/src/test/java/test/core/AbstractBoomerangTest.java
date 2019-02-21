@@ -602,10 +602,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 	protected void queryForAndNotEmpty(Object variable) {
 
 	}
-	protected void intQueryFor(int variable, String value) {
+	protected static void intQueryFor(int variable, String value) {
 
 	}
-	protected void intQueryFor(BigInteger variable, String value) {
+	protected static void intQueryFor(BigInteger variable, String value) {
 
 	}
 
