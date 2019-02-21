@@ -16,7 +16,7 @@ pipeline {
 
 		stage('Deploy'){
 		    when {
-			    branch 'master'
+			    branch 'jenkins'
 			}
 	        steps {
 	            echo 'WHEN - Master Branch!'
