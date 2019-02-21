@@ -8,13 +8,6 @@ pipeline {
             }
         }
 
-	    stage('Test') {
-	        steps {
-	            sh 'mvn test'
-	        }
-		}
-
-
 		stage('Deploy'){
 		    when { 
 		    	anyOf { branch 'master'; branch 'on-demand-icfg' } 
