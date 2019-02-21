@@ -20,6 +20,8 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Sets;
 
 import boomerang.WeightedForwardQuery;
@@ -61,11 +63,21 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 	}
 	
 	public TransitionFunction pop(Node<Statement,Val> curr, Statement returnSite) {
-		return getMatchingTransitions(curr.stmt(), curr.fact(), Type.OnReturn, returnSite);
+		return getMatchingTransitions(curr.stmt(), curr.fact(), returnSite,  Collections2.filter(transition, new Predicate<MatcherTransition>() {
+			@Override
+			public boolean apply(MatcherTransition input) {
+				return input.getType().equals(Type.OnReturn);
+			}
+		}));
 	}
 
 	public TransitionFunction push(Node<Statement,Val> curr, Node<Statement,Val> succ, Statement push) {
-		return getMatchingTransitions(succ.stmt(),succ.fact(), Type.OnCall, curr.stmt());
+		return getMatchingTransitions(succ.stmt(),succ.fact(),  curr.stmt(), Collections2.filter(transition, new Predicate<MatcherTransition>() {
+			@Override
+			public boolean apply(MatcherTransition input) {
+				return input.getType().equals(Type.OnCall) ||  input.getType().equals(Type.OnCallOrOnCallToReturn);
+			}
+		}));
 	}
 	
 	@Override
@@ -86,7 +98,7 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 			InstanceInvokeExpr e = (InstanceInvokeExpr) invokeExpr;
 			if(e.getBase().equals(succ.fact().value())){
 				for (MatcherTransition trans : transition) {
-					if(trans.matches(method) && trans.getType().equals(Type.OnCallToReturn)){
+					if(trans.matches(method) && (trans.getType().equals(Type.OnCallToReturn) || trans.getType().equals(Type.OnCallOrOnCallToReturn))){
 						res.add(trans);
 					}
 				}	
@@ -95,22 +107,20 @@ public abstract class TypeStateMachineWeightFunctions implements  WeightFunction
 		return (res.isEmpty() ? getOne() : new TransitionFunction(res,Collections.singleton(succ.stmt())));
 	}
 
-	private TransitionFunction getMatchingTransitions(Statement statement, Val node, Type type, Statement transitionStmt) {
+	private TransitionFunction getMatchingTransitions(Statement statement, Val node, Statement transitionStmt, Collection<MatcherTransition> filteredTrans) {
 		Set<ITransition> res = new HashSet<>();
-//		if (node.getFieldCount() == 0) { //TODO How do we check this?
-			for (MatcherTransition trans : transition) {
-				if (trans.matches(statement.getMethod()) && trans.getType().equals(type)) {
-					Parameter param = trans.getParam();
-					if (param.equals(Parameter.This) && isThisValue(statement.getMethod(), node))
-						res.add(new Transition(trans.from(), trans.to()));
-					if (param.equals(Parameter.Param1)
-							&& statement.getMethod().getActiveBody().getParameterLocal(0).equals(node.value()))
-						res.add(new Transition(trans.from(), trans.to()));
-					if (param.equals(Parameter.Param2)
-							&& statement.getMethod().getActiveBody().getParameterLocal(1).equals(node.value()))
-						res.add(new Transition(trans.from(), trans.to()));
-				}
-//			}
+		for (MatcherTransition trans : filteredTrans) {
+			if (trans.matches(statement.getMethod())) {
+				Parameter param = trans.getParam();
+				if (param.equals(Parameter.This) && isThisValue(statement.getMethod(), node))
+					res.add(new Transition(trans.from(), trans.to()));
+				if (param.equals(Parameter.Param1)
+						&& statement.getMethod().getActiveBody().getParameterLocal(0).equals(node.value()))
+					res.add(new Transition(trans.from(), trans.to()));
+				if (param.equals(Parameter.Param2)
+						&& statement.getMethod().getActiveBody().getParameterLocal(1).equals(node.value()))
+					res.add(new Transition(trans.from(), trans.to()));
+			}
 		}
 			
 		if(res.isEmpty())
