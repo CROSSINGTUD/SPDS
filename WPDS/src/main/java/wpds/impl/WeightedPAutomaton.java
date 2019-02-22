@@ -81,6 +81,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	private WeightedPAutomaton<N, D, W> initialAutomaton;
 	private PathExpressionComputer<D,N> pathExpressionComputer;
 	protected Set<D> unbalancedStates = Sets.newHashSet();
+	private int lastStates = 0;
 	
 
 	public WeightedPAutomaton(D initialState) {
@@ -686,8 +687,9 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 	}
 
 	public IRegEx<N> toRegEx(D start, D end){
-		if(pathExpressionComputer == null) {
+		if(lastStates  < states.size()) {
 			pathExpressionComputer = new PathExpressionComputer<D,N>(this);
+			lastStates = states.size();
 		}
 		
 		return RegEx.reverse(pathExpressionComputer.getExpressionBetween(end, start));
