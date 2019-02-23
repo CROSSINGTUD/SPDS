@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.fraunhofer.iem</groupId>
     <artifactId>idealPDS</artifactId>
-    <version>1.0.2-ofcg-SNAPSHOT</version>
+    <version>1.0.3-ofcg-SNAPSHOT</version>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>

@@ -47,6 +47,10 @@ import java.util.*;
  */
 public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 
+	private static final String THREAD_CLASS = "java.lang.Thread";
+	private static final String THREAD_START_SIGNATURE = "<java.lang.Thread: void start()>";
+	private static final String THREAD_RUN_SUB_SIGNATURE = "void run()";
+	
     private static final Logger logger = LogManager.getLogger();
 
     private int numberOfEdgesTakenFromPrecomputedCallGraph=0;
@@ -213,14 +217,15 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 	            logger.debug("Found AllocationSite '{}'.", forwardQuery);
 	            Type type = forwardQuery.getType();
 	            if (type instanceof RefType){
-	                SootMethod calleeMethod = getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) type).getSootClass());
-	                if (calleeMethod != null)
+	                for(SootMethod calleeMethod : getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) type).getSootClass())) {
 	                    addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
+	                }
 	            } else if (type instanceof ArrayType){
 	                Type base = ((ArrayType) type).baseType;
 	                if (base instanceof RefType){
-	                    SootMethod calleeMethod = getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) base).getSootClass());
-	                    addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
+	                    for(SootMethod calleeMethod : getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(), ((RefType) base).getSootClass())) {
+	                    		addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
+	                    }
 	                }
 	            }
 	        }
@@ -238,26 +243,45 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
         }
     }
 
-    private SootMethod getMethodFromClassOrFromSuperclass(SootMethod method, SootClass sootClass){
+    private Collection<SootMethod> getMethodFromClassOrFromSuperclass(SootMethod method, SootClass sootClass){
+    		Set<SootMethod> res = Sets.newHashSet();
         SootClass originalClass = sootClass;
         while(sootClass != null){
+        	
             for (SootMethod candidate : sootClass.getMethods()){
                 if (candidate.getSubSignature().equals(method.getSubSignature())){
-                    return candidate;
+                	 	res.add(candidate);
                 }
+                
             }
+            handlingForThreading(method, sootClass, res);
+            if(!res.isEmpty())
+            		return res;
             if (sootClass.hasSuperclass()){
                 sootClass = sootClass.getSuperclass();
             } else {
                 logger.error("Did not find method {} for class {}", method, originalClass);
-                return null;
+                return res;
             }
         }
         logger.error("Did not find method {} for class {}", method, originalClass);
-        return null;
+        return res;
     }
 
-    @Override
+    private void handlingForThreading(SootMethod method, SootClass sootClass, Set<SootMethod> res) {
+    		if(Scene.v().getFastHierarchy().isSubclass(sootClass, Scene.v().getSootClass(THREAD_CLASS ))) {
+    			if(method.getSignature().equals(THREAD_START_SIGNATURE)) {
+    				for(SootMethod candidate : sootClass.getMethods()) {
+    					if(candidate.getSubSignature().equals(THREAD_RUN_SUB_SIGNATURE)) {
+    						res.add(candidate);
+    					}
+    				}
+    			}
+    		}
+	}
+
+
+	@Override
     public void addCallerListener(CallerListener<Unit, SootMethod> listener) {
         if(!callerListeners.put(listener.getObservedCallee(), listener)) {
         	return;
@@ -327,7 +351,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
     private boolean addCallIfNotInGraph(Unit caller, SootMethod callee, Kind kind) {
         Edge edge = new Edge(getMethodOf(caller), caller, callee, kind);
         if(!demandDrivenCallGraph.addEdge(edge)) {
-        	return false;
+        		return false;
         }
         logger.debug("Added call from unit '{}' to method '{}'", caller, callee);
         //Notify all interested listeners, so ..
