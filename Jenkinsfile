@@ -12,6 +12,16 @@ pipeline {
                 sh 'mvn clean compile'
             }
         }
+        stage('Test') {
+            steps {
+                sh 'mvn clean test'
+            }
+	    post {  
+		always {
+            		junit 'shippable/testreports/**/*.xml'
+        	}
+	    }
+        }
 
 		stage('Deploy'){
 		    when { 
