@@ -14,7 +14,7 @@ pipeline {
         }
         stage('Test') {
             steps {
-                sh 'mvn clean test'
+                sh 'mvn clean test  -P !defaultTestSet'
             }
 	    post {  
 		always {
