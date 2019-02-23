@@ -12,13 +12,16 @@ pipeline {
                 sh 'mvn clean compile'
             }
         }
-
-	    stage('Test') {
-	        steps {
-	            sh 'mvn test'
-	        }
-		}
-
+        stage('Test') {
+            steps {
+                sh 'mvn clean test  -P !defaultTestSet'
+            }
+	    post {  
+    		always {
+                		junit 'shippable/testresults/**/*.xml'
+            	}
+    	    }
+        }
 
 		stage('Deploy'){
 		    when { 
