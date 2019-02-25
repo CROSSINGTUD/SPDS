@@ -1089,7 +1089,11 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 	public BackwardBoomerangResults<W> solve(BackwardQuery query) {
-		if (!analysisWatch.isRunning()) {
+		return solve(query, true);
+	}
+	
+	public BackwardBoomerangResults<W> solve(BackwardQuery query, boolean timing) {
+		if (timing && !analysisWatch.isRunning()) {
 			analysisWatch.start();
 		}
 		boolean timedout = false;
@@ -1102,7 +1106,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			cleanup();
 			logger.debug("Timeout of query: {}", query);
 		}
-		if (analysisWatch.isRunning()) {
+		if (timing && analysisWatch.isRunning()) {
 			analysisWatch.stop();
 		}
 		

@@ -167,6 +167,8 @@ public abstract class SeedFactory<W extends Weight> {
 	}
 
 	private void addPushRule(Method caller, Method callee) {
+		if(caller.equals(callee))
+			return;
 		pds.addRule(
 				new PushRule<>(wrap(Reachable.v()), caller, wrap(Reachable.v()), callee, caller, Weight.NO_WEIGHT_ONE));
 	}

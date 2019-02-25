@@ -1,26 +1,47 @@
 package boomerang.callgraph;
 
-import boomerang.BackwardQuery;
-import boomerang.Boomerang;
-import boomerang.ForwardQuery;
-import boomerang.WeightedBoomerang;
-import boomerang.debugger.Debugger;
-import boomerang.jimple.Field;
-import boomerang.jimple.Statement;
-import boomerang.jimple.Val;
-import boomerang.results.BackwardBoomerangResults;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+
+import boomerang.BackwardQuery;
+import boomerang.Boomerang;
+import boomerang.ForwardQuery;
+import boomerang.WeightedBoomerang;
+import boomerang.jimple.Statement;
+import boomerang.jimple.Val;
+import boomerang.results.BackwardBoomerangResults;
 import heros.DontSynchronize;
 import heros.SynchronizedBy;
 import heros.solver.IDESolver;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import soot.*;
+import soot.ArrayType;
+import soot.Body;
+import soot.Kind;
+import soot.MethodOrMethodContext;
+import soot.PatchingChain;
+import soot.RefType;
+import soot.Scene;
+import soot.SootClass;
+import soot.SootMethod;
+import soot.Type;
+import soot.Unit;
+import soot.Value;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.SpecialInvokeExpr;
@@ -31,10 +52,7 @@ import soot.toolkits.exceptions.UnitThrowAnalysis;
 import soot.toolkits.graph.BriefUnitGraph;
 import soot.toolkits.graph.DirectedGraph;
 import soot.toolkits.graph.ExceptionalUnitGraph;
-import sync.pds.solver.WeightFunctions;
 import wpds.impl.Weight;
-
-import java.util.*;
 
 /**
  * An interprocedural control-flow graph, for which caller-callee edges can be observed using {@link CalleeListener} and
@@ -209,7 +227,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod>{
 	        BackwardQuery query = new BackwardQuery(statement, val);
 	
 	        //Execute that query
-	        BackwardBoomerangResults<? extends Weight> results = solver.solve(query);
+	        BackwardBoomerangResults<? extends Weight> results = solver.solve(query, false);
 	
 	        //Go through possible types an add edges to implementations in possible types
 	        Set<ForwardQuery> keySet = results.getAllocationSites().keySet();
