@@ -324,13 +324,7 @@ public class IDEALSeedSolver<W extends Weight> {
 			public ObservableICFG<Unit, SootMethod> icfg() {
 				if (analysisDefinition.icfg() == null){
 					//For Static ICFG use this line
-					if(System.getProperty("demandDrivenCg") != null && Boolean.parseBoolean(System.getProperty("demandDrivenCg"))) {
-						System.out.println("Using Demand Driven ICFG");
-						analysisDefinition.icfg = new ObservableDynamicICFG(this);
-					} else {
-						System.out.println("Using Static ICFG");
-						analysisDefinition.icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(false));
-					}
+					analysisDefinition.icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(false));
 				}
 				return analysisDefinition.icfg();
 			}
