@@ -56,4 +56,6 @@ public interface BoomerangOptions {
 	boolean trackReturnOfInstanceOf();
 	
 	boolean trackStaticFieldAtEntryPointToClinit();
+	
+	boolean trackFields();
 }

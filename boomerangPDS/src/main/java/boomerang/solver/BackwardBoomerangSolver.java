@@ -320,17 +320,19 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 			if (leftOp.equals(fact.value())) {
 				leftSideMatches = true;
 				if (rightOp instanceof InstanceFieldRef) {
-					InstanceFieldRef ifr = (InstanceFieldRef) rightOp;
-					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
-							new Field(ifr.getField()), PDSSystem.FIELDS));
+					if(options.trackFields()) {
+						InstanceFieldRef ifr = (InstanceFieldRef) rightOp;
+						out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
+								new Field(ifr.getField()), PDSSystem.FIELDS));
+					}
 				} else if(rightOp instanceof StaticFieldRef){
-					if(options.staticFlows()){
+					if(options.trackFields() && options.staticFlows()){
 						StaticFieldRef sfr = (StaticFieldRef) rightOp;
 						out.add(new Node<Statement, Val>(new Statement(succ, method), new StaticFieldVal(leftOp,sfr.getField(),method)));
 					}
 				} else if(rightOp instanceof ArrayRef){
 					ArrayRef ifr = (ArrayRef) rightOp;
-					if(options.arrayFlows()){
+					if(options.trackFields() && options.arrayFlows()){
 						out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
 								Field.array(), PDSSystem.FIELDS));
 					}

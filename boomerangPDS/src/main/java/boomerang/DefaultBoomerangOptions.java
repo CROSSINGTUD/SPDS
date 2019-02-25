@@ -214,4 +214,9 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 	public boolean trackStaticFieldAtEntryPointToClinit() {
 		return false;
 	}
+
+	@Override
+	public boolean trackFields() {
+		return true;
+	}
 }
