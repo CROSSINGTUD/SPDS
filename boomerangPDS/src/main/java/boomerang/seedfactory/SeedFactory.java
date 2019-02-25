@@ -92,7 +92,6 @@ public abstract class SeedFactory<W extends Weight> {
 		for (SootMethod m : entryPoints) {
 			automaton.addTransition(new Transition<>(wrap(Reachable.v()), new Method(m), automaton.getInitialState()));
 		}
-		pds.poststar(automaton);
 		automaton.registerListener(new WPAUpdateListener<Method, INode<Reachable>, Weight.NoWeight>() {
 			@Override
 			public void onWeightAdded(Transition<Method, INode<Reachable>> t, Weight.NoWeight noWeight,
