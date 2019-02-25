@@ -48,7 +48,7 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 			seedFactory = new SeedFactory<W>() {
 
 				@Override
-				protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
+				protected Collection<? extends Query> generate(SootMethod method, Stmt u) {
 					if(u instanceof AssignStmt){
 						AssignStmt assignStmt = (AssignStmt) u;
 						if(options.isAllocationVal(assignStmt.getRightOp())){

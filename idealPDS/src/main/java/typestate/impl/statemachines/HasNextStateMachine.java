@@ -14,6 +14,7 @@ package typestate.impl.statemachines;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -30,6 +31,7 @@ import soot.jimple.AssignStmt;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.InvokeExpr;
 import soot.jimple.Stmt;
+import soot.jimple.toolkits.callgraph.Edge;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
@@ -115,8 +117,10 @@ public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
 	}
 
 	@Override
-	public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit, Collection<SootMethod> calledMethod) {
-		for (SootMethod m : calledMethod) {
+	public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit) {
+		Iterator<Edge> edIt = Scene.v().getCallGraph().edgesOutOf(unit);
+		while (edIt.hasNext()) {
+			SootMethod m = edIt.next().getTgt().method();
 			if (retrieveIteratorConstructors().contains(m)) {
 				Stmt stmt = ((Stmt) unit);
 				InvokeExpr invokeExpr = stmt.getInvokeExpr();

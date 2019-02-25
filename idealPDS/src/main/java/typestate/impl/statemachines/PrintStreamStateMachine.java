@@ -72,7 +72,7 @@ public class PrintStreamStateMachine extends TypeStateMachineWeightFunctions{
 	}
 
 	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
 		return this.generateThisAtAnyCallSitesOf(m, unit, closeMethods());
 	}
 

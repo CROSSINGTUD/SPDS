@@ -58,8 +58,8 @@ public class IDEALAnalysis<W extends Weight> {
 		this.seedFactory = new SeedFactory<W>(){
 
 			@Override
-			protected Collection<WeightedForwardQuery<W>> generate(SootMethod method, Stmt stmt, Collection<SootMethod> calledMethods) {
-				return analysisDefinition.generate(method, stmt, calledMethods);
+			protected Collection<WeightedForwardQuery<W>> generate(SootMethod method, Stmt stmt) {
+				return analysisDefinition.generate(method, stmt);
 			}
 
 			@Override

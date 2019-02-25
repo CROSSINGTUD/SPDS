@@ -443,7 +443,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 				return new SeedFactory<Weight.NoWeight>() {
 
 						@Override
-						protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
+						protected Collection<? extends Query> generate(SootMethod method, Stmt u) {
 							if(u instanceof AssignStmt){
 								AssignStmt assignStmt = (AssignStmt) u;
 								if(options.isAllocationVal(assignStmt.getRightOp())){

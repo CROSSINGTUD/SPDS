@@ -64,8 +64,7 @@ public class PipedInputStreamStateMachine extends TypeStateMachineWeightFunction
 
 
 	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit,
-																	  Collection<SootMethod> calledMethod) {
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
 		return generateAtAllocationSiteOf(m, unit, java.io.PipedInputStream.class);
 	}
 

@@ -67,8 +67,8 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
 		return new IDEALAnalysis<TransitionFunction>(new IDEALAnalysisDefinition<TransitionFunction>() {
 
 			@Override
-			public Collection<WeightedForwardQuery<TransitionFunction>> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
-				return  IDEALTestingFramework.this.getStateMachine().generateSeed(method, stmt, calledMethod);
+			public Collection<WeightedForwardQuery<TransitionFunction>> generate(SootMethod method, Unit stmt) {
+				return  IDEALTestingFramework.this.getStateMachine().generateSeed(method, stmt);
 			}
 
 			@Override

@@ -127,8 +127,7 @@ public abstract class SeedFactory<W extends Weight> {
 		return false;
 	}
 
-	protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u,
-			Collection<SootMethod> calledMethods);
+	protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u);
 
 	private void process(Transition<Method, INode<Reachable>> t) {
 		Method curr = t.getLabel();
@@ -147,7 +146,6 @@ public abstract class SeedFactory<W extends Weight> {
 		}
 		Set<Query> seeds = Sets.newHashSet();
 		for (Unit u : m.getActiveBody().getUnits()) {
-			Collection<SootMethod> calledMethods = Sets.newHashSet();
 			if (icfg().isCallStmt(u)) {
 				icfg().addCalleeListener(new CalleeListener<Unit, SootMethod>() {
 					@Override
@@ -157,14 +155,13 @@ public abstract class SeedFactory<W extends Weight> {
 
 					@Override
 					public void onCalleeAdded(Unit n, SootMethod callee) {
-						calledMethods.add(m);
 						  if (!callee.hasActiveBody())
 		                        return;
 						  addPushRule(new Method(m),new Method(callee));
 					}
 				});
 			}
-			seeds.addAll(generate(m, (Stmt) u, calledMethods));
+			seeds.addAll(generate(m, (Stmt) u));
 		}
 		seedsPerMethod.putAll(m, seeds);
 	}

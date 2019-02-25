@@ -88,7 +88,7 @@ public class VectorStateMachine extends TypeStateMachineWeightFunctions {
 	}
 
 	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
 		if (m.toString().contains("<clinit>"))
 			return Collections.emptySet();
 		return generateAtAllocationSiteOf(m, unit, Vector.class);

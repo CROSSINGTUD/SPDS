@@ -32,7 +32,16 @@ public class Method implements Location {
 
     public static Method epsilon(){
         if(epsilon == null)
-            epsilon = new Method();
+            epsilon = new Method() {
+        	@Override
+        	public int hashCode() {
+        		return System.identityHashCode(this);
+        	}
+        	@Override
+    		public boolean equals(Object obj) {
+    			return obj == this;
+    		}
+        };
         return epsilon;
     }
    

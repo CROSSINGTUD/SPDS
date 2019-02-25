@@ -38,12 +38,9 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 	 * @param method
 	 * @param stmt
 	 *            The statement over which is iterated over
-	 * @param calledMethod
-	 *            If stmt is a call site, this set contains the set of called
-	 *            method for the call site.
 	 * @return
 	 */
-	public abstract Collection<WeightedForwardQuery<W>> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod);
+	public abstract Collection<WeightedForwardQuery<W>> generate(SootMethod method, Unit stmt);
 
 	/**
 	 * This function must generate and return the AnalysisEdgeFunctions that are

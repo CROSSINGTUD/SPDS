@@ -71,7 +71,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 				seedFactory = new SeedFactory<Weight.NoWeight>() {
 
 					@Override
-					protected Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods) {
+					protected Collection<? extends Query> generate(SootMethod method, Stmt u) {
 						Optional<Query> query = new FirstArgumentOf("queryFor.*").test(u);
 
 						if(query.isPresent()){

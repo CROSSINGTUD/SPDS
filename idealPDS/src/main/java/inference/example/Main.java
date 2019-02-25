@@ -112,7 +112,7 @@ public class Main {
 				IDEALAnalysis<InferenceWeight> solver = new IDEALAnalysis<>(new IDEALAnalysisDefinition<InferenceWeight>() {
 
 					@Override
-					public Collection<WeightedForwardQuery<InferenceWeight>> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod) {
+					public Collection<WeightedForwardQuery<InferenceWeight>> generate(SootMethod method, Unit stmt) {
 						if(stmt instanceof AssignStmt){
 							AssignStmt as = (AssignStmt) stmt;
 							if(as.getRightOp() instanceof NewExpr &&
