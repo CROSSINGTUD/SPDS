@@ -362,16 +362,18 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			if (rightOp.equals(fact.value())) {
 				if (leftOp instanceof InstanceFieldRef) {
 					InstanceFieldRef ifr = (InstanceFieldRef) leftOp;
-					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
-							new Field(ifr.getField()), PDSSystem.FIELDS));
+					if(options.trackFields()) {
+						out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
+								new Field(ifr.getField()), PDSSystem.FIELDS));
+					}
 				} else if(leftOp instanceof StaticFieldRef){
 					StaticFieldRef sfr = (StaticFieldRef) leftOp;
-					if(options.staticFlows()){
+					if(options.trackFields() && options.staticFlows()){
 						out.add(new Node<Statement, Val>(new Statement(succ, method), new StaticFieldVal(leftOp,sfr.getField(),method)));
 					}
 				} else if(leftOp instanceof ArrayRef){
 					ArrayRef arrayRef = (ArrayRef) leftOp;
-					if(options.arrayFlows()){
+					if(options.trackFields() && options.arrayFlows()){
 						out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(arrayRef.getBase(),method),
 								Field.array(), PDSSystem.FIELDS));
 					}
