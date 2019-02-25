@@ -8,7 +8,7 @@ Additionally, it contains an implementation of [Boomerang](boomerangPDS) and [ID
 
 # Checkout, Build and Install
 
-To build and install WPDS into you local repository, run 
+To build and install WPDS into your local repository, run 
 
 ``mvn clean install -DskipTests``
 

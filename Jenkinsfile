@@ -17,10 +17,10 @@ pipeline {
                 sh 'mvn clean test'
             }
 	    post {  
-		always {
-            		junit 'shippable/testresults/**/*.xml'
-        	}
-	    }
+    		always {
+                		junit 'shippable/testresults/**/*.xml'
+            	}
+    	    }
         }
 
 		stage('Deploy'){
