@@ -167,8 +167,6 @@ public abstract class SeedFactory<W extends Weight> {
 	}
 
 	private void addPushRule(Method caller, Method callee) {
-		if(caller.equals(callee))
-			return;
 		automaton.addTransition(new Transition<Method, INode<Reachable>>(automaton.createState(wrap(Reachable.v()), caller), callee, automaton.createState(wrap(Reachable.v()), callee)));
 	}
 
