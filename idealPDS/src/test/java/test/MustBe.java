@@ -22,31 +22,31 @@ import typestate.finiteautomata.ITransition;
 import typestate.finiteautomata.State;
 import typestate.finiteautomata.Transition;
 
-public class MustBe extends ExpectedResults<TransitionFunction,Val> {
+public class MustBe extends ExpectedResults<TransitionFunction, Val> {
 
-	MustBe(Unit unit, Val val, InternalState state) {
-		super(unit, val, state);
-	}
+    MustBe(Unit unit, Val val, InternalState state) {
+        super(unit, val, state);
+    }
 
-	public String toString(){
-		return "MustBe " + super.toString();
-	}
+    public String toString() {
+        return "MustBe " + super.toString();
+    }
 
-	@Override
-	public void computedResults(TransitionFunction val) {
-		Set<State> states = Sets.newHashSet();
-		for(ITransition t : val.values()){
-			if(!t.equals(Transition.identity())){
-				states.add(t.to());
-			}
-		}
-		for(State s : states){
-			if(state == InternalState.ACCEPTING){
-				satisfied |= !s.isErrorState() && states.size() == 1;
-			} else if(state == InternalState.ERROR){
-				satisfied |= s.isErrorState() && states.size() == 1;
-			}
-		}
-	}
+    @Override
+    public void computedResults(TransitionFunction val) {
+        Set<State> states = Sets.newHashSet();
+        for (ITransition t : val.values()) {
+            if (!t.equals(Transition.identity())) {
+                states.add(t.to());
+            }
+        }
+        for (State s : states) {
+            if (state == InternalState.ACCEPTING) {
+                satisfied |= !s.isErrorState() && states.size() == 1;
+            } else if (state == InternalState.ERROR) {
+                satisfied |= s.isErrorState() && states.size() == 1;
+            }
+        }
+    }
 
-}	
+}

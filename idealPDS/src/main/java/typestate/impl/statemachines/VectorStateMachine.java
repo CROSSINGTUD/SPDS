@@ -31,71 +31,71 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public class VectorStateMachine extends TypeStateMachineWeightFunctions {
 
-	public static enum States implements State {
-		INIT, NOT_EMPTY, ACCESSED_EMPTY;
+    public static enum States implements State {
+        INIT, NOT_EMPTY, ACCESSED_EMPTY;
 
-		@Override
-		public boolean isErrorState() {
-			return this == ACCESSED_EMPTY;
-		}
+        @Override
+        public boolean isErrorState() {
+            return this == ACCESSED_EMPTY;
+        }
 
-		@Override
-		public boolean isInitialState() {
-			return false;
-		}
+        @Override
+        public boolean isInitialState() {
+            return false;
+        }
 
-		@Override
-		public boolean isAccepting() {
-			return false;
-		}
-	}
+        @Override
+        public boolean isAccepting() {
+            return false;
+        }
+    }
 
-	public VectorStateMachine() {
-		addTransition(
-				new MatcherTransition(States.INIT, addElement(), Parameter.This, States.NOT_EMPTY, Type.OnReturn));
-		addTransition(new MatcherTransition(States.INIT, accessElement(), Parameter.This, States.ACCESSED_EMPTY,
-				Type.OnReturn));
-		addTransition(new MatcherTransition(States.NOT_EMPTY, accessElement(), Parameter.This, States.NOT_EMPTY,
-				Type.OnReturn));
+    public VectorStateMachine() {
+        addTransition(
+                new MatcherTransition(States.INIT, addElement(), Parameter.This, States.NOT_EMPTY, Type.OnReturn));
+        addTransition(new MatcherTransition(States.INIT, accessElement(), Parameter.This, States.ACCESSED_EMPTY,
+                Type.OnReturn));
+        addTransition(new MatcherTransition(States.NOT_EMPTY, accessElement(), Parameter.This, States.NOT_EMPTY,
+                Type.OnReturn));
 
-		addTransition(new MatcherTransition(States.NOT_EMPTY, removeAllElements(), Parameter.This, States.INIT,
-				Type.OnReturn));
-		addTransition(
-				new MatcherTransition(States.INIT, removeAllElements(), Parameter.This, States.INIT, Type.OnReturn));
-		addTransition(new MatcherTransition(States.ACCESSED_EMPTY, accessElement(), Parameter.This,
-				States.ACCESSED_EMPTY, Type.OnReturn));
-	}
+        addTransition(new MatcherTransition(States.NOT_EMPTY, removeAllElements(), Parameter.This, States.INIT,
+                Type.OnReturn));
+        addTransition(
+                new MatcherTransition(States.INIT, removeAllElements(), Parameter.This, States.INIT, Type.OnReturn));
+        addTransition(new MatcherTransition(States.ACCESSED_EMPTY, accessElement(), Parameter.This,
+                States.ACCESSED_EMPTY, Type.OnReturn));
+    }
 
-	private Set<SootMethod> removeAllElements() {
-		List<SootClass> vectorClasses = getSubclassesOf("java.util.Vector");
-		Set<SootMethod> selectMethodByName = selectMethodByName(vectorClasses, "removeAllElements");
-		return selectMethodByName;
-	}
+    private Set<SootMethod> removeAllElements() {
+        List<SootClass> vectorClasses = getSubclassesOf("java.util.Vector");
+        Set<SootMethod> selectMethodByName = selectMethodByName(vectorClasses, "removeAllElements");
+        return selectMethodByName;
+    }
 
-	private Set<SootMethod> addElement() {
-		List<SootClass> vectorClasses = getSubclassesOf("java.util.Vector");
-		Set<SootMethod> selectMethodByName = selectMethodByName(vectorClasses,
-				"add|addAll|addElement|insertElementAt|set|setElementAt");
-		selectMethodByName.add(Scene.v().getMethod("<java.util.Vector: void <init>(java.util.Collection)>"));
-		return selectMethodByName;
-	}
+    private Set<SootMethod> addElement() {
+        List<SootClass> vectorClasses = getSubclassesOf("java.util.Vector");
+        Set<SootMethod> selectMethodByName = selectMethodByName(vectorClasses,
+                "add|addAll|addElement|insertElementAt|set|setElementAt");
+        selectMethodByName.add(Scene.v().getMethod("<java.util.Vector: void <init>(java.util.Collection)>"));
+        return selectMethodByName;
+    }
 
-	private Set<SootMethod> accessElement() {
-		List<SootClass> vectorClasses = getSubclassesOf("java.util.Vector");
-		Set<SootMethod> selectMethodByName = selectMethodByName(vectorClasses,
-				"elementAt|firstElement|lastElement|get");
-		return selectMethodByName;
-	}
+    private Set<SootMethod> accessElement() {
+        List<SootClass> vectorClasses = getSubclassesOf("java.util.Vector");
+        Set<SootMethod> selectMethodByName = selectMethodByName(vectorClasses,
+                "elementAt|firstElement|lastElement|get");
+        return selectMethodByName;
+    }
 
-	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
-		if (m.toString().contains("<clinit>"))
-			return Collections.emptySet();
-		return generateAtAllocationSiteOf(m, unit, Vector.class);
-	}
+    @Override
+    public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
+        if (m.toString().contains("<clinit>"))
+            return Collections.emptySet();
+        return generateAtAllocationSiteOf(m, unit, Vector.class);
+    }
 
-	@Override
-	protected State initialState() {
-		return States.INIT;
-	}
+    @Override
+    protected State initialState() {
+        return States.INIT;
+    }
 }

@@ -30,79 +30,79 @@ import typestate.impl.statemachines.SocketStateMachine;
 
 public class SocketLongTest extends IDEALTestingFramework {
 
-	@Test
-	public void test1() throws IOException {
-		Socket socket = new Socket();
-		socket.connect(new SocketAddress() {
-		});
-		socket.sendUrgentData(2);
-		mustBeInAcceptingState(socket);
-	}
+    @Test
+    public void test1() throws IOException {
+        Socket socket = new Socket();
+        socket.connect(new SocketAddress() {
+        });
+        socket.sendUrgentData(2);
+        mustBeInAcceptingState(socket);
+    }
 
-	@Test
-	public void test2() throws IOException {
-		Socket socket = new Socket();
-		socket.sendUrgentData(2);
-		mustBeInErrorState(socket);
-	}
+    @Test
+    public void test2() throws IOException {
+        Socket socket = new Socket();
+        socket.sendUrgentData(2);
+        mustBeInErrorState(socket);
+    }
 
-	@Test
-	public void test3() throws IOException {
-		Socket socket = new Socket();
-		socket.sendUrgentData(2);
-		socket.sendUrgentData(2);
-		mustBeInErrorState(socket);
-	}
-	
-	
-	@Test
-	public void test4() throws IOException {
-		Collection<Socket> sockets = createSockets();
-	    for (Iterator<Socket> it = sockets.iterator(); it.hasNext();) {
-	      Socket s = (Socket) it.next();
-	      s.connect(null);
-	      talk(s);
-	      mustBeInAcceptingState(s);
-	    }
+    @Test
+    public void test3() throws IOException {
+        Socket socket = new Socket();
+        socket.sendUrgentData(2);
+        socket.sendUrgentData(2);
+        mustBeInErrorState(socket);
+    }
 
-		Collection<Socket> s1 = createOther();
-	}
+    @Test
+    public void test4() throws IOException {
+        Collection<Socket> sockets = createSockets();
+        for (Iterator<Socket> it = sockets.iterator(); it.hasNext();) {
+            Socket s = (Socket) it.next();
+            s.connect(null);
+            talk(s);
+            mustBeInAcceptingState(s);
+        }
 
-	private Collection<Socket> createOther() {
-		Collection<Socket> result = new ArrayList<>();
-		for (int i = 0; i < 5; i++) {
-			result.add(new Socket());
-		}
-		return result;
-	}
+        Collection<Socket> s1 = createOther();
+    }
 
-	@Test
-	public void test5() throws IOException {
-		Collection<Socket> sockets = createSockets();
-	    for (Iterator<Socket> it = sockets.iterator(); it.hasNext();) {
-	      Socket s = (Socket) it.next();
-	      talk(s);
-	      mayBeInErrorState(s);
-	    }
-	}
-	public static Socket createSocket() {
-		return new Socket();
-	}
+    private Collection<Socket> createOther() {
+        Collection<Socket> result = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            result.add(new Socket());
+        }
+        return result;
+    }
 
-	public static Collection<Socket> createSockets() {
-		Collection<Socket> result = new LinkedList<>();
-		for (int i = 0; i < 5; i++) {
-			result.add(new Socket());
-		}
-		return result;
-	}
+    @Test
+    public void test5() throws IOException {
+        Collection<Socket> sockets = createSockets();
+        for (Iterator<Socket> it = sockets.iterator(); it.hasNext();) {
+            Socket s = (Socket) it.next();
+            talk(s);
+            mayBeInErrorState(s);
+        }
+    }
 
-	public static void talk(Socket s) throws IOException {
-		s.getChannel();
-	}
+    public static Socket createSocket() {
+        return new Socket();
+    }
 
-	@Override
-	protected TypeStateMachineWeightFunctions getStateMachine() {
-		return new SocketStateMachine();
-	}
+    public static Collection<Socket> createSockets() {
+        Collection<Socket> result = new LinkedList<>();
+        for (int i = 0; i < 5; i++) {
+            result.add(new Socket());
+        }
+        return result;
+    }
+
+    public static void talk(Socket s) throws IOException {
+        s.getChannel();
+    }
+
+    @Override
+    protected TypeStateMachineWeightFunctions getStateMachine() {
+        return new SocketStateMachine();
+    }
 }

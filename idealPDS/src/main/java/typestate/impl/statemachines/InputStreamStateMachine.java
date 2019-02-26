@@ -31,70 +31,74 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public class InputStreamStateMachine extends TypeStateMachineWeightFunctions {
 
-	private Set<SootMethod> closeMethods;
-	private Set<SootMethod> readMethods;
+    private Set<SootMethod> closeMethods;
+    private Set<SootMethod> readMethods;
 
-	public static enum States implements State {
-		NONE, CLOSED, ERROR;
+    public static enum States implements State {
+        NONE, CLOSED, ERROR;
 
-		@Override
-		public boolean isErrorState() {
-			return this == ERROR;
-		}
+        @Override
+        public boolean isErrorState() {
+            return this == ERROR;
+        }
 
-		@Override
-		public boolean isInitialState() {
-			return false;
-		}
+        @Override
+        public boolean isInitialState() {
+            return false;
+        }
 
-		@Override
-		public boolean isAccepting() {
-			return false;
-		}
-	}
+        @Override
+        public boolean isAccepting() {
+            return false;
+        }
+    }
 
-	public InputStreamStateMachine() {
-		addTransition(new MatcherTransition(States.NONE, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
-		addTransition(
-				new MatcherTransition(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
-		addTransition(new MatcherTransition(States.CLOSED, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-		addTransition(new MatcherTransition(States.ERROR, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+    public InputStreamStateMachine() {
+        addTransition(new MatcherTransition(States.NONE, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
+        addTransition(
+                new MatcherTransition(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
+        addTransition(new MatcherTransition(States.CLOSED, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+        addTransition(new MatcherTransition(States.ERROR, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
 
-		addTransition(new MatcherTransition(States.CLOSED, Collections.singleton(Scene.v().getMethod("<java.io.InputStream: int read()>")), Parameter.This, States.ERROR, Type.OnCallToReturn));
-		addTransition(new MatcherTransition(States.ERROR, Collections.singleton(Scene.v().getMethod("<java.io.InputStream: int read()>")), Parameter.This, States.ERROR, Type.OnCallToReturn));
-	}
-	private Set<SootMethod> closeMethods() {
-		if(closeMethods == null)
-			closeMethods = selectMethodByName(getImplementersOf("java.io.InputStream"), "close");
-		return closeMethods;
-	}
+        addTransition(new MatcherTransition(States.CLOSED,
+                Collections.singleton(Scene.v().getMethod("<java.io.InputStream: int read()>")), Parameter.This,
+                States.ERROR, Type.OnCallToReturn));
+        addTransition(new MatcherTransition(States.ERROR,
+                Collections.singleton(Scene.v().getMethod("<java.io.InputStream: int read()>")), Parameter.This,
+                States.ERROR, Type.OnCallToReturn));
+    }
 
-	private Set<SootMethod> readMethods() {
-		if(readMethods == null){
-			readMethods = selectMethodByName(getImplementersOf("java.io.InputStream"), "read");
-		}
+    private Set<SootMethod> closeMethods() {
+        if (closeMethods == null)
+            closeMethods = selectMethodByName(getImplementersOf("java.io.InputStream"), "close");
+        return closeMethods;
+    }
 
-		return readMethods;
-	}
+    private Set<SootMethod> readMethods() {
+        if (readMethods == null) {
+            readMethods = selectMethodByName(getImplementersOf("java.io.InputStream"), "read");
+        }
 
+        return readMethods;
+    }
 
-	private List<SootClass> getImplementersOf(String className) {
-		SootClass sootClass = Scene.v().getSootClass(className);
-		List<SootClass> list = Scene.v().getActiveHierarchy().getSubclassesOfIncluding(sootClass);
-		List<SootClass> res = new LinkedList<>();
-		for (SootClass c : list) {
-			res.add(c);
-		}
-		return res;
-	}
+    private List<SootClass> getImplementersOf(String className) {
+        SootClass sootClass = Scene.v().getSootClass(className);
+        List<SootClass> list = Scene.v().getActiveHierarchy().getSubclassesOfIncluding(sootClass);
+        List<SootClass> res = new LinkedList<>();
+        for (SootClass c : list) {
+            res.add(c);
+        }
+        return res;
+    }
 
-	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit) {
-		return this.generateThisAtAnyCallSitesOf(method, unit, closeMethods());
-	}
+    @Override
+    public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit) {
+        return this.generateThisAtAnyCallSitesOf(method, unit, closeMethods());
+    }
 
-	@Override
-	public State initialState() {
-		return States.NONE;
-	}
+    @Override
+    public State initialState() {
+        return States.NONE;
+    }
 }

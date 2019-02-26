@@ -17,6 +17,6 @@ import sync.pds.solver.nodes.Node;
 
 public interface NonOneFlowListener {
 
-	void nonOneFlow(Node<Statement, Val> curr);
+    void nonOneFlow(Node<Statement, Val> curr);
 
 }

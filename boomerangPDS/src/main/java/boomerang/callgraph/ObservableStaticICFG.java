@@ -22,7 +22,7 @@ import java.util.Set;
  *
  * @author Melanie Bruns on 04.05.2018
  */
-public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
+public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod> {
     /**
      * Wrapped static ICFG. If available, this is used to handle all queries.
      */
@@ -49,14 +49,14 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
 
     @Override
     public void addCalleeListener(CalleeListener<Unit, SootMethod> listener) {
-        for (SootMethod method : precomputedGraph.getCalleesOfCallAt(listener.getObservedCaller())){
+        for (SootMethod method : precomputedGraph.getCalleesOfCallAt(listener.getObservedCaller())) {
             listener.onCalleeAdded(listener.getObservedCaller(), method);
         }
     }
 
     @Override
     public void addCallerListener(CallerListener<Unit, SootMethod> listener) {
-        for (Unit unit : precomputedGraph.getCallersOf(listener.getObservedCallee())){
+        for (Unit unit : precomputedGraph.getCallersOf(listener.getObservedCallee())) {
             listener.onCallerAdded(unit, listener.getObservedCallee());
         }
     }
@@ -116,11 +116,11 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
         return precomputedGraph.isReachable(u);
     }
 
-    public CallGraph getCallGraphCopy(){
+    public CallGraph getCallGraphCopy() {
         CallGraph copy = new CallGraph();
         HashSet<SootMethod> visited = new HashSet<>();
-        for (SootMethod entryPoint : Scene.v().getEntryPoints()){
-            if (!visited.contains(entryPoint)){
+        for (SootMethod entryPoint : Scene.v().getEntryPoints()) {
+            if (!visited.contains(entryPoint)) {
                 addEdgesForCallees(entryPoint, visited, copy);
             }
         }
@@ -129,28 +129,29 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
 
     private void addEdgesForCallees(SootMethod sootMethod, HashSet<SootMethod> visited, CallGraph copy) {
         visited.add(sootMethod);
-        for (Unit callsite : precomputedGraph.getCallsFromWithin(sootMethod)){
-            for (SootMethod callee : precomputedGraph.getCalleesOfCallAt(callsite)){
-                copy.addEdge(new Edge(sootMethod, (Stmt)callsite, callee));
-                if (!visited.contains(callee)){
+        for (Unit callsite : precomputedGraph.getCallsFromWithin(sootMethod)) {
+            for (SootMethod callee : precomputedGraph.getCalleesOfCallAt(callsite)) {
+                copy.addEdge(new Edge(sootMethod, (Stmt) callsite, callee));
+                if (!visited.contains(callee)) {
                     addEdgesForCallees(callee, visited, copy);
                 }
             }
         }
     }
 
-	@Override
-	public boolean isMethodsWithCallFlow(SootMethod method) {
-		return false;
-	}
+    @Override
+    public boolean isMethodsWithCallFlow(SootMethod method) {
+        return false;
+    }
 
-	@Override
-	public void addMethodWithCallFlow(SootMethod method) {
-        //No need to keep track of that since we rely on the precomputed graph
-	}
+    @Override
+    public void addMethodWithCallFlow(SootMethod method) {
+        // No need to keep track of that since we rely on the precomputed graph
+    }
 
     /**
      * Returns negative number to signify all edges are precomputed. CallGraphDebugger will add the actual number in.
+     * 
      * @return -1 as all edges are precomputed, but we don't have access to the actual number
      */
     @Override
@@ -160,6 +161,6 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod>{
 
     @Override
     public void resetCallGraph() {
-        //Static call graph does not need to be reset, ignore this
+        // Static call graph does not need to be reset, ignore this
     }
 }

@@ -19,9 +19,9 @@ import wpds.impl.Weight;
 
 public class Debugger<W extends Weight> {
 
-	public void done(Map<Query, AbstractBoomerangSolver<W>> queryToSolvers) {
-		// TODO Auto-generated method stub
-		
-	}
+    public void done(Map<Query, AbstractBoomerangSolver<W>> queryToSolvers) {
+        // TODO Auto-generated method stub
+
+    }
 
 }

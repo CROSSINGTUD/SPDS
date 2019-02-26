@@ -18,31 +18,34 @@ import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
 public class SimpleContextQueryTest extends AbstractBoomerangTest {
-	@Test
-	public void outerAllocation(){
-		AllocatedObject alloc = new Alloc();
-		methodOfQuery(alloc);
-	}
+    @Test
+    public void outerAllocation() {
+        AllocatedObject alloc = new Alloc();
+        methodOfQuery(alloc);
+    }
 
-	private void methodOfQuery(AllocatedObject alloc) {
-		AllocatedObject alias = alloc;
-		queryFor(alias);
-	}
-	@Test
-	public void outerAllocation2(){
-		AllocatedObject alloc = new AllocatedObject(){};
-		AllocatedObject same = alloc;
-		methodOfQuery(alloc, same);
-	}
-	@Test
-	public void outerAllocation3(){
-		AllocatedObject alloc = new AllocatedObject(){};
-		Object same = new Object();
-		methodOfQuery(alloc, same);
-	}
+    private void methodOfQuery(AllocatedObject alloc) {
+        AllocatedObject alias = alloc;
+        queryFor(alias);
+    }
 
+    @Test
+    public void outerAllocation2() {
+        AllocatedObject alloc = new AllocatedObject() {
+        };
+        AllocatedObject same = alloc;
+        methodOfQuery(alloc, same);
+    }
 
-	private void methodOfQuery(Object alloc, Object alias) {
-		queryFor(alloc);
-	}
+    @Test
+    public void outerAllocation3() {
+        AllocatedObject alloc = new AllocatedObject() {
+        };
+        Object same = new Object();
+        methodOfQuery(alloc, same);
+    }
+
+    private void methodOfQuery(Object alloc, Object alias) {
+        queryFor(alloc);
+    }
 }

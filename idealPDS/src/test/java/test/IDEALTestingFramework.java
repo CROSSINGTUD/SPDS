@@ -54,42 +54,44 @@ import test.core.selfrunning.ImprecisionException;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
+public abstract class IDEALTestingFramework extends AbstractTestingFramework {
+    protected ObservableICFG<Unit, SootMethod> staticIcfg;
+    private static final boolean FAIL_ON_IMPRECISE = false;
+    private static final boolean VISUALIZATION = false;
 
-public abstract class IDEALTestingFramework extends AbstractTestingFramework{
-	protected ObservableICFG<Unit,SootMethod> staticIcfg;
-	private static final boolean FAIL_ON_IMPRECISE = false;
-	private static final boolean VISUALIZATION = false;
+    protected StoreIDEALResultHandler<TransitionFunction> resultHandler = new StoreIDEALResultHandler<>();
 
-	protected StoreIDEALResultHandler<TransitionFunction> resultHandler = new StoreIDEALResultHandler<>();
-	protected abstract TypeStateMachineWeightFunctions getStateMachine();
+    protected abstract TypeStateMachineWeightFunctions getStateMachine();
 
-	protected IDEALAnalysis<TransitionFunction> createAnalysis() {
-		return new IDEALAnalysis<TransitionFunction>(new IDEALAnalysisDefinition<TransitionFunction>() {
+    protected IDEALAnalysis<TransitionFunction> createAnalysis() {
+        return new IDEALAnalysis<TransitionFunction>(new IDEALAnalysisDefinition<TransitionFunction>() {
 
-			@Override
-			public Collection<WeightedForwardQuery<TransitionFunction>> generate(SootMethod method, Unit stmt) {
-				return  IDEALTestingFramework.this.getStateMachine().generateSeed(method, stmt);
-			}
+            @Override
+            public Collection<WeightedForwardQuery<TransitionFunction>> generate(SootMethod method, Unit stmt) {
+                return IDEALTestingFramework.this.getStateMachine().generateSeed(method, stmt);
+            }
 
-			@Override
-			public WeightFunctions<Statement, Val, Statement, TransitionFunction> weightFunctions() {
-				return IDEALTestingFramework.this.getStateMachine();
-			}
-			
-			@Override
-			public Debugger<TransitionFunction> debugger(IDEALSeedSolver<TransitionFunction> solver) {
-				return VISUALIZATION ? new IDEVizDebugger<>(new File(ideVizFile.getAbsolutePath().replace(".json",
-						" " + solver.getSeed() +".json")),icfg) : new Debugger<>();
-			}
-			
-			@Override
-			public IDEALResultHandler<TransitionFunction> getResultHandler() {
-				return resultHandler;
-			}
+            @Override
+            public WeightFunctions<Statement, Val, Statement, TransitionFunction> weightFunctions() {
+                return IDEALTestingFramework.this.getStateMachine();
+            }
 
-			@Override
+            @Override
+            public Debugger<TransitionFunction> debugger(IDEALSeedSolver<TransitionFunction> solver) {
+                return VISUALIZATION
+                        ? new IDEVizDebugger<>(new File(
+                                ideVizFile.getAbsolutePath().replace(".json", " " + solver.getSeed() + ".json")), icfg)
+                        : new Debugger<>();
+            }
+
+            @Override
+            public IDEALResultHandler<TransitionFunction> getResultHandler() {
+                return resultHandler;
+            }
+
+            @Override
             public BoomerangOptions boomerangOptions() {
-			    return new DefaultBoomerangOptions() {
+                return new DefaultBoomerangOptions() {
 
                     @Override
                     public boolean onTheFlyCallGraph() {
@@ -97,168 +99,168 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework{
                     }
                 };
             }
-			
-		});
-	}
 
-	@Override
-	protected SceneTransformer createAnalysisTransformer() throws ImprecisionException {
-		return new SceneTransformer() {
-			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				BoomerangPretransformer.v().reset();
-				BoomerangPretransformer.v().apply();
-				staticIcfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(false));
-				Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
-				TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
-				
-				Map<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> seedToSolvers = executeAnalysis();
-				for(Entry<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> e : seedToSolvers.entrySet()){
-					testingResultReporter.onSeedFinished(e.getKey().asNode(), e.getValue());
-				}
-				List<Assertion> unsound = Lists.newLinkedList();
-				List<Assertion> imprecise = Lists.newLinkedList();
-				for (Assertion r : expectedResults){
-					if (r instanceof ShouldNotBeAnalyzed){
-						throw new RuntimeException(r.toString());
-					}
-				}
-				for (Assertion r : expectedResults) {
-					if (!r.isSatisfied()) {
-						unsound.add(r);
-					}
-				}
-				for (Assertion r : expectedResults) {
-					if (r.isImprecise()) {
-						imprecise.add(r);
-					}
-				}
-				if (!unsound.isEmpty())
-					throw new RuntimeException("Unsound results: " + unsound);
-				if (!imprecise.isEmpty() && FAIL_ON_IMPRECISE) {
-					throw new ImprecisionException("Imprecise results: " + imprecise);
-				}
-			}
-		};
-	}
+        });
+    }
 
-	protected Map<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> executeAnalysis() {
-		IDEALTestingFramework.this.createAnalysis().run();
-		return resultHandler.getResults();
-	}
+    @Override
+    protected SceneTransformer createAnalysisTransformer() throws ImprecisionException {
+        return new SceneTransformer() {
+            protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
+                BoomerangPretransformer.v().reset();
+                BoomerangPretransformer.v().apply();
+                staticIcfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(false));
+                Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
+                TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 
-	private Set<Assertion> parseExpectedQueryResults(SootMethod sootTestMethod) {
-		Set<Assertion> results = new HashSet<>();
-		parseExpectedQueryResults(sootTestMethod, results, new HashSet<SootMethod>());
-		return results;
-	}
+                Map<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> seedToSolvers = executeAnalysis();
+                for (Entry<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> e : seedToSolvers
+                        .entrySet()) {
+                    testingResultReporter.onSeedFinished(e.getKey().asNode(), e.getValue());
+                }
+                List<Assertion> unsound = Lists.newLinkedList();
+                List<Assertion> imprecise = Lists.newLinkedList();
+                for (Assertion r : expectedResults) {
+                    if (r instanceof ShouldNotBeAnalyzed) {
+                        throw new RuntimeException(r.toString());
+                    }
+                }
+                for (Assertion r : expectedResults) {
+                    if (!r.isSatisfied()) {
+                        unsound.add(r);
+                    }
+                }
+                for (Assertion r : expectedResults) {
+                    if (r.isImprecise()) {
+                        imprecise.add(r);
+                    }
+                }
+                if (!unsound.isEmpty())
+                    throw new RuntimeException("Unsound results: " + unsound);
+                if (!imprecise.isEmpty() && FAIL_ON_IMPRECISE) {
+                    throw new ImprecisionException("Imprecise results: " + imprecise);
+                }
+            }
+        };
+    }
 
-	private void parseExpectedQueryResults(SootMethod m, Set<Assertion> queries, Set<SootMethod> visited) {
-		if (!m.hasActiveBody() || visited.contains(m))
-			return;
-		visited.add(m);
-		Body activeBody = m.getActiveBody();
-		for (Unit callSite : staticIcfg.getCallsFromWithin(m)) {
-			staticIcfg.addCalleeListener(new ParseExpectedQueryResultCalleeListener(queries, visited, callSite));
-		}
-		for (Unit u : activeBody.getUnits()) {
-			if (!(u instanceof Stmt))
-				continue;
+    protected Map<WeightedForwardQuery<TransitionFunction>, ForwardBoomerangResults<TransitionFunction>> executeAnalysis() {
+        IDEALTestingFramework.this.createAnalysis().run();
+        return resultHandler.getResults();
+    }
 
-			Stmt stmt = (Stmt) u;
-			if (!(stmt.containsInvokeExpr()))
-				continue;
-			InvokeExpr invokeExpr = stmt.getInvokeExpr();
-			String invocationName = invokeExpr.getMethod().getName();
-			if (invocationName.equals("shouldNotBeAnalyzed")){
-				queries.add(new ShouldNotBeAnalyzed(stmt));
-			}
-			if (!invocationName.startsWith("mayBeIn") && !invocationName.startsWith("mustBeIn"))
-				continue;
-			Value param = invokeExpr.getArg(0);
-			Val val = new Val(param, m);
-			if (invocationName.startsWith("mayBeIn")) {
-				if (invocationName.contains("Error"))
-					queries.add(new MayBe(stmt, val, InternalState.ERROR));
-				else
-					queries.add(new MayBe(stmt, val, InternalState.ACCEPTING));
-			} else if (invocationName.startsWith("mustBeIn")) {
-				if (invocationName.contains("Error"))
-					queries.add(new MustBe(stmt, val, InternalState.ERROR));
-				else
-					queries.add(new MustBe(stmt, val, InternalState.ACCEPTING));
-			}
-		}
-	}
+    private Set<Assertion> parseExpectedQueryResults(SootMethod sootTestMethod) {
+        Set<Assertion> results = new HashSet<>();
+        parseExpectedQueryResults(sootTestMethod, results, new HashSet<SootMethod>());
+        return results;
+    }
 
-	private class ParseExpectedQueryResultCalleeListener implements CalleeListener<Unit, SootMethod>{
-		Set<Assertion> queries;
-		Set<SootMethod> visited;
-		Unit callSite;
+    private void parseExpectedQueryResults(SootMethod m, Set<Assertion> queries, Set<SootMethod> visited) {
+        if (!m.hasActiveBody() || visited.contains(m))
+            return;
+        visited.add(m);
+        Body activeBody = m.getActiveBody();
+        for (Unit callSite : staticIcfg.getCallsFromWithin(m)) {
+            staticIcfg.addCalleeListener(new ParseExpectedQueryResultCalleeListener(queries, visited, callSite));
+        }
+        for (Unit u : activeBody.getUnits()) {
+            if (!(u instanceof Stmt))
+                continue;
 
-		ParseExpectedQueryResultCalleeListener(Set<Assertion> queries, Set<SootMethod> visited, Unit callSite){
-			this.queries = queries;
-			this.visited = visited;
-			this.callSite = callSite;
-		}
+            Stmt stmt = (Stmt) u;
+            if (!(stmt.containsInvokeExpr()))
+                continue;
+            InvokeExpr invokeExpr = stmt.getInvokeExpr();
+            String invocationName = invokeExpr.getMethod().getName();
+            if (invocationName.equals("shouldNotBeAnalyzed")) {
+                queries.add(new ShouldNotBeAnalyzed(stmt));
+            }
+            if (!invocationName.startsWith("mayBeIn") && !invocationName.startsWith("mustBeIn"))
+                continue;
+            Value param = invokeExpr.getArg(0);
+            Val val = new Val(param, m);
+            if (invocationName.startsWith("mayBeIn")) {
+                if (invocationName.contains("Error"))
+                    queries.add(new MayBe(stmt, val, InternalState.ERROR));
+                else
+                    queries.add(new MayBe(stmt, val, InternalState.ACCEPTING));
+            } else if (invocationName.startsWith("mustBeIn")) {
+                if (invocationName.contains("Error"))
+                    queries.add(new MustBe(stmt, val, InternalState.ERROR));
+                else
+                    queries.add(new MustBe(stmt, val, InternalState.ACCEPTING));
+            }
+        }
+    }
 
-		@Override
-		public Unit getObservedCaller() {
-			return callSite;
-		}
+    private class ParseExpectedQueryResultCalleeListener implements CalleeListener<Unit, SootMethod> {
+        Set<Assertion> queries;
+        Set<SootMethod> visited;
+        Unit callSite;
 
-		@Override
-		public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-			parseExpectedQueryResults(sootMethod, queries, visited);
-		}
+        ParseExpectedQueryResultCalleeListener(Set<Assertion> queries, Set<SootMethod> visited, Unit callSite) {
+            this.queries = queries;
+            this.visited = visited;
+            this.callSite = callSite;
+        }
 
-		@Override
-		public boolean equals(Object o) {
-			if (this == o) return true;
-			if (o == null || getClass() != o.getClass()) return false;
-			ParseExpectedQueryResultCalleeListener that = (ParseExpectedQueryResultCalleeListener) o;
-			return Objects.equals(queries, that.queries) &&
-					Objects.equals(visited, that.visited) &&
-					Objects.equals(callSite, that.callSite);
-		}
+        @Override
+        public Unit getObservedCaller() {
+            return callSite;
+        }
 
-		@Override
-		public int hashCode() {
-			return Objects.hash(queries, visited, callSite);
-		}
-	}
+        @Override
+        public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+            parseExpectedQueryResults(sootMethod, queries, visited);
+        }
 
-	/**
-	 * The methods parameter describes the variable that a query is issued for.
-	 * Note: We misuse the @Deprecated annotation to highlight the method in the
-	 * Code.
-	 */
+        @Override
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
+            ParseExpectedQueryResultCalleeListener that = (ParseExpectedQueryResultCalleeListener) o;
+            return Objects.equals(queries, that.queries) && Objects.equals(visited, that.visited)
+                    && Objects.equals(callSite, that.callSite);
+        }
 
-	protected static void mayBeInErrorState(Object variable) {
+        @Override
+        public int hashCode() {
+            return Objects.hash(queries, visited, callSite);
+        }
+    }
 
-	}
+    /**
+     * The methods parameter describes the variable that a query is issued for. Note: We misuse the @Deprecated
+     * annotation to highlight the method in the Code.
+     */
 
-	protected static void mustBeInErrorState(Object variable) {
+    protected static void mayBeInErrorState(Object variable) {
 
-	}
+    }
 
-	protected static void mayBeInAcceptingState(Object variable) {
+    protected static void mustBeInErrorState(Object variable) {
 
-	}
+    }
 
-	protected static void mustBeInAcceptingState(Object variable) {
-	}
+    protected static void mayBeInAcceptingState(Object variable) {
 
-	protected static void shouldNotBeAnalyzed(){
-	}
+    }
 
-	/**
-	 * This method can be used in test cases to create branching. It is not
-	 * optimized away.
-	 * 
-	 * @return
-	 */
-	protected boolean staticallyUnknown() {
-		return true;
-	}
+    protected static void mustBeInAcceptingState(Object variable) {
+    }
+
+    protected static void shouldNotBeAnalyzed() {
+    }
+
+    /**
+     * This method can be used in test cases to create branching. It is not optimized away.
+     * 
+     * @return
+     */
+    protected boolean staticallyUnknown() {
+        return true;
+    }
 
 }

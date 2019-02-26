@@ -18,26 +18,28 @@ import typestate.finiteautomata.ITransition;
 import typestate.finiteautomata.State;
 import typestate.finiteautomata.Transition;
 
-public class MayBe extends ExpectedResults<TransitionFunction,Val> {
+public class MayBe extends ExpectedResults<TransitionFunction, Val> {
 
-	MayBe(Unit unit, Val accessGraph, InternalState state) {
-		super(unit, accessGraph, state);
-	}
-	public String toString(){
-		return "Maybe " + super.toString();
-	}
-	@Override
-	public void computedResults(TransitionFunction results) {
-		for(ITransition t : results.values()){
-//			if(t.equals(Transition.identity()))
-//				continue;
-			State s = t.to();
-			if(s != null)
-			if(state == InternalState.ACCEPTING){
-				satisfied |= !s.isErrorState();
-			} else if(state == InternalState.ERROR){
-				satisfied |= s.isErrorState();
-			}
-		}
-	}
+    MayBe(Unit unit, Val accessGraph, InternalState state) {
+        super(unit, accessGraph, state);
+    }
+
+    public String toString() {
+        return "Maybe " + super.toString();
+    }
+
+    @Override
+    public void computedResults(TransitionFunction results) {
+        for (ITransition t : results.values()) {
+            // if(t.equals(Transition.identity()))
+            // continue;
+            State s = t.to();
+            if (s != null)
+                if (state == InternalState.ACCEPTING) {
+                    satisfied |= !s.isErrorState();
+                } else if (state == InternalState.ERROR) {
+                    satisfied |= s.isErrorState();
+                }
+        }
+    }
 }

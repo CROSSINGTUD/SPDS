@@ -15,12 +15,12 @@ import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 
 public class BackwardQuery extends Query {
-	public BackwardQuery(Statement stmt, Val variable) {
-		super(stmt, variable);
-	}
+    public BackwardQuery(Statement stmt, Val variable) {
+        super(stmt, variable);
+    }
 
-	@Override
-	public String toString() {
-		return "BackwardQuery: "+ super.toString();
-	}
+    @Override
+    public String toString() {
+        return "BackwardQuery: " + super.toString();
+    }
 }

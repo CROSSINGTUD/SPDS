@@ -10,20 +10,21 @@
  *     Johannes Spaeth - initial API and implementation
  *******************************************************************************/
 package typestate.test.helper;
+
 public class File {
-  public File open() {
-	  return this;
-  }
+    public File open() {
+        return this;
+    }
 
-  public File close() {
-	  return this;
-  };
+    public File close() {
+        return this;
+    };
 
-  public int hashCode() {
-    return 9;
-  }
-  
-  public void wrappedClose(){
-	  close();
-  }
+    public int hashCode() {
+        return 9;
+    }
+
+    public void wrappedClose() {
+        close();
+    }
 }

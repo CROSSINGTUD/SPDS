@@ -26,51 +26,51 @@ import typestate.finiteautomata.MatcherTransition.Type;
 import typestate.finiteautomata.State;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
-public class URLConnStateMachine extends TypeStateMachineWeightFunctions{
+public class URLConnStateMachine extends TypeStateMachineWeightFunctions {
 
-	public static enum States implements State {
-		NONE, INIT, CONNECTED, ERROR;
+    public static enum States implements State {
+        NONE, INIT, CONNECTED, ERROR;
 
-		@Override
-		public boolean isErrorState() {
-			return this == ERROR;
-		}
+        @Override
+        public boolean isErrorState() {
+            return this == ERROR;
+        }
 
-		@Override
-		public boolean isInitialState() {
-			return false;
-		}
+        @Override
+        public boolean isInitialState() {
+            return false;
+        }
 
-		@Override
-		public boolean isAccepting() {
-			return false;
-		}
-	}
+        @Override
+        public boolean isAccepting() {
+            return false;
+        }
+    }
 
-	public URLConnStateMachine() {
-		addTransition(new MatcherTransition(States.CONNECTED, illegalOpertaion(), Parameter.This, States.ERROR,
-				Type.OnReturn));
-		addTransition(
-				new MatcherTransition(States.ERROR, illegalOpertaion(), Parameter.This, States.ERROR, Type.OnReturn));
-	}
+    public URLConnStateMachine() {
+        addTransition(new MatcherTransition(States.CONNECTED, illegalOpertaion(), Parameter.This, States.ERROR,
+                Type.OnReturn));
+        addTransition(
+                new MatcherTransition(States.ERROR, illegalOpertaion(), Parameter.This, States.ERROR, Type.OnReturn));
+    }
 
-	private Set<SootMethod> connect() {
-		return selectMethodByName(getSubclassesOf("java.net.URLConnection"), "connect");
-	}
+    private Set<SootMethod> connect() {
+        return selectMethodByName(getSubclassesOf("java.net.URLConnection"), "connect");
+    }
 
-	private Set<SootMethod> illegalOpertaion() {
-		List<SootClass> subclasses = getSubclassesOf("java.net.URLConnection");
-		return selectMethodByName(subclasses,
-				"setDoInput|setDoOutput|setAllowUserInteraction|setUseCaches|setIfModifiedSince|setRequestProperty|addRequestProperty|getRequestProperty|getRequestProperties");
-	}
+    private Set<SootMethod> illegalOpertaion() {
+        List<SootClass> subclasses = getSubclassesOf("java.net.URLConnection");
+        return selectMethodByName(subclasses,
+                "setDoInput|setDoOutput|setAllowUserInteraction|setUseCaches|setIfModifiedSince|setRequestProperty|addRequestProperty|getRequestProperty|getRequestProperties");
+    }
 
-	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
-		return this.generateThisAtAnyCallSitesOf(m, unit, connect());
-	}
+    @Override
+    public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
+        return this.generateThisAtAnyCallSitesOf(m, unit, connect());
+    }
 
-	@Override
-	protected State initialState() {
-		return States.CONNECTED;
-	}
+    @Override
+    protected State initialState() {
+        return States.CONNECTED;
+    }
 }

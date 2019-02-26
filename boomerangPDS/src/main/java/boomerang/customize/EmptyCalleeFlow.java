@@ -23,32 +23,30 @@ import wpds.interfaces.State;
 
 public abstract class EmptyCalleeFlow {
 
-	protected SootMethod systemArrayCopyMethod;
-	protected boolean fetchedSystemArrayCopyMethod;
-	
-	protected boolean isSystemArrayCopy(SootMethod method) {
-		fetchSystemArrayClasses();
-		return systemArrayCopyMethod != null && systemArrayCopyMethod.equals(method);
-	}
+    protected SootMethod systemArrayCopyMethod;
+    protected boolean fetchedSystemArrayCopyMethod;
 
-	protected void fetchSystemArrayClasses() {
-		if(fetchedSystemArrayCopyMethod)
-			return;
-		fetchedSystemArrayCopyMethod = true;
-		if(Scene.v().containsClass("java.lang.System")){
-			SootClass systemClass = Scene.v().getSootClass("java.lang.System");
-			for(SootMethod m : systemClass.getMethods()){
-				if(m.getName().contains("arraycopy")){
-					systemArrayCopyMethod = m;
-				}
-			}
-		}
-	}
-	
+    protected boolean isSystemArrayCopy(SootMethod method) {
+        fetchSystemArrayClasses();
+        return systemArrayCopyMethod != null && systemArrayCopyMethod.equals(method);
+    }
 
-	public abstract Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt curr, Val value,
-			Stmt succ);
+    protected void fetchSystemArrayClasses() {
+        if (fetchedSystemArrayCopyMethod)
+            return;
+        fetchedSystemArrayCopyMethod = true;
+        if (Scene.v().containsClass("java.lang.System")) {
+            SootClass systemClass = Scene.v().getSootClass("java.lang.System");
+            for (SootMethod m : systemClass.getMethods()) {
+                if (m.getName().contains("arraycopy")) {
+                    systemArrayCopyMethod = m;
+                }
+            }
+        }
+    }
 
-	protected abstract Collection<? extends State> systemArrayCopyFlow(SootMethod caller, Stmt callSite, Val value,
-			Stmt returnSite);
+    public abstract Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt curr, Val value, Stmt succ);
+
+    protected abstract Collection<? extends State> systemArrayCopyFlow(SootMethod caller, Stmt callSite, Val value,
+            Stmt returnSite);
 }

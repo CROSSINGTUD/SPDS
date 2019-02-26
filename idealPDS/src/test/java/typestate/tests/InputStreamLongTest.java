@@ -23,33 +23,33 @@ import typestate.impl.statemachines.alloc.InputStreamStateMachine;
 
 public class InputStreamLongTest extends IDEALTestingFramework {
 
-	@Test
-	public void test1() throws IOException {
-		InputStream inputStream = new FileInputStream("");
-		inputStream.close();
-		inputStream.read();
-		mustBeInErrorState(inputStream);
-	}
+    @Test
+    public void test1() throws IOException {
+        InputStream inputStream = new FileInputStream("");
+        inputStream.close();
+        inputStream.read();
+        mustBeInErrorState(inputStream);
+    }
 
-	@Test
-	public void test2() throws IOException {
-	    InputStream inputStream = new FileInputStream("");
-	    inputStream.close();
-	    inputStream.close();
-	    inputStream.read();
-	    mustBeInErrorState(inputStream);
-	}
+    @Test
+    public void test2() throws IOException {
+        InputStream inputStream = new FileInputStream("");
+        inputStream.close();
+        inputStream.close();
+        inputStream.read();
+        mustBeInErrorState(inputStream);
+    }
 
-	@Test
-	public void test3() throws IOException {
-	    InputStream inputStream = new FileInputStream("");
-	    inputStream.read();
-	    inputStream.close();
-	    mustBeInAcceptingState(inputStream);
-	}
+    @Test
+    public void test3() throws IOException {
+        InputStream inputStream = new FileInputStream("");
+        inputStream.read();
+        inputStream.close();
+        mustBeInAcceptingState(inputStream);
+    }
 
-	@Override
-	protected TypeStateMachineWeightFunctions getStateMachine() {
-		return new InputStreamStateMachine();
-	}
+    @Override
+    protected TypeStateMachineWeightFunctions getStateMachine() {
+        return new InputStreamStateMachine();
+    }
 }

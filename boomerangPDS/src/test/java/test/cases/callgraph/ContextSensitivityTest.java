@@ -7,14 +7,12 @@ import test.core.AbstractBoomerangTest;
 
 public class ContextSensitivityTest extends AbstractBoomerangTest {
 
-
-    public void wrongContext(){
+    public void wrongContext() {
         SuperClass type = new WrongSubclass();
         method(type);
     }
 
-
-    public Object method(SuperClass type){
+    public Object method(SuperClass type) {
         Alloc alloc = new Alloc();
         type.foo(alloc);
         return alloc;
@@ -22,7 +20,7 @@ public class ContextSensitivityTest extends AbstractBoomerangTest {
 
     @Ignore
     @Test
-    public void testOnlyCorrectContextInCallGraph(){
+    public void testOnlyCorrectContextInCallGraph() {
         wrongContext();
         SuperClass type = new CorrectSubclass();
         Object alloc = method(type);
@@ -31,7 +29,7 @@ public class ContextSensitivityTest extends AbstractBoomerangTest {
 
     public class SuperClass {
 
-        public void foo(Object o){
+        public void foo(Object o) {
             unreachable(o);
         }
 
@@ -39,14 +37,14 @@ public class ContextSensitivityTest extends AbstractBoomerangTest {
 
     class CorrectSubclass extends SuperClass {
 
-        public void foo(Object o){
+        public void foo(Object o) {
 
         }
     }
 
     class WrongSubclass extends SuperClass {
 
-        public void foo(Object o){
+        public void foo(Object o) {
             unreachable(o);
         }
     }

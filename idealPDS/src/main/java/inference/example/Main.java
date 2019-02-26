@@ -55,96 +55,104 @@ import sync.pds.solver.WeightFunctions;
 
 public class Main {
 
-	private static final Logger logger = LogManager.getLogger();
+    private static final Logger logger = LogManager.getLogger();
 
-	public static void main(String... args) {
-		String sootClassPath = System.getProperty("user.dir") + File.separator+"target"+File.separator+"classes";
-		String mainClass = "inference.example.InferenceExample";
-		setupSoot(sootClassPath, mainClass);
-		analyze();
-	}
+    public static void main(String... args) {
+        String sootClassPath = System.getProperty("user.dir") + File.separator + "target" + File.separator + "classes";
+        String mainClass = "inference.example.InferenceExample";
+        setupSoot(sootClassPath, mainClass);
+        analyze();
+    }
 
-	private static void setupSoot(String sootClassPath, String mainClass) {
-		G.v().reset();
-		Options.v().set_whole_program(true);
-		Options.v().setPhaseOption("cg.spark", "on");
-		Options.v().set_output_format(Options.output_format_none);
-		Options.v().set_no_bodies_for_excluded(true);
-		Options.v().set_allow_phantom_refs(true);
+    private static void setupSoot(String sootClassPath, String mainClass) {
+        G.v().reset();
+        Options.v().set_whole_program(true);
+        Options.v().setPhaseOption("cg.spark", "on");
+        Options.v().set_output_format(Options.output_format_none);
+        Options.v().set_no_bodies_for_excluded(true);
+        Options.v().set_allow_phantom_refs(true);
 
-		List<String> includeList = new LinkedList<>();
-		includeList.add("java.lang.*");
-		includeList.add("java.util.*");
-		includeList.add("java.io.*");
-		includeList.add("sun.misc.*");
-		includeList.add("java.net.*");
-		includeList.add("javax.servlet.*");
-		includeList.add("javax.crypto.*");
+        List<String> includeList = new LinkedList<>();
+        includeList.add("java.lang.*");
+        includeList.add("java.util.*");
+        includeList.add("java.io.*");
+        includeList.add("sun.misc.*");
+        includeList.add("java.net.*");
+        includeList.add("javax.servlet.*");
+        includeList.add("javax.crypto.*");
 
-		Options.v().set_include(includeList);
-		Options.v().setPhaseOption("jb", "use-original-names:true");
+        Options.v().set_include(includeList);
+        Options.v().setPhaseOption("jb", "use-original-names:true");
 
-		Options.v().set_soot_classpath(sootClassPath);
-		Options.v().set_prepend_classpath(true);
+        Options.v().set_soot_classpath(sootClassPath);
+        Options.v().set_prepend_classpath(true);
 
-		Scene.v().loadNecessaryClasses();
-		SootClass c = Scene.v().forceResolve(mainClass, SootClass.BODIES);
-		if (c != null) {
-			c.setApplicationClass();
-			for (SootMethod m : c.getMethods()) {
-				logger.debug(m);
-			}
-		}
-	}
-	private static void analyze() {
-		Transform transform = new Transform("wjtp.ifds", createAnalysisTransformer());
-		PackManager.v().getPack("wjtp").add(transform);
-		PackManager.v().getPack("cg").apply();
-		BoomerangPretransformer.v().apply();
-		PackManager.v().getPack("wjtp").apply();
-	}
+        Scene.v().loadNecessaryClasses();
+        SootClass c = Scene.v().forceResolve(mainClass, SootClass.BODIES);
+        if (c != null) {
+            c.setApplicationClass();
+            for (SootMethod m : c.getMethods()) {
+                logger.debug(m);
+            }
+        }
+    }
 
-	private static Transformer createAnalysisTransformer() {
-		return new SceneTransformer() {
-			protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
-				StoreIDEALResultHandler<InferenceWeight> resultHandler = new StoreIDEALResultHandler<>();
+    private static void analyze() {
+        Transform transform = new Transform("wjtp.ifds", createAnalysisTransformer());
+        PackManager.v().getPack("wjtp").add(transform);
+        PackManager.v().getPack("cg").apply();
+        BoomerangPretransformer.v().apply();
+        PackManager.v().getPack("wjtp").apply();
+    }
 
-				IDEALAnalysis<InferenceWeight> solver = new IDEALAnalysis<>(new IDEALAnalysisDefinition<InferenceWeight>() {
+    private static Transformer createAnalysisTransformer() {
+        return new SceneTransformer() {
+            protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
+                StoreIDEALResultHandler<InferenceWeight> resultHandler = new StoreIDEALResultHandler<>();
 
-					@Override
-					public Collection<WeightedForwardQuery<InferenceWeight>> generate(SootMethod method, Unit stmt) {
-						if(stmt instanceof AssignStmt){
-							AssignStmt as = (AssignStmt) stmt;
-							if(as.getRightOp() instanceof NewExpr &&
-									as.getRightOp().getType().toString().contains("inference.example.InferenceExample$File")){
-								return Collections.singleton(new WeightedForwardQuery<InferenceWeight>(new Statement(as, method), new Val(as.getLeftOp(), method), InferenceWeight.one()));
-							}
-						}
-						return Collections.emptySet();
-					}
+                IDEALAnalysis<InferenceWeight> solver = new IDEALAnalysis<>(
+                        new IDEALAnalysisDefinition<InferenceWeight>() {
 
-					@Override
-					public WeightFunctions<Statement, Val, Statement, InferenceWeight> weightFunctions() {
-						return new InferenceWeightFunctions();
-					}
+                            @Override
+                            public Collection<WeightedForwardQuery<InferenceWeight>> generate(SootMethod method,
+                                    Unit stmt) {
+                                if (stmt instanceof AssignStmt) {
+                                    AssignStmt as = (AssignStmt) stmt;
+                                    if (as.getRightOp() instanceof NewExpr && as.getRightOp().getType().toString()
+                                            .contains("inference.example.InferenceExample$File")) {
+                                        return Collections.singleton(
+                                                new WeightedForwardQuery<InferenceWeight>(new Statement(as, method),
+                                                        new Val(as.getLeftOp(), method), InferenceWeight.one()));
+                                    }
+                                }
+                                return Collections.emptySet();
+                            }
 
-					@Override
-					public Debugger<InferenceWeight> debugger(IDEALSeedSolver<InferenceWeight> solver) {
-						return new Debugger<>();
-					}
-					@Override
-					public IDEALResultHandler<InferenceWeight> getResultHandler() {
-						return resultHandler;
-					}
-				});
-				solver.run();
-				Map<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>> res = resultHandler.getResults();
-				for(Entry<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>> e : res.entrySet()){
-					Table<Statement, Val, InferenceWeight> results = e.getValue().asStatementValWeightTable();
-					logger.info(Joiner.on("\n").join(results.cellSet()));
-				}
-			}
-		};
-	}
+                            @Override
+                            public WeightFunctions<Statement, Val, Statement, InferenceWeight> weightFunctions() {
+                                return new InferenceWeightFunctions();
+                            }
+
+                            @Override
+                            public Debugger<InferenceWeight> debugger(IDEALSeedSolver<InferenceWeight> solver) {
+                                return new Debugger<>();
+                            }
+
+                            @Override
+                            public IDEALResultHandler<InferenceWeight> getResultHandler() {
+                                return resultHandler;
+                            }
+                        });
+                solver.run();
+                Map<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>> res = resultHandler
+                        .getResults();
+                for (Entry<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>> e : res
+                        .entrySet()) {
+                    Table<Statement, Val, InferenceWeight> results = e.getValue().asStatementValWeightTable();
+                    logger.info(Joiner.on("\n").join(results.cellSet()));
+                }
+            }
+        };
+    }
 
 }

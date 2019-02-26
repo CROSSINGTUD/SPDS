@@ -41,91 +41,91 @@ import java.util.*;
 
 public class IDEALAnalysis<W extends Weight> {
 
-	private static final Logger logger = LogManager.getLogger();
+    private static final Logger logger = LogManager.getLogger();
 
-	public static boolean PRINT_OPTIONS = false;
+    public static boolean PRINT_OPTIONS = false;
 
-	protected final IDEALAnalysisDefinition<W> analysisDefinition;
-	private final SeedFactory<W> seedFactory;
-	private int seedCount;
-	private Map<WeightedForwardQuery<W>, Stopwatch> analysisTime = new HashMap<>();
-	private Set<WeightedForwardQuery<W>> timedoutSeeds = new HashSet<>();
+    protected final IDEALAnalysisDefinition<W> analysisDefinition;
+    private final SeedFactory<W> seedFactory;
+    private int seedCount;
+    private Map<WeightedForwardQuery<W>, Stopwatch> analysisTime = new HashMap<>();
+    private Set<WeightedForwardQuery<W>> timedoutSeeds = new HashSet<>();
 
+    public IDEALAnalysis(final IDEALAnalysisDefinition<W> analysisDefinition) {
+        this.analysisDefinition = analysisDefinition;
+        ObservableICFG<Unit, SootMethod> staticICFG = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
+        this.seedFactory = new SeedFactory<W>() {
 
-	public IDEALAnalysis(final IDEALAnalysisDefinition<W> analysisDefinition) {
-		this.analysisDefinition = analysisDefinition;
-		ObservableICFG<Unit, SootMethod> staticICFG = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
-		this.seedFactory = new SeedFactory<W>(){
+            @Override
+            protected Collection<WeightedForwardQuery<W>> generate(SootMethod method, Stmt stmt) {
+                return analysisDefinition.generate(method, stmt);
+            }
 
-			@Override
-			protected Collection<WeightedForwardQuery<W>> generate(SootMethod method, Stmt stmt) {
-				return analysisDefinition.generate(method, stmt);
-			}
+            @Override
+            public ObservableICFG<Unit, SootMethod> icfg() {
+                return staticICFG;
+            }
+        };
+    }
 
-			@Override
-			public ObservableICFG<Unit, SootMethod> icfg() {
-				return staticICFG;
-			}
-		};
-	}
+    public void run() {
+        printOptions();
 
-	public void run() {
-		printOptions();
+        Collection<Query> initialSeeds = seedFactory.computeSeeds();
 
-		Collection<Query> initialSeeds = seedFactory.computeSeeds();
+        if (initialSeeds.isEmpty())
+            System.out.println("No seeds found!");
+        else
+            System.out.println("Analysing " + initialSeeds.size() + " seeds!");
+        for (Query s : initialSeeds) {
+            if (!(s instanceof WeightedForwardQuery))
+                continue;
+            WeightedForwardQuery<W> seed = (WeightedForwardQuery<W>) s;
+            seedCount++;
+            logger.info("Analyzing " + seed);
+            Stopwatch watch = Stopwatch.createStarted();
+            analysisTime.put(seed, watch);
+            if (analysisDefinition.icfg() != null)
+                analysisDefinition.icfg().resetCallGraph();
+            ForwardBoomerangResults<W> res = run(seed);
+            watch.stop();
+            System.out.println("Analyzed (finished,timedout): \t (" + (seedCount - timedoutSeeds.size()) + ","
+                    + timedoutSeeds.size() + ") of " + initialSeeds.size() + " seeds! ");
+            analysisDefinition.getResultHandler().report(seed, res);
+        }
+    }
 
-		if (initialSeeds.isEmpty())
-			System.out.println("No seeds found!");
-		else
-			System.out.println("Analysing " + initialSeeds.size() + " seeds!");
-		for (Query s : initialSeeds) {
-			if(!(s instanceof WeightedForwardQuery))
-				continue;
-			WeightedForwardQuery<W> seed = (WeightedForwardQuery<W>) s;
-			seedCount++;
-			logger.info("Analyzing "+ seed);
-			Stopwatch watch = Stopwatch.createStarted();
-			analysisTime.put(seed, watch);
-			if (analysisDefinition.icfg() != null)
-				analysisDefinition.icfg().resetCallGraph();
-			ForwardBoomerangResults<W> res = run(seed);
-			watch.stop();
-			System.out.println("Analyzed (finished,timedout): \t (" + (seedCount -timedoutSeeds.size())+ "," + timedoutSeeds.size() + ") of "+ initialSeeds.size() + " seeds! ");
-			analysisDefinition.getResultHandler().report(seed,res);
-		}
-	}
+    public ForwardBoomerangResults<W> run(ForwardQuery seed) {
+        IDEALSeedSolver<W> idealAnalysis = new IDEALSeedSolver<W>(analysisDefinition, seed, seedFactory);
+        ForwardBoomerangResults<W> res;
+        try {
+            if (analysisDefinition.icfg() != null)
+                analysisDefinition.icfg().resetCallGraph();
+            res = idealAnalysis.run();
+        } catch (IDEALSeedTimeout e) {
+            res = (ForwardBoomerangResults<W>) e.getLastResults();
+            timedoutSeeds.add((WeightedForwardQuery) seed);
+        }
+        analysisDefinition.getResultHandler().report((WeightedForwardQuery) seed, res);
+        return res;
+    }
 
-	public ForwardBoomerangResults<W> run(ForwardQuery seed) {
-		IDEALSeedSolver<W> idealAnalysis = new IDEALSeedSolver<W>(analysisDefinition, seed, seedFactory);
-		ForwardBoomerangResults<W> res;
-		try {
-			if (analysisDefinition.icfg() != null)
-				analysisDefinition.icfg().resetCallGraph();
-			res = idealAnalysis.run();			
-		} catch(IDEALSeedTimeout e){
-			res = (ForwardBoomerangResults<W>) e.getLastResults();
-			timedoutSeeds.add((WeightedForwardQuery) seed);
-		}
-		analysisDefinition.getResultHandler().report((WeightedForwardQuery)seed,res);
-		return res;
-	}
-	private void printOptions() {
-		if(PRINT_OPTIONS) {
-			System.out.println(analysisDefinition);
-		}
-	}
+    private void printOptions() {
+        if (PRINT_OPTIONS) {
+            System.out.println(analysisDefinition);
+        }
+    }
 
-	public Collection<Query> computeSeeds() {
-		return seedFactory.computeSeeds();
-	}
+    public Collection<Query> computeSeeds() {
+        return seedFactory.computeSeeds();
+    }
 
-	public Stopwatch getAnalysisTime(WeightedForwardQuery<TransitionFunction> key) {
-		return analysisTime.get(key);
-	}
+    public Stopwatch getAnalysisTime(WeightedForwardQuery<TransitionFunction> key) {
+        return analysisTime.get(key);
+    }
 
-	public boolean isTimedout(WeightedForwardQuery<TransitionFunction> key) {
-		return timedoutSeeds.contains(key);
-	}
-
+    public boolean isTimedout(WeightedForwardQuery<TransitionFunction> key) {
+        return timedoutSeeds.contains(key);
+    }
 
 }

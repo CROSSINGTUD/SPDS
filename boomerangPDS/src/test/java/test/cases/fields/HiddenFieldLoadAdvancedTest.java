@@ -29,68 +29,70 @@ import wpds.impl.Weight.NoWeight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAUpdateListener;
 
-public class HiddenFieldLoadAdvancedTest extends AbstractBoomerangTest{
-	@Test
-	@Ignore
-	public void run(){
-		A b = new A();
-		A a = b;
-		b.setF();
-		int x = 1;
-		Object alias = a.f();
-		queryFor(alias);
-	}
-	
-	@Override
-	protected void setupSolver(WeightedBoomerang<NoWeight> solver) {
-		doesNotContainTransition(solver,"queryFor(alias)", "x = 1", "b", "{}");
-		doesNotContainTransition(solver,"queryFor(alias)", "a.f(", "b", "{}");
-	}
-	
-	
+public class HiddenFieldLoadAdvancedTest extends AbstractBoomerangTest {
+    @Test
+    @Ignore
+    public void run() {
+        A b = new A();
+        A a = b;
+        b.setF();
+        int x = 1;
+        Object alias = a.f();
+        queryFor(alias);
+    }
 
-	private void doesNotContainTransition(WeightedBoomerang<NoWeight> solver, String solverMatch, String stmt, String fact, String fieldlabel) {
-		solver.registerSolverCreationListener(new SolverCreationListener<NoWeight>() {
-			
-			@Override
-			public void onCreatedSolver(AbstractBoomerangSolver<NoWeight> solver) {
-				if(solver instanceof BackwardBoomerangSolver) {
-					BackwardBoomerangSolver<NoWeight> bsolver = (BackwardBoomerangSolver) solver;
-					if(bsolver.getFieldAutomaton().getInitialState().toString().contains(solverMatch)){
-						bsolver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, NoWeight>() {
+    @Override
+    protected void setupSolver(WeightedBoomerang<NoWeight> solver) {
+        doesNotContainTransition(solver, "queryFor(alias)", "x = 1", "b", "{}");
+        doesNotContainTransition(solver, "queryFor(alias)", "a.f(", "b", "{}");
+    }
 
-							@Override
-							public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, NoWeight w,
-									WeightedPAutomaton<Field, INode<Node<Statement, Val>>, NoWeight> aut) {
-								if(t.getStart().fact().stmt().toString().contains(stmt) && t.getStart().fact().fact().toString().contains(fact) && t.getLabel().toString().contains(fieldlabel))  {
-									throw new RuntimeException("Did not except this transition " + t);
-								}
-							}
+    private void doesNotContainTransition(WeightedBoomerang<NoWeight> solver, String solverMatch, String stmt,
+            String fact, String fieldlabel) {
+        solver.registerSolverCreationListener(new SolverCreationListener<NoWeight>() {
 
-						});
-					}
-					
-				}
-			}
-		});
-		
-	}
+            @Override
+            public void onCreatedSolver(AbstractBoomerangSolver<NoWeight> solver) {
+                if (solver instanceof BackwardBoomerangSolver) {
+                    BackwardBoomerangSolver<NoWeight> bsolver = (BackwardBoomerangSolver) solver;
+                    if (bsolver.getFieldAutomaton().getInitialState().toString().contains(solverMatch)) {
+                        bsolver.getFieldAutomaton().registerListener(
+                                new WPAUpdateListener<Field, INode<Node<Statement, Val>>, NoWeight>() {
 
+                                    @Override
+                                    public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t,
+                                            NoWeight w,
+                                            WeightedPAutomaton<Field, INode<Node<Statement, Val>>, NoWeight> aut) {
+                                        if (t.getStart().fact().stmt().toString().contains(stmt)
+                                                && t.getStart().fact().fact().toString().contains(fact)
+                                                && t.getLabel().toString().contains(fieldlabel)) {
+                                            throw new RuntimeException("Did not except this transition " + t);
+                                        }
+                                    }
 
+                                });
+                    }
 
+                }
+            }
+        });
 
-	private static class A{
-		Object f;
-		public void setF() {
-			f = new Alloc();
-		}
+    }
 
-		public void setF(Object alloc) {
-			f = alloc;
-		}
-		public Object f() {
-			return f;
-		}
-		
-	}
+    private static class A {
+        Object f;
+
+        public void setF() {
+            f = new Alloc();
+        }
+
+        public void setF(Object alloc) {
+            f = alloc;
+        }
+
+        public Object f() {
+            return f;
+        }
+
+    }
 }

@@ -24,52 +24,50 @@ import typestate.finiteautomata.MatcherTransition.Type;
 import typestate.finiteautomata.State;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
-public class PipedOutputStreamStateMachine extends TypeStateMachineWeightFunctions{
+public class PipedOutputStreamStateMachine extends TypeStateMachineWeightFunctions {
 
+    public static enum States implements State {
+        INIT, CONNECTED, ERROR;
 
-	public static enum States implements State {
-		 INIT, CONNECTED, ERROR;
+        @Override
+        public boolean isErrorState() {
+            return this == ERROR;
+        }
 
-		@Override
-		public boolean isErrorState() {
-			return this == ERROR;
-		}
+        @Override
+        public boolean isInitialState() {
+            return false;
+        }
 
-		@Override
-		public boolean isInitialState() {
-			return false;
-		}
+        @Override
+        public boolean isAccepting() {
+            return false;
+        }
+    }
 
-		@Override
-		public boolean isAccepting() {
-			return false;
-		}
-	}
+    public PipedOutputStreamStateMachine() {
+        addTransition(new MatcherTransition(States.INIT, connect(), Parameter.This, States.CONNECTED, Type.OnReturn));
+        addTransition(new MatcherTransition(States.INIT, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+        addTransition(new MatcherTransition(States.CONNECTED, readMethods(), Parameter.This, States.CONNECTED,
+                Type.OnReturn));
+        addTransition(new MatcherTransition(States.ERROR, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+    }
 
-	public PipedOutputStreamStateMachine() {
-		addTransition(
-				new MatcherTransition(States.INIT, connect(), Parameter.This, States.CONNECTED, Type.OnReturn));
-		addTransition(new MatcherTransition(States.INIT, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-		addTransition(new MatcherTransition(States.CONNECTED, readMethods(), Parameter.This, States.CONNECTED, Type.OnReturn));
-		addTransition(new MatcherTransition(States.ERROR, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-	}
-	private Set<SootMethod> connect() {
-		return selectMethodByName(getSubclassesOf("java.io.PipedOutputStream"), "connect");
-	}
+    private Set<SootMethod> connect() {
+        return selectMethodByName(getSubclassesOf("java.io.PipedOutputStream"), "connect");
+    }
 
+    private Set<SootMethod> readMethods() {
+        return selectMethodByName(getSubclassesOf("java.io.PipedOutputStream"), "write");
+    }
 
-	private Set<SootMethod> readMethods() {
-		return selectMethodByName(getSubclassesOf("java.io.PipedOutputStream"), "write");
-	}
+    @Override
+    public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
+        return generateAtAllocationSiteOf(m, unit, java.io.PipedOutputStream.class);
+    }
 
-
-	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
-		return generateAtAllocationSiteOf(m, unit, java.io.PipedOutputStream.class);
-	}
-
-	@Override
-	protected State initialState() {
-		return States.INIT;
-	}
+    @Override
+    protected State initialState() {
+        return States.INIT;
+    }
 }

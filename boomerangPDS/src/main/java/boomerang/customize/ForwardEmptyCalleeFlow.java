@@ -24,21 +24,20 @@ import wpds.interfaces.State;
 
 public class ForwardEmptyCalleeFlow extends EmptyCalleeFlow {
 
-	public Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt curr, Val value,
-			Stmt callSite) {
-		if(isSystemArrayCopy(curr.getInvokeExpr().getMethod())){
-			return systemArrayCopyFlow(caller, curr, value, callSite);
-		}
-		return Collections.emptySet();
-	}
-	@Override
-	protected Collection<? extends State> systemArrayCopyFlow(SootMethod caller, Stmt curr, Val value,
-			Stmt callSite) {
-		if(value.equals(new Val(curr.getInvokeExpr().getArg(0), caller))){
-			Value arg = curr.getInvokeExpr().getArg(2);
-			return Collections.singleton(new Node<Statement, Val>(new Statement(curr, caller), new Val(arg,caller)));
-		}
-		return Collections.emptySet();
-	}
+    public Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt curr, Val value, Stmt callSite) {
+        if (isSystemArrayCopy(curr.getInvokeExpr().getMethod())) {
+            return systemArrayCopyFlow(caller, curr, value, callSite);
+        }
+        return Collections.emptySet();
+    }
+
+    @Override
+    protected Collection<? extends State> systemArrayCopyFlow(SootMethod caller, Stmt curr, Val value, Stmt callSite) {
+        if (value.equals(new Val(curr.getInvokeExpr().getArg(0), caller))) {
+            Value arg = curr.getInvokeExpr().getArg(2);
+            return Collections.singleton(new Node<Statement, Val>(new Statement(curr, caller), new Val(arg, caller)));
+        }
+        return Collections.emptySet();
+    }
 
 }

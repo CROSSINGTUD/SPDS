@@ -41,101 +41,105 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
 
-	private Set<SootMethod> hasNextMethods;
-	private HashSet<SootMethod> res;
+    private Set<SootMethod> hasNextMethods;
+    private HashSet<SootMethod> res;
 
-	public static enum States implements State {
-		NONE, INIT, HASNEXT, ERROR;
+    public static enum States implements State {
+        NONE, INIT, HASNEXT, ERROR;
 
-		@Override
-		public boolean isErrorState() {
-			return this == ERROR;
-		}
+        @Override
+        public boolean isErrorState() {
+            return this == ERROR;
+        }
 
-		@Override
-		public boolean isInitialState() {
-			return false;
-		}
+        @Override
+        public boolean isInitialState() {
+            return false;
+        }
 
-		@Override
-		public boolean isAccepting() {
-			return false;
-		}
-	}
+        @Override
+        public boolean isAccepting() {
+            return false;
+        }
+    }
 
-	public HasNextStateMachine() {
-		addTransition(
-				new MatcherTransition(States.INIT, retrieveNextMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-		addTransition(new MatcherTransition(States.ERROR, retrieveNextMethods(), Parameter.This, States.ERROR,
-				Type.OnReturn));
-		addTransition(new MatcherTransition(States.HASNEXT, retrieveNextMethods(), Parameter.This, States.INIT,
-				Type.OnReturn));
-		addTransition(new MatcherTransition(States.INIT, retrieveHasNextMethods(), Parameter.This, States.HASNEXT,
-				Type.OnReturn));
-		addTransition(new MatcherTransition(States.HASNEXT, retrieveHasNextMethods(), Parameter.This, States.HASNEXT,
-				Type.OnReturn));
-		addTransition(new MatcherTransition(States.ERROR, retrieveHasNextMethods(), Parameter.This, States.ERROR,
-				Type.OnReturn));
-	}
+    public HasNextStateMachine() {
+        addTransition(
+                new MatcherTransition(States.INIT, retrieveNextMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+        addTransition(new MatcherTransition(States.ERROR, retrieveNextMethods(), Parameter.This, States.ERROR,
+                Type.OnReturn));
+        addTransition(new MatcherTransition(States.HASNEXT, retrieveNextMethods(), Parameter.This, States.INIT,
+                Type.OnReturn));
+        addTransition(new MatcherTransition(States.INIT, retrieveHasNextMethods(), Parameter.This, States.HASNEXT,
+                Type.OnReturn));
+        addTransition(new MatcherTransition(States.HASNEXT, retrieveHasNextMethods(), Parameter.This, States.HASNEXT,
+                Type.OnReturn));
+        addTransition(new MatcherTransition(States.ERROR, retrieveHasNextMethods(), Parameter.This, States.ERROR,
+                Type.OnReturn));
+    }
 
-	private Set<SootMethod> retrieveHasNextMethods() {
-		if (hasNextMethods == null)
-			hasNextMethods = selectMethodByName(getImplementersOfIterator("java.util.Iterator"), "hasNext");
-		return hasNextMethods;
-	}
+    private Set<SootMethod> retrieveHasNextMethods() {
+        if (hasNextMethods == null)
+            hasNextMethods = selectMethodByName(getImplementersOfIterator("java.util.Iterator"), "hasNext");
+        return hasNextMethods;
+    }
 
-	private Set<SootMethod> retrieveNextMethods() {
-		return selectMethodByName(getImplementersOfIterator("java.util.Iterator"), "next");
-	}
+    private Set<SootMethod> retrieveNextMethods() {
+        return selectMethodByName(getImplementersOfIterator("java.util.Iterator"), "next");
+    }
 
-	private Set<SootMethod> retrieveIteratorConstructors() {
-		if(res != null)
-			return res;
-		Set<SootMethod> selectMethodByName = selectMethodByName(Scene.v().getClasses(), "iterator");
-		res = new HashSet<>();
-		for (SootMethod m : selectMethodByName) {
-			if (m.getReturnType() instanceof RefType) {
-				RefType refType = (RefType) m.getReturnType();
-				SootClass classs = refType.getSootClass();
-				if (classs.equals(Scene.v().getSootClass("java.util.Iterator")) || Scene.v().getActiveHierarchy()
-						.getImplementersOf(Scene.v().getSootClass("java.util.Iterator")).contains(classs)) {
-					res.add(m);
-				}
-			}
-		}
-		return res;
-	}
+    private Set<SootMethod> retrieveIteratorConstructors() {
+        if (res != null)
+            return res;
+        Set<SootMethod> selectMethodByName = selectMethodByName(Scene.v().getClasses(), "iterator");
+        res = new HashSet<>();
+        for (SootMethod m : selectMethodByName) {
+            if (m.getReturnType() instanceof RefType) {
+                RefType refType = (RefType) m.getReturnType();
+                SootClass classs = refType.getSootClass();
+                if (classs.equals(Scene.v().getSootClass("java.util.Iterator")) || Scene.v().getActiveHierarchy()
+                        .getImplementersOf(Scene.v().getSootClass("java.util.Iterator")).contains(classs)) {
+                    res.add(m);
+                }
+            }
+        }
+        return res;
+    }
 
-	private List<SootClass> getImplementersOfIterator(String className) {
-		SootClass sootClass = Scene.v().getSootClass(className);
-		List<SootClass> list = Scene.v().getActiveHierarchy().getImplementersOf(sootClass);
-		List<SootClass> res = new LinkedList<>();
-		for (SootClass c : list) {
-			res.add(c);
-		}
-		return res;
-	}
+    private List<SootClass> getImplementersOfIterator(String className) {
+        SootClass sootClass = Scene.v().getSootClass(className);
+        List<SootClass> list = Scene.v().getActiveHierarchy().getImplementersOf(sootClass);
+        List<SootClass> res = new LinkedList<>();
+        for (SootClass c : list) {
+            res.add(c);
+        }
+        return res;
+    }
 
-	@Override
-	public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit) {
-		Iterator<Edge> edIt = Scene.v().getCallGraph().edgesOutOf(unit);
-		while (edIt.hasNext()) {
-			SootMethod m = edIt.next().getTgt().method();
-			if (retrieveIteratorConstructors().contains(m)) {
-				Stmt stmt = ((Stmt) unit);
-				InvokeExpr invokeExpr = stmt.getInvokeExpr();
-				if(stmt instanceof AssignStmt) {
-					AssignStmt assignStmt = (AssignStmt) stmt;
-					InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
-					return Collections.singleton(new WeightedForwardQuery<>(new Statement(stmt,method),new AllocVal(assignStmt.getLeftOp(), method, assignStmt.getLeftOp(),new Statement((Stmt) unit,m)),initialTransition()));
-				}
-			}
-		}
-		return Collections.emptySet();
-	}
+    @Override
+    public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit) {
+        Iterator<Edge> edIt = Scene.v().getCallGraph().edgesOutOf(unit);
+        while (edIt.hasNext()) {
+            SootMethod m = edIt.next().getTgt().method();
+            if (retrieveIteratorConstructors().contains(m)) {
+                Stmt stmt = ((Stmt) unit);
+                InvokeExpr invokeExpr = stmt.getInvokeExpr();
+                if (stmt instanceof AssignStmt) {
+                    AssignStmt assignStmt = (AssignStmt) stmt;
+                    InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
+                    return Collections
+                            .singleton(new WeightedForwardQuery<>(
+                                    new Statement(stmt, method), new AllocVal(assignStmt.getLeftOp(), method,
+                                            assignStmt.getLeftOp(), new Statement((Stmt) unit, m)),
+                                    initialTransition()));
+                }
+            }
+        }
+        return Collections.emptySet();
+    }
 
-	@Override
-	public State initialState() {
-		return States.INIT;
-	}
+    @Override
+    public State initialState() {
+        return States.INIT;
+    }
 }

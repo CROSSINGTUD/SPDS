@@ -24,115 +24,115 @@ import typestate.impl.statemachines.VectorStateMachine;
 @SuppressWarnings("deprecation")
 public class StackTest extends IDEALTestingFramework {
 
-	@Test
-	public void test1() {
-		Stack s = new Stack();
-		if (staticallyUnknown())
-			s.peek();
-		else {
-			Stack r = s;
-			r.pop();
-			mustBeInErrorState(r);
-		}
-		mustBeInErrorState(s);
-	}
+    @Test
+    public void test1() {
+        Stack s = new Stack();
+        if (staticallyUnknown())
+            s.peek();
+        else {
+            Stack r = s;
+            r.pop();
+            mustBeInErrorState(r);
+        }
+        mustBeInErrorState(s);
+    }
 
-	@Test
-	public void test4simple() {
-		Stack s = new Stack();
-		s.peek();
-		mustBeInErrorState(s);
-		s.pop();
-		mustBeInErrorState(s);
-	}
+    @Test
+    public void test4simple() {
+        Stack s = new Stack();
+        s.peek();
+        mustBeInErrorState(s);
+        s.pop();
+        mustBeInErrorState(s);
+    }
 
-	@Test
-	public void test2() {
-		Stack s = new Stack();
-		s.add(new Object());
-		if (staticallyUnknown())
-			s.peek();
-		else
-			s.pop();
-		mustBeInAcceptingState(s);
-	}
+    @Test
+    public void test2() {
+        Stack s = new Stack();
+        s.add(new Object());
+        if (staticallyUnknown())
+            s.peek();
+        else
+            s.pop();
+        mustBeInAcceptingState(s);
+    }
 
-	@Test
-	public void test6() {
-		ArrayList l = new ArrayList();
-		Stack s = new Stack();
-		if (staticallyUnknown()) {
-			s.push(new Object());
-		}
-		if (staticallyUnknown()) {
-			s.push(new Object());
-		}
-		if (!s.isEmpty()) {
-			Object pop = s.pop();
-			mayBeInErrorState(s);
-		}
-	}
+    @Test
+    public void test6() {
+        ArrayList l = new ArrayList();
+        Stack s = new Stack();
+        if (staticallyUnknown()) {
+            s.push(new Object());
+        }
+        if (staticallyUnknown()) {
+            s.push(new Object());
+        }
+        if (!s.isEmpty()) {
+            Object pop = s.pop();
+            mayBeInErrorState(s);
+        }
+    }
 
-	@Test
-	public void test3() {
-		Stack s = new Stack();
-		s.peek();
-		mustBeInErrorState(s);
-		s.pop();
-		mustBeInErrorState(s);
-	}
+    @Test
+    public void test3() {
+        Stack s = new Stack();
+        s.peek();
+        mustBeInErrorState(s);
+        s.pop();
+        mustBeInErrorState(s);
+    }
 
-	@Test
-	public void test5() {
-		Stack s = new Stack();
-		s.peek();
-		mustBeInErrorState(s);
-	}
+    @Test
+    public void test5() {
+        Stack s = new Stack();
+        s.peek();
+        mustBeInErrorState(s);
+    }
 
-	@Test
-	public void test4() {
-		Stack s = new Stack();
-		s.peek();
-		s.pop();
+    @Test
+    public void test4() {
+        Stack s = new Stack();
+        s.peek();
+        s.pop();
 
-		Stack c = new Stack();
-		c.add(new Object());
-		c.peek();
-		c.pop();
-		mustBeInErrorState(s);
-		mustBeInAcceptingState(c);
-	}
+        Stack c = new Stack();
+        c.add(new Object());
+        c.peek();
+        c.pop();
+        mustBeInErrorState(s);
+        mustBeInAcceptingState(c);
+    }
 
-	@Test
-	public void testInNewObject() {
-		OwithStack owithStack = new OwithStack();
-		owithStack.pushStack(new Object());
-		owithStack.get();
-		mustBeInAcceptingState(owithStack.stack);
-	}
+    @Test
+    public void testInNewObject() {
+        OwithStack owithStack = new OwithStack();
+        owithStack.pushStack(new Object());
+        owithStack.get();
+        mustBeInAcceptingState(owithStack.stack);
+    }
 
-	private static class OwithStack {
-		Stack stack;
+    private static class OwithStack {
+        Stack stack;
 
-		public void pushStack(Object o) {
-			if (this.stack == null) {
-				this.stack = new Stack();
-			}
-			this.stack.push(o);
-		}
+        public void pushStack(Object o) {
+            if (this.stack == null) {
+                this.stack = new Stack();
+            }
+            this.stack.push(o);
+        }
 
-		public Object get() {
-			if (stack == null || stack.empty()) {
-				return null;
-			}
-			Object peek = this.stack.peek();
-			mustBeInAcceptingState(this.stack);
-			return peek;
-		}
-	}
+        public Object get() {
+            if (stack == null || stack.empty()) {
+                return null;
+            }
+            Object peek = this.stack.peek();
+            mustBeInAcceptingState(this.stack);
+            return peek;
+        }
+    }
 
-	@Override
-	protected TypeStateMachineWeightFunctions getStateMachine() {
-		return new VectorStateMachine();
-	}
+    @Override
+    protected TypeStateMachineWeightFunctions getStateMachine() {
+        return new VectorStateMachine();
+    }
 }

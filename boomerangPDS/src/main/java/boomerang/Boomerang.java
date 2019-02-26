@@ -20,54 +20,57 @@ import sync.pds.solver.WeightFunctions;
 import wpds.impl.Weight.NoWeight;
 
 public abstract class Boomerang extends WeightedBoomerang<NoWeight> {
-	
-	private OneWeightFunctions<Statement, Val, Field, NoWeight> fieldWeights;
-	private OneWeightFunctions<Statement, Val, Statement, NoWeight> callWeights;
 
-	public Boomerang(){
-		super();
-	}
-	public Boomerang(BoomerangOptions opt){
-		super(opt);
-	}
-	
-	@Override
-	protected WeightFunctions<Statement, Val, Field, NoWeight> getForwardFieldWeights() {
-		return getOrCreateFieldWeights();
-	}
+    private OneWeightFunctions<Statement, Val, Field, NoWeight> fieldWeights;
+    private OneWeightFunctions<Statement, Val, Statement, NoWeight> callWeights;
 
-	
-	@Override
-	protected WeightFunctions<Statement, Val, Field, NoWeight> getBackwardFieldWeights() {
-		return getOrCreateFieldWeights();
-	}
+    public Boomerang() {
+        super();
+    }
 
-	@Override
-	protected WeightFunctions<Statement, Val, Statement, NoWeight> getBackwardCallWeights() {
-		return getOrCreateCallWeights();
-	}
+    public Boomerang(BoomerangOptions opt) {
+        super(opt);
+    }
 
-	@Override
-	protected WeightFunctions<Statement, Val, Statement, NoWeight> getForwardCallWeights(ForwardQuery sourceQuery) {
-		return getOrCreateCallWeights();
-	}
+    @Override
+    protected WeightFunctions<Statement, Val, Field, NoWeight> getForwardFieldWeights() {
+        return getOrCreateFieldWeights();
+    }
 
-	@Override
-	public Debugger<NoWeight> createDebugger() {
-		return new Debugger<>();
-	}
-	
-	private WeightFunctions<Statement, Val, Field, NoWeight> getOrCreateFieldWeights() {
-		if(fieldWeights == null) {
-			fieldWeights = new OneWeightFunctions<Statement, Val, Field, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
-		}
-		return fieldWeights;
-	}
-	private WeightFunctions<Statement, Val, Statement, NoWeight> getOrCreateCallWeights() {
-		if(callWeights == null) {
-			callWeights = new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO, NoWeight.NO_WEIGHT_ONE);
-		}
-		return callWeights;
-	}
+    @Override
+    protected WeightFunctions<Statement, Val, Field, NoWeight> getBackwardFieldWeights() {
+        return getOrCreateFieldWeights();
+    }
+
+    @Override
+    protected WeightFunctions<Statement, Val, Statement, NoWeight> getBackwardCallWeights() {
+        return getOrCreateCallWeights();
+    }
+
+    @Override
+    protected WeightFunctions<Statement, Val, Statement, NoWeight> getForwardCallWeights(ForwardQuery sourceQuery) {
+        return getOrCreateCallWeights();
+    }
+
+    @Override
+    public Debugger<NoWeight> createDebugger() {
+        return new Debugger<>();
+    }
+
+    private WeightFunctions<Statement, Val, Field, NoWeight> getOrCreateFieldWeights() {
+        if (fieldWeights == null) {
+            fieldWeights = new OneWeightFunctions<Statement, Val, Field, NoWeight>(NoWeight.NO_WEIGHT_ZERO,
+                    NoWeight.NO_WEIGHT_ONE);
+        }
+        return fieldWeights;
+    }
+
+    private WeightFunctions<Statement, Val, Statement, NoWeight> getOrCreateCallWeights() {
+        if (callWeights == null) {
+            callWeights = new OneWeightFunctions<Statement, Val, Statement, NoWeight>(NoWeight.NO_WEIGHT_ZERO,
+                    NoWeight.NO_WEIGHT_ONE);
+        }
+        return callWeights;
+    }
 
 }

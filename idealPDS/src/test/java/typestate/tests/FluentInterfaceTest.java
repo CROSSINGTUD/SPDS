@@ -18,23 +18,25 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.impl.statemachines.FileMustBeClosedStateMachine;
 import typestate.test.helper.File;
 
-public class FluentInterfaceTest extends IDEALTestingFramework{
-	@Test
-	public void fluentOpen() {
-		File file = new File();
-		file = file.open();
-		mustBeInErrorState(file);
-	}
-	@Test
-	public void fluentOpenAndClose() {
-		File file = new File();
-		file = file.open();
-		mustBeInErrorState(file);
-		file = file.close();
-		mustBeInAcceptingState(file);
-	}
-	@Override
-	protected TypeStateMachineWeightFunctions getStateMachine() {
-		return new FileMustBeClosedStateMachine();
-	}
+public class FluentInterfaceTest extends IDEALTestingFramework {
+    @Test
+    public void fluentOpen() {
+        File file = new File();
+        file = file.open();
+        mustBeInErrorState(file);
+    }
+
+    @Test
+    public void fluentOpenAndClose() {
+        File file = new File();
+        file = file.open();
+        mustBeInErrorState(file);
+        file = file.close();
+        mustBeInAcceptingState(file);
+    }
+
+    @Override
+    protected TypeStateMachineWeightFunctions getStateMachine() {
+        return new FileMustBeClosedStateMachine();
+    }
 }

@@ -29,36 +29,35 @@ import sync.pds.solver.nodes.Node;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 
+public class TestingResultReporter<W extends Weight> {
+    private Multimap<Unit, Assertion> stmtToResults = HashMultimap.create();
 
-public class TestingResultReporter<W extends Weight>{
-	private Multimap<Unit, Assertion> stmtToResults = HashMultimap.create();
-	public TestingResultReporter(Set<Assertion> expectedResults) {
-		for(Assertion e : expectedResults){
-			if(e instanceof ComparableResult)
-				stmtToResults.put(((ComparableResult) e).getStmt(), e);
-		}
-	}
+    public TestingResultReporter(Set<Assertion> expectedResults) {
+        for (Assertion e : expectedResults) {
+            if (e instanceof ComparableResult)
+                stmtToResults.put(((ComparableResult) e).getStmt(), e);
+        }
+    }
 
-	public void onSeedFinished(Node<Statement,Val> seed,final ForwardBoomerangResults<W> res) {
-		Table<Statement, Val, W> results = res.asStatementValWeightTable();
-		for(final Entry<Unit, Assertion> e : stmtToResults.entries()){
-			if(e.getValue() instanceof ComparableResult){
-				final ComparableResult<W,Val> expectedResults = (ComparableResult) e.getValue();
-				W w2 = results.get(new Statement((Stmt)e.getKey(), null), expectedResults.getVal());
-				if(w2 != null) {
-					expectedResults.computedResults(w2);
-				}
-			}
-			//check if any of the methods that should not be analyzed have been analyzed
-			if (e.getValue() instanceof ShouldNotBeAnalyzed){
-				final ShouldNotBeAnalyzed shouldNotBeAnalyzed = (ShouldNotBeAnalyzed) e.getValue();
-				Unit analyzedUnit = e.getKey();
-				if (analyzedUnit.equals(shouldNotBeAnalyzed.unit)){
-					shouldNotBeAnalyzed.hasBeenAnalyzed();
-				}
-			}
-		}
-	}
-
+    public void onSeedFinished(Node<Statement, Val> seed, final ForwardBoomerangResults<W> res) {
+        Table<Statement, Val, W> results = res.asStatementValWeightTable();
+        for (final Entry<Unit, Assertion> e : stmtToResults.entries()) {
+            if (e.getValue() instanceof ComparableResult) {
+                final ComparableResult<W, Val> expectedResults = (ComparableResult) e.getValue();
+                W w2 = results.get(new Statement((Stmt) e.getKey(), null), expectedResults.getVal());
+                if (w2 != null) {
+                    expectedResults.computedResults(w2);
+                }
+            }
+            // check if any of the methods that should not be analyzed have been analyzed
+            if (e.getValue() instanceof ShouldNotBeAnalyzed) {
+                final ShouldNotBeAnalyzed shouldNotBeAnalyzed = (ShouldNotBeAnalyzed) e.getValue();
+                Unit analyzedUnit = e.getKey();
+                if (analyzedUnit.equals(shouldNotBeAnalyzed.unit)) {
+                    shouldNotBeAnalyzed.hasBeenAnalyzed();
+                }
+            }
+        }
+    }
 
 }

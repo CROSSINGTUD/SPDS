@@ -19,33 +19,31 @@ import test.core.selfrunning.AllocatedObject2;
 
 public class MultiQueryTests extends MultiQueryBoomerangTest {
 
+    @Test
+    public void twoQueriesTest() {
+        Object alloc1 = new Alloc1();
+        Object alias1 = new Alloc2();
+        Object query = alloc1;
+        queryFor1(query, AllocatedObject.class);
+        queryFor2(alias1, AllocatedObject2.class);
+    }
 
-	@Test
-	public void twoQueriesTest() {
-		Object alloc1 = new Alloc1();
-		Object alias1 = new Alloc2();
-		Object query = alloc1;
-		queryFor1(query,AllocatedObject.class);
-		queryFor2(alias1,AllocatedObject2.class);
-	}
+    @Test
+    public void withFields() {
+        Alloc1 alloc1 = new Alloc1();
+        Object alias1 = new Alloc2();
+        Alloc1 alias = alloc1;
+        alias.field = alias1;
+        Object query = alloc1.field;
+        queryFor1(alias, AllocatedObject.class);
+        queryFor2(query, AllocatedObject2.class);
+    }
 
-	@Test
-	public void withFields() {
-		Alloc1 alloc1 = new Alloc1();
-		Object alias1 = new Alloc2();
-		Alloc1 alias = alloc1;
-		alias.field = alias1;
-		Object query = alloc1.field;
-		queryFor1(alias,AllocatedObject.class);
-		queryFor2(query,AllocatedObject2.class);
-	}
-	
-	
-	private static class Alloc1 implements AllocatedObject{
-		Object field = new Object();
-	}
-	
-	private static class Alloc2 implements AllocatedObject2{
-		
-	}
+    private static class Alloc1 implements AllocatedObject {
+        Object field = new Object();
+    }
+
+    private static class Alloc2 implements AllocatedObject2 {
+
+    }
 }

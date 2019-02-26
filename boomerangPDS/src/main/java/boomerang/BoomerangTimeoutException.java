@@ -15,16 +15,16 @@ import boomerang.stats.IBoomerangStats;
 
 class BoomerangTimeoutException extends RuntimeException {
 
-	private IBoomerangStats stats;
-	private long elapsed;
+    private IBoomerangStats stats;
+    private long elapsed;
 
-	BoomerangTimeoutException(long elapsed, IBoomerangStats stats) {
-		this.elapsed = elapsed;
-		this.stats = stats;
-	}
+    BoomerangTimeoutException(long elapsed, IBoomerangStats stats) {
+        this.elapsed = elapsed;
+        this.stats = stats;
+    }
 
-	@Override
-	public String toString() {
-		return "Boomerang Timeout after " + elapsed + "ms\n " + stats;
-	}
+    @Override
+    public String toString() {
+        return "Boomerang Timeout after " + elapsed + "ms\n " + stats;
+    }
 }

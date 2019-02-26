@@ -2,8 +2,7 @@ package test;
 
 import soot.Unit;
 
-
-public class ShouldNotBeAnalyzed implements Assertion{
+public class ShouldNotBeAnalyzed implements Assertion {
     public Unit unit;
     private boolean isSatisfied = true;
     private boolean isImprecise = false;
@@ -12,8 +11,8 @@ public class ShouldNotBeAnalyzed implements Assertion{
         this.unit = unit;
     }
 
-    //TODO Melanie: Get calling method, atm this is always shouldNotBeAnalyzed
-    public String toString(){
+    // TODO Melanie: Get calling method, atm this is always shouldNotBeAnalyzed
+    public String toString() {
         return "Method should not be included in analysis: " + unit.toString();
     }
 
@@ -27,7 +26,7 @@ public class ShouldNotBeAnalyzed implements Assertion{
         return isImprecise;
     }
 
-    public void hasBeenAnalyzed(){
+    public void hasBeenAnalyzed() {
         isSatisfied = false;
         isImprecise = true;
     }

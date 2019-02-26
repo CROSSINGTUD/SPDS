@@ -20,71 +20,72 @@ import test.core.AbstractBoomerangTest.AnalysisMode;
 import test.core.selfrunning.AllocatedObject;
 
 public class InnerClassWithThreadTest extends AbstractBoomerangTest {
-	private static Alloc param;
-	@Ignore
-	@Test
-	public void runWithThreadStatic(){
-		param = new Alloc();
-		Runnable r = new Runnable(){
+    private static Alloc param;
 
-			@Override
-			public void run() {
-				String cmd = System.getProperty("");
-//				if(cmd!=null){
-//					param = new Allocation();
-//				}
-				for(int i = 1; i < 3; i++){
-					Object t = param;
-					Object a = t;
-					queryFor(a);
-				}
-			}
-			
-		};
-		Thread t = new Thread(r);
-		t.start();
-	}
-	@Test
-	public void runWithThread(){
-		final Alloc u = new Alloc();
-		Runnable r = new Runnable(){
+    @Ignore
+    @Test
+    public void runWithThreadStatic() {
+        param = new Alloc();
+        Runnable r = new Runnable() {
 
-			@Override
-			public void run() {
-//				String cmd = System.getProperty("");
-//				if(cmd!=null){
-//					param = new Allocation();
-//				}
-				for(int i = 1; i < 3; i++){
-					queryFor(u);
-				}
-			}
-			
-		};
-		Thread t = new Thread(r);
-		t.start();
-	}
+            @Override
+            public void run() {
+                String cmd = System.getProperty("");
+                // if(cmd!=null){
+                // param = new Allocation();
+                // }
+                for (int i = 1; i < 3; i++) {
+                    Object t = param;
+                    Object a = t;
+                    queryFor(a);
+                }
+            }
 
-	
-	@Test
-	public void threadQuery(){
-		for(int i = 1; i < 3; i++){
-			Thread t = new MyThread();
-			t.start();
-			queryFor(t);
-		}
-	}
-	
-	private static class MyThread extends Thread implements AllocatedObject{
-		
-	}
-	protected AnalysisMode[] getAnalyses() {
-		return new AnalysisMode[] {
-				AnalysisMode.DemandDrivenBackward
-				};
-	}
-	@Override
-	protected boolean includeJDK() {
-		return true;
-	}
+        };
+        Thread t = new Thread(r);
+        t.start();
+    }
+
+    @Test
+    public void runWithThread() {
+        final Alloc u = new Alloc();
+        Runnable r = new Runnable() {
+
+            @Override
+            public void run() {
+                // String cmd = System.getProperty("");
+                // if(cmd!=null){
+                // param = new Allocation();
+                // }
+                for (int i = 1; i < 3; i++) {
+                    queryFor(u);
+                }
+            }
+
+        };
+        Thread t = new Thread(r);
+        t.start();
+    }
+
+    @Test
+    public void threadQuery() {
+        for (int i = 1; i < 3; i++) {
+            Thread t = new MyThread();
+            t.start();
+            queryFor(t);
+        }
+    }
+
+    private static class MyThread extends Thread implements AllocatedObject {
+
+    }
+
+    protected AnalysisMode[] getAnalyses() {
+        return new AnalysisMode[] { AnalysisMode.DemandDrivenBackward };
+    }
+
+    @Override
+    protected boolean includeJDK() {
+        return true;
+    }
 }

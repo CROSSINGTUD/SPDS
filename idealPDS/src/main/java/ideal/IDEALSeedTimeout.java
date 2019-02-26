@@ -21,15 +21,16 @@ import wpds.impl.Weight;
 public class IDEALSeedTimeout extends RuntimeException {
     private final IDEALSeedSolver<? extends Weight> solver;
     private WeightedBoomerang<? extends Weight> timedoutSolver;
-	private ForwardBoomerangResults<? extends Weight> lastResults;
+    private ForwardBoomerangResults<? extends Weight> lastResults;
 
-    public <W extends Weight> IDEALSeedTimeout(IDEALSeedSolver<W> solver, WeightedBoomerang<W> timedoutSolver, ForwardBoomerangResults<W> lastResults) {
+    public <W extends Weight> IDEALSeedTimeout(IDEALSeedSolver<W> solver, WeightedBoomerang<W> timedoutSolver,
+            ForwardBoomerangResults<W> lastResults) {
         this.solver = solver;
         this.timedoutSolver = timedoutSolver;
-		this.lastResults = lastResults;
+        this.lastResults = lastResults;
     }
 
-	public IDEALSeedSolver<? extends Weight> getSolver() {
+    public IDEALSeedSolver<? extends Weight> getSolver() {
         return solver;
     }
 
@@ -38,9 +39,9 @@ public class IDEALSeedTimeout extends RuntimeException {
     }
 
     public ForwardBoomerangResults<? extends Weight> getLastResults() {
-    		return lastResults;
+        return lastResults;
     }
-    
+
     @Override
     public String toString() {
         return "IDEAL Seed TimeoutException \n";

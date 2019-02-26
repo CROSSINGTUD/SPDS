@@ -32,84 +32,88 @@ import typestate.finiteautomata.MatcherTransition.Type;
 import typestate.finiteautomata.State;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
-public class KeyStoreStateMachine extends TypeStateMachineWeightFunctions{
+public class KeyStoreStateMachine extends TypeStateMachineWeightFunctions {
 
-	public static enum States implements State {
-		NONE, INIT, LOADED, ERROR;
+    public static enum States implements State {
+        NONE, INIT, LOADED, ERROR;
 
-		@Override
-		public boolean isErrorState() {
-			return this == ERROR ;
-		} 
+        @Override
+        public boolean isErrorState() {
+            return this == ERROR;
+        }
 
-		@Override
-		public boolean isInitialState() {
-			// TODO Auto-generated method stub
-			return false;
-		}
+        @Override
+        public boolean isInitialState() {
+            // TODO Auto-generated method stub
+            return false;
+        }
 
-		@Override
-		public boolean isAccepting() {
-			return false;
-		}
-	}
+        @Override
+        public boolean isAccepting() {
+            return false;
+        }
+    }
 
-	public KeyStoreStateMachine() {
-		// addTransition(new MatcherTransition(States.NONE,
-		// keyStoreConstructor(),Parameter.This, States.INIT, Type.OnReturn));
-		addTransition(new MatcherTransition(States.INIT, loadMethods(), Parameter.This, States.LOADED, Type.OnCallToReturn));
-		addTransition(new MatcherTransition(States.LOADED, anyMethodOtherThanLoad(), Parameter.This, States.LOADED, Type.OnCallToReturn));
+    public KeyStoreStateMachine() {
+        // addTransition(new MatcherTransition(States.NONE,
+        // keyStoreConstructor(),Parameter.This, States.INIT, Type.OnReturn));
+        addTransition(
+                new MatcherTransition(States.INIT, loadMethods(), Parameter.This, States.LOADED, Type.OnCallToReturn));
+        addTransition(new MatcherTransition(States.LOADED, anyMethodOtherThanLoad(), Parameter.This, States.LOADED,
+                Type.OnCallToReturn));
 
-		addTransition(new MatcherTransition(States.INIT, anyMethodOtherThanLoad(), Parameter.This, States.ERROR,
-				Type.OnCallToReturn));
-		addTransition(new MatcherTransition(States.ERROR, anyMethodOtherThanLoad(), Parameter.This, States.ERROR,
-				Type.OnCallToReturn));
+        addTransition(new MatcherTransition(States.INIT, anyMethodOtherThanLoad(), Parameter.This, States.ERROR,
+                Type.OnCallToReturn));
+        addTransition(new MatcherTransition(States.ERROR, anyMethodOtherThanLoad(), Parameter.This, States.ERROR,
+                Type.OnCallToReturn));
 
-	}
+    }
 
-	private Set<SootMethod> anyMethodOtherThanLoad() {
-		List<SootClass> subclasses = getSubclassesOf("java.security.KeyStore");
-		Set<SootMethod> loadMethods = loadMethods();
-		Set<SootMethod> out = new HashSet<>();
-		for (SootClass c : subclasses) {
-			for (SootMethod m : c.getMethods())
-				if (m.isPublic() && !loadMethods.contains(m) && !m.isStatic()) {
-					out.add(m);
-				}
-		}
-		return out;
-	}
+    private Set<SootMethod> anyMethodOtherThanLoad() {
+        List<SootClass> subclasses = getSubclassesOf("java.security.KeyStore");
+        Set<SootMethod> loadMethods = loadMethods();
+        Set<SootMethod> out = new HashSet<>();
+        for (SootClass c : subclasses) {
+            for (SootMethod m : c.getMethods())
+                if (m.isPublic() && !loadMethods.contains(m) && !m.isStatic()) {
+                    out.add(m);
+                }
+        }
+        return out;
+    }
 
-	private Set<SootMethod> loadMethods() {
-		return selectMethodByName(getSubclassesOf("java.security.KeyStore"), "load");
-	}
+    private Set<SootMethod> loadMethods() {
+        return selectMethodByName(getSubclassesOf("java.security.KeyStore"), "load");
+    }
 
-	private Set<SootMethod> keyStoreConstructor() {
-		List<SootClass> subclasses = getSubclassesOf("java.security.KeyStore");
-		Set<SootMethod> out = new HashSet<>();
-		for (SootClass c : subclasses) {
-			for (SootMethod m : c.getMethods())
-				if (m.getName().equals("getInstance") && m.isStatic())
-					out.add(m);
-		}
-		return out;
-	}
+    private Set<SootMethod> keyStoreConstructor() {
+        List<SootClass> subclasses = getSubclassesOf("java.security.KeyStore");
+        Set<SootMethod> out = new HashSet<>();
+        for (SootClass c : subclasses) {
+            for (SootMethod m : c.getMethods())
+                if (m.getName().equals("getInstance") && m.isStatic())
+                    out.add(m);
+        }
+        return out;
+    }
 
-	@Override
-	public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
-		if (unit instanceof AssignStmt) {
-			AssignStmt stmt = (AssignStmt) unit;
-			if(stmt.containsInvokeExpr()){
-				if(keyStoreConstructor().contains(stmt.getInvokeExpr().getMethod())){
-					return Collections.singleton(new WeightedForwardQuery<>(new Statement(stmt,m),new AllocVal(stmt.getLeftOp(), m, stmt.getRightOp(),new Statement((Stmt) unit,m)),initialTransition()));
-				}
-			}
-		}
-		return Collections.emptySet();
-	}
+    @Override
+    public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
+        if (unit instanceof AssignStmt) {
+            AssignStmt stmt = (AssignStmt) unit;
+            if (stmt.containsInvokeExpr()) {
+                if (keyStoreConstructor().contains(stmt.getInvokeExpr().getMethod())) {
+                    return Collections.singleton(new WeightedForwardQuery<>(new Statement(stmt, m),
+                            new AllocVal(stmt.getLeftOp(), m, stmt.getRightOp(), new Statement((Stmt) unit, m)),
+                            initialTransition()));
+                }
+            }
+        }
+        return Collections.emptySet();
+    }
 
-	@Override
-	protected State initialState() {
-		return States.INIT;
-	}
+    @Override
+    protected State initialState() {
+        return States.INIT;
+    }
 }

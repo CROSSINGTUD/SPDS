@@ -23,39 +23,46 @@ import soot.Value;
 import soot.jimple.Stmt;
 
 public interface BoomerangOptions {
-	
-	public boolean staticFlows();
-	
-	public boolean arrayFlows();
-	public boolean typeCheck();
-	public boolean onTheFlyCallGraph();
-	public boolean throwFlows();
-	
-	public boolean callSummaries();
-	public boolean fieldSummaries();
-	
-	public int analysisTimeoutMS();
 
-	public boolean isAllocationVal(Value val);
+    public boolean staticFlows();
 
-	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, ObservableICFG<Unit, SootMethod> icfg);
+    public boolean arrayFlows();
 
-	public boolean isIgnoredMethod(SootMethod method);
-	public IBoomerangStats statsFactory();
+    public boolean typeCheck();
 
-	public boolean aliasing();
-	
-	
-	/**
-	 * Assume we propagate an object of soot.NullType in variable y and the propagation reaches a statement x = (Object) y.
-	 * @return If set to true, the propagation will NOT continue in x. This does not match the runtime semantics.   
-	 * At runtime, null can be cast to any RefType! Though a check (null instanceof Object) returns false.
-	 */
-	public boolean killNullAtCast();
+    public boolean onTheFlyCallGraph();
 
-	boolean trackReturnOfInstanceOf();
-	
-	boolean trackStaticFieldAtEntryPointToClinit();
-	
-	boolean trackFields();
+    public boolean throwFlows();
+
+    public boolean callSummaries();
+
+    public boolean fieldSummaries();
+
+    public int analysisTimeoutMS();
+
+    public boolean isAllocationVal(Value val);
+
+    public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact,
+            ObservableICFG<Unit, SootMethod> icfg);
+
+    public boolean isIgnoredMethod(SootMethod method);
+
+    public IBoomerangStats statsFactory();
+
+    public boolean aliasing();
+
+    /**
+     * Assume we propagate an object of soot.NullType in variable y and the propagation reaches a statement x = (Object)
+     * y.
+     * 
+     * @return If set to true, the propagation will NOT continue in x. This does not match the runtime semantics. At
+     *         runtime, null can be cast to any RefType! Though a check (null instanceof Object) returns false.
+     */
+    public boolean killNullAtCast();
+
+    boolean trackReturnOfInstanceOf();
+
+    boolean trackStaticFieldAtEntryPointToClinit();
+
+    boolean trackFields();
 }

@@ -15,6 +15,6 @@ import soot.RefType;
 
 public interface AllocationTypeListener {
 
-	void allocationType(RefType m);
+    void allocationType(RefType m);
 
 }

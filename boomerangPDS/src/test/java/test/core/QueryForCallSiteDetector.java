@@ -87,7 +87,7 @@ class QueryForCallSiteDetector extends SimpleSeedFactory {
             Statement newStatement = new Statement(unit, newMethod);
             Val newVal = new Val(param, newMethod);
             BackwardQuery newBackwardQuery = new BackwardQuery(newStatement, newVal);
-            return Optional.<Query>of(newBackwardQuery);
+            return Optional.<Query> of(newBackwardQuery);
         }
     }
 

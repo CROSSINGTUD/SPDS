@@ -11,7 +11,6 @@
  *******************************************************************************/
 package test.cases.lists;
 
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -23,31 +22,31 @@ import org.junit.Test;
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 
-public class ArrayAndLinkedListsTest extends AbstractBoomerangTest{
-	
-	@Override
-	protected boolean includeJDK() {
-		return true;
-	}
-	
-	@Test
-	public void addAndRetrieve(){
-		List<Object> list1 = new LinkedList<>();
-		Object o = new Alloc();
-		add(list1, o);
-		Object o2 = new Object();
-		List<Object> list2 = new ArrayList<>();
-		add(list2, o2);
-		queryFor(o);		
+public class ArrayAndLinkedListsTest extends AbstractBoomerangTest {
 
-	}
-	
-	private void add(List<Object> list1, Object o) {
-		list1.add(o);
-	}
+    @Override
+    protected boolean includeJDK() {
+        return true;
+    }
 
-	@Override
-	protected Collection<String> errorOnVisitMethod() {
-		return Collections.singleton("<java.util.ArrayList: boolean add(java.lang.Object)>");
-	}
+    @Test
+    public void addAndRetrieve() {
+        List<Object> list1 = new LinkedList<>();
+        Object o = new Alloc();
+        add(list1, o);
+        Object o2 = new Object();
+        List<Object> list2 = new ArrayList<>();
+        add(list2, o2);
+        queryFor(o);
+
+    }
+
+    private void add(List<Object> list1, Object o) {
+        list1.add(o);
+    }
+
+    @Override
+    protected Collection<String> errorOnVisitMethod() {
+        return Collections.singleton("<java.util.ArrayList: boolean add(java.lang.Object)>");
+    }
 }

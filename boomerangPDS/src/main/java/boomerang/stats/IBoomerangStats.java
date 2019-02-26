@@ -38,11 +38,11 @@ public interface IBoomerangStats<W extends Weight> {
     void registerFieldReadPOI(WeightedBoomerang<W>.FieldReadPOI key);
 
     Set<SootMethod> getCallVisitedMethods();
-    
+
     Collection<? extends Node<Statement, Val>> getForwardReachesNodes();
 
-	void terminated(ForwardQuery query, ForwardBoomerangResults<W> forwardBoomerangResults);
+    void terminated(ForwardQuery query, ForwardBoomerangResults<W> forwardBoomerangResults);
 
-	void terminated(BackwardQuery query, BackwardBoomerangResults<W> backwardBoomerangResults);
-	
+    void terminated(BackwardQuery query, BackwardBoomerangResults<W> backwardBoomerangResults);
+
 }

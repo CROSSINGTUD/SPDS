@@ -28,69 +28,73 @@ import typestate.finiteautomata.MatcherTransition.Type;
 import typestate.finiteautomata.State;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
-public class SocketStateMachine extends TypeStateMachineWeightFunctions{
+public class SocketStateMachine extends TypeStateMachineWeightFunctions {
 
-	public static enum States implements State {
-		INIT, CONNECTED, ERROR;
+    public static enum States implements State {
+        INIT, CONNECTED, ERROR;
 
-		@Override
-		public boolean isErrorState() {
-			return this == ERROR;
-		}
+        @Override
+        public boolean isErrorState() {
+            return this == ERROR;
+        }
 
-		@Override
-		public boolean isInitialState() {
-			return false;
-		}
+        @Override
+        public boolean isInitialState() {
+            return false;
+        }
 
-		@Override
-		public boolean isAccepting() {
-			return false;
-		}
-	}
-	public SocketStateMachine() {
-		addTransition(new MatcherTransition(States.INIT, connect(), Parameter.This, States.CONNECTED, Type.OnReturn));
-		addTransition(new MatcherTransition(States.ERROR, connect(), Parameter.This, States.ERROR, Type.OnReturn));
-		addTransition(new MatcherTransition(States.CONNECTED, useMethods(), Parameter.This, States.CONNECTED, Type.OnReturn));
-		addTransition(new MatcherTransition(States.INIT, useMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-		addTransition(new MatcherTransition(States.CONNECTED, connect(), Parameter.This, States.CONNECTED, Type.OnReturn));
-		addTransition(new MatcherTransition(States.ERROR, useMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-	}
+        @Override
+        public boolean isAccepting() {
+            return false;
+        }
+    }
 
-	private Set<SootMethod> socketConstructor() {
-		List<SootClass> subclasses = getSubclassesOf("java.net.Socket");
-		Set<SootMethod> out = new HashSet<>();
-		for (SootClass c : subclasses) {
-			for (SootMethod m : c.getMethods())
-				if (m.isConstructor())
-					out.add(m);
-		}
-		return out;
-	}
+    public SocketStateMachine() {
+        addTransition(new MatcherTransition(States.INIT, connect(), Parameter.This, States.CONNECTED, Type.OnReturn));
+        addTransition(new MatcherTransition(States.ERROR, connect(), Parameter.This, States.ERROR, Type.OnReturn));
+        addTransition(
+                new MatcherTransition(States.CONNECTED, useMethods(), Parameter.This, States.CONNECTED, Type.OnReturn));
+        addTransition(new MatcherTransition(States.INIT, useMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+        addTransition(
+                new MatcherTransition(States.CONNECTED, connect(), Parameter.This, States.CONNECTED, Type.OnReturn));
+        addTransition(new MatcherTransition(States.ERROR, useMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+    }
 
-	private Set<SootMethod> connect() {
-		return selectMethodByName(getSubclassesOf("java.net.Socket"), "connect");
-	}
+    private Set<SootMethod> socketConstructor() {
+        List<SootClass> subclasses = getSubclassesOf("java.net.Socket");
+        Set<SootMethod> out = new HashSet<>();
+        for (SootClass c : subclasses) {
+            for (SootMethod m : c.getMethods())
+                if (m.isConstructor())
+                    out.add(m);
+        }
+        return out;
+    }
 
-	private Set<SootMethod> useMethods() {
-		List<SootClass> subclasses = getSubclassesOf("java.net.Socket");
-		Set<SootMethod> connectMethod = connect();
-		Set<SootMethod> out = new HashSet<>();
-		for (SootClass c : subclasses) {
-			for (SootMethod m : c.getMethods())
-				if (!m.isConstructor() && m.isPublic() && !connectMethod.contains(m) && !m.isStatic() && !m.getName().startsWith("is"))
-					out.add(m);
-		}
-		return out;
-	}
+    private Set<SootMethod> connect() {
+        return selectMethodByName(getSubclassesOf("java.net.Socket"), "connect");
+    }
 
-	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
-		return generateAtAllocationSiteOf(m, unit, Socket.class);
-	}
+    private Set<SootMethod> useMethods() {
+        List<SootClass> subclasses = getSubclassesOf("java.net.Socket");
+        Set<SootMethod> connectMethod = connect();
+        Set<SootMethod> out = new HashSet<>();
+        for (SootClass c : subclasses) {
+            for (SootMethod m : c.getMethods())
+                if (!m.isConstructor() && m.isPublic() && !connectMethod.contains(m) && !m.isStatic()
+                        && !m.getName().startsWith("is"))
+                    out.add(m);
+        }
+        return out;
+    }
 
-	@Override
-	protected State initialState() {
-		return States.INIT;
-	}
+    @Override
+    public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
+        return generateAtAllocationSiteOf(m, unit, Socket.class);
+    }
+
+    @Override
+    protected State initialState() {
+        return States.INIT;
+    }
 }

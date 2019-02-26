@@ -28,144 +28,145 @@ import wpds.interfaces.Empty;
 import wpds.interfaces.Location;
 
 public class Statement implements Location {
-	//Wrapper for stmt so we know the method
-	private static Statement epsilon;
-	private final Stmt delegate;
-	private final SootMethod method;
-	private final String rep;
+    // Wrapper for stmt so we know the method
+    private static Statement epsilon;
+    private final Stmt delegate;
+    private final SootMethod method;
+    private final String rep;
 
-	public Statement(Stmt delegate, SootMethod m) {
-		this.delegate = delegate;
-		this.method = m;
-		this.rep = null;
-	}
-	
-	private Statement(String rep) {
-		this.rep = rep;
-		this.delegate = null;
-		this.method = null;
-	}
+    public Statement(Stmt delegate, SootMethod m) {
+        this.delegate = delegate;
+        this.method = m;
+        this.rep = null;
+    }
 
-	public Optional<Stmt> getUnit() {
-		if (delegate == null)
-			return Optional.absent();
-		return Optional.of(delegate);
-	}
-	
-	public boolean isCallsite(){
-		return delegate != null && delegate.containsInvokeExpr();
-	}
+    private Statement(String rep) {
+        this.rep = rep;
+        this.delegate = null;
+        this.method = null;
+    }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((delegate == null) ? 0 : delegate.hashCode());
-		result = prime * result + ((rep == null) ? 0 : rep.hashCode());
-		return result;
-	}
+    public Optional<Stmt> getUnit() {
+        if (delegate == null)
+            return Optional.absent();
+        return Optional.of(delegate);
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		Statement other = (Statement) obj;
-		if (rep == null) {
-			if (other.rep != null)
-				return false;
-		} else if (!rep.equals(other.rep))
-			return false;
-		if (delegate == null) {
-			if (other.delegate != null)
-				return false;
-		} else if (!delegate.equals(other.delegate))
-			return false;
-		return true;
-	}
+    public boolean isCallsite() {
+        return delegate != null && delegate.containsInvokeExpr();
+    }
 
-	public static Statement epsilon() {
-		if (epsilon == null) {
-			epsilon = new EpsStatement();
-		}
-		return epsilon;
-	}
-	
-	private static class EpsStatement extends Statement implements Empty{
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((delegate == null) ? 0 : delegate.hashCode());
+        result = prime * result + ((rep == null) ? 0 : rep.hashCode());
+        return result;
+    }
 
-		public EpsStatement() {
-			super("Eps_s");
-		}
-		
-	}
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        Statement other = (Statement) obj;
+        if (rep == null) {
+            if (other.rep != null)
+                return false;
+        } else if (!rep.equals(other.rep))
+            return false;
+        if (delegate == null) {
+            if (other.delegate != null)
+                return false;
+        } else if (!delegate.equals(other.delegate))
+            return false;
+        return true;
+    }
 
-	@Override
-	public String toString() {
-		if (delegate == null) {
-			return rep;
-		}
-		if(DEBUG){
-			return method.getName() + " " + shortName(delegate);
-		}
-		return "[" + Integer.toString(methodToInt(method)) + "]" + Integer.toString(stmtToInt(delegate));
-	}
+    public static Statement epsilon() {
+        if (epsilon == null) {
+            epsilon = new EpsStatement();
+        }
+        return epsilon;
+    }
 
-	private String shortName(Stmt s) {
-		if(s.containsInvokeExpr()){
-			String base = "";
-			if(s.getInvokeExpr() instanceof InstanceInvokeExpr){
-				InstanceInvokeExpr iie = (InstanceInvokeExpr) s.getInvokeExpr();
-				base = iie.getBase().toString()+".";
-			}
-			String assign = "";
-			if(s instanceof AssignStmt){
-				assign = ((AssignStmt)s).getLeftOp() + " = ";
-			}
-			return assign + base+s.getInvokeExpr().getMethod().getName() + "(" +Joiner.on(",").join(s.getInvokeExpr().getArgs())+")";
-		}
-		if(s instanceof IdentityStmt){
-			return "id";
-		}
-		if(s instanceof AssignStmt){
-			AssignStmt assignStmt = (AssignStmt) s;
-			if(assignStmt.getLeftOp() instanceof InstanceFieldRef){
-				InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getLeftOp();
-				return ifr.getBase() +"."+ifr.getField().getName() +" = " + assignStmt.getRightOp();
-			}
-			if(assignStmt.getRightOp() instanceof InstanceFieldRef){
-				InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
-				return assignStmt.getLeftOp()  +" = " +ifr.getBase() +"."+ifr.getField().getName();
-			}
-			if(assignStmt.getRightOp() instanceof NewExpr){
-				NewExpr newExpr = (NewExpr) assignStmt.getRightOp();
-				return assignStmt.getLeftOp()  +" = new " +newExpr.getBaseType().getSootClass().getShortName();
-			}
-		}
-		return s.toString();
-	}
+    private static class EpsStatement extends Statement implements Empty {
 
-	private static boolean DEBUG = true;
-	private static Map<SootMethod, Integer> methodToInteger = new HashMap<>();
-	private static Map<Stmt, Integer> statementToInteger = new HashMap<>();
+        public EpsStatement() {
+            super("Eps_s");
+        }
 
-	public int stmtToInt(Stmt s) {
-		if (!statementToInteger.containsKey(s)) {
-			statementToInteger.put(s, statementToInteger.size());
-		}
-		return statementToInteger.get(s);
-	}
+    }
 
-	public int methodToInt(SootMethod method) {
-		if (!methodToInteger.containsKey(method)) {
-			methodToInteger.put(method, methodToInteger.size());
-		}
-		return methodToInteger.get(method);
-	}
+    @Override
+    public String toString() {
+        if (delegate == null) {
+            return rep;
+        }
+        if (DEBUG) {
+            return method.getName() + " " + shortName(delegate);
+        }
+        return "[" + Integer.toString(methodToInt(method)) + "]" + Integer.toString(stmtToInt(delegate));
+    }
 
-	public SootMethod getMethod() {
-		return method;
-	}
+    private String shortName(Stmt s) {
+        if (s.containsInvokeExpr()) {
+            String base = "";
+            if (s.getInvokeExpr() instanceof InstanceInvokeExpr) {
+                InstanceInvokeExpr iie = (InstanceInvokeExpr) s.getInvokeExpr();
+                base = iie.getBase().toString() + ".";
+            }
+            String assign = "";
+            if (s instanceof AssignStmt) {
+                assign = ((AssignStmt) s).getLeftOp() + " = ";
+            }
+            return assign + base + s.getInvokeExpr().getMethod().getName() + "("
+                    + Joiner.on(",").join(s.getInvokeExpr().getArgs()) + ")";
+        }
+        if (s instanceof IdentityStmt) {
+            return "id";
+        }
+        if (s instanceof AssignStmt) {
+            AssignStmt assignStmt = (AssignStmt) s;
+            if (assignStmt.getLeftOp() instanceof InstanceFieldRef) {
+                InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getLeftOp();
+                return ifr.getBase() + "." + ifr.getField().getName() + " = " + assignStmt.getRightOp();
+            }
+            if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
+                InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
+                return assignStmt.getLeftOp() + " = " + ifr.getBase() + "." + ifr.getField().getName();
+            }
+            if (assignStmt.getRightOp() instanceof NewExpr) {
+                NewExpr newExpr = (NewExpr) assignStmt.getRightOp();
+                return assignStmt.getLeftOp() + " = new " + newExpr.getBaseType().getSootClass().getShortName();
+            }
+        }
+        return s.toString();
+    }
+
+    private static boolean DEBUG = true;
+    private static Map<SootMethod, Integer> methodToInteger = new HashMap<>();
+    private static Map<Stmt, Integer> statementToInteger = new HashMap<>();
+
+    public int stmtToInt(Stmt s) {
+        if (!statementToInteger.containsKey(s)) {
+            statementToInteger.put(s, statementToInteger.size());
+        }
+        return statementToInteger.get(s);
+    }
+
+    public int methodToInt(SootMethod method) {
+        if (!methodToInteger.containsKey(method)) {
+            methodToInteger.put(method, methodToInteger.size());
+        }
+        return methodToInteger.get(method);
+    }
+
+    public SootMethod getMethod() {
+        return method;
+    }
 }

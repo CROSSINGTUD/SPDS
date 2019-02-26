@@ -16,50 +16,56 @@ import org.junit.Test;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
-public class IntraproceduralStrongUpdateTest extends AbstractBoomerangTest{
-	@Test
-	public void strongUpdateWithField(){
-		A a = new A();
-		a.field = new Object();
-		A b = a;
-		b.field = new AllocatedObject(){};
-		Object alias = a.field;
-		queryFor(alias);
-	}
-	@Test
-	public void strongUpdateWithFieldSwapped(){
-		A a = new A();
-		A b = a;
-		b.field = new Object();
-		a.field = new AllocatedObject(){};
-		Object alias = a.field;
-		queryFor(alias);
-	}
-	private class A{
-		Object field;
-	}
-	
-	@Test
-	public void innerClass(){
-		A a = new A();
-		A b = a;
-		b.field = new I();
-		Object alias = a.field;
-		queryFor(alias);
-	}
-	private class I implements AllocatedObject{
-	}
-	
+public class IntraproceduralStrongUpdateTest extends AbstractBoomerangTest {
+    @Test
+    public void strongUpdateWithField() {
+        A a = new A();
+        a.field = new Object();
+        A b = a;
+        b.field = new AllocatedObject() {
+        };
+        Object alias = a.field;
+        queryFor(alias);
+    }
 
-	private static class B{
-		Object field;
-	}
-	@Test
-	public void anonymousClass(){
-		B a = new B();
-		B b = a;
-		b.field = new AllocatedObject() {};
-		Object alias = a.field;
-		queryFor(alias);
-	}
+    @Test
+    public void strongUpdateWithFieldSwapped() {
+        A a = new A();
+        A b = a;
+        b.field = new Object();
+        a.field = new AllocatedObject() {
+        };
+        Object alias = a.field;
+        queryFor(alias);
+    }
+
+    private class A {
+        Object field;
+    }
+
+    @Test
+    public void innerClass() {
+        A a = new A();
+        A b = a;
+        b.field = new I();
+        Object alias = a.field;
+        queryFor(alias);
+    }
+
+    private class I implements AllocatedObject {
+    }
+
+    private static class B {
+        Object field;
+    }
+
+    @Test
+    public void anonymousClass() {
+        B a = new B();
+        B b = a;
+        b.field = new AllocatedObject() {
+        };
+        Object alias = a.field;
+        queryFor(alias);
+    }
 }

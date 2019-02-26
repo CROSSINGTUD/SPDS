@@ -12,9 +12,9 @@ import java.util.*;
 
 public abstract class SimpleSeedFactory {
 
-    protected ObservableICFG<Unit,SootMethod> icfg;
+    protected ObservableICFG<Unit, SootMethod> icfg;
 
-    public SimpleSeedFactory(ObservableICFG<Unit,SootMethod> icfg) {
+    public SimpleSeedFactory(ObservableICFG<Unit, SootMethod> icfg) {
         this.icfg = icfg;
     }
 
@@ -24,13 +24,13 @@ public abstract class SimpleSeedFactory {
         List<SootMethod> worklist = new ArrayList<>(Scene.v().getEntryPoints());
 
         Set<SootMethod> visited = new HashSet<>();
-        while (!worklist.isEmpty()){
+        while (!worklist.isEmpty()) {
             SootMethod m = worklist.get(0);
             visited.add(m);
             worklist.remove(m);
-            if(!m.hasActiveBody())
+            if (!m.hasActiveBody())
                 continue;
-            for(Unit u : m.getActiveBody().getUnits()) {
+            for (Unit u : m.getActiveBody().getUnits()) {
                 Collection<SootMethod> calledMethods = new HashSet<SootMethod>();
                 if (icfg.isCallStmt(u)) {
                     icfg.addCalleeListener(new CalleeListener<Unit, SootMethod>() {
@@ -42,7 +42,7 @@ public abstract class SimpleSeedFactory {
                         @Override
                         public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
                             calledMethods.add(sootMethod);
-                            if (!visited.contains(sootMethod) && !worklist.contains(sootMethod)){
+                            if (!visited.contains(sootMethod) && !worklist.contains(sootMethod)) {
                                 worklist.add(sootMethod);
                             }
                         }
@@ -54,6 +54,7 @@ public abstract class SimpleSeedFactory {
         return seeds;
     }
 
-    protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u, Collection<SootMethod> calledMethods);
+    protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u,
+            Collection<SootMethod> calledMethods);
 
 }

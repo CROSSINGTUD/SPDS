@@ -45,134 +45,137 @@ import soot.util.queue.QueueReader;
 
 public class BoomerangPretransformer extends BodyTransformer {
 
-	public static boolean TRANSFORM_CONSTANTS = true;
-	private static BoomerangPretransformer instance;
-	private int replaceCounter;
-	private boolean applied;
+    public static boolean TRANSFORM_CONSTANTS = true;
+    private static BoomerangPretransformer instance;
+    private int replaceCounter;
+    private boolean applied;
 
-	@Override
-	protected void internalTransform(Body b, String phaseName, Map<String, String> options) {
-		addNopStmtToMethods(b);
-		if(TRANSFORM_CONSTANTS)
-			transformConstantAtFieldWrites(b);
-	}
+    @Override
+    protected void internalTransform(Body b, String phaseName, Map<String, String> options) {
+        addNopStmtToMethods(b);
+        if (TRANSFORM_CONSTANTS)
+            transformConstantAtFieldWrites(b);
+    }
 
-	private void transformConstantAtFieldWrites(Body body) {
-		Set<Unit> cwnc = getStmtsWithConstants(body);
-		for (Unit u : cwnc) {
-			if (u instanceof AssignStmt) {
-				AssignStmt assignStmt = (AssignStmt) u;
-				if (isFieldRef(assignStmt.getLeftOp()) && assignStmt.getRightOp() instanceof Constant && !(assignStmt.getRightOp() instanceof ClassConstant)) {
-					String label = "varReplacer" + new Integer(replaceCounter++).toString();
-					Local paramVal = new JimpleLocal(label, assignStmt.getRightOp().getType());
-					AssignStmt newUnit = new JAssignStmt(paramVal, assignStmt.getRightOp());
-					body.getLocals().add(paramVal);
-					body.getUnits().insertBefore(newUnit, u);
-					AssignStmt other = new JAssignStmt(assignStmt.getLeftOp(), paramVal);
-					body.getUnits().insertBefore(other, u);
-					body.getUnits().remove(u);
-				}
-			}
-			if (u instanceof Stmt && ((Stmt) u).containsInvokeExpr() && !u.toString().contains("test.assertions.Assertions:") && !u.toString().contains("intQueryFor")) {
-				Stmt stmt = (Stmt) u;
-				if(stmt.getInvokeExpr().getMethod().getSignature().equals("<java.math.BigInteger: java.math.BigInteger valueOf(long)>")) {
-					continue;
-				}
-				List<ValueBox> useBoxes = stmt.getInvokeExpr().getUseBoxes();
-				for (Value v : stmt.getInvokeExpr().getArgs()) {
-					if (v instanceof Constant && !(v instanceof ClassConstant)) {
-						String label = "varReplacer" + new Integer(replaceCounter++).toString();
-						Local paramVal = new JimpleLocal(label, v.getType());
-						AssignStmt newUnit = new JAssignStmt(paramVal, v);
-						body.getLocals().add(paramVal);
-						body.getUnits().insertBefore(newUnit, u);
-						for (ValueBox b : useBoxes) {
-							if (b.getValue().equals(v)) {
-								b.setValue(paramVal);
-							}
-						}
-					}
-				}
-			}
-			if (u instanceof ReturnStmt) {
-				ReturnStmt returnStmt = (ReturnStmt) u;
-				String label = "varReplacer" + new Integer(replaceCounter++).toString();
-				Local paramVal = new JimpleLocal(label, returnStmt.getOp().getType());
-				AssignStmt newUnit = new JAssignStmt(paramVal, returnStmt.getOp());
-				body.getLocals().add(paramVal);
-				body.getUnits().insertBefore(newUnit, u);
-				JReturnStmt other = new JReturnStmt(paramVal);
-				body.getUnits().insertBefore(other, u);
-				body.getUnits().remove(u);
-			}
-		}
-	}
+    private void transformConstantAtFieldWrites(Body body) {
+        Set<Unit> cwnc = getStmtsWithConstants(body);
+        for (Unit u : cwnc) {
+            if (u instanceof AssignStmt) {
+                AssignStmt assignStmt = (AssignStmt) u;
+                if (isFieldRef(assignStmt.getLeftOp()) && assignStmt.getRightOp() instanceof Constant
+                        && !(assignStmt.getRightOp() instanceof ClassConstant)) {
+                    String label = "varReplacer" + new Integer(replaceCounter++).toString();
+                    Local paramVal = new JimpleLocal(label, assignStmt.getRightOp().getType());
+                    AssignStmt newUnit = new JAssignStmt(paramVal, assignStmt.getRightOp());
+                    body.getLocals().add(paramVal);
+                    body.getUnits().insertBefore(newUnit, u);
+                    AssignStmt other = new JAssignStmt(assignStmt.getLeftOp(), paramVal);
+                    body.getUnits().insertBefore(other, u);
+                    body.getUnits().remove(u);
+                }
+            }
+            if (u instanceof Stmt && ((Stmt) u).containsInvokeExpr()
+                    && !u.toString().contains("test.assertions.Assertions:") && !u.toString().contains("intQueryFor")) {
+                Stmt stmt = (Stmt) u;
+                if (stmt.getInvokeExpr().getMethod().getSignature()
+                        .equals("<java.math.BigInteger: java.math.BigInteger valueOf(long)>")) {
+                    continue;
+                }
+                List<ValueBox> useBoxes = stmt.getInvokeExpr().getUseBoxes();
+                for (Value v : stmt.getInvokeExpr().getArgs()) {
+                    if (v instanceof Constant && !(v instanceof ClassConstant)) {
+                        String label = "varReplacer" + new Integer(replaceCounter++).toString();
+                        Local paramVal = new JimpleLocal(label, v.getType());
+                        AssignStmt newUnit = new JAssignStmt(paramVal, v);
+                        body.getLocals().add(paramVal);
+                        body.getUnits().insertBefore(newUnit, u);
+                        for (ValueBox b : useBoxes) {
+                            if (b.getValue().equals(v)) {
+                                b.setValue(paramVal);
+                            }
+                        }
+                    }
+                }
+            }
+            if (u instanceof ReturnStmt) {
+                ReturnStmt returnStmt = (ReturnStmt) u;
+                String label = "varReplacer" + new Integer(replaceCounter++).toString();
+                Local paramVal = new JimpleLocal(label, returnStmt.getOp().getType());
+                AssignStmt newUnit = new JAssignStmt(paramVal, returnStmt.getOp());
+                body.getLocals().add(paramVal);
+                body.getUnits().insertBefore(newUnit, u);
+                JReturnStmt other = new JReturnStmt(paramVal);
+                body.getUnits().insertBefore(other, u);
+                body.getUnits().remove(u);
+            }
+        }
+    }
 
-	/**
-	 * The first statement of a method must be a nop statement, because the call-flow functions do only map parameters to arguments.
-	 * If the first statement of a method would be an assign statement, the analysis misses data-flows.
-	 */
-	private void addNopStmtToMethods(Body b) {
-		b.getUnits().insertBefore(new JNopStmt(), b.getUnits().getFirst());
-	}
+    /**
+     * The first statement of a method must be a nop statement, because the call-flow functions do only map parameters
+     * to arguments. If the first statement of a method would be an assign statement, the analysis misses data-flows.
+     */
+    private void addNopStmtToMethods(Body b) {
+        b.getUnits().insertBefore(new JNopStmt(), b.getUnits().getFirst());
+    }
 
-	private Set<Unit> getStmtsWithConstants(Body methodBody) {
-		Set<Unit> retMap = Sets.newHashSet();
-		for (Unit u : methodBody.getUnits()) {
-			if (u instanceof AssignStmt) {
-				AssignStmt assignStmt = (AssignStmt) u;
-				if (isFieldRef(assignStmt.getLeftOp()) && assignStmt.getRightOp() instanceof Constant) {
-					retMap.add(u);
-				}
-			}
-			if (u instanceof Stmt && ((Stmt) u).containsInvokeExpr()) {
-				Stmt stmt = (Stmt) u;
-				for (Value v : stmt.getInvokeExpr().getArgs()) {
-					if (v instanceof Constant) {
-						retMap.add(u);
-					}
-				}
-			}
-			if (u instanceof ReturnStmt) {
-				ReturnStmt assignStmt = (ReturnStmt) u;
-				if (assignStmt.getOp() instanceof Constant) {
-					retMap.add(u);
-				}
-			}
-		}
-		return retMap;
-	}
+    private Set<Unit> getStmtsWithConstants(Body methodBody) {
+        Set<Unit> retMap = Sets.newHashSet();
+        for (Unit u : methodBody.getUnits()) {
+            if (u instanceof AssignStmt) {
+                AssignStmt assignStmt = (AssignStmt) u;
+                if (isFieldRef(assignStmt.getLeftOp()) && assignStmt.getRightOp() instanceof Constant) {
+                    retMap.add(u);
+                }
+            }
+            if (u instanceof Stmt && ((Stmt) u).containsInvokeExpr()) {
+                Stmt stmt = (Stmt) u;
+                for (Value v : stmt.getInvokeExpr().getArgs()) {
+                    if (v instanceof Constant) {
+                        retMap.add(u);
+                    }
+                }
+            }
+            if (u instanceof ReturnStmt) {
+                ReturnStmt assignStmt = (ReturnStmt) u;
+                if (assignStmt.getOp() instanceof Constant) {
+                    retMap.add(u);
+                }
+            }
+        }
+        return retMap;
+    }
 
-	private boolean isFieldRef(Value op) {
-		return op instanceof InstanceFieldRef || op instanceof StaticFieldRef;
-	}
+    private boolean isFieldRef(Value op) {
+        return op instanceof InstanceFieldRef || op instanceof StaticFieldRef;
+    }
 
-	public void apply() {	
-		if(applied)
-			return;
-		ReachableMethods reachableMethods = Scene.v().getReachableMethods();
-		QueueReader<MethodOrMethodContext> listener = reachableMethods.listener();
-		while (listener.hasNext()) {
-			SootMethod method = listener.next().method();
-			if(method.hasActiveBody()) {
-				internalTransform(method.getActiveBody(),"",new HashMap<>());
-			}
-		}
-		applied = true;
-	}
+    public void apply() {
+        if (applied)
+            return;
+        ReachableMethods reachableMethods = Scene.v().getReachableMethods();
+        QueueReader<MethodOrMethodContext> listener = reachableMethods.listener();
+        while (listener.hasNext()) {
+            SootMethod method = listener.next().method();
+            if (method.hasActiveBody()) {
+                internalTransform(method.getActiveBody(), "", new HashMap<>());
+            }
+        }
+        applied = true;
+    }
 
-	public boolean isApplied() {
-		return applied;
-	}
-	
-	public static BoomerangPretransformer v() {
-		if(instance == null) {
-			instance = new BoomerangPretransformer();
-		}
-		return instance;
-	}
+    public boolean isApplied() {
+        return applied;
+    }
 
-	public void reset() {
-		instance = null;
-	}
+    public static BoomerangPretransformer v() {
+        if (instance == null) {
+            instance = new BoomerangPretransformer();
+        }
+        return instance;
+    }
+
+    public void reset() {
+        instance = null;
+    }
 }

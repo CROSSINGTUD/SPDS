@@ -25,49 +25,50 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 
-	public boolean isAllocationVal(Value val) {
-		if(val instanceof IntConstant){
-			return true;
-		}
-		return super.isAllocationVal(val);
-	}
+    public boolean isAllocationVal(Value val) {
+        if (val instanceof IntConstant) {
+            return true;
+        }
+        return super.isAllocationVal(val);
+    }
 
-	@Override
-	protected boolean isArrayAllocationVal(Value val) {
-		return (val instanceof NewArrayExpr || val instanceof NewMultiArrayExpr);
-	}
+    @Override
+    protected boolean isArrayAllocationVal(Value val) {
+        return (val instanceof NewArrayExpr || val instanceof NewMultiArrayExpr);
+    }
 
-	@Override
-	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, ObservableICFG<Unit, SootMethod> icfg) {
-		if (!(stmt instanceof AssignStmt)) {
-			return Optional.absent();
-		}
-		AssignStmt as = (AssignStmt) stmt;
-		if (!as.getLeftOp().equals(fact.value())) {
-			return Optional.absent();
-		}
-		if(as.getRightOp() instanceof LengthExpr){
-			return Optional.of(new AllocVal(as.getLeftOp(), m,as.getRightOp(), new Statement(stmt,m)));
-		}
+    @Override
+    public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact,
+            ObservableICFG<Unit, SootMethod> icfg) {
+        if (!(stmt instanceof AssignStmt)) {
+            return Optional.absent();
+        }
+        AssignStmt as = (AssignStmt) stmt;
+        if (!as.getLeftOp().equals(fact.value())) {
+            return Optional.absent();
+        }
+        if (as.getRightOp() instanceof LengthExpr) {
+            return Optional.of(new AllocVal(as.getLeftOp(), m, as.getRightOp(), new Statement(stmt, m)));
+        }
 
-		if(as.containsInvokeExpr()){
-//			AtomicReference<AllocVal> returnValue = new AtomicReference<>();
-//			icfg.addCalleeListener(new AllocationValCalleeListener(returnValue, as, icfg, m));
-//			if (returnValue.get() != null){
-//				return Optional.of(returnValue.get());
-//			}
+        if (as.containsInvokeExpr()) {
+            // AtomicReference<AllocVal> returnValue = new AtomicReference<>();
+            // icfg.addCalleeListener(new AllocationValCalleeListener(returnValue, as, icfg, m));
+            // if (returnValue.get() != null){
+            // return Optional.of(returnValue.get());
+            // }
             SootMethod method = as.getInvokeExpr().getMethod();
             String sig = method.getSignature();
-            if (sig.equals("<java.math.BigInteger: java.math.BigInteger valueOf(long)>")){
+            if (sig.equals("<java.math.BigInteger: java.math.BigInteger valueOf(long)>")) {
                 Value arg = as.getInvokeExpr().getArg(0);
-    			return Optional.of(new AllocVal(as.getLeftOp(),m,arg, new Statement(stmt,m)));
-            }            
-		}
-		return super.getAllocationVal(m, stmt, fact, icfg);
-	}
+                return Optional.of(new AllocVal(as.getLeftOp(), m, arg, new Statement(stmt, m)));
+            }
+        }
+        return super.getAllocationVal(m, stmt, fact, icfg);
+    }
 
-	@Override
-	public boolean trackStrings() {
-		return true;
-	}
+    @Override
+    public boolean trackStrings() {
+        return true;
+    }
 }

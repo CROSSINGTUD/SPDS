@@ -17,48 +17,49 @@ import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
 public class ReadTwiceSameFieldTest extends AbstractBoomerangTest {
-	@Test
-	public void recursiveTest() {
-		Container a = new Container();
-		Container c = a.d;
-		Container alias = c.d;
-		queryFor(alias);
-	}
+    @Test
+    public void recursiveTest() {
+        Container a = new Container();
+        Container c = a.d;
+        Container alias = c.d;
+        queryFor(alias);
+    }
 
-	@Test
-	public void readFieldTwice() {
-		Container a = new Container();
-		Container c = a.d;
-		Container alias = c.d;
-		queryFor(alias);
-	}
+    @Test
+    public void readFieldTwice() {
+        Container a = new Container();
+        Container c = a.d;
+        Container alias = c.d;
+        queryFor(alias);
+    }
 
-	private class Container {
-		Container d;
+    private class Container {
+        Container d;
 
-		Container() {
-			if (staticallyUnknown())
-				d = new Alloc();
-			else
-				d = null;
-		}
+        Container() {
+            if (staticallyUnknown())
+                d = new Alloc();
+            else
+                d = null;
+        }
 
-	}
+    }
 
-	private class DeterministicContainer {
-		DeterministicContainer d;
+    private class DeterministicContainer {
+        DeterministicContainer d;
 
-		DeterministicContainer() {
-			d = new DeterministicAlloc();
-		}
+        DeterministicContainer() {
+            d = new DeterministicAlloc();
+        }
 
-	}
-	private class DeterministicAlloc extends DeterministicContainer implements AllocatedObject {
+    }
 
-	}
+    private class DeterministicAlloc extends DeterministicContainer implements AllocatedObject {
 
-	private class Alloc extends Container implements AllocatedObject {
+    }
 
-	}
+    private class Alloc extends Container implements AllocatedObject {
+
+    }
 
 }

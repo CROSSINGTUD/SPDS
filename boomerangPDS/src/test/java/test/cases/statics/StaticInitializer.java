@@ -16,11 +16,11 @@ import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 
 public class StaticInitializer extends AbstractBoomerangTest {
-	private static Object alloc = new Alloc();
-	
-	@Test
-	public void doubleSingleton(){
-		Object alias = alloc;
-		queryFor(alias);
-	}
+    private static Object alloc = new Alloc();
+
+    @Test
+    public void doubleSingleton() {
+        Object alias = alloc;
+        queryFor(alias);
+    }
 }

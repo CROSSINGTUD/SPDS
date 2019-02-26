@@ -16,8 +16,8 @@ import org.junit.Before;
 import wpds.impl.PostStar;
 
 public class SummaryPDSPostStarTests extends PDSPoststarTests {
-	@Before
-	public void init() {
-		super.init();
-	}
+    @Before
+    public void init() {
+        super.init();
+    }
 }

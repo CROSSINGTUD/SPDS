@@ -22,17 +22,17 @@ import typestate.impl.statemachines.PrintWriterStateMachine;
 
 public class PrintWriterLongTest extends IDEALTestingFramework {
 
-	@Test
-	public void test1() throws FileNotFoundException {
-		PrintWriter inputStream = new PrintWriter("");
-		inputStream.close();
-		inputStream.flush();
-		mustBeInErrorState(inputStream);
-	}
+    @Test
+    public void test1() throws FileNotFoundException {
+        PrintWriter inputStream = new PrintWriter("");
+        inputStream.close();
+        inputStream.flush();
+        mustBeInErrorState(inputStream);
+    }
 
-	@Override
-	protected TypeStateMachineWeightFunctions getStateMachine() {
-		return new PrintWriterStateMachine();
-	}
+    @Override
+    protected TypeStateMachineWeightFunctions getStateMachine() {
+        return new PrintWriterStateMachine();
+    }
 
 }

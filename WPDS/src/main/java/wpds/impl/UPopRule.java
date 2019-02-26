@@ -17,14 +17,13 @@ import wpds.interfaces.State;
 
 public class UPopRule<N extends Location, D extends State> extends PopRule<N, D, NoWeight> {
 
-  public UPopRule(D s1, N l1, D s2) {
-    super(s1, l1, s2, NoWeight.NO_WEIGHT_ONE);
-  }
+    public UPopRule(D s1, N l1, D s2) {
+        super(s1, l1, s2, NoWeight.NO_WEIGHT_ONE);
+    }
 
-
-  @Override
-  public String toString() {
-    return "<" + s1 + ";" + l1 + ">-><" + s2 + ">";
-  }
+    @Override
+    public String toString() {
+        return "<" + s1 + ";" + l1 + ">-><" + s2 + ">";
+    }
 
 }

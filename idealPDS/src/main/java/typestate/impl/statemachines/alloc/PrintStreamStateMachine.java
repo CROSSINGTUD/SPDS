@@ -29,64 +29,59 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public class PrintStreamStateMachine extends TypeStateMachineWeightFunctions {
 
-	public static enum States implements State {
-		OPEN, CLOSED, ERROR;
+    public static enum States implements State {
+        OPEN, CLOSED, ERROR;
 
-		@Override
-		public boolean isErrorState() {
-			return this == ERROR || this == OPEN;
-		}
+        @Override
+        public boolean isErrorState() {
+            return this == ERROR || this == OPEN;
+        }
 
-		@Override
-		public boolean isInitialState() {
-			return false;
-		}
+        @Override
+        public boolean isInitialState() {
+            return false;
+        }
 
-		@Override
-		public boolean isAccepting() {
-			return false;
-		}
-	}
+        @Override
+        public boolean isAccepting() {
+            return false;
+        }
+    }
 
-	public PrintStreamStateMachine() {
-		addTransition(new MatcherTransition(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED,
-				Type.OnReturn));
-		addTransition(new MatcherTransition(States.OPEN, readMethods(), Parameter.This, States.OPEN,
-				Type.OnReturn));
-		addTransition(new MatcherTransition(States.OPEN, closeMethods(), Parameter.This, States.CLOSED,
-				Type.OnReturn));
-		addTransition(new MatcherTransition(States.CLOSED, readMethods(), Parameter.This, States.ERROR,
-				Type.OnReturn));
-		addTransition(new MatcherTransition(States.ERROR, readMethods(), Parameter.This, States.ERROR,
-				Type.OnReturn));
-		addTransition(new MatcherTransition(States.ERROR, closeMethods(), Parameter.This, States.ERROR,
-				Type.OnReturn));
+    public PrintStreamStateMachine() {
+        addTransition(
+                new MatcherTransition(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
+        addTransition(new MatcherTransition(States.OPEN, readMethods(), Parameter.This, States.OPEN, Type.OnReturn));
+        addTransition(new MatcherTransition(States.OPEN, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
+        addTransition(new MatcherTransition(States.CLOSED, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+        addTransition(new MatcherTransition(States.ERROR, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
+        addTransition(new MatcherTransition(States.ERROR, closeMethods(), Parameter.This, States.ERROR, Type.OnReturn));
 
-	}
+    }
 
-	private Set<SootMethod> closeMethods() {
-		return selectMethodByName(getSubclassesOf("java.io.PrintStream"), "close");
-	}
+    private Set<SootMethod> closeMethods() {
+        return selectMethodByName(getSubclassesOf("java.io.PrintStream"), "close");
+    }
 
-	private Set<SootMethod> readMethods() {
-		List<SootClass> subclasses = getSubclassesOf("java.io.PrintStream");
-		Set<SootMethod> closeMethods = closeMethods();
-		Set<SootMethod> out = new HashSet<>();
-		for (SootClass c : subclasses) {
-			for (SootMethod m : c.getMethods())
-				if (m.isPublic() && !closeMethods.contains(m) && !m.isStatic() && !m.isConstructor())
-					out.add(m);
-		}
-		return out;
-	}
+    private Set<SootMethod> readMethods() {
+        List<SootClass> subclasses = getSubclassesOf("java.io.PrintStream");
+        Set<SootMethod> closeMethods = closeMethods();
+        Set<SootMethod> out = new HashSet<>();
+        for (SootClass c : subclasses) {
+            for (SootMethod m : c.getMethods())
+                if (m.isPublic() && !closeMethods.contains(m) && !m.isStatic() && !m.isConstructor())
+                    out.add(m);
+        }
+        return out;
+    }
 
-	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
-		return generateAtAllocationSiteOf(m, unit, java.io.PrintStream.class);
-	}
+    @Override
+    public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
+        return generateAtAllocationSiteOf(m, unit, java.io.PrintStream.class);
+    }
 
-	@Override
-	protected State initialState() {
-		return States.OPEN;
-	}
+    @Override
+    protected State initialState() {
+        return States.OPEN;
+    }
 }

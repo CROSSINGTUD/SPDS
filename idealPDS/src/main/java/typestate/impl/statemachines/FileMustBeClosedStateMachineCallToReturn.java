@@ -24,34 +24,36 @@ import typestate.finiteautomata.MatcherTransition.Type;
 import typestate.finiteautomata.State;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
-public class FileMustBeClosedStateMachineCallToReturn extends TypeStateMachineWeightFunctions{
+public class FileMustBeClosedStateMachineCallToReturn extends TypeStateMachineWeightFunctions {
 
-  public static enum States implements State {
-    INIT, OPENED, CLOSED;
+    public static enum States implements State {
+        INIT, OPENED, CLOSED;
 
-    @Override
-    public boolean isErrorState() {
-      return this == OPENED;
+        @Override
+        public boolean isErrorState() {
+            return this == OPENED;
+        }
+
+        @Override
+        public boolean isInitialState() {
+            return false;
+        }
+
+        @Override
+        public boolean isAccepting() {
+            return false;
+        }
+
     }
 
-	@Override
-	public boolean isInitialState() {
-		return false;
-	}
-
-	@Override
-	public boolean isAccepting() {
-		return false;
-	}
-
-  }
-
-  public FileMustBeClosedStateMachineCallToReturn() {
-    addTransition(new MatcherTransition(States.INIT, ".*open.*",Parameter.This, States.OPENED, Type.OnCallToReturn));
-    addTransition(new MatcherTransition(States.INIT, ".*close.*",Parameter.This, States.CLOSED, Type.OnCallToReturn));
-    addTransition(new MatcherTransition(States.OPENED, ".*close.*",Parameter.This, States.CLOSED, Type.OnCallToReturn));
-  }
-
+    public FileMustBeClosedStateMachineCallToReturn() {
+        addTransition(
+                new MatcherTransition(States.INIT, ".*open.*", Parameter.This, States.OPENED, Type.OnCallToReturn));
+        addTransition(
+                new MatcherTransition(States.INIT, ".*close.*", Parameter.This, States.CLOSED, Type.OnCallToReturn));
+        addTransition(
+                new MatcherTransition(States.OPENED, ".*close.*", Parameter.This, States.CLOSED, Type.OnCallToReturn));
+    }
 
     @Override
     public State initialState() {
@@ -59,12 +61,12 @@ public class FileMustBeClosedStateMachineCallToReturn extends TypeStateMachineWe
     }
 
     @Override
-  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit) {
-    try {
-		return generateAtAllocationSiteOf(method, unit, Class.forName("typestate.test.helper.File"));
-	} catch (ClassNotFoundException e) {
-		e.printStackTrace();
-	}
-    return Collections.emptySet();
-  }
+    public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit) {
+        try {
+            return generateAtAllocationSiteOf(method, unit, Class.forName("typestate.test.helper.File"));
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return Collections.emptySet();
+    }
 }
