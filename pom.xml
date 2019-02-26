@@ -60,8 +60,8 @@
     </reporting>
     <distributionManagement>
     <repository>
-      <id>soot-snapshot</id>
-      <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
+      <id>soot-release</id>
+      <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
     </repository>
   </distributionManagement>
 </project>

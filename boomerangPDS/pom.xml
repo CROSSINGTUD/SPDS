@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>de.fraunhofer.iem</groupId>
 	<artifactId>boomerangPDS</artifactId>
-	<version>1.0.1-SNAPSHOT</version>
+	<version>1.5</version>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
@@ -34,12 +34,12 @@
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
 			<artifactId>testCore</artifactId>
-			<version>1.0.0-SNAPSHOT</version>
+			<version>1.5</version>
 		</dependency>
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
 			<artifactId>WPDS</artifactId>
-			<version>1.0.0-SNAPSHOT</version>
+			<version>1.5</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.guava</groupId>
@@ -59,12 +59,12 @@
 		<dependency>
 			<groupId>ca.mcgill.sable</groupId>
 			<artifactId>soot</artifactId>
-			<version>3.1.0-SNAPSHOT</version>
+			<version>3.2.0</version>
 		</dependency>
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
 			<artifactId>synchronizedPDS</artifactId>
-			<version>1.0.1-SNAPSHOT</version>
+			<version>1.5</version>
 		</dependency>
 		<dependency>
 			<groupId>com.googlecode.json-simple</groupId>
@@ -148,9 +148,13 @@
 		</profile>
 	</profiles>
 	<distributionManagement>
-		<repository>
+		<snapshotRepository>
 			<id>soot-snapshot</id>
 			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
+		</snapshotRepository>
+		<repository>
+			<id>soot-release</id>
+			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
 		</repository>
 	</distributionManagement>
 
