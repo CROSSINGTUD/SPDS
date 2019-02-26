@@ -2,10 +2,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>de.fraunhofer.iem</groupId>
-  <artifactId>weightedBoomerang-root</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <artifactId>SPDS</artifactId>
+  <version>1.0.4-ofcg-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>weightedBoomerang-root</name>
+  <name>SPDS</name>
   <modules>
     <module>WPDS</module>
     <module>SynchronizedPDS</module>
@@ -15,6 +15,7 @@
    </modules>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <revision>1.0.4-ofcg</revision>
   </properties>
   <build>
     <plugins>
@@ -58,6 +59,24 @@
         </plugin>
       </plugins>
     </reporting>
+    <repositories>
+    <repository>
+      <id>soot-snapshot</id>
+      <name>soot snapshots</name>
+      <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+    </repository>
+    <repository>
+      <id>soot-release</id>
+      <name>soot release</name>
+      <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
     <distributionManagement>
     <repository>
       <id>soot-snapshot</id>
