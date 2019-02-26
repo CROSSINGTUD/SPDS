@@ -114,9 +114,13 @@
 		</profile>
 	</profiles>
 	<distributionManagement>
-		<repository>
+        <repository>
+            <id>soot-release</id>
+            <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
+        </repository>
+		<snapshotRepository>
 			<id>soot-snapshot</id>
 			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
-		</repository>
+		</snapshotRepository>
 	</distributionManagement>
 </project>
