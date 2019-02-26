@@ -65,8 +65,8 @@ public class URLConnStateMachine extends TypeStateMachineWeightFunctions{
 	}
 
 	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
-		return this.generateThisAtAnyCallSitesOf(m, unit, calledMethod, connect());
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
+		return this.generateThisAtAnyCallSitesOf(m, unit, connect());
 	}
 
 	@Override

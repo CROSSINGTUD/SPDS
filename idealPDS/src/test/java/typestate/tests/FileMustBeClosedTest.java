@@ -12,7 +12,6 @@
 package typestate.tests;
 
 import org.junit.Test;
-
 import test.IDEALTestingFramework;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 import typestate.impl.statemachines.FileMustBeClosedStateMachine;
@@ -28,6 +27,14 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		file.close();
 		mustBeInAcceptingState(file);
 	}
+	
+	@Test
+	public void simple2() {
+		File file = new File();
+		file.open();
+		mustBeInErrorState(file);
+	}
+	
 	@Test
 	public void simple0() {
 		File file = new File();
@@ -40,7 +47,6 @@ public class FileMustBeClosedTest extends IDEALTestingFramework{
 		File file = new File();
 		file.open();
 		File alias = file;
-		System.err.print("");
 		escape(alias);
 		mustBeInErrorState(file);
 	}

@@ -12,7 +12,6 @@
 package test.cases.fields;
 
 import org.junit.Test;
-
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
@@ -21,7 +20,6 @@ public class TypeChangeTest extends AbstractBoomerangTest {
 	public void returnValue() {
 		D f = new D();
 		Object amIThere = f.getField();
-		System.err.println(2);
 		queryFor(amIThere);
 	}
 	@Test

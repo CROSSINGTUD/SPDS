@@ -22,18 +22,27 @@ import com.google.common.base.Stopwatch;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedForwardQuery;
+import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
+import boomerang.seedfactory.SimpleSeedFactory;
+import com.google.common.base.Stopwatch;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import typestate.TransitionFunction;
 import wpds.impl.Weight;
 
+import java.util.*;
+
 public class IDEALAnalysis<W extends Weight> {
 
-	public static boolean SEED_IN_APPLICATION_CLASS_METHOD = false;
+	private static final Logger logger = LogManager.getLogger();
+
 	public static boolean PRINT_OPTIONS = false;
 
 	protected final IDEALAnalysisDefinition<W> analysisDefinition;
@@ -42,51 +51,56 @@ public class IDEALAnalysis<W extends Weight> {
 	private Map<WeightedForwardQuery<W>, Stopwatch> analysisTime = new HashMap<>();
 	private Set<WeightedForwardQuery<W>> timedoutSeeds = new HashSet<>();
 
+
 	public IDEALAnalysis(final IDEALAnalysisDefinition<W> analysisDefinition) {
 		this.analysisDefinition = analysisDefinition;
+		ObservableICFG<Unit, SootMethod> staticICFG = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
 		this.seedFactory = new SeedFactory<W>(){
 
 			@Override
-			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
-				return analysisDefinition.icfg();
+			protected Collection<WeightedForwardQuery<W>> generate(SootMethod method, Stmt stmt) {
+				return analysisDefinition.generate(method, stmt);
 			}
+
 			@Override
-			protected Collection<WeightedForwardQuery<W>> generate(SootMethod method, Stmt stmt,
-					Collection<SootMethod> calledMethods) {
-				return analysisDefinition.generate(method, stmt, calledMethods);
+			public ObservableICFG<Unit, SootMethod> icfg() {
+				return staticICFG;
 			}
 		};
 	}
 
 	public void run() {
 		printOptions();
-		
+
 		Collection<Query> initialSeeds = seedFactory.computeSeeds();
-//		System.out.println("Computed seeds in: "+ watch.elapsed() );
-		
+
 		if (initialSeeds.isEmpty())
-			System.err.println("No seeds found!");
+			System.out.println("No seeds found!");
 		else
-			System.err.println("Analysing " + initialSeeds.size() + " seeds!");
+			System.out.println("Analysing " + initialSeeds.size() + " seeds!");
 		for (Query s : initialSeeds) {
 			if(!(s instanceof WeightedForwardQuery))
 				continue;
-			WeightedForwardQuery<W> seed = (WeightedForwardQuery) s;
+			WeightedForwardQuery<W> seed = (WeightedForwardQuery<W>) s;
 			seedCount++;
-			System.err.println("Analyzing "+ seed);
+			logger.info("Analyzing "+ seed);
 			Stopwatch watch = Stopwatch.createStarted();
 			analysisTime.put(seed, watch);
+			if (analysisDefinition.icfg() != null)
+				analysisDefinition.icfg().resetCallGraph();
 			ForwardBoomerangResults<W> res = run(seed);
 			watch.stop();
-			System.err.println("Analyzed (finished,timedout): \t (" + (seedCount -timedoutSeeds.size())+ "," + timedoutSeeds.size() + ") of "+ initialSeeds.size() + " seeds! ");
+			System.out.println("Analyzed (finished,timedout): \t (" + (seedCount -timedoutSeeds.size())+ "," + timedoutSeeds.size() + ") of "+ initialSeeds.size() + " seeds! ");
 			analysisDefinition.getResultHandler().report(seed,res);
 		}
-//		System.out.println("Analysis time for all seeds: "+ watch.elapsed());
 	}
+
 	public ForwardBoomerangResults<W> run(ForwardQuery seed) {
 		IDEALSeedSolver<W> idealAnalysis = new IDEALSeedSolver<W>(analysisDefinition, seed, seedFactory);
 		ForwardBoomerangResults<W> res;
 		try {
+			if (analysisDefinition.icfg() != null)
+				analysisDefinition.icfg().resetCallGraph();
 			res = idealAnalysis.run();			
 		} catch(IDEALSeedTimeout e){
 			res = (ForwardBoomerangResults<W>) e.getLastResults();

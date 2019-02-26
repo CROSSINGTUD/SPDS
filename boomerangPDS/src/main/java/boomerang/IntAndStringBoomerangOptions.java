@@ -11,22 +11,17 @@
  *******************************************************************************/
 package boomerang;
 
-import com.google.common.base.Optional;
-
+import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
+import com.google.common.base.Optional;
 import soot.SootMethod;
 import soot.Unit;
 import soot.Value;
-import soot.jimple.AssignStmt;
-import soot.jimple.IntConstant;
-import soot.jimple.LengthExpr;
-import soot.jimple.NewArrayExpr;
-import soot.jimple.NewMultiArrayExpr;
-import soot.jimple.ReturnStmt;
-import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import soot.jimple.*;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 
@@ -43,7 +38,7 @@ public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 	}
 
 	@Override
-	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, BiDiInterproceduralCFG<Unit, SootMethod> icfg) {
+	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, ObservableICFG<Unit, SootMethod> icfg) {
 		if (!(stmt instanceof AssignStmt)) {
 			return Optional.absent();
 		}
@@ -56,6 +51,11 @@ public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 		}
 
 		if(as.containsInvokeExpr()){
+//			AtomicReference<AllocVal> returnValue = new AtomicReference<>();
+//			icfg.addCalleeListener(new AllocationValCalleeListener(returnValue, as, icfg, m));
+//			if (returnValue.get() != null){
+//				return Optional.of(returnValue.get());
+//			}
             SootMethod method = as.getInvokeExpr().getMethod();
             String sig = method.getSignature();
             if (sig.equals("<java.math.BigInteger: java.math.BigInteger valueOf(long)>")){

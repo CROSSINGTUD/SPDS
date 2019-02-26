@@ -14,8 +14,6 @@ package sync.pds.solver;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -38,7 +36,16 @@ import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.*;
+import wpds.impl.NestedAutomatonListener;
+import wpds.impl.NestedWeightedPAutomatons;
+import wpds.impl.NormalRule;
+import wpds.impl.PopRule;
+import wpds.impl.PushRule;
+import wpds.impl.Rule;
+import wpds.impl.Transition;
+import wpds.impl.Weight;
+import wpds.impl.WeightedPAutomaton;
+import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
@@ -55,12 +62,12 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	private static final boolean ContextSensitive = true;
 	protected final WeightedPushdownSystem<Stmt, INode<Fact>, W> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, W>(){
 		public String toString() {
-			return "Call " + super.toString();
+			return "Call " + SyncPDSSolver.this.toString();
 		};
 	};
 	protected final WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W> fieldPDS = new WeightedPushdownSystem<Field, INode<Node<Stmt,Fact>>, W>(){
 		public String toString() {
-			return "Field " + super.toString();
+			return "Field " + SyncPDSSolver.this.toString();
 		};
 	};
 	private final Set<Node<Stmt,Fact>> reachedStates = Sets.newHashSet();
@@ -408,7 +415,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 
 		@Override
 		public void onWeightAdded(Transition<Stmt, INode<Fact>> t, W w, WeightedPAutomaton<Stmt, INode<Fact>,W> aut) {
-			if(!(t.getStart() instanceof GeneratedState)){
+			if(!(t.getStart() instanceof GeneratedState) && !t.getLabel().equals(callAutomaton.epsilon())){
 				Node<Stmt, Fact> node = new Node<Stmt,Fact>(t.getString(),t.getStart().fact());
 				setCallingContextReachable(node);
 			}
@@ -437,22 +444,23 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 	protected void processNode(Node<Stmt, Fact> curr) {
 		if(!addReachableState(curr))
 			return;
-		Collection<? extends State> successors = computeSuccessor(curr);
-		for (State s : successors) {
-			if (s instanceof Node) {
-				Node<Stmt, Fact> succ = (Node<Stmt, Fact>) s;
-				if (succ instanceof PushNode) {
-					PushNode<Stmt, Fact, Location> pushNode = (PushNode<Stmt, Fact, Location>) succ;
-					PDSSystem system = pushNode.system();
-					Location location = pushNode.location();
-					processPush(curr, location, pushNode, system);
-				} else {
-					processNormal(curr, succ);
-				}
-			} else if (s instanceof PopNode) {
-				PopNode<Fact> popNode = (PopNode<Fact>) s;
-				processPop(curr, popNode);
+		computeSuccessor(curr);
+	}
+	
+	protected void propagate(Node<Stmt,Fact> curr, State s) {
+		if (s instanceof Node) {
+			Node<Stmt, Fact> succ = (Node<Stmt, Fact>) s;
+			if (succ instanceof PushNode) {
+				PushNode<Stmt, Fact, Location> pushNode = (PushNode<Stmt, Fact, Location>) succ;
+				PDSSystem system = pushNode.system();
+				Location location = pushNode.location();
+				processPush(curr, location, pushNode, system);
+			} else {
+				processNormal(curr, succ);
 			}
+		} else if (s instanceof PopNode) {
+			PopNode<Fact> popNode = (PopNode<Fact>) s;
+			processPop(curr, popNode);
 		}
 	}
 
@@ -625,7 +633,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		public void onWeightAdded(Transition<Field, INode<Node<Stmt,Fact>>> t,
 				W w, WeightedPAutomaton<Field, INode<Node<Stmt,Fact>>, W> aut) {
 			INode<Node<Stmt,Fact>> n = t.getStart();
-			if(!(n instanceof GeneratedState)){
+			if(!(n instanceof GeneratedState) && !t.getLabel().equals(fieldAutomaton.epsilon())){
 				Node<Stmt,Fact> fact = n.fact();
 				Node<Stmt, Fact> node = new Node<Stmt,Fact>(fact.stmt(), fact.fact());
 				setFieldContextReachable(node);
@@ -673,7 +681,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		return new SingleNode<Fact>(variable);
 	}
 
-	Map<Entry<INode<Fact>, Stmt>, INode<Fact>> generatedCallState = Maps.newHashMap();
+	protected Map<Entry<INode<Fact>, Stmt>, INode<Fact>> generatedCallState = Maps.newHashMap();
 
 	public INode<Fact> generateCallState(final INode<Fact> d, final Stmt loc) {
 		Entry<INode<Fact>, Stmt> e = new AbstractMap.SimpleEntry<>(d, loc);
@@ -699,7 +707,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
 		generatedFieldState.put(e,state);
 	}
 
-	public abstract Collection<? extends State> computeSuccessor(Node<Stmt, Fact> node);
+	public abstract void computeSuccessor(Node<Stmt, Fact> node);
 
 	public abstract Field epsilonField();
 

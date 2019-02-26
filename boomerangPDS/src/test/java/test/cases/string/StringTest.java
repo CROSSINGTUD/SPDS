@@ -13,7 +13,6 @@ package test.cases.string;
 
 import org.junit.Test;
 
-import test.cases.fields.A;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
@@ -23,10 +22,9 @@ public class StringTest extends AbstractBoomerangTest {
 		Object query = "a" + "b";
 		if(staticallyUnknown())
 			query += "c";
-		System.out.println(query);
 		queryFor(query);
 	}
-	
+
 	@Test
 	public void stringConcatQueryByPass(){
 		T t = new T("a" + staticallyUnknown());
@@ -42,16 +40,16 @@ public class StringTest extends AbstractBoomerangTest {
 		StringBuffer t2 = new StringBuffer();
 		queryFor(t);
 	}
-	private static class T implements AllocatedObject{
+	private static class T implements AllocatedObject {
 
 		private String string;
 
 		public T(String string) {
 			this.string = string;
 		}
-		
+
 	}
-	
+
 	@Test
 	public void stringToCharArray(){
 		char[] s = "password".toCharArray();

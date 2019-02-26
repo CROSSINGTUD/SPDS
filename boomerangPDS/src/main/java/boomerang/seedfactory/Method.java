@@ -32,25 +32,46 @@ public class Method implements Location {
 
     public static Method epsilon(){
         if(epsilon == null)
-            epsilon = new Method();
+            epsilon = new Method() {
+        	@Override
+        	public int hashCode() {
+        		return System.identityHashCode(this);
+        	}
+        	@Override
+    		public boolean equals(Object obj) {
+    			return obj == this;
+    		}
+        };
         return epsilon;
     }
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        Method method = (Method) o;
-
-        return delegate != null ? delegate.equals(method.delegate) : method.delegate == null;
-    }
+   
 
     @Override
-    public int hashCode() {
-        return delegate != null ? delegate.hashCode() : 0;
-    }
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((delegate == null) ? 0 : delegate.hashCode());
+		return result;
+	}
 
-    public SootMethod getMethod() {
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Method other = (Method) obj;
+		if (delegate == null) {
+			if (other.delegate != null)
+				return false;
+		} else if (!delegate.equals(other.delegate))
+			return false;
+		return true;
+	}
+
+	public SootMethod getMethod() {
         return delegate;
     }
     @Override

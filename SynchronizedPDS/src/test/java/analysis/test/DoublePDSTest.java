@@ -75,8 +75,11 @@ public class DoublePDSTest {
 	private SyncPDSSolver<Statement, Variable, FieldRef, NoWeight> solver = new SyncPDSSolver<Statement, Variable, FieldRef, NoWeight>(new SingleNode<Variable>(new Variable("u")), new SingleNode<Node<Statement,Variable>>(node(1,"u")), false, new SummaryNestedWeightedPAutomatons<Statement,INode<Variable>,NoWeight>(),false, new SummaryNestedWeightedPAutomatons<FieldRef,INode<Node<Statement,Variable>>,NoWeight>()) {
 
 		@Override
-		public Collection<State> computeSuccessor(Node<Statement, Variable> node) {
-			return successorMap.get(node);
+		public void computeSuccessor(Node<Statement, Variable> node) {
+			Collection<State> states = successorMap.get(node);
+			for(State s : states) {
+				propagate(node, s);
+			}
 		}
 
 		@Override

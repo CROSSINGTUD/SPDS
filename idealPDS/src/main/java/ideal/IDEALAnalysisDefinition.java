@@ -11,21 +11,23 @@
  *******************************************************************************/
 package ideal;
 
-import java.util.Collection;
-
 import boomerang.BoomerangOptions;
 import boomerang.DefaultBoomerangOptions;
 import boomerang.WeightedForwardQuery;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import soot.SootMethod;
 import soot.Unit;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.WeightFunctions;
 import wpds.impl.Weight;
 
+import java.util.Collection;
+
 public abstract class IDEALAnalysisDefinition<W extends Weight> {
+
+	protected ObservableICFG<Unit, SootMethod> icfg;
 
 	/**
 	 * This function generates the seed. Each (reachable) statement of the
@@ -35,13 +37,10 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 	 * 
 	 * @param method
 	 * @param stmt
-	 *            The statement over which is itearted over
-	 * @param calledMethod
-	 *            If stmt is a call site, this set contains the set of called
-	 *            method for the call site.
+	 *            The statement over which is iterated over
 	 * @return
 	 */
-	public abstract Collection<WeightedForwardQuery<W>> generate(SootMethod method, Unit stmt, Collection<SootMethod> calledMethod);
+	public abstract Collection<WeightedForwardQuery<W>> generate(SootMethod method, Unit stmt);
 
 	/**
 	 * This function must generate and return the AnalysisEdgeFunctions that are
@@ -51,7 +50,9 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
 	 */
 	public abstract WeightFunctions<Statement,Val,Statement,W> weightFunctions();
 
-	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
+	public ObservableICFG<Unit, SootMethod> icfg(){
+		return icfg;
+	}
 
 	public boolean enableStrongUpdates() {
 		return true;

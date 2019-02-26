@@ -13,8 +13,6 @@ package boomerang.solver;
 
 import java.util.AbstractMap;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -23,7 +21,6 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
@@ -34,6 +31,8 @@ import com.google.common.collect.Table;
 
 import boomerang.BoomerangOptions;
 import boomerang.Query;
+import boomerang.callgraph.CallerListener;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -74,8 +73,94 @@ import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSSolver<Statement, Val, Field, W> {
 
+	private final class ReturnFlowCallerListener implements CallerListener<Unit, SootMethod> {
+		private final Stmt curr;
+		private final SootMethod method;
+		private final Val value;
+		private final Node<Statement, Val> currNode;
+
+		private ReturnFlowCallerListener(Stmt curr, SootMethod method, Val value, Node<Statement, Val> currNode) {
+			this.curr = curr;
+			this.method = method;
+			this.value = value;
+			this.currNode = currNode;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((curr == null) ? 0 : curr.hashCode());
+			result = prime * result + ((currNode == null) ? 0 : currNode.hashCode());
+			result = prime * result + ((method == null) ? 0 : method.hashCode());
+			result = prime * result + ((value == null) ? 0 : value.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			ReturnFlowCallerListener other = (ReturnFlowCallerListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (curr == null) {
+				if (other.curr != null)
+					return false;
+			} else if (!curr.equals(other.curr))
+				return false;
+			if (currNode == null) {
+				if (other.currNode != null)
+					return false;
+			} else if (!currNode.equals(other.currNode))
+				return false;
+			if (method == null) {
+				if (other.method != null)
+					return false;
+			} else if (!method.equals(other.method))
+				return false;
+			if (value == null) {
+				if (other.value != null)
+					return false;
+			} else if (!value.equals(other.value))
+				return false;
+			return true;
+		}
+
+		@Override
+		public void onCallerAdded(Unit callSite, SootMethod m) {
+			if(!((Stmt)callSite).containsInvokeExpr()){
+				return;
+			}
+			Set<State> out = Sets.newHashSet();
+			for (Unit returnSite : icfg.getSuccsOf(callSite)) {
+				Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) callSite,
+						(Stmt) returnSite);
+				out.addAll(outFlow);
+			}
+
+			for(State s : out) {
+				propagate(currNode, s);
+			}
+		}
+
+		@Override
+		public SootMethod getObservedCallee() {
+			return method;
+		}
+
+		private AbstractBoomerangSolver getOuterType() {
+			return AbstractBoomerangSolver.this;
+		}
+	}
+
 	protected static final Logger logger = LogManager.getLogger();
-	protected final BiDiInterproceduralCFG<Unit, SootMethod> icfg;
+	protected final ObservableICFG<Unit, SootMethod> icfg;
 	protected final Query query;
 	protected boolean INTERPROCEDURAL = true;
 	protected final Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> generatedFieldState;
@@ -94,7 +179,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	private Multimap<SootMethod, Runnable> queuedReachableMethod = HashMultimap.create();
 	private Collection<SootMethod> reachableMethods = Sets.newHashSet();
 	protected final BoomerangOptions options;
-	public AbstractBoomerangSolver(BiDiInterproceduralCFG<Unit, SootMethod> icfg,
+	public AbstractBoomerangSolver(ObservableICFG<Unit, SootMethod> icfg,
 			Query query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
 			BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
 			 NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries) {
@@ -352,10 +437,12 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 	protected abstract Collection<? extends State> computeReturnFlow(SootMethod method, Stmt curr, Val value,
 			Stmt callSite, Stmt returnSite);
 
-	protected Collection<? extends State> returnFlow(SootMethod method, Stmt curr, Val value) {
-		Set<State> out = Sets.newHashSet();
-
+	protected void returnFlow(SootMethod method, Node<Statement,Val> currNode) {
+		
+		Val value = currNode.fact();
+		Stmt curr = currNode.stmt().getUnit().get();
 		if(method.isStaticInitializer() && value.isStatic()){
+			Set<State> out = Sets.newHashSet();
 			for(SootMethod entryPoint : Scene.v().getEntryPoints()){
 				for(Unit sp : icfg.getStartPointsOf(entryPoint)){
 					Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) sp,
@@ -363,19 +450,29 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
 					out.addAll(outFlow);
 				}
 			}
+			for(State s : out) {
+				propagate(currNode, s);
+			}
 		} else{
-			for (Unit callSite : icfg.getCallersOf(method)) {
-				if(!((Stmt)callSite).containsInvokeExpr()){
-					continue;
+			if (icfg.isMethodsWithCallFlow(method)){
+				icfg.addCallerListener(new ReturnFlowCallerListener(curr, method, value, currNode));
+			} else {
+				//Unbalanced call which we did not observe a flow to previously
+				Set<State> out = Sets.newHashSet();
+				for (Unit unit : icfg.getAllPrecomputedCallers(method)){
+					if (((Stmt) unit).containsInvokeExpr()){
+						for (Unit returnSite : icfg.getSuccsOf(unit)) {
+							Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) unit,
+									(Stmt) returnSite);
+							out.addAll(outFlow);
+						}
+					}
 				}
-				for (Unit returnSite : icfg.getSuccsOf(callSite)) {
-					Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) callSite,
-							(Stmt) returnSite);
-					out.addAll(outFlow);
+				for(State s : out) {
+					propagate(currNode, s);
 				}
 			}
 		}
-		return out;
 	}
 
 

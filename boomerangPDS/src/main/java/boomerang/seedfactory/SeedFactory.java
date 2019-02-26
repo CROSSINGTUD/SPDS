@@ -13,22 +13,24 @@ package boomerang.seedfactory;
 
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
 import boomerang.Query;
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.ObservableICFG;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.SingleNode;
@@ -85,10 +87,11 @@ public abstract class SeedFactory<W extends Weight> {
 
 	public Collection<Query> computeSeeds() {
 		List<SootMethod> entryPoints = Scene.v().getEntryPoints();
+		System.out.print("Computing seeds starting at "+entryPoints.size() + " entry method(s).");
+		Stopwatch watch = Stopwatch.createStarted();
 		for (SootMethod m : entryPoints) {
 			automaton.addTransition(new Transition<>(wrap(Reachable.v()), new Method(m), automaton.getInitialState()));
 		}
-		pds.poststar(automaton);
 		automaton.registerListener(new WPAUpdateListener<Method, INode<Reachable>, Weight.NoWeight>() {
 			@Override
 			public void onWeightAdded(Transition<Method, INode<Reachable>> t, Weight.NoWeight noWeight,
@@ -105,7 +108,7 @@ public abstract class SeedFactory<W extends Weight> {
 				}
 			}
 		}
-
+		System.out.print("Seed finding took "+watch.elapsed(TimeUnit.SECONDS) + " second(s) and analyzed "+processed.size()+" method(s).");
 		return seedToTransition.keySet();
 	}
 
@@ -123,8 +126,7 @@ public abstract class SeedFactory<W extends Weight> {
 		return false;
 	}
 
-	protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u,
-			Collection<SootMethod> calledMethods);
+	protected abstract Collection<? extends Query> generate(SootMethod method, Stmt u);
 
 	private void process(Transition<Method, INode<Reachable>> t) {
 		Method curr = t.getLabel();
@@ -143,32 +145,35 @@ public abstract class SeedFactory<W extends Weight> {
 		}
 		Set<Query> seeds = Sets.newHashSet();
 		for (Unit u : m.getActiveBody().getUnits()) {
-			if(!icfg().isReachable(u))
-				continue;
-			Collection<SootMethod> calledMethods = (icfg().isCallStmt(u) ? icfg().getCalleesOfCallAt(u)
-					: new HashSet<SootMethod>());
-			seeds.addAll(generate(m, (Stmt) u, calledMethods));
 			if (icfg().isCallStmt(u)) {
-				for (SootMethod callee : icfg().getCalleesOfCallAt(u)) {
-					if (!callee.hasActiveBody())
-						continue;
-					addPushRule(new Method(m), new Method(callee));
-				}
+				icfg().addCalleeListener(new CalleeListener<Unit, SootMethod>() {
+					@Override
+					public Unit getObservedCaller() {
+						return u;
+					}
+
+					@Override
+					public void onCalleeAdded(Unit n, SootMethod callee) {
+						  if (!callee.hasActiveBody() || !callee.getDeclaringClass().isApplicationClass())
+		                        return;
+						  addPushRule(new Method(m),new Method(callee));
+					}
+				});
 			}
+			seeds.addAll(generate(m, (Stmt) u));
 		}
 		seedsPerMethod.putAll(m, seeds);
 	}
 
 	private void addPushRule(Method caller, Method callee) {
-		pds.addRule(
-				new PushRule<>(wrap(Reachable.v()), caller, wrap(Reachable.v()), callee, caller, Weight.NO_WEIGHT_ONE));
+		automaton.addTransition(new Transition<Method, INode<Reachable>>(automaton.createState(wrap(Reachable.v()), caller), callee, automaton.createState(wrap(Reachable.v()), callee)));
 	}
 
 	private INode<Reachable> wrap(Reachable r) {
 		return new SingleNode<>(r);
 	}
 
-	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
+	public abstract ObservableICFG<Unit, SootMethod> icfg();
 
 	public Collection<SootMethod> getMethodScope(Query query) {
 		Set<SootMethod> scope = Sets.newHashSet();
@@ -238,6 +243,14 @@ public abstract class SeedFactory<W extends Weight> {
 		private SeedFactory getOuterType() {
 			return SeedFactory.this;
 		}
+	}
+
+	public Collection<SootMethod> getAnyMethodScope() {
+		Set<SootMethod> out = Sets.newHashSet();
+		for (Query q : seedToTransition.keySet()) {
+			out.addAll(getMethodScope(q));
+		}
+		return out;
 	}
 
 }

@@ -12,7 +12,6 @@
 package ideal;
 
 import java.util.Collection;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -26,11 +25,13 @@ import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
+import boomerang.callgraph.ObservableDynamicICFG;
+import boomerang.callgraph.ObservableICFG;
+import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.debugger.Debugger;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import boomerang.results.AbstractBoomerangResults;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
@@ -38,16 +39,13 @@ import boomerang.solver.AbstractBoomerangSolver;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import soot.jimple.toolkits.ide.icfg.JimpleBasedInterproceduralCFG;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
-import sync.pds.solver.SyncPDSSolver;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
-import sync.pds.solver.nodes.PopNode;
-import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.ConnectPushListener;
 import wpds.impl.NormalRule;
@@ -57,7 +55,6 @@ import wpds.impl.StackListener;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
-import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
@@ -72,7 +69,6 @@ public class IDEALSeedSolver<W extends Weight> {
 	private final WeightedBoomerang<W> phase2Solver;
 	private final Stopwatch analysisStopwatch = Stopwatch.createUnstarted();
 	private final SeedFactory<W> seedFactory;
-	private WeightedBoomerang<W> timedoutSolver;
 	private Multimap<Node<Statement, Val>, Statement> affectedStrongUpdateStmt = HashMultimap.create();
 	private Set<Node<Statement, Val>> weakUpdates = Sets.newHashSet();
 	private final class AddIndirectFlowAtCallSite implements WPAUpdateListener<Statement, INode<Val>, W> {
@@ -218,6 +214,7 @@ public class IDEALSeedSolver<W extends Weight> {
 			for(Unit u : analysisDefinition.icfg().getPredsOf(strongUpdateNode.stmt().getUnit().get())){
 				BackwardQuery query = new BackwardQuery(new Statement((Stmt)u, strongUpdateNode.stmt().getMethod()), strongUpdateNode.fact());
 				BackwardBoomerangResults<W> queryResults = boomerang.backwardSolveUnderScope(query, seed, strongUpdateNode);
+				
 				Set<ForwardQuery> queryAllocationSites = queryResults
 						.getAllocationSites().keySet();
 				setWeakUpdateIfNecessary();
@@ -309,7 +306,6 @@ public class IDEALSeedSolver<W extends Weight> {
 			if (analysisStopwatch.isRunning()) {
 				analysisStopwatch.stop();
 			}
-			timedoutSolver = this.phase1Solver;
 			throw new IDEALSeedTimeout(this, this.phase1Solver, resultPhase1);
 		}
 		ForwardBoomerangResults<W> resultPhase2 = runPhase(this.phase2Solver, Phases.ValueFlow);
@@ -317,7 +313,6 @@ public class IDEALSeedSolver<W extends Weight> {
 			if (analysisStopwatch.isRunning()) {
 				analysisStopwatch.stop();
 			}
-			timedoutSolver = this.phase2Solver;
 			throw new IDEALSeedTimeout(this, this.phase2Solver, resultPhase2);
 		}
 		return resultPhase2;
@@ -326,7 +321,11 @@ public class IDEALSeedSolver<W extends Weight> {
 	private WeightedBoomerang<W> createSolver(Phases phase) {
 		return new WeightedBoomerang<W>(analysisDefinition.boomerangOptions()) {
 			@Override
-			public BiDiInterproceduralCFG<Unit, SootMethod> icfg() {
+			public ObservableICFG<Unit, SootMethod> icfg() {
+				if (analysisDefinition.icfg() == null){
+					//For Static ICFG use this line
+					analysisDefinition.icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(false));
+				}
 				return analysisDefinition.icfg();
 			}
 
@@ -339,22 +338,22 @@ public class IDEALSeedSolver<W extends Weight> {
 			protected WeightFunctions<Statement, Val, Statement, W> getForwardCallWeights(ForwardQuery sourceQuery) {
 				if (sourceQuery.equals(seed))
 					return idealWeightFunctions;
-				return new OneWeightFunctions<Statement, Val, Statement, W>(zero, one);
+				return new OneWeightFunctions<>(zero, one);
 			}
 
 			@Override
 			protected WeightFunctions<Statement, Val, Field, W> getForwardFieldWeights() {
-				return new OneWeightFunctions<Statement, Val, Field, W>(zero, one);
+				return new OneWeightFunctions<>(zero, one);
 			}
 
 			@Override
 			protected WeightFunctions<Statement, Val, Field, W> getBackwardFieldWeights() {
-				return new OneWeightFunctions<Statement, Val, Field, W>(zero, one);
+				return new OneWeightFunctions<>(zero, one);
 			}
 
 			@Override
 			protected WeightFunctions<Statement, Val, Statement, W> getBackwardCallWeights() {
-				return new OneWeightFunctions<Statement, Val, Statement, W>(zero, one);
+				return new OneWeightFunctions<>(zero, one);
 			}
 
 			@Override
@@ -482,14 +481,6 @@ public class IDEALSeedSolver<W extends Weight> {
 
 	public Stopwatch getAnalysisStopwatch() {
 		return analysisStopwatch;
-	}
-
-	public boolean isTimedOut() {
-		return timedoutSolver != null;
-	}
-
-	public WeightedBoomerang getTimedoutSolver() {
-		return timedoutSolver;
 	}
 
 	public Query getSeed() {

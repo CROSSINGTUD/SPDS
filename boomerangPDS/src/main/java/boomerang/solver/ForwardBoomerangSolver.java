@@ -24,6 +24,8 @@ import com.google.common.collect.Sets;
 
 import boomerang.BoomerangOptions;
 import boomerang.ForwardQuery;
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
 import boomerang.jimple.StaticFieldVal;
@@ -66,7 +68,100 @@ import wpds.impl.Weight;
 import wpds.interfaces.State;
 
 public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractBoomerangSolver<W> {
-	public ForwardBoomerangSolver(BiDiInterproceduralCFG<Unit, SootMethod> icfg, ForwardQuery query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>,W> fieldSummaries) {
+	private final class CallSiteCalleeListener implements CalleeListener<Unit, SootMethod> {
+		private final SootMethod caller;
+		private final Stmt callSite;
+		private final Node<Statement, Val> currNode;
+		private final InvokeExpr invokeExpr;
+
+		private CallSiteCalleeListener(SootMethod caller, Stmt callSite, Node<Statement, Val> currNode,
+				InvokeExpr invokeExpr) {
+			this.caller = caller;
+			this.callSite = callSite;
+			this.currNode = currNode;
+			this.invokeExpr = invokeExpr;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
+			result = prime * result + ((caller == null) ? 0 : caller.hashCode());
+			result = prime * result + ((currNode == null) ? 0 : currNode.hashCode());
+			result = prime * result + ((invokeExpr == null) ? 0 : invokeExpr.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			CallSiteCalleeListener other = (CallSiteCalleeListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (callSite == null) {
+				if (other.callSite != null)
+					return false;
+			} else if (!callSite.equals(other.callSite))
+				return false;
+			if (caller == null) {
+				if (other.caller != null)
+					return false;
+			} else if (!caller.equals(other.caller))
+				return false;
+			if (currNode == null) {
+				if (other.currNode != null)
+					return false;
+			} else if (!currNode.equals(other.currNode))
+				return false;
+			if (invokeExpr == null) {
+				if (other.invokeExpr != null)
+					return false;
+			} else if (!invokeExpr.equals(other.invokeExpr))
+				return false;
+			return true;
+		}
+
+		@Override
+		public void onCalleeAdded(Unit callSite, SootMethod callee) {
+			if(callee.isStaticInitializer()) {
+				return;
+			}
+//				onlyStaticInitializer = false;
+			icfg.addMethodWithCallFlow(callee);
+			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
+				Set<State> out = Sets.newHashSet();
+				Collection<? extends State> res = computeCallFlow(caller,
+						new Statement((Stmt) callSite, caller), invokeExpr, currNode.fact(), callee, (Stmt) calleeSp);
+				out.addAll(res);
+				for(State s : out) {
+					propagate(currNode, s);
+				}
+			}
+			addReachable(callee);
+
+//				if(Scene.v().isExcluded(callee.getDeclaringClass())) {
+//					calleeExcluded = true;
+//				}
+		}
+
+		@Override
+		public Unit getObservedCaller() {
+			return callSite;
+		}
+
+		private ForwardBoomerangSolver getOuterType() {
+			return ForwardBoomerangSolver.this;
+		}
+	}
+
+	public ForwardBoomerangSolver(ObservableICFG<Unit, SootMethod> icfg, ForwardQuery query, Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField, BoomerangOptions options, NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries, NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>,W> fieldSummaries) {
 		super(icfg, query, genField, options, callSummaries, fieldSummaries);
 	}
 	
@@ -139,7 +234,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	}
 
 	@Override
-	public Collection<? extends State> computeSuccessor(Node<Statement, Val> node) {
+	public void computeSuccessor(Node<Statement, Val> node) {
 		Statement stmt = node.stmt();
 		Optional<Stmt> unit = stmt.getUnit();
 		if (unit.isPresent()) {
@@ -147,24 +242,97 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			Val value = node.fact();
 			SootMethod method = icfg.getMethodOf(curr);
 			if(method == null)
-				return Collections.emptySet();
+				return;
 			if (icfg.isExitStmt(curr)) {
-				return returnFlow(method, curr, value);
+				returnFlow(method, node);
+				return;
 			}
-			Set<State> out = Sets.newHashSet();
 			for(Unit next : icfg.getSuccsOf(curr)){
 				Stmt nextStmt = (Stmt) next; 
+				if(query.getType() instanceof NullType && curr instanceof IfStmt && killAtIfStmt((IfStmt) curr, value, next)) {
+					continue;
+				}
 				if (nextStmt.containsInvokeExpr() && valueUsedInStatement(nextStmt, value)) {
-					out.addAll(callFlow(method, curr, nextStmt, nextStmt.getInvokeExpr(), value));
+					callFlow(method, node, nextStmt, nextStmt.getInvokeExpr());
 				} else if (!killFlow(method, nextStmt, value)) {
-					out.addAll(computeNormalFlow(method, curr, value, nextStmt));
+					Collection<State> out = computeNormalFlow(method, curr, value, nextStmt);
+					for(State s : out) {
+						propagate(node, s);
+					}
 				}
 			}
-			return out;
 		}
-		return Collections.emptySet();
 	}
 	
+	/**
+	 * This method kills a data-flow at an if-stmt, it is assumed that the propagated "allocation" site
+	 * is x = null and fact is the propagated aliased variable. (i.e., y after a statement y = x). 
+	 * If the if-stmt checks for if y != null or if y == null, data-flow propagation can be killed when along the true/false
+	 * branch. 
+	 * @param ifStmt The if-stmt the data-flow value fact bypasses
+	 * @param fact The data-flow value that bypasses the if-stmt
+	 * @param succ The successor statement of the if-stmt
+	 * @return true if the Val fact shall be killed
+	 */
+	private boolean killAtIfStmt(IfStmt ifStmt, Val fact, Unit succ) {
+		Stmt target = ifStmt.getTarget();
+		Value condition = ifStmt.getCondition();
+		if(condition instanceof JEqExpr) {
+			JEqExpr eqExpr = (JEqExpr) condition;
+			Value op1 = eqExpr.getOp1();
+			Value op2 = eqExpr.getOp2();
+			if(fact instanceof ValWithFalseVariable) {
+				ValWithFalseVariable valWithFalseVar = (ValWithFalseVariable) fact;
+				if(op1.equals(valWithFalseVar.getFalseVariable())){
+					if(op2.equals(IntConstant.v(0))) {
+						if(!succ.equals(target)) {
+							return true;
+						}
+					}
+				}
+				if(op2.equals(valWithFalseVar.getFalseVariable())){
+					if(op1.equals(IntConstant.v(0))) {
+						if(!succ.equals(target)) {
+							return true;
+						}
+					}
+				}
+			}
+			if(op1 instanceof NullConstant) {
+				if(op2.equals(fact.value())) {
+					if(!succ.equals(target)) {
+						return true;
+					}
+				}
+			} else if(op2 instanceof NullConstant) {
+				if(op1.equals(fact.value())) {
+					if(!succ.equals(target)) {
+						return true;
+					}
+				}
+			} 
+		}		
+		if(condition instanceof JNeExpr) {
+			JNeExpr eqExpr = (JNeExpr) condition;
+			Value op1 = eqExpr.getOp1();
+			Value op2 = eqExpr.getOp2();
+			if(op1 instanceof NullConstant) {
+				if(op2.equals(fact.value())) {
+					if(succ.equals(target)) {
+						return true;
+					}
+				}
+			} else if(op2 instanceof NullConstant) {
+				if(op1.equals(fact.value())) {
+					if(succ.equals(target)) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
 	protected Collection<State> normalFlow(SootMethod method, Stmt curr, Val value) {
 		Set<State> out = Sets.newHashSet();
 		for (Unit succ : icfg.getSuccsOf(curr)) {
@@ -177,7 +345,6 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	@Override
 	public Collection<State> computeNormalFlow(SootMethod method, Stmt curr, Val fact, Stmt succ) {
 		Set<State> out = Sets.newHashSet();
-
 		if (!isFieldWriteWithBase(succ, fact)) {
 			// always maintain data-flow if not a field write // killFlow has
 			// been taken care of
@@ -195,16 +362,18 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			if (rightOp.equals(fact.value())) {
 				if (leftOp instanceof InstanceFieldRef) {
 					InstanceFieldRef ifr = (InstanceFieldRef) leftOp;
-					out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
-							new Field(ifr.getField()), PDSSystem.FIELDS));
+					if(options.trackFields()) {
+						out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(ifr.getBase(),method),
+								new Field(ifr.getField()), PDSSystem.FIELDS));
+					}
 				} else if(leftOp instanceof StaticFieldRef){
 					StaticFieldRef sfr = (StaticFieldRef) leftOp;
-					if(options.staticFlows()){
+					if(options.trackFields() && options.staticFlows()){
 						out.add(new Node<Statement, Val>(new Statement(succ, method), new StaticFieldVal(leftOp,sfr.getField(),method)));
 					}
 				} else if(leftOp instanceof ArrayRef){
 					ArrayRef arrayRef = (ArrayRef) leftOp;
-					if(options.arrayFlows()){
+					if(options.trackFields() && options.arrayFlows()){
 						out.add(new PushNode<Statement, Val, Field>(new Statement(succ, method), new Val(arrayRef.getBase(),method),
 								Field.array(), PDSSystem.FIELDS));
 					}
@@ -246,64 +415,6 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 			}
 		}
 
-		if(succ instanceof IfStmt && query.getType() instanceof NullType) {
-			IfStmt ifStmt = (IfStmt) succ;
-			Stmt target = ifStmt.getTarget();
-			Value condition = ifStmt.getCondition();
-			if(condition instanceof JEqExpr) {
-				JEqExpr eqExpr = (JEqExpr) condition;
-				Value op1 = eqExpr.getOp1();
-				Value op2 = eqExpr.getOp2();
-				if(fact instanceof ValWithFalseVariable) {
-					ValWithFalseVariable valWithFalseVar = (ValWithFalseVariable) fact;
-					if(op1.equals(valWithFalseVar.getFalseVariable())){
-						if(op2.equals(IntConstant.v(0))) {
-							if(!succ.equals(target)) {
-								return Collections.emptySet();
-							}
-						}
-					}
-					if(op2.equals(valWithFalseVar.getFalseVariable())){
-						if(op1.equals(IntConstant.v(0))) {
-							if(!succ.equals(target)) {
-								return Collections.emptySet();
-							}
-						}
-					}
-				}
-				if(op1 instanceof NullConstant) {
-					if(op2.equals(fact.value())) {
-						if(!succ.equals(target)) {
-							return Collections.emptySet();
-						}
-					}
-				} else if(op2 instanceof NullConstant) {
-					if(op1.equals(fact.value())) {
-						if(!succ.equals(target)) {
-							return Collections.emptySet();
-						}
-					}
-				} 
-			}		
-			if(condition instanceof JNeExpr) {
-				JNeExpr eqExpr = (JNeExpr) condition;
-				Value op1 = eqExpr.getOp1();
-				Value op2 = eqExpr.getOp2();
-				if(op1 instanceof NullConstant) {
-					if(op2.equals(fact.value())) {
-						if(succ.equals(target)) {
-							return Collections.emptySet();
-						}
-					}
-				} else if(op2 instanceof NullConstant) {
-					if(op1.equals(fact.value())) {
-						if(succ.equals(target)) {
-							return Collections.emptySet();
-						}
-					}
-				}
-			}
-		}
 		return out;
 	}
 
@@ -321,32 +432,20 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 	}
 
 
-	protected Collection<State> callFlow(SootMethod caller, Stmt curr, Stmt callSite, InvokeExpr invokeExpr, Val value) {
+	protected void callFlow(SootMethod caller, Node<Statement,Val> currNode, Stmt callSite, InvokeExpr invokeExpr) {
 		assert icfg.isCallStmt(callSite);
-		Set<State> out = Sets.newHashSet();
-		boolean onlyStaticInitializer = true;
-		boolean calleeExcluded = false;
-		for (SootMethod callee : icfg.getCalleesOfCallAt(callSite)) {
-			if(callee.isStaticInitializer()) {
-				continue;
+		if (Scene.v().isExcluded(invokeExpr.getMethod().getDeclaringClass()) || invokeExpr.getMethod().isNative()) {
+			for(State s:  computeNormalFlow(caller, currNode.stmt().getUnit().get(), currNode.fact(), (Stmt) callSite)) {
+				propagate(currNode, s);
 			}
-			onlyStaticInitializer = false;
-			for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
-				Collection<? extends State> res = computeCallFlow(caller,
-						new Statement((Stmt) callSite, caller), invokeExpr, value, callee, (Stmt) calleeSp);
-				out.addAll(res);
-			}
-			addReachable(callee);
-
-			if(Scene.v().isExcluded(callee.getDeclaringClass())) {
-				calleeExcluded = true;
+			for(Statement returnSite : getSuccsOf(currNode.stmt())) {
+				for(State s: getEmptyCalleeFlow(caller, callSite, currNode.fact(), returnSite.getUnit().get())){
+					propagate(currNode, s);	
+				}
 			}
 		}
-		if (calleeExcluded || onlyStaticInitializer) {
-			out.addAll(computeNormalFlow(caller, curr, value, (Stmt) callSite));
-		}
-		out.addAll(getEmptyCalleeFlow(caller, curr, value, (Stmt) callSite));
-		return out;
+			
+		icfg.addCalleeListener(new CallSiteCalleeListener(caller, callSite, currNode, invokeExpr));
 	}
 	
 	@Override

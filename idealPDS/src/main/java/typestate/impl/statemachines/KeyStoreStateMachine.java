@@ -96,7 +96,7 @@ public class KeyStoreStateMachine extends TypeStateMachineWeightFunctions{
 	}
 
 	@Override
-	public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+	public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
 		if (unit instanceof AssignStmt) {
 			AssignStmt stmt = (AssignStmt) unit;
 			if(stmt.containsInvokeExpr()){

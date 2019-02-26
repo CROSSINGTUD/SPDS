@@ -14,13 +14,16 @@ package typestate.impl.statemachines;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
 import boomerang.WeightedForwardQuery;
+import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.Unit;
+import soot.jimple.toolkits.callgraph.Edge;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
@@ -129,10 +132,13 @@ public class SignatureStateMachine extends TypeStateMachineWeightFunctions {
 	}
 
 	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
 		for (SootMethod cons : constructor()) {
-			if (calledMethod.contains(cons)) {
-				return getLeftSideOf(m, unit);
+			Iterator<Edge> edIt = Scene.v().getCallGraph().edgesOutOf(unit);
+			while (edIt.hasNext()) {
+				SootMethod calledMethod = edIt.next().getTgt().method();
+				if(calledMethod.equals(cons))
+					return getLeftSideOf(m, unit);
 			}
 		}
 		return Collections.emptySet();

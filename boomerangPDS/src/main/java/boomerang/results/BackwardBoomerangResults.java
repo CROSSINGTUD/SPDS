@@ -19,6 +19,10 @@ import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.stats.IBoomerangStats;
 import boomerang.util.AccessPath;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import heros.utilities.DefaultValueMap;
 import soot.PointsToSet;
 import soot.Type;
@@ -29,6 +33,12 @@ import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomerangResults<W> implements PointsToSet{
 
@@ -79,7 +89,6 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 		for(ForwardQuery q : results) {
 			AbstractBoomerangResults<W>.Context context = constructContextGraph(q,query.asNode());
 			assert allocationSites.get(q) == null;
-//			System.out.println(context.toRegEx(new SingleNode<Val>(query.var()), new SingleNode<Val>(q.asNode().fact())));
 			allocationSites.put(q, context);
 		}
 	}

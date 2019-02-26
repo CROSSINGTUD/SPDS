@@ -59,8 +59,7 @@ public class FileMustBeClosedStateMachineCallToReturn extends TypeStateMachineWe
     }
 
     @Override
-  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit,
-                                                                    Collection<SootMethod> calledMethod) {
+  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit) {
     try {
 		return generateAtAllocationSiteOf(method, unit, Class.forName("typestate.test.helper.File"));
 	} catch (ClassNotFoundException e) {

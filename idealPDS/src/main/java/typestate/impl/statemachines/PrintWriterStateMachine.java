@@ -74,9 +74,8 @@ public class PrintWriterStateMachine extends TypeStateMachineWeightFunctions{
 	}
 
 	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit,
-																	  Collection<SootMethod> calledMethod) {
-		return generateThisAtAnyCallSitesOf(m, unit, calledMethod, closeMethods());
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
+		return generateThisAtAnyCallSitesOf(m, unit, closeMethods());
 	}
 
 	@Override

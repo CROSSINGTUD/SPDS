@@ -108,16 +108,12 @@ public class BoomerangPretransformer extends BodyTransformer {
 		}
 	}
 
+	/**
+	 * The first statement of a method must be a nop statement, because the call-flow functions do only map parameters to arguments.
+	 * If the first statement of a method would be an assign statement, the analysis misses data-flows.
+	 */
 	private void addNopStmtToMethods(Body b) {
-		Set<Unit> returnStmts = Sets.newHashSet();
-		for(Unit u : b.getUnits()) {
-			if(u instanceof ReturnStmt || u instanceof ReturnVoidStmt)
-				returnStmts.add(u);
-		}
 		b.getUnits().insertBefore(new JNopStmt(), b.getUnits().getFirst());
-		for(Unit rets : returnStmts) {
-			b.getUnits().insertBefore(new JNopStmt(), rets);
-		}
 	}
 
 	private Set<Unit> getStmtsWithConstants(Body methodBody) {

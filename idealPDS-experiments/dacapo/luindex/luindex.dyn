@@ -1,0 +1,15 @@
+sun.security.provider.SHA
+sun.security.provider.Sun
+sun.text.resources.DateFormatZoneData_en
+org.apache.lucene.store.FSDirectory
+java.lang.ref.Finalizer
+sun.nio.cs.ISO_8859_1
+org.apache.lucene.index.SegmentReader
+sun.security.provider.MD5
+sun.text.resources.LocaleElements_en
+sun.text.resources.LocaleElements_en_US
+sun.net.www.protocol.jar.Handler
+sun.text.resources.LocaleElements
+sun.text.resources.DateFormatZoneData
+java.io.UnixFileSystem
+sun.net.www.protocol.file.Handler

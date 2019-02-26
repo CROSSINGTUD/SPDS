@@ -190,41 +190,41 @@ public class WeightedPushdownSystem<N extends Location, D extends State, W exten
 		return s;
 	}
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((normalRules == null) ? 0 : normalRules.hashCode());
-		result = prime * result + ((popRules == null) ? 0 : popRules.hashCode());
-		result = prime * result + ((pushRules == null) ? 0 : pushRules.hashCode());
-		return result;
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		PushdownSystem other = (PushdownSystem) obj;
-		if (normalRules == null) {
-			if (other.normalRules != null)
-				return false;
-		} else if (!normalRules.equals(other.normalRules))
-			return false;
-		if (popRules == null) {
-			if (other.popRules != null)
-				return false;
-		} else if (!popRules.equals(other.popRules))
-			return false;
-		if (pushRules == null) {
-			if (other.pushRules != null)
-				return false;
-		} else if (!pushRules.equals(other.pushRules))
-			return false;
-		return true;
-	}
+//	@Override
+//	public int hashCode() {
+//		final int prime = 31;
+//		int result = 1;
+//		result = prime * result + ((normalRules == null) ? 0 : normalRules.hashCode());
+//		result = prime * result + ((popRules == null) ? 0 : popRules.hashCode());
+//		result = prime * result + ((pushRules == null) ? 0 : pushRules.hashCode());
+//		return result;
+//	}
+//
+//	@Override
+//	public boolean equals(Object obj) {
+//		if (this == obj)
+//			return true;
+//		if (obj == null)
+//			return false;
+//		if (getClass() != obj.getClass())
+//			return false;
+//		PushdownSystem other = (PushdownSystem) obj;
+//		if (normalRules == null) {
+//			if (other.normalRules != null)
+//				return false;
+//		} else if (!normalRules.equals(other.normalRules))
+//			return false;
+//		if (popRules == null) {
+//			if (other.popRules != null)
+//				return false;
+//		} else if (!popRules.equals(other.popRules))
+//			return false;
+//		if (pushRules == null) {
+//			if (other.pushRules != null)
+//				return false;
+//		} else if (!pushRules.equals(other.pushRules))
+//			return false;
+//		return true;
+//	}
 
 }

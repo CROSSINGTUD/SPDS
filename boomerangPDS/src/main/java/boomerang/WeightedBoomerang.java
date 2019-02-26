@@ -10,7 +10,10 @@
  *     Johannes Spaeth - initial API and implementation
  *******************************************************************************/
 package boomerang;
-
+import boomerang.callgraph.BackwardsObservableICFG;
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.CallerListener;
+import boomerang.callgraph.ObservableICFG;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -36,24 +39,38 @@ import boomerang.customize.BackwardEmptyCalleeFlow;
 import boomerang.customize.EmptyCalleeFlow;
 import boomerang.customize.ForwardEmptyCalleeFlow;
 import boomerang.debugger.Debugger;
-import boomerang.jimple.AllocVal;
-import boomerang.jimple.Field;
-import boomerang.jimple.Statement;
-import boomerang.jimple.StaticFieldVal;
-import boomerang.jimple.Val;
+import boomerang.jimple.*;
 import boomerang.poi.AbstractPOI;
 import boomerang.poi.ExecuteImportFieldStmtPOI;
 import boomerang.poi.PointOfIndirection;
 import boomerang.preanalysis.BoomerangPretransformer;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
+import boomerang.seedfactory.SimpleSeedFactory;
+import boomerang.solver.*;
 import boomerang.seedfactory.SeedFactory;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
 import boomerang.solver.ReachableMethodListener;
+import boomerang.solver.StatementBasedCallTransitionListener;
 import boomerang.stats.IBoomerangStats;
+import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 import heros.utilities.DefaultValueMap;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import soot.*;
+import soot.jimple.*;
+import sync.pds.solver.SyncPDSUpdateListener;
+import sync.pds.solver.WeightFunctions;
+import sync.pds.solver.nodes.*;
+import wpds.impl.*;
 import soot.Local;
 import soot.Scene;
 import soot.SootClass;
@@ -87,7 +104,13 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
+
 public abstract class WeightedBoomerang<W extends Weight> {
+	public static final boolean DEBUG = false;
+	protected ObservableICFG<Unit, SootMethod> icfg;
 	private static final Logger logger = LogManager.getLogger();
 	private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
 	private long lastTick;
@@ -118,17 +141,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 							if (!callee.isStaticInitializer()) {
 
 								UnbalancedPopHandler<W> info = new UnbalancedPopHandler<W>(returningFact, trans,weight);
-								for (Unit callSite : WeightedBoomerang.this.icfg().getCallersOf(callee)) {
-									if (!((Stmt) callSite).containsInvokeExpr())
-										continue;
-									final Statement callStatement = new Statement((Stmt) callSite,
-											WeightedBoomerang.this.icfg().getMethodOf(callSite));
-									Node<Statement,AbstractBoomerangSolver<W>> solverPair = new Node<>(callStatement,solver);
-									registerUnbalancedPopListener(solverPair, info);
-									if(callee.isStatic() || !scopedQueries.contains(key)) {
-										triggerUnbalancedPop(solverPair);
-									}
-								}
+								icfg().addCallerListener(new UnbalancedPopCallerListener(callee, info, key, solver));
 							} else {
 								for (SootMethod entryPoint : Scene.v().getEntryPoints()) {
 									for (Unit ep : WeightedBoomerang.this.icfg().getStartPointsOf(entryPoint)) {
@@ -220,7 +233,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	
 	
 
-	private BackwardsInterproceduralCFG bwicfg;
+	private ObservableICFG<Unit, SootMethod> bwicfg;
 	private EmptyCalleeFlow forwardEmptyCalleeFlow = new ForwardEmptyCalleeFlow();
 	private EmptyCalleeFlow backwardEmptyCalleeFlow = new BackwardEmptyCalleeFlow();
 
@@ -260,7 +273,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 	}
 
 	protected AbstractBoomerangSolver<W> createBackwardSolver(final BackwardQuery backwardQuery) {
-		final BackwardBoomerangSolver<W> solver = new BackwardBoomerangSolver<W>(bwicfg(), backwardQuery, genField,
+		BackwardBoomerangSolver<W> solver = new BackwardBoomerangSolver<W>(bwicfg(), backwardQuery, genField,
 				options, createCallSummaries(backwardQuery, backwardCallSummaries),
 				createFieldSummaries(backwardQuery, backwardFieldSummaries)) {
 
@@ -386,9 +399,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 				createFieldSummaries(sourceQuery, forwardFieldSummaries)) {
 
 			@Override
-			protected Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt curr, Val value,
-					Stmt callSite) {
-				return forwardEmptyCalleeFlow.getEmptyCalleeFlow(caller, curr, value, callSite);
+			protected Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt callSite, Val value,
+					Stmt returnSite) {
+				return forwardEmptyCalleeFlow.getEmptyCalleeFlow(caller, callSite, value, returnSite);
 			}
 
 			@Override
@@ -412,6 +425,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			protected void onManyStateListenerRegister() {
 				checkTimeout();
 			}
+
 		};
 
 		solver.registerListener(new SyncPDSUpdateListener<Statement, Val>() {
@@ -613,7 +627,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 				@Override
 				public void anyContext(Statement end) {
-					bwSolver.registerListener(new CanUnbalancedReturn(end.getMethod(),bwSolver));
+					for(Unit sP : icfg().getStartPointsOf(end.getMethod())) {
+						bwSolver.registerStatementCallTransitionListener(new CanUnbalancedReturn(end.getMethod(),new Statement((Stmt)sP, end.getMethod()),bwSolver) );
+					}
 				}
 			});
 		} catch (BoomerangTimeoutException e) {
@@ -658,6 +674,90 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		 return new BackwardBoomerangResults<W>(backwardQuery, timedout, this.queryToSolvers, getStats(), analysisWatch);
 	}
 	
+	private final class UnbalancedPopCallerListener implements CallerListener<Unit, SootMethod> {
+		private final SootMethod callee;
+		private final UnbalancedPopHandler<W> info;
+		private final Query key;
+		private final AbstractBoomerangSolver<W> solver;
+
+		private UnbalancedPopCallerListener(SootMethod callee, UnbalancedPopHandler<W> info, Query key,
+				AbstractBoomerangSolver<W> solver) {
+			this.callee = callee;
+			this.info = info;
+			this.key = key;
+			this.solver = solver;
+		}
+
+		@Override
+		public SootMethod getObservedCallee() {
+			return callee;
+		}
+
+		@Override
+		public void onCallerAdded(Unit callSite, SootMethod m) {
+			if (!((Stmt) callSite).containsInvokeExpr())
+				return;
+			final Statement callStatement = new Statement((Stmt) callSite,
+					WeightedBoomerang.this.icfg().getMethodOf(callSite));
+			Node<Statement,AbstractBoomerangSolver<W>> solverPair = new Node<>(callStatement,solver);
+			registerUnbalancedPopListener(solverPair, info);
+			if(callee.isStatic() || !scopedQueries.contains(key)) {
+				triggerUnbalancedPop(solverPair);
+			}
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + ((callee == null) ? 0 : callee.hashCode());
+			result = prime * result + ((info == null) ? 0 : info.hashCode());
+			result = prime * result + ((key == null) ? 0 : key.hashCode());
+			result = prime * result + ((solver == null) ? 0 : solver.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			UnbalancedPopCallerListener other = (UnbalancedPopCallerListener) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (callee == null) {
+				if (other.callee != null)
+					return false;
+			} else if (!callee.equals(other.callee))
+				return false;
+			if (info == null) {
+				if (other.info != null)
+					return false;
+			} else if (!info.equals(other.info))
+				return false;
+			if (key == null) {
+				if (other.key != null)
+					return false;
+			} else if (!key.equals(other.key))
+				return false;
+			if (solver == null) {
+				if (other.solver != null)
+					return false;
+			} else if (!solver.equals(other.solver))
+				return false;
+			return true;
+		}
+
+		private WeightedBoomerang getOuterType() {
+			return WeightedBoomerang.this;
+		}
+		
+	}
+
 	private class CanUnbalancedReturnToCallSite implements SyncPDSUpdateListener<Statement, Val> {
 
 		private AbstractBoomerangSolver<W> bwSolver;
@@ -732,30 +832,50 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
 	}
 	
-	private class CanUnbalancedReturn implements SyncPDSUpdateListener<Statement, Val> {
+	private final class UnbalancedReturnCallerListener implements CallerListener<Unit, SootMethod> {
+		private final AbstractBoomerangSolver<W>  bwSolver;
+		private final SootMethod method;
 
-		private AbstractBoomerangSolver<W> bwSolver;
-		private SootMethod method;
-		private Collection<Unit> startPointsOf;
-
-		public CanUnbalancedReturn(SootMethod method, AbstractBoomerangSolver<W> bwSolver) {
-					this.method = method;
-					this.bwSolver = bwSolver;
-					this.startPointsOf = icfg().getStartPointsOf(method);
+		public UnbalancedReturnCallerListener(AbstractBoomerangSolver<W>  bwSolver, SootMethod method) {
+			this.bwSolver = bwSolver;
+			this.method = method;
+		}
+		@Override
+		public SootMethod getObservedCallee() {
+			return method;
 		}
 
 		@Override
-		public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
-			if(startPointsOf.contains(reachableNode.stmt().getUnit().get())){
-				for (Unit callSite : WeightedBoomerang.this.icfg().getCallersOf(method)) {
-					if (!((Stmt) callSite).containsInvokeExpr())
-						continue;
-					final Statement callStatement = new Statement((Stmt) callSite,
-							WeightedBoomerang.this.icfg().getMethodOf(callSite));
-					Node<Statement,AbstractBoomerangSolver<W>> solverPair = new Node<>(callStatement,bwSolver);
-					triggerUnbalancedPop(solverPair);
-					bwSolver.registerListener(new CanUnbalancedReturn(callStatement.getMethod(), bwSolver));
-				}
+		public void onCallerAdded(Unit callSite, SootMethod m) {
+			if (!((Stmt) callSite).containsInvokeExpr())
+				return;
+			final Statement callStatement = new Statement((Stmt) callSite,
+					WeightedBoomerang.this.icfg().getMethodOf(callSite));
+			Node<Statement,AbstractBoomerangSolver<W>> solverPair = new Node<>(callStatement,bwSolver);
+			triggerUnbalancedPop(solverPair);
+			for(Unit sP : icfg().getStartPointsOf(callStatement.getMethod())) {
+				bwSolver.registerStatementCallTransitionListener(new CanUnbalancedReturn(callStatement.getMethod(),new Statement((Stmt)sP, callStatement.getMethod()),bwSolver) );
+			}
+		}
+	}
+	private class CanUnbalancedReturn extends StatementBasedCallTransitionListener<W> {
+
+		
+
+		private AbstractBoomerangSolver<W> bwSolver;
+		private Statement startPoint;
+		private SootMethod method;
+
+		public CanUnbalancedReturn(SootMethod method, Statement startPoint, AbstractBoomerangSolver<W> bwSolver) {
+			super(startPoint);
+			this.method = method;
+			this.bwSolver = bwSolver;
+			this.startPoint = startPoint;
+		}
+		@Override
+		public void onAddedTransition(Transition<Statement, INode<Val>> t, W w) {
+			if(t.getLabel().equals(startPoint)){
+				WeightedBoomerang.this.icfg().addCallerListener(new UnbalancedReturnCallerListener(bwSolver, method));
 			}
 		}
 
@@ -765,7 +885,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			int result = 1;
 			result = prime * result + getOuterType().hashCode();
 			result = prime * result + ((bwSolver == null) ? 0 : bwSolver.hashCode());
-			result = prime * result + ((method == null) ? 0 : method.hashCode());
+			result = prime * result + ((startPoint == null) ? 0 : startPoint.hashCode());
 			return result;
 		}
 
@@ -785,10 +905,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
 					return false;
 			} else if (!bwSolver.equals(other.bwSolver))
 				return false;
-			if (method == null) {
-				if (other.method != null)
+			if (startPoint == null) {
+				if (other.startPoint != null)
 					return false;
-			} else if (!method.equals(other.method))
+			} else if (!startPoint.equals(other.startPoint))
 				return false;
 			return true;
 		}
@@ -933,16 +1053,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			queryToSolvers.getOrCreate(sourceQuery).getFieldAutomaton().registerListener(
 					new TriggerBaseAllocationAtFieldWrite(new SingleNode<Node<Statement, Val>>(node),
 							fieldReadPoi, sourceQuery));
-//			queryToSolvers.getOrCreate(sourceQuery).registerFieldTransitionListener(
-//					new MethodBasedFieldTransitionListener<W>(node.stmt().getMethod()) {
-//						@Override
-//						public void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t) {
-//							if (t.getStart().fact().equals(node.asNode())
-//									&& isAllocationNode(t.getTarget().fact().fact(), sourceQuery)) {
-//								fieldReadPoi.addBaseAllocation(sourceQuery);
-//							}
-//						}
-//					});
 		}
 	}
 
@@ -950,9 +1060,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		return fact.equals(sourceQuery.var());
 	}
 
-	private BiDiInterproceduralCFG<Unit, SootMethod> bwicfg() {
+	private ObservableICFG<Unit, SootMethod> bwicfg() {
 		if (bwicfg == null)
-			bwicfg = new BackwardsInterproceduralCFG(icfg());
+			bwicfg = new BackwardsObservableICFG(icfg());
 		return bwicfg;
 	}
 
@@ -974,12 +1084,16 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		if (analysisWatch.isRunning()) {
 			analysisWatch.stop();
 		}
-		return new ForwardBoomerangResults<W>(query, timedout, this.queryToSolvers, icfg(), bwicfg(), getStats(),
+		return new ForwardBoomerangResults<W>(query, icfg(),timedout, this.queryToSolvers, getStats(),
 				analysisWatch);
 	}
 
 	public BackwardBoomerangResults<W> solve(BackwardQuery query) {
-		if (!analysisWatch.isRunning()) {
+		return solve(query, true);
+	}
+	
+	public BackwardBoomerangResults<W> solve(BackwardQuery query, boolean timing) {
+		if (timing && !analysisWatch.isRunning()) {
 			analysisWatch.start();
 		}
 		boolean timedout = false;
@@ -992,7 +1106,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			cleanup();
 			logger.debug("Timeout of query: {}", query);
 		}
-		if (analysisWatch.isRunning()) {
+		if (timing && analysisWatch.isRunning()) {
 			analysisWatch.stop();
 		}
 		
@@ -1162,7 +1276,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
 			}
 		}
 	}
-	public abstract BiDiInterproceduralCFG<Unit, SootMethod> icfg();
 
 	public void registerActivationListener(
 			WeightedBoomerang<W>.SolverPair solverPair, ExecuteImportFieldStmtPOI<W> exec) {
@@ -1229,6 +1342,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 		// TODO Auto-generated method stub
 		
 	}
+
+	public abstract ObservableICFG<Unit, SootMethod> icfg();
 
 	protected abstract WeightFunctions<Statement, Val, Field, W> getForwardFieldWeights();
 

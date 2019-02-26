@@ -26,7 +26,7 @@ public class ForwardEmptyCalleeFlow extends EmptyCalleeFlow {
 
 	public Collection<? extends State> getEmptyCalleeFlow(SootMethod caller, Stmt curr, Val value,
 			Stmt callSite) {
-		if(isSystemArrayCopy(callSite.getInvokeExpr().getMethod())){
+		if(isSystemArrayCopy(curr.getInvokeExpr().getMethod())){
 			return systemArrayCopyFlow(caller, curr, value, callSite);
 		}
 		return Collections.emptySet();
@@ -34,9 +34,9 @@ public class ForwardEmptyCalleeFlow extends EmptyCalleeFlow {
 	@Override
 	protected Collection<? extends State> systemArrayCopyFlow(SootMethod caller, Stmt curr, Val value,
 			Stmt callSite) {
-		if(value.equals(new Val(callSite.getInvokeExpr().getArg(0), caller))){
-			Value arg = callSite.getInvokeExpr().getArg(2);
-			return Collections.singleton(new Node<Statement, Val>(new Statement(callSite, caller), new Val(arg,caller)));
+		if(value.equals(new Val(curr.getInvokeExpr().getArg(0), caller))){
+			Value arg = curr.getInvokeExpr().getArg(2);
+			return Collections.singleton(new Node<Statement, Val>(new Statement(curr, caller), new Val(arg,caller)));
 		}
 		return Collections.emptySet();
 	}

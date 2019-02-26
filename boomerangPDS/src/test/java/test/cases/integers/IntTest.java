@@ -79,7 +79,6 @@ public class IntTest extends AbstractBoomerangTest {
 	
 	@Test
 	public void wrappedTypeBigInteger(){
-		//Fails when we include analysing 
 		BigInteger integer = BigInteger.valueOf(1);
 		intQueryFor(integer, "1L");
 	}

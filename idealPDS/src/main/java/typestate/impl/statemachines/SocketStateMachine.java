@@ -85,7 +85,7 @@ public class SocketStateMachine extends TypeStateMachineWeightFunctions{
 	}
 
 	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit, Collection<SootMethod> calledMethod) {
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
 		return generateAtAllocationSiteOf(m, unit, Socket.class);
 	}
 

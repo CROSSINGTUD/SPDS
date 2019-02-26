@@ -11,28 +11,19 @@
  *******************************************************************************/
 package boomerang;
 
-import com.google.common.base.Optional;
-
+import boomerang.callgraph.CalleeListener;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
 import boomerang.stats.IBoomerangStats;
 import boomerang.stats.SimpleBoomerangStats;
-import soot.RefType;
-import soot.Scene;
-import soot.SootMethod;
-import soot.Type;
-import soot.Unit;
-import soot.Value;
-import soot.jimple.AssignStmt;
-import soot.jimple.NewArrayExpr;
-import soot.jimple.NewExpr;
-import soot.jimple.NewMultiArrayExpr;
-import soot.jimple.NullConstant;
-import soot.jimple.ReturnStmt;
-import soot.jimple.Stmt;
-import soot.jimple.StringConstant;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
+import com.google.common.base.Optional;
+import soot.*;
+import soot.jimple.*;
+
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class DefaultBoomerangOptions implements BoomerangOptions {
 	
@@ -134,7 +125,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 		return trackAnySubclassOfThrowable() && Scene.v().getFastHierarchy().canStoreType(method.getDeclaringClass().getType(), Scene.v().getType("java.lang.Throwable"));
 	}
 	@Override
-	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, BiDiInterproceduralCFG<Unit, SootMethod> icfg) {
+	public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact, ObservableICFG<Unit, SootMethod> icfg) {
 		if (!(stmt instanceof AssignStmt)) {
 			return Optional.absent();
 		}
@@ -146,15 +137,57 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 			return Optional.of(new AllocVal(as.getLeftOp(), m,as.getRightOp(),new Statement(stmt,m)));
 		}
 		if(as.containsInvokeExpr()){
-			for(SootMethod callee : icfg.getCalleesOfCallAt(as)){
-				for(Unit u : icfg.getEndPointsOf(callee)){
-					if(u instanceof ReturnStmt && isAllocationVal(((ReturnStmt) u).getOp())){
-						return Optional.of(new AllocVal(as.getLeftOp(), m,((ReturnStmt) u).getOp(),new Statement((Stmt) u,m)));
-					}
+            AtomicReference<AllocVal> returnValue = new AtomicReference<>();
+			icfg.addCalleeListener(new AllocationValCalleeListener(returnValue, as, icfg, m));
+            if (returnValue.get() != null){
+                return Optional.of(returnValue.get());
+            }
+		}
+		return Optional.absent();
+	}
+
+	protected class AllocationValCalleeListener implements CalleeListener<Unit,SootMethod>{
+		AtomicReference<AllocVal> returnValue;
+		AssignStmt as;
+		ObservableICFG<Unit, SootMethod> icfg;
+		SootMethod m;
+
+		AllocationValCalleeListener(AtomicReference<AllocVal> returnValue, AssignStmt as,
+									ObservableICFG<Unit, SootMethod> icfg, SootMethod m){
+			this.returnValue = returnValue;
+			this.as = as;
+			this.icfg = icfg;
+			this.m = m;
+		}
+		@Override
+		public Unit getObservedCaller() {
+			return as;
+		}
+
+		@Override
+		public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
+			for(Unit u : icfg.getEndPointsOf(sootMethod)){
+				if(u instanceof ReturnStmt && isAllocationVal(((ReturnStmt) u).getOp())){
+					returnValue.set(new AllocVal(as.getLeftOp(), m, ((ReturnStmt) u).getOp(), new Statement((Stmt) u,m)));
 				}
 			}
 		}
-		return Optional.absent();
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			AllocationValCalleeListener that = (AllocationValCalleeListener) o;
+			return Objects.equals(returnValue, that.returnValue) &&
+					Objects.equals(as, that.as) &&
+					Objects.equals(m, that.m);
+		}
+
+		@Override
+		public int hashCode() {
+
+			return Objects.hash(returnValue, as, m);
+		}
 	}
 
 	@Override
@@ -180,5 +213,10 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
 	@Override
 	public boolean trackStaticFieldAtEntryPointToClinit() {
 		return false;
+	}
+
+	@Override
+	public boolean trackFields() {
+		return true;
 	}
 }

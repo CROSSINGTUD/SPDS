@@ -110,13 +110,12 @@ public class InputStreamStateMachine extends TypeStateMachineWeightFunctions{
 	}
 
 	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit,
-                                                                      Collection<SootMethod> calledMethod) {
-		return this.generateThisAtAnyCallSitesOf(method, unit, calledMethod, constructors());
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit) {
+		return this.generateThisAtAnyCallSitesOf(method, unit, closeMethods());
 	}
 
 	@Override
 	protected State initialState() {
-		return States.OPEN;
+		return States.CLOSED;
 	}
 }

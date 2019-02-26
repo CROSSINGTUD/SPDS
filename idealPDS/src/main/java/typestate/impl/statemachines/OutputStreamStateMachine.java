@@ -79,9 +79,8 @@ public class OutputStreamStateMachine extends TypeStateMachineWeightFunctions{
 	}
 
 	@Override
-	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit,
-																	  Collection<SootMethod> calledMethod) {
-		return generateThisAtAnyCallSitesOf(method, unit,calledMethod,closeMethods());
+	public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit) {
+		return generateThisAtAnyCallSitesOf(method, unit,closeMethods());
 	}
 
 	@Override

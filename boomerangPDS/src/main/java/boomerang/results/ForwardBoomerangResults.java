@@ -1,19 +1,10 @@
 package boomerang.results;
 
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
-
 import boomerang.ForwardQuery;
 import boomerang.Query;
+import boomerang.callgraph.CallerListener;
+import boomerang.callgraph.ObservableDynamicICFG;
+import boomerang.callgraph.ObservableICFG;
 import boomerang.Util;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -21,6 +12,8 @@ import boomerang.jimple.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
 import boomerang.stats.IBoomerangStats;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.*;
 import heros.utilities.DefaultValueMap;
 import soot.Local;
 import soot.SootMethod;
@@ -30,7 +23,6 @@ import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.LengthExpr;
 import soot.jimple.Stmt;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -40,25 +32,28 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
+
 public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerangResults<W> {
 
 	private final ForwardQuery query;
-	private final BiDiInterproceduralCFG<Unit, SootMethod> bwicfg;
-	private final BiDiInterproceduralCFG<Unit, SootMethod> icfg;
 	private final boolean timedout;
 	private final IBoomerangStats<W> stats;
 	private Stopwatch analysisWatch;
 	private long maxMemory;
+	private ObservableICFG<Unit,SootMethod> icfg;
 
-	public ForwardBoomerangResults(ForwardQuery query, boolean timedout,
+	public ForwardBoomerangResults(ForwardQuery query, ObservableICFG<Unit,SootMethod> icfg, boolean timedout,
 			DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers,
-			BiDiInterproceduralCFG<Unit, SootMethod> icfg, BiDiInterproceduralCFG<Unit, SootMethod> bwicfg,
 			IBoomerangStats<W> stats, Stopwatch analysisWatch) {
 		super(queryToSolvers);
 		this.query = query;
-		this.timedout = timedout;
 		this.icfg = icfg;
-		this.bwicfg = bwicfg;
+		this.timedout = timedout;
 		this.stats = stats;
 		this.analysisWatch = analysisWatch;
 		stats.terminated(query, this);
@@ -88,17 +83,25 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 			for (Unit ep : icfg.getEndPointsOf(flowReaches)) {
 				Statement exitStmt = new Statement((Stmt) ep, flowReaches);
 				Set<State> escapes = Sets.newHashSet();
-				for (Unit callSite : icfg.getCallersOf(flowReaches)) {
-					SootMethod callee = icfg.getMethodOf(callSite);
-					if (visitedMethods.contains(callee)) {
-						for (Entry<Val, W> valAndW : res.row(exitStmt).entrySet()) {
-							for (Unit retSite : icfg.getSuccsOf(callSite)) {
-								escapes.addAll(forwardSolver.computeReturnFlow(flowReaches, (Stmt) ep, valAndW.getKey(),
-										(Stmt) callSite, (Stmt) retSite));
+				icfg.addCallerListener(new CallerListener<Unit, SootMethod>() {
+					@Override
+					public SootMethod getObservedCallee() {
+						return flowReaches;
+					}
+
+					@Override
+					public void onCallerAdded(Unit callSite, SootMethod m) {
+						SootMethod callee = icfg.getMethodOf(callSite);
+						if (visitedMethods.contains(callee)) {
+							for (Entry<Val, W> valAndW : res.row(exitStmt).entrySet()) {
+								for (Unit retSite : icfg.getSuccsOf(callSite)) {
+									escapes.addAll(forwardSolver.computeReturnFlow(flowReaches, (Stmt) ep, valAndW.getKey(),
+											(Stmt) callSite, (Stmt) retSite));
+								}
 							}
 						}
 					}
-				}
+				});
 				if (escapes.isEmpty()) {
 					Map<Val, W> row = res.row(exitStmt);
 					findLastUsage(exitStmt, row, destructingStatement, forwardSolver);
@@ -131,7 +134,7 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 				}
 			}
 			if (!valueUsedInStmt) {
-				for (Unit succ : bwicfg.getSuccsOf(curr.getUnit().get())) {
+				for (Unit succ : icfg.getPredsOf(curr.getUnit().get())) {
 					worklist.add(new Statement((Stmt) succ, curr.getMethod()));
 				}
 			}
@@ -198,9 +201,9 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 				});
 		return invokedMethodsOnInstance;
 	}
-
-	public Map<Node<Statement, Val>, AbstractBoomerangResults<W>.Context> getPotentialNullPointerDereferences() {
-		Set<Node<Statement, Val>> res = Sets.newHashSet();
+	
+	public Set<NullPointer> getPotentialNullPointerDereferences() {
+		Set<Node<Statement,Val>> res = Sets.newHashSet();
 		queryToSolvers.get(query).getFieldAutomaton()
 				.registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
 
@@ -212,39 +215,47 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 						}
 						Node<Statement, Val> node = t.getStart().fact();
 						Val fact = node.fact();
-						Statement curr = node.stmt();
-						if (curr.isCallsite()) {
-							Stmt callSite = (Stmt) curr.getUnit().get();
-							if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
-								InstanceInvokeExpr e = (InstanceInvokeExpr) callSite.getInvokeExpr();
-								if (e.getBase().equals(fact.value())) {
-									res.add(node);
-								}
-							}
-						}
-						if (curr.getUnit().get() instanceof AssignStmt) {
-							AssignStmt assignStmt = (AssignStmt) curr.getUnit().get();
-							if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
-								InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
-								if (ifr.getBase().equals(fact.value())) {
-									res.add(node);
-								}
-							}
-							if (assignStmt.getRightOp() instanceof LengthExpr) {
-								LengthExpr lengthExpr = (LengthExpr) assignStmt.getRightOp();
-								if (lengthExpr.getOp().equals(fact.value())) {
-									res.add(node);
-								}
-							}
-						}
+						SootMethod m = fact.m();
 
+						//A this variable can never be null.
+						if(m.hasActiveBody() && Util.isThisLocal(fact,m)) {
+							return;
+						}
+						Statement curr = node.stmt();
+						for(Unit pred : icfg.getPredsOf(curr.getUnit().get())) {
+							Node<Statement,Val> nullPointerNode = new Node<>(new Statement((Stmt) pred, curr.getMethod()), fact);
+							if(pred instanceof Stmt && ((Stmt) pred).containsInvokeExpr()) {
+								Stmt callSite = (Stmt) pred;
+								if (callSite.getInvokeExpr() instanceof InstanceInvokeExpr) {
+									InstanceInvokeExpr e = (InstanceInvokeExpr) callSite.getInvokeExpr();
+									if (e.getBase().equals(fact.value())) {
+										res.add(nullPointerNode);
+									}
+								}
+							}
+							if (pred instanceof AssignStmt) {
+								AssignStmt assignStmt = (AssignStmt) pred;
+								if (assignStmt.getRightOp() instanceof InstanceFieldRef) {
+									InstanceFieldRef ifr = (InstanceFieldRef) assignStmt.getRightOp();
+									if (ifr.getBase().equals(fact.value())) {
+										res.add(nullPointerNode);
+									}
+								}
+								if (assignStmt.getRightOp() instanceof LengthExpr) {
+									LengthExpr lengthExpr = (LengthExpr) assignStmt.getRightOp();
+									if (lengthExpr.getOp().equals(fact.value())) {
+										res.add(nullPointerNode);
+									}
+								}
+							}
+						}
 					}
 				});
 
-		Map<Node<Statement, Val>, AbstractBoomerangResults<W>.Context> resWithContext = Maps.newHashMap();
+		Set<NullPointer> resWithContext = Sets.newHashSet();
 		for (Node<Statement, Val> r : res) {
 			AbstractBoomerangResults<W>.Context context = constructContextGraph(query, r);
-			resWithContext.put(r, context);
+			resWithContext.add(new NullPointer(query.stmt(),query.var(),r.stmt(),r.fact(), context.getOpeningContext(), context.getClosingContext()));
 		}
 		return resWithContext;
 	}
