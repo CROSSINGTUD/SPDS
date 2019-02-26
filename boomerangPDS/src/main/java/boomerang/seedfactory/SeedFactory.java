@@ -154,7 +154,7 @@ public abstract class SeedFactory<W extends Weight> {
 
 					@Override
 					public void onCalleeAdded(Unit n, SootMethod callee) {
-						  if (!callee.hasActiveBody())
+						  if (!callee.hasActiveBody() || !Scene.v().getApplicationClasses().contains(callee.getDeclaringClass()))
 		                        return;
 						  addPushRule(new Method(m),new Method(callee));
 					}
