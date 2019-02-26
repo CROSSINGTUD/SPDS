@@ -133,6 +133,7 @@ public abstract class AbstractTestingFramework {
 		}
 		for(SootClass inner : Scene.v().getClasses()){
 			if(inner.getName().contains(sootTestCaseClass.getName())){
+				inner.setApplicationClass();
 				for (SootMethod m : inner.getMethods()) {
 					if (m.isStaticInitializer())
 						ePoints.add(m);
