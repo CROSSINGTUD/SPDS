@@ -4,7 +4,8 @@
 	<parent>
 		<groupId>de.fraunhofer.iem</groupId>
 		<artifactId>SPDS</artifactId>
-	    <version>1.0.4-ofcg-SNAPSHOT</version>
+	    <version>${projectVersion}</version>
+    	<relativePath>../pom.xml</relativePath>
 	</parent>
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>WPDS</artifactId>

@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>de.fraunhofer.iem</groupId>
   <artifactId>SPDS</artifactId>
-  <version>1.0.4-ofcg-SNAPSHOT</version>
+  <version>${projectVersion}</version>
   <packaging>pom</packaging>
   <name>SPDS</name>
   <modules>
@@ -15,7 +15,8 @@
    </modules>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <revision>1.0.4-ofcg</revision>
+    <sootVersion>3.3.0-SNAPSHOT</sootVersion>
+    <projectVersion>1.0.4-ofcg-SNAPSHOT</projectVersion>
   </properties>
   <build>
     <plugins>

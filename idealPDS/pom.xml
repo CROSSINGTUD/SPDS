@@ -3,7 +3,8 @@
    <parent>
 		<groupId>de.fraunhofer.iem</groupId>
 		<artifactId>SPDS</artifactId>
-		<version>1.0.4-ofcg-SNAPSHOT</version>
+		<version>${projectVersion}</version>
+        <relativePath>../pom.xml</relativePath>
 	</parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>idealPDS</artifactId>
@@ -24,17 +25,17 @@
         <dependency>
             <groupId>de.fraunhofer.iem</groupId>
             <artifactId>testCore</artifactId>
-            <version>1.0.4-ofcg-SNAPSHOT</version>
+            <version>${projectVersion}</version>
         </dependency>
         <dependency>
             <groupId>de.fraunhofer.iem</groupId>
             <artifactId>boomerangPDS</artifactId>
-            <version>1.0.4-ofcg-SNAPSHOT</version>
+            <version>${projectVersion}</version>
         </dependency>
         <dependency>
             <groupId>de.fraunhofer.iem</groupId>
             <artifactId>WPDS</artifactId>
-            <version>1.0.4-ofcg-SNAPSHOT</version>
+            <version>${projectVersion}</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -55,12 +56,12 @@
         <dependency>
             <groupId>ca.mcgill.sable</groupId>
             <artifactId>soot</artifactId>
-            <version>3.1.0-SNAPSHOT</version>
+            <version>${sootVersion}</version>
         </dependency>
         <dependency>
             <groupId>de.fraunhofer.iem</groupId>
             <artifactId>synchronizedPDS</artifactId>
-            <version>1.0.4-ofcg-SNAPSHOT</version>
+            <version>${projectVersion}</version>
         </dependency>
     </dependencies>
     <profiles>
