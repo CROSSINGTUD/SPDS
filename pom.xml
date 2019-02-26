@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>de.fraunhofer.iem</groupId>
   <artifactId>weightedBoomerang-root</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>1.5</version>
   <packaging>pom</packaging>
   <name>weightedBoomerang-root</name>
   <modules>
