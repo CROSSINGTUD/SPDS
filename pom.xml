@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>de.fraunhofer.iem</groupId>
   <artifactId>SPDS</artifactId>
-  <version>${projectVersion}</version>
+  <version>1.0.4-ofcg-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>SPDS</name>
   <modules>
@@ -16,7 +16,6 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <sootVersion>3.3.0-SNAPSHOT</sootVersion>
-    <projectVersion>1.0.4-ofcg-SNAPSHOT</projectVersion>
   </properties>
   <build>
     <plugins>
@@ -79,9 +78,13 @@
     </repository>
   </repositories>
     <distributionManagement>
-    <repository>
+    <snapshotRepository>
       <id>soot-snapshot</id>
       <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
+    </snapshotRepository>
+    <repository>
+      <id>soot-release</id>
+      <url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
     </repository>
   </distributionManagement>
 </project>
