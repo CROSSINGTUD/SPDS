@@ -124,9 +124,10 @@ public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
 			if (retrieveIteratorConstructors().contains(m)) {
 				Stmt stmt = ((Stmt) unit);
 				InvokeExpr invokeExpr = stmt.getInvokeExpr();
-				if(invokeExpr instanceof InstanceInvokeExpr) {
+				if(stmt instanceof AssignStmt) {
+					AssignStmt assignStmt = (AssignStmt) stmt;
 					InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
-					return Collections.singleton(new WeightedForwardQuery<>(new Statement(stmt,method),new AllocVal(iie.getBase(), method, iie.getBase(),new Statement((Stmt) unit,m)),initialTransition()));
+					return Collections.singleton(new WeightedForwardQuery<>(new Statement(stmt,method),new AllocVal(assignStmt.getLeftOp(), method, assignStmt.getLeftOp(),new Statement((Stmt) unit,m)),initialTransition()));
 				}
 			}
 		}
