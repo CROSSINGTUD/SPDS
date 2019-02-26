@@ -177,8 +177,6 @@ public abstract class AbstractTestingFramework {
 		JimpleBody body = Jimple.v().newBody(mainMethod);
 		mainMethod.setActiveBody(body);
 		RefType testCaseType = RefType.v(getTestCaseClassName());
-		System.out.println(getTestCaseClassName());
-
 		Local loc = Jimple.v().newLocal("l0", paramType);
 		body.getLocals().add(loc);
 		body.getUnits().add(Jimple.v().newIdentityStmt(loc, Jimple.v().newParameterRef(paramType, 0)));
