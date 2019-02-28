@@ -185,7 +185,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
                 }
             });
             SeedFactory<W> seedFactory = getSeedFactory();
-            if (options.onTheFlyCallGraph() && seedFactory != null) {
+            if (seedFactory != null) {
                 for (SootMethod m : seedFactory.getMethodScope(key)) {
                     solver.addReachable(m);
                 }
