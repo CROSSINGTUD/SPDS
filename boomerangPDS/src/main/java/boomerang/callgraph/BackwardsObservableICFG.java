@@ -101,16 +101,17 @@ public class BackwardsObservableICFG implements ObservableICFG<Unit, SootMethod>
         delegate.addCallerListener(listener);
     }
 
+ 
     @Override
-    public boolean isMethodsWithCallFlow(SootMethod method) {
-        return delegate.isMethodsWithCallFlow(method);
+    public void addUnbalancedMethod(SootMethod method) {
+        delegate.addUnbalancedMethod(method);
     }
-
+    
     @Override
-    public void addMethodWithCallFlow(SootMethod method) {
-        delegate.addMethodWithCallFlow(method);
+    public boolean isUnbalancedMethod(SootMethod method) {
+      return delegate.isUnbalancedMethod(method);
     }
-
+    
     @Override
     public int getNumberOfEdgesTakenFromPrecomputedGraph() {
         return delegate.getNumberOfEdgesTakenFromPrecomputedGraph();

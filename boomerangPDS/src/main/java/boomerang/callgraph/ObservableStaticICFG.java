@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.google.common.collect.Sets;
 
 /**
  * An interprocedural control-flow graph, for which caller-callee edges can be observed using {@link CalleeListener} and
@@ -27,6 +28,7 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod> {
      * Wrapped static ICFG. If available, this is used to handle all queries.
      */
     private BiDiInterproceduralCFG<Unit, SootMethod> precomputedGraph;
+    private Set<SootMethod> unbalancedMethods = Sets.newHashSet();
 
     public ObservableStaticICFG(BiDiInterproceduralCFG<Unit, SootMethod> icfg) {
         this.precomputedGraph = icfg;
@@ -63,6 +65,9 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod> {
 
     @Override
     public Collection<Unit> getAllPrecomputedCallers(SootMethod sootMethod) {
+        for(Unit u : precomputedGraph.getCallersOf(sootMethod)) {
+          this.unbalancedMethods.add(getMethodOf(u));
+        }
         return precomputedGraph.getCallersOf(sootMethod);
     }
 
@@ -138,17 +143,15 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod> {
             }
         }
     }
-
     @Override
-    public boolean isMethodsWithCallFlow(SootMethod method) {
-        return false;
+    public boolean isUnbalancedMethod(SootMethod method) {
+      return unbalancedMethods.contains(method);
     }
 
     @Override
-    public void addMethodWithCallFlow(SootMethod method) {
-        // No need to keep track of that since we rely on the precomputed graph
+    public void addUnbalancedMethod(SootMethod method) {
+      unbalancedMethods.add(method);
     }
-
     /**
      * Returns negative number to signify all edges are precomputed. CallGraphDebugger will add the actual number in.
      * 

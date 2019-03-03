@@ -1096,6 +1096,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
     }
 
     public BackwardBoomerangResults<W> solve(BackwardQuery query) {
+        icfg().addUnbalancedMethod(query.stmt().getMethod());
         return solve(query, true);
     }
 

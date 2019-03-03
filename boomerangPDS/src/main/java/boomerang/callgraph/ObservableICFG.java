@@ -110,9 +110,9 @@ public interface ObservableICFG<N, M> {
 
     CallGraph getCallGraphCopy();
 
-    boolean isMethodsWithCallFlow(SootMethod method);
+    boolean isUnbalancedMethod(SootMethod method);
 
-    void addMethodWithCallFlow(SootMethod method);
+    void addUnbalancedMethod(SootMethod method);
 
     int getNumberOfEdgesTakenFromPrecomputedGraph();
 

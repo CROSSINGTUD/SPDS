@@ -458,23 +458,23 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
                 propagate(currNode, s);
             }
         } else {
-            if (icfg.isMethodsWithCallFlow(method)) {
-                icfg.addCallerListener(new ReturnFlowCallerListener(curr, method, value, currNode));
+            if (icfg.isUnbalancedMethod(method)) {
+           // Unbalanced call which we did not observe a flow to previously
+              Set<State> out = Sets.newHashSet();
+              for (Unit unit : icfg.getAllPrecomputedCallers(method)) {
+                  if (((Stmt) unit).containsInvokeExpr()) {
+                      for (Unit returnSite : icfg.getSuccsOf(unit)) {
+                          Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) unit,
+                                  (Stmt) returnSite);
+                          out.addAll(outFlow);
+                      }
+                  }
+              }
+              for (State s : out) {
+                  propagate(currNode, s);
+              }
             } else {
-                // Unbalanced call which we did not observe a flow to previously
-                Set<State> out = Sets.newHashSet();
-                for (Unit unit : icfg.getAllPrecomputedCallers(method)) {
-                    if (((Stmt) unit).containsInvokeExpr()) {
-                        for (Unit returnSite : icfg.getSuccsOf(unit)) {
-                            Collection<? extends State> outFlow = computeReturnFlow(method, curr, value, (Stmt) unit,
-                                    (Stmt) returnSite);
-                            out.addAll(outFlow);
-                        }
-                    }
-                }
-                for (State s : out) {
-                    propagate(currNode, s);
-                }
+              icfg.addCallerListener(new ReturnFlowCallerListener(curr, method, value, currNode));
             }
         }
     }

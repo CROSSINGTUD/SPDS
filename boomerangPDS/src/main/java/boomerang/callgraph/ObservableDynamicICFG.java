@@ -157,7 +157,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod> {
     private CallGraph demandDrivenCallGraph = new CallGraph();
     private CallGraph precomputedCallGraph;
     private WeightedBoomerang<? extends Weight> solver;
-    private Set<SootMethod> methodsWithCallFlow = Sets.newHashSet();
+    private Set<SootMethod> unbalancedMethods = Sets.newHashSet();
 
     private Multimap<Unit, CalleeListener<Unit, SootMethod>> calleeListeners = HashMultimap.create();
     private Multimap<SootMethod, CallerListener<Unit, SootMethod>> callerListeners = HashMultimap.create();
@@ -422,6 +422,9 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod> {
             return Collections.emptySet();
         if (!options.fallbackOnPrecomputedForUnbalanced())
             return Collections.emptySet();
+        assert this.unbalancedMethods.contains(sootMethod);
+        
+        System.out.println("Getting Precomiputed of sootMethod " + sootMethod);
         logger.debug("Getting precomputed callers of {}", sootMethod);
         Set<Unit> callers = new HashSet<>();
         Iterator<Edge> precomputedCallers = precomputedCallGraph.edgesInto(sootMethod);
@@ -430,6 +433,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod> {
             if (methodCall.srcUnit() == null)
                 continue;
             callers.add(methodCall.srcUnit());
+            unbalancedMethods.add(methodCall.src());
             boolean wasPrecomputedAdded = addCallIfNotInGraph(methodCall.srcUnit(), methodCall.tgt(),
                     methodCall.kind());
             if (wasPrecomputedAdded)
@@ -551,12 +555,13 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod> {
     }
 
     @Override
-    public boolean isMethodsWithCallFlow(SootMethod method) {
-        return methodsWithCallFlow.contains(method);
+    public boolean isUnbalancedMethod(SootMethod method) {
+      return unbalancedMethods.contains(method);
     }
 
-    public void addMethodWithCallFlow(SootMethod method) {
-        methodsWithCallFlow.add(method);
+    @Override
+    public void addUnbalancedMethod(SootMethod method) {
+      unbalancedMethods.add(method);
     }
 
     @Override
@@ -568,7 +573,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod> {
     public void resetCallGraph() {
         demandDrivenCallGraph = new CallGraph();
         numberOfEdgesTakenFromPrecomputedCallGraph = 0;
-        methodsWithCallFlow.clear();
+        unbalancedMethods.clear();
         calleeListeners.clear();
         callerListeners.clear();
     }

@@ -86,7 +86,6 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 
             Set<State> out = Sets.newHashSet();
             InvokeExpr invokeExpr = curr.stmt().getUnit().get().getInvokeExpr();
-            icfg.addMethodWithCallFlow(callee);
             for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
                 for (Unit returnSite : icfg.getSuccsOf(callSite)) {
                     Collection<? extends State> res = computeCallFlow(caller, new Statement((Stmt) returnSite, caller),
