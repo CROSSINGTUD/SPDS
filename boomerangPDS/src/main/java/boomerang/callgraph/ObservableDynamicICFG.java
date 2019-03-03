@@ -424,7 +424,6 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod> {
             return Collections.emptySet();
         assert this.unbalancedMethods.contains(sootMethod);
         
-        System.out.println("Getting Precomiputed of sootMethod " + sootMethod);
         logger.debug("Getting precomputed callers of {}", sootMethod);
         Set<Unit> callers = new HashSet<>();
         Iterator<Edge> precomputedCallers = precomputedCallGraph.edgesInto(sootMethod);
