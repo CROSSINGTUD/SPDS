@@ -9,24 +9,25 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.ForwardQuery;
+import boomerang.Query;
+import boomerang.SolverCreationListener;
 import boomerang.WeightedBoomerang;
 import boomerang.jimple.Statement;
 import boomerang.jimple.Val;
-import boomerang.results.BackwardBoomerangResults;
+import boomerang.results.ExtractAllocationSiteStateListener;
+import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.solver.ForwardBoomerangSolver;
 import heros.DontSynchronize;
 import heros.SynchronizedBy;
 import heros.solver.IDESolver;
@@ -52,6 +53,8 @@ import soot.toolkits.exceptions.UnitThrowAnalysis;
 import soot.toolkits.graph.BriefUnitGraph;
 import soot.toolkits.graph.DirectedGraph;
 import soot.toolkits.graph.ExceptionalUnitGraph;
+import sync.pds.solver.nodes.INode;
+import sync.pds.solver.nodes.Node;
 import wpds.impl.Weight;
 
 /**
@@ -64,6 +67,83 @@ import wpds.impl.Weight;
  * @author Melanie Bruns on 04.05.2018
  */
 public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod> {
+
+    private final class IterateSolvers implements SolverCreationListener {
+    private final BackwardQuery query;
+    private final Stmt unit;
+    private final InvokeExpr invokeExpr;
+
+    private IterateSolvers(BackwardQuery query, Stmt unit, InvokeExpr invokeExpr) {
+      this.query = query;
+      this.unit = unit;
+      this.invokeExpr = invokeExpr;
+    }
+
+    @Override
+    
+    public void onCreatedSolver(Query q, AbstractBoomerangSolver solver) {
+      if(solver instanceof ForwardBoomerangSolver) {
+        ForwardQuery forwardQuery = (ForwardQuery) q;
+        ForwardBoomerangSolver forwardBoomerangSolver = (ForwardBoomerangSolver) solver;
+        INode<Node<Statement, Val>> initialState = (INode<Node<Statement, Val>>) forwardBoomerangSolver.getFieldAutomaton().getInitialState();
+        forwardBoomerangSolver.getFieldAutomaton().registerListener(new ExtractAllocationSiteStateListener(
+            initialState, query, (ForwardQuery) q) {
+              @Override
+              protected void allocationSiteFound(ForwardQuery allocationSite,
+                  BackwardQuery query) {
+                logger.debug("Found AllocationSite '{}'.", forwardQuery);
+                Type type = forwardQuery.getType();
+                if (type instanceof RefType) {
+                    for (SootMethod calleeMethod : getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(),
+                            ((RefType) type).getSootClass())) {
+                        addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
+                    }
+                } else if (type instanceof ArrayType) {
+                    Type base = ((ArrayType) type).baseType;
+                    if (base instanceof RefType) {
+                        for (SootMethod calleeMethod : getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(),
+                                ((RefType) base).getSootClass())) {
+                            addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
+                        }
+                    }
+                }
+              };
+        });
+      }
+    }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + getOuterType().hashCode();
+      result = prime * result + ((query == null) ? 0 : query.hashCode());
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      IterateSolvers other = (IterateSolvers) obj;
+      if (!getOuterType().equals(other.getOuterType()))
+        return false;
+      if (query == null) {
+        if (other.query != null)
+          return false;
+      } else if (!query.equals(other.query))
+        return false;
+      return true;
+    }
+
+    private ObservableDynamicICFG getOuterType() {
+      return ObservableDynamicICFG.this;
+    }
+  }
 
     private static final String THREAD_CLASS = "java.lang.Thread";
     private static final String THREAD_START_SIGNATURE = "<java.lang.Thread: void start()>";
@@ -229,40 +309,32 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod> {
             BackwardQuery query = new BackwardQuery(statement, val);
 
             // Execute that query
-            BackwardBoomerangResults<? extends Weight> results = solver.solve(query, false);
-
+            solver.solve(query, false);
+            forAnyAllocationSiteOfQuery(query, invokeExpr, stmt);
+            
             // Go through possible types an add edges to implementations in possible types
-            Set<ForwardQuery> keySet = results.getAllocationSites().keySet();
-            for (ForwardQuery forwardQuery : keySet) {
-                logger.debug("Found AllocationSite '{}'.", forwardQuery);
-                Type type = forwardQuery.getType();
-                if (type instanceof RefType) {
-                    for (SootMethod calleeMethod : getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(),
-                            ((RefType) type).getSootClass())) {
-                        addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
-                    }
-                } else if (type instanceof ArrayType) {
-                    Type base = ((ArrayType) type).baseType;
-                    if (base instanceof RefType) {
-                        for (SootMethod calleeMethod : getMethodFromClassOrFromSuperclass(invokeExpr.getMethod(),
-                                ((RefType) base).getSootClass())) {
-                            addCallIfNotInGraph(unit, calleeMethod, Kind.VIRTUAL);
-                        }
-                    }
-                }
-            }
+//            Set<ForwardQuery> keySet = results.getAllocationSites().keySet();
+//            for (ForwardQuery forwardQuery : keySet) {
+//                
+//            }
 
             // Fallback on Precompute if set was empty
-            if (options.fallbackOnPrecomputedOnEmpty() && keySet.isEmpty()) {
-                Iterator<Edge> precomputedCallers = precomputedCallGraph.edgesOutOf(unit);
-                while (precomputedCallers.hasNext()) {
-                    Edge methodCall = precomputedCallers.next();
-                    if (methodCall.srcUnit() == null)
-                        continue;
-                    addCallIfNotInGraph(methodCall.srcUnit(), methodCall.tgt(), methodCall.kind());
-                }
-            }
+//            if (options.fallbackOnPrecomputedOnEmpty() && keySet.isEmpty()) {
+//                Iterator<Edge> precomputedCallers = precomputedCallGraph.edgesOutOf(unit);
+//                while (precomputedCallers.hasNext()) {
+//                    Edge methodCall = precomputedCallers.next();
+//                    if (methodCall.srcUnit() == null)
+//                        continue;
+//                    addCallIfNotInGraph(methodCall.srcUnit(), methodCall.tgt(), methodCall.kind());
+//                }
+//            }
         }
+    }
+
+    
+    @SuppressWarnings("rawtypes")
+    private void forAnyAllocationSiteOfQuery(BackwardQuery query, InvokeExpr invokeExpr, Stmt unit) {
+      solver.registerSolverCreationListener(new IterateSolvers(query, unit, invokeExpr));
     }
 
     private Collection<SootMethod> getMethodFromClassOrFromSuperclass(SootMethod method, SootClass sootClass) {
