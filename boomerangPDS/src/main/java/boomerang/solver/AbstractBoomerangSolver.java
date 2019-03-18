@@ -31,6 +31,7 @@ import com.google.common.collect.Table;
 
 import boomerang.BoomerangOptions;
 import boomerang.Query;
+import boomerang.Util;
 import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.jimple.AllocVal;
@@ -406,10 +407,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
     public boolean valueUsedInStatement(Stmt u, Val value) {
         if (value.isStatic())
             return true;
-        if (isBackward()) {
-            if (assignsValue(u, value))
-                return true;
-        }
+        if (assignsValue(u, value))
+            return true;
+        if(Util.isReturnOperator(value, u))
+            return true;
         if (u.containsInvokeExpr()) {
             InvokeExpr invokeExpr = u.getInvokeExpr();
             if (invokeExpr instanceof InstanceInvokeExpr) {

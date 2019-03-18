@@ -24,8 +24,7 @@ public class UnbalancedPopHandler<W extends Weight> {
     public void trigger(Statement callStatement, AbstractBoomerangSolver<W> solver) {
         boolean valueUsedInStatement = solver.valueUsedInStatement((Stmt) callStatement.getUnit().get(),
                 returningFact.fact());
-        if (valueUsedInStatement
-                || AbstractBoomerangSolver.assignsValue((Stmt) callStatement.getUnit().get(), returningFact.fact())) {
+        if (valueUsedInStatement) {
             unbalancedReturnFlow(callStatement, returningFact, trans, weight, solver);
         }
     }

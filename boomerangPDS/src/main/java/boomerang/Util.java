@@ -31,8 +31,7 @@ public class Util {
         return parameterLocals.contains(val.value());
     }
 
-    public static boolean isReturnOperator(Val val, Statement returnStmt) {
-        Stmt stmt = returnStmt.getUnit().get();
+    public static boolean isReturnOperator(Val val, Stmt stmt) {
         return (stmt instanceof ReturnStmt && ((ReturnStmt) stmt).getOp().equals(val.value()));
     }
 
