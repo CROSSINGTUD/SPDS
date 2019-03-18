@@ -13,7 +13,7 @@ package test.cases.fields;
 
 import org.junit.Ignore;
 import org.junit.Test;
-
+import boomerang.Query;
 import boomerang.SolverCreationListener;
 import boomerang.WeightedBoomerang;
 import boomerang.jimple.Field;
@@ -52,7 +52,7 @@ public class HiddenFieldLoadAdvancedTest extends AbstractBoomerangTest {
         solver.registerSolverCreationListener(new SolverCreationListener<NoWeight>() {
 
             @Override
-            public void onCreatedSolver(AbstractBoomerangSolver<NoWeight> solver) {
+            public void onCreatedSolver(Query q, AbstractBoomerangSolver<NoWeight> solver) {
                 if (solver instanceof BackwardBoomerangSolver) {
                     BackwardBoomerangSolver<NoWeight> bsolver = (BackwardBoomerangSolver) solver;
                     if (bsolver.getFieldAutomaton().getInitialState().toString().contains(solverMatch)) {

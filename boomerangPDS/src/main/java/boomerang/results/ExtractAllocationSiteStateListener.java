@@ -14,22 +14,20 @@ import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
 
-class ExtractAllocationSiteStateListener<W extends Weight>
+public abstract class ExtractAllocationSiteStateListener<W extends Weight>
         extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
     /**
      * 
      */
     private ForwardQuery query;
-    private Set<ForwardQuery> results;
     private BackwardQuery bwQuery;
 
     public ExtractAllocationSiteStateListener(INode<Node<Statement, Val>> state, BackwardQuery bwQuery,
-            ForwardQuery query, Set<ForwardQuery> results) {
+            ForwardQuery query) {
         super(state);
         this.bwQuery = bwQuery;
         this.query = query;
-        this.results = results;
     }
 
     @Override
@@ -41,9 +39,11 @@ class ExtractAllocationSiteStateListener<W extends Weight>
     public void onInTransitionAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
             WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
         if (t.getStart().fact().equals(bwQuery.asNode()) && t.getLabel().equals(Field.empty())) {
-            results.add(query);
+            allocationSiteFound(query,bwQuery);
         }
     }
+
+    protected abstract void allocationSiteFound(ForwardQuery allocationSite, BackwardQuery query);
 
     @Override
     public int hashCode() {

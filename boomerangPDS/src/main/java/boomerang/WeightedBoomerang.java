@@ -116,7 +116,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
     private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
     private long lastTick;
     private IBoomerangStats<W> stats;
-    private List<SolverCreationListener<W>> solverCreationListeners = Lists.newArrayList();
+    private Set<SolverCreationListener<W>> solverCreationListeners = Sets.newHashSet();
     private Multimap<SolverPair, ExecuteImportFieldStmtPOI<W>> poiListeners = HashMultimap.create();
     private Multimap<SolverPair, INode<Node<Statement, Val>>> activatedPoi = HashMultimap.create();
     private final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers = new DefaultValueMap<Query, AbstractBoomerangSolver<W>>() {
@@ -185,12 +185,12 @@ public abstract class WeightedBoomerang<W extends Weight> {
                 }
             });
             SeedFactory<W> seedFactory = getSeedFactory();
-            if (seedFactory != null) {
+            if (options.onTheFlyCallGraph() && seedFactory != null) {
                 for (SootMethod m : seedFactory.getMethodScope(key)) {
                     solver.addReachable(m);
                 }
             }
-            onCreateSubSolver(solver);
+            onCreateSubSolver(key, solver);
             return solver;
         }
     };
@@ -1096,6 +1096,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
     }
 
     public BackwardBoomerangResults<W> solve(BackwardQuery query) {
+        icfg().addUnbalancedMethod(query.stmt().getMethod());
         return solve(query, true);
     }
 
@@ -1383,14 +1384,18 @@ public abstract class WeightedBoomerang<W extends Weight> {
         return stats;
     }
 
-    public void onCreateSubSolver(AbstractBoomerangSolver<W> solver) {
+    public void onCreateSubSolver(Query key, AbstractBoomerangSolver<W> solver) {
         for (SolverCreationListener<W> l : solverCreationListeners) {
-            l.onCreatedSolver(solver);
+            l.onCreatedSolver(key, solver);
         }
     }
 
     public void registerSolverCreationListener(SolverCreationListener<W> l) {
-        solverCreationListeners.add(l);
+        if(solverCreationListeners.add(l)) {
+          for(Entry<Query, AbstractBoomerangSolver<W>> e : Lists.newArrayList(queryToSolvers.entrySet())) {
+            l.onCreatedSolver(e.getKey(), e.getValue());
+          }
+        }
     }
 
     public Table<Statement, Val, W> getResults(Query seed) {

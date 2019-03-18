@@ -89,7 +89,14 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
                 continue;
             }
             fw.getValue().getFieldAutomaton().registerListener(new ExtractAllocationSiteStateListener<W>(
-                    fw.getValue().getFieldAutomaton().getInitialState(), query, (ForwardQuery) fw.getKey(), results));
+                    fw.getValue().getFieldAutomaton().getInitialState(), query, (ForwardQuery) fw.getKey()) {
+
+                      @Override
+                      protected void allocationSiteFound(ForwardQuery allocationSite,
+                          BackwardQuery query) {
+                        results.add(allocationSite);
+                      }
+            });
         }
         allocationSites = Maps.newHashMap();
         for (ForwardQuery q : results) {
