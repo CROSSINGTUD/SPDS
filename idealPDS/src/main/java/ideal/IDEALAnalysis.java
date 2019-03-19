@@ -99,9 +99,10 @@ public class IDEALAnalysis<W extends Weight> {
         IDEALSeedSolver<W> idealAnalysis = new IDEALSeedSolver<W>(analysisDefinition, seed, seedFactory);
         ForwardBoomerangResults<W> res;
         try {
-            if (analysisDefinition.icfg() != null)
+            if (analysisDefinition.icfg() != null) {
                 analysisDefinition.icfg().resetCallGraph();
-            analysisDefinition.icfg().addUnbalancedMethod(seed.stmt().getMethod());
+                analysisDefinition.icfg().addUnbalancedMethod(seed.stmt().getMethod());
+            }
             res = idealAnalysis.run();
         } catch (IDEALSeedTimeout e) {
             res = (ForwardBoomerangResults<W>) e.getLastResults();
