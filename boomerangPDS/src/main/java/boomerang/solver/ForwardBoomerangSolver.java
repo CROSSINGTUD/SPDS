@@ -255,7 +255,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
                         && killAtIfStmt((IfStmt) curr, value, next)) {
                     continue;
                 }
-                if (nextStmt.containsInvokeExpr() && (valueUsedInStatement(nextStmt, value) && !assignsValue(nextStmt, value))) {
+                if (nextStmt.containsInvokeExpr() && (valueUsedInStatement(nextStmt, value) && /** Assigned value may kill the flow*/!assignsValue(nextStmt, value))) {
                     callFlow(method, node, nextStmt, nextStmt.getInvokeExpr());
                 } else if (!killFlow(method, nextStmt, value)) {
                     Collection<State> out = computeNormalFlow(method, curr, value, nextStmt);
