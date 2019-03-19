@@ -411,7 +411,14 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
             return true;
         if(Util.isReturnOperator(value, u))
             return true;
-        if (u.containsInvokeExpr()) {
+        if(isParameter(value, u)) {
+        	return true;
+        }
+        return false;
+    }
+
+    public boolean isParameter(Val value, Stmt u) {
+    	if (u.containsInvokeExpr()) {
             InvokeExpr invokeExpr = u.getInvokeExpr();
             if (invokeExpr instanceof InstanceInvokeExpr) {
                 InstanceInvokeExpr iie = (InstanceInvokeExpr) invokeExpr;
@@ -424,10 +431,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
                 }
             }
         }
-        return false;
-    }
+		return false;
+	}
 
-    public static boolean assignsValue(Stmt u, Val value) {
+	public static boolean assignsValue(Stmt u, Val value) {
         if (u instanceof AssignStmt) {
             AssignStmt assignStmt = (AssignStmt) u;
             if (assignStmt.getLeftOp().equals(value.value()))
