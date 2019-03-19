@@ -19,6 +19,7 @@ import soot.Local;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.AssignStmt;
+import soot.jimple.IdentityStmt;
 import soot.jimple.InstanceFieldRef;
 import soot.jimple.InstanceInvokeExpr;
 import soot.jimple.LengthExpr;
@@ -133,7 +134,8 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
                     valueUsedInStmt = true;
                 }
             }
-            if (!valueUsedInStmt) {
+        	Stmt stmt = curr.getUnit().get();
+            if (!valueUsedInStmt && /**Do not continue over CatchStmt*/!(stmt instanceof IdentityStmt)) {
                 for (Unit succ : icfg.getPredsOf(curr.getUnit().get())) {
                     worklist.add(new Statement((Stmt) succ, curr.getMethod()));
                 }
