@@ -100,7 +100,6 @@ public class IDEALAnalysis<W extends Weight> {
         ForwardBoomerangResults<W> res;
         try {
             if (analysisDefinition.icfg() != null) {
-                analysisDefinition.icfg().resetCallGraph();
                 analysisDefinition.icfg().addUnbalancedMethod(seed.stmt().getMethod());
             }
             res = idealAnalysis.run();
