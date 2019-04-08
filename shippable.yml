@@ -1,8 +1,0 @@
-language: java
-
-jdk:
-   - oraclejdk8
-
-build:
-  ci:
-   - mvn verify -P shippableTestSet --fail-at-end -B
