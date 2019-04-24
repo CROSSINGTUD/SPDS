@@ -133,6 +133,13 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
             if (callee.isStaticInitializer()) {
                 return;
             }
+            if(!callee.hasActiveBody()) {
+            	for (State s : computeNormalFlow(caller, currNode.stmt().getUnit().get(), currNode.fact(),
+                        (Stmt) callSite)) {
+                    propagate(currNode, s);
+                }
+            	return;
+            }
             // onlyStaticInitializer = false;
             for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
                 Set<State> out = Sets.newHashSet();

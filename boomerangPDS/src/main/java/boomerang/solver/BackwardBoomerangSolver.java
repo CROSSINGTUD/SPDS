@@ -82,8 +82,11 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
             if (callee.isStaticInitializer()) {
                 return;
             }
+            if(!callee.hasActiveBody()) {
+            	normalFlow(icfg.getMethodOf(callSite), curr); 
+            	return;
+            }
             // onlyStaticInitializer = false;
-
             Set<State> out = Sets.newHashSet();
             InvokeExpr invokeExpr = curr.stmt().getUnit().get().getInvokeExpr();
             for (Unit calleeSp : icfg.getStartPointsOf(callee)) {
