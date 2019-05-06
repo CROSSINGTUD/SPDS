@@ -15,7 +15,7 @@
    </modules>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <sootVersion>3.2.0</sootVersion>
+    <sootVersion>4.0.0-SNAPSHOT</sootVersion>
   </properties>
   <build>
     <plugins>

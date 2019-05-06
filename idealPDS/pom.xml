@@ -55,7 +55,7 @@
         </dependency>
         <dependency>
             <groupId>ca.mcgill.sable</groupId>
-            <artifactId>soot</artifactId>
+            <artifactId>soot-j9</artifactId>
             <version>${sootVersion}</version>
         </dependency>
         <dependency>
