@@ -88,6 +88,11 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework {
             public IDEALResultHandler<TransitionFunction> getResultHandler() {
                 return resultHandler;
             }
+            
+            @Override
+            public ObservableICFG<Unit, SootMethod> icfg() {
+            	return staticIcfg;
+            }
 
             @Override
             public BoomerangOptions boomerangOptions() {

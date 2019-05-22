@@ -53,7 +53,6 @@ public class IDEALAnalysis<W extends Weight> {
 
     public IDEALAnalysis(final IDEALAnalysisDefinition<W> analysisDefinition) {
         this.analysisDefinition = analysisDefinition;
-        ObservableICFG<Unit, SootMethod> staticICFG = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
         this.seedFactory = new SeedFactory<W>() {
 
             @Override
@@ -63,7 +62,7 @@ public class IDEALAnalysis<W extends Weight> {
 
             @Override
             public ObservableICFG<Unit, SootMethod> icfg() {
-                return staticICFG;
+                return analysisDefinition.icfg();
             }
         };
     }
