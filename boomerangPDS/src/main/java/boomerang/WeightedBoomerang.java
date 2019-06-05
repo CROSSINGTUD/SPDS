@@ -1150,7 +1150,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
                 // SootClass.BODIES);
                 SootClass stringClass = Scene.v().getSootClass("java.lang.String");
                 if (stringClass.declaresField("char[] value")) {
-                    SootField valueField = stringClass.getField("char[] value");
+                    SootField valueField = stringClass.getFieldByName("value");
                     SingleNode<Node<Statement, Val>> s = new SingleNode<Node<Statement, Val>>(query.asNode());
                     INode<Node<Statement, Val>> irState = solver.getFieldAutomaton().createState(s,
                             new Field(valueField));
