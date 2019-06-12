@@ -16,8 +16,6 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
-import com.sun.istack.logging.Logger;
-
 import soot.*;
 import soot.jimple.Jimple;
 import soot.jimple.JimpleBody;
