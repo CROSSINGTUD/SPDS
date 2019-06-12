@@ -15,6 +15,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
+
+import com.sun.istack.logging.Logger;
+
 import soot.*;
 import soot.jimple.Jimple;
 import soot.jimple.JimpleBody;
@@ -89,14 +92,6 @@ public abstract class AbstractTestingFramework {
         Options.v().setPhaseOption("cg.spark", "verbose:true");
         Options.v().set_output_format(Options.output_format_none);
 
-        String userdir = System.getProperty("user.dir");
-        String sootCp = userdir + "/target/test-classes";
-        String javaHome = System.getProperty("java.home");
-        if (javaHome == null || javaHome.equals(""))
-            throw new RuntimeException("Could not get property java.home!");
-        sootCp += File.pathSeparator + javaHome + "/lib/rt.jar";
-        sootCp += File.pathSeparator + javaHome + "/lib/jce.jar";
-
         Options.v().set_no_bodies_for_excluded(true);
         Options.v().set_allow_phantom_refs(true);
 
@@ -105,7 +100,17 @@ public abstract class AbstractTestingFramework {
         Options.v().setPhaseOption("jb", "use-original-names:true");
 
         Options.v().set_exclude(excludedPackages());
-        Options.v().set_soot_classpath(getSootClassPath());
+        
+        // JAVA VERSION 8
+     	if(getJavaVersion() < 9) {
+     		Options.v().set_prepend_classpath(true);
+   			Options.v().set_soot_classpath(getSootClassPath());
+   		}
+    	// JAVA VERSION 9
+     	else if(getJavaVersion() >= 9) {
+     		Options.v().set_soot_classpath("VIRTUAL_FS_FOR_JDK" + File.pathSeparator + getSootClassPath());
+     	}
+        
         // Options.v().set_main_class(this.getTargetClass());
         SootClass sootTestCaseClass = Scene.v().forceResolve(getTestCaseClassName(), SootClass.BODIES);
 
@@ -149,8 +154,10 @@ public abstract class AbstractTestingFramework {
             throw new RuntimeException("Could not get property java.home!");
 
         String sootCp = userdir + "/target/test-classes";
-        sootCp += File.pathSeparator + javaHome + "/lib/rt.jar";
-        sootCp += File.pathSeparator + javaHome + "/lib/jce.jar";
+        if(getJavaVersion() < 9) {
+        	sootCp += File.pathSeparator + javaHome + "/lib/rt.jar";
+        	sootCp += File.pathSeparator + javaHome + "/lib/jce.jar";
+        }
         return sootCp;
     }
 
@@ -215,4 +222,14 @@ public abstract class AbstractTestingFramework {
     protected boolean staticallyUnknown() {
         return true;
     }
+    
+    private static int getJavaVersion() {
+	    String version = System.getProperty("java.version");
+	    if(version.startsWith("1.")) {
+	        version = version.substring(2, 3);
+	    } else {
+	        int dot = version.indexOf(".");
+	        if(dot != -1) { version = version.substring(0, dot); }
+	    } return Integer.parseInt(version);
+	}
 }
