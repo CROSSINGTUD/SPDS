@@ -100,9 +100,6 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
                 BackwardBoomerangSolver.this.propagate(curr, o);
             }
             addReachable(callee);
-            // if(Scene.v().isExcluded(callee.getDeclaringClass())) {
-            // calleeExcluded = true;
-            // }
         }
 
         @Override
@@ -215,7 +212,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
         Statement callSite = curr.stmt();
         icfg.addCalleeListener(new CallSiteCalleeListener(curr, caller, callSite));
         InvokeExpr invokeExpr = callSite.getUnit().get().getInvokeExpr();
-        if (Scene.v().isExcluded(invokeExpr.getMethod().getDeclaringClass()) || invokeExpr.getMethod().isNative()) {
+        if (invokeExpr.getMethod().getDeclaringClass().isPhantom() || invokeExpr.getMethod().isNative()) {
             normalFlow(caller, curr);
             for (Statement returnSite : getSuccsOf(callSite)) {
                 for (State s : getEmptyCalleeFlow(caller, callSite.getUnit().get(), curr.fact(),

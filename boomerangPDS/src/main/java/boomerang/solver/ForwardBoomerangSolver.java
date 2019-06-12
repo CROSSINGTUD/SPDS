@@ -151,10 +151,6 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
                 }
             }
             addReachable(callee);
-
-            // if(Scene.v().isExcluded(callee.getDeclaringClass())) {
-            // calleeExcluded = true;
-            // }
         }
 
         @Override
@@ -448,7 +444,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 
     protected void callFlow(SootMethod caller, Node<Statement, Val> currNode, Stmt callSite, InvokeExpr invokeExpr) {
         assert icfg.isCallStmt(callSite);
-        if (Scene.v().isExcluded(invokeExpr.getMethod().getDeclaringClass()) || invokeExpr.getMethod().isNative()) {
+        if (invokeExpr.getMethod().getDeclaringClass().isPhantom() || invokeExpr.getMethod().isNative()) {
             for (State s : computeNormalFlow(caller, currNode.stmt().getUnit().get(), currNode.fact(),
                     (Stmt) callSite)) {
                 propagate(currNode, s);

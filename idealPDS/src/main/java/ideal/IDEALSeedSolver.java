@@ -25,6 +25,7 @@ import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
+import boomerang.callgraph.BoomerangICFG;
 import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
@@ -330,7 +331,7 @@ public class IDEALSeedSolver<W extends Weight> {
             public ObservableICFG<Unit, SootMethod> icfg() {
                 if (analysisDefinition.icfg() == null) {
                     // For Static ICFG use this line
-                    analysisDefinition.icfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(false));
+                    analysisDefinition.icfg = new ObservableStaticICFG(new BoomerangICFG(false));
                 }
                 return analysisDefinition.icfg();
             }

@@ -34,6 +34,7 @@ import boomerang.IntAndStringBoomerangOptions;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.WholeProgramBoomerang;
+import boomerang.callgraph.BoomerangICFG;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.callgraph.ObservableICFG;
@@ -109,7 +110,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
             protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
                 BoomerangPretransformer.v().apply();
-                staticIcfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
+                staticIcfg = new ObservableStaticICFG(new BoomerangICFG(false));
                 queryDetector = new QueryForCallSiteDetector(staticIcfg);
                 queryForCallSites = queryDetector.computeSeeds();
 

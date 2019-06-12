@@ -27,10 +27,10 @@ public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod> {
     /**
      * Wrapped static ICFG. If available, this is used to handle all queries.
      */
-    private BiDiInterproceduralCFG<Unit, SootMethod> precomputedGraph;
+    private BoomerangICFG precomputedGraph;
     private Set<SootMethod> unbalancedMethods = Sets.newHashSet();
 
-    public ObservableStaticICFG(BiDiInterproceduralCFG<Unit, SootMethod> icfg) {
+    public ObservableStaticICFG(BoomerangICFG icfg) {
         this.precomputedGraph = icfg;
     }
 
