@@ -14,6 +14,7 @@ package boomerang;
 import java.util.Collection;
 import java.util.Collections;
 
+import boomerang.callgraph.BoomerangICFG;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.jimple.AllocVal;
@@ -62,7 +63,7 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
 
                 @Override
                 public ObservableICFG<Unit, SootMethod> icfg() {
-                    return new ObservableStaticICFG(new JimpleBasedInterproceduralCFG());
+                    return new ObservableStaticICFG(new BoomerangICFG(false));
                 }
             };
         }

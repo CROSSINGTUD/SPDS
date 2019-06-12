@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import boomerang.BoomerangOptions;
 import boomerang.DefaultBoomerangOptions;
 import boomerang.WeightedForwardQuery;
+import boomerang.callgraph.BoomerangICFG;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
@@ -114,7 +115,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework {
             protected void internalTransform(String phaseName, @SuppressWarnings("rawtypes") Map options) {
                 BoomerangPretransformer.v().reset();
                 BoomerangPretransformer.v().apply();
-                staticIcfg = new ObservableStaticICFG(new JimpleBasedInterproceduralCFG(false));
+                staticIcfg = new ObservableStaticICFG(new BoomerangICFG(false));
                 Set<Assertion> expectedResults = parseExpectedQueryResults(sootTestMethod);
                 TestingResultReporter testingResultReporter = new TestingResultReporter(expectedResults);
 
