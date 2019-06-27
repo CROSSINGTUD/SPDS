@@ -749,4 +749,21 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
         this.perStatementFieldTransitionsListener.clear();
     }
 
+	public Set<SootMethod> getVisitedMethods() {
+		Set<SootMethod> methods = Sets.newHashSet();
+		for(Node<Statement, Val> s : getReachedStates()) {
+			methods.add(s.stmt().getMethod());
+		}
+		return methods;
+	}
+
+	public Set<Val> getValsAtStatement(Statement exitStmt) {
+		Set<Val> vals = Sets.newHashSet();
+		for(Node<Statement, Val> s : getReachedStates()) {
+			if(s.stmt().equals(exitStmt))
+				vals.add(s.fact());
+		}
+		return vals;
+	}
+
 }

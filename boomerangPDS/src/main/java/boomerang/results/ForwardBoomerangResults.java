@@ -73,13 +73,10 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
         AbstractBoomerangSolver<W> solver = queryToSolvers.get(query);
         if (solver == null)
             return HashBasedTable.create();
-        Table<Statement, Val, W> res = asStatementValWeightTable();
-        Set<SootMethod> visitedMethods = Sets.newHashSet();
-        for (Statement s : res.rowKeySet()) {
-            visitedMethods.add(s.getMethod());
-        }
+        Set<SootMethod> visitedMethods = solver.getVisitedMethods();
         ForwardBoomerangSolver<W> forwardSolver = (ForwardBoomerangSolver) queryToSolvers.get(query);
         Table<Statement, Val, W> destructingStatement = HashBasedTable.create();
+        Table<Statement, Val, W> res = asStatementValWeightTable();
         for (SootMethod flowReaches : visitedMethods) {
             for (Unit ep : icfg.getEndPointsOf(flowReaches)) {
                 Statement exitStmt = new Statement((Stmt) ep, flowReaches);
@@ -94,17 +91,17 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
                     public void onCallerAdded(Unit callSite, SootMethod m) {
                         SootMethod callee = icfg.getMethodOf(callSite);
                         if (visitedMethods.contains(callee)) {
-                            for (Entry<Val, W> valAndW : res.row(exitStmt).entrySet()) {
+                            for (Val v : solver.getValsAtStatement(exitStmt)) {
                                 for (Unit retSite : icfg.getSuccsOf(callSite)) {
                                     escapes.addAll(forwardSolver.computeReturnFlow(flowReaches, (Stmt) ep,
-                                            valAndW.getKey(), (Stmt) callSite, (Stmt) retSite));
+                                            v, (Stmt) callSite, (Stmt) retSite));
                                 }
                             }
                         }
                     }
                 });
-                if (escapes.isEmpty()) {
-                    Map<Val, W> row = res.row(exitStmt);
+                if (escapes.isEmpty()) {                   
+                	Map<Val, W> row = res.row(exitStmt);
                     findLastUsage(exitStmt, row, destructingStatement, forwardSolver);
                 }
             }
