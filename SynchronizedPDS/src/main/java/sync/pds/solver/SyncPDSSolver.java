@@ -27,7 +27,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 
-import crypto.analysis.CryptoScanner;
 import sync.pds.solver.nodes.CallPopNode;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.GeneratedState;
@@ -746,7 +745,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
     }
 
     public void debugOutput() {
-        logger.debug(this.getClass());
+        logger.debug(this.getClass().toString());
         logger.debug("All reachable states");
         prettyPrintSet(getReachedStates());
 
@@ -762,9 +761,9 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
             logger.debug("Field matching reachable");
             prettyPrintSet(notCallingContextReachable);
         }
-        logger.debug(fieldPDS);
+        logger.debug(fieldPDS.toString());
         logger.debug(fieldAutomaton.toDotString());
-        logger.debug(callingPDS);
+        logger.debug(callingPDS.toString());
         logger.debug(callAutomaton.toDotString());
         logger.debug("===== end === " + this.getClass());
     }
