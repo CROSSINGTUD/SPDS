@@ -14,8 +14,8 @@ package ideal;
 import java.util.Collection;
 import java.util.Set;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
@@ -32,7 +32,7 @@ import wpds.impl.Weight;
 
 public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<Statement, Val, Statement, W> {
 
-    private static final Logger logger = LogManager.getLogger();
+	private static final Logger logger = LoggerFactory.getLogger(IDEALWeightFunctions.class);
     private WeightFunctions<Statement, Val, Statement, W> delegate;
     private Set<NonOneFlowListener> listeners = Sets.newHashSet();
     private Set<Statement> potentialStrongUpdates = Sets.newHashSet();

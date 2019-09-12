@@ -23,8 +23,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -64,8 +64,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import heros.utilities.DefaultValueMap;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
 import soot.*;
 import soot.jimple.*;
 import sync.pds.solver.SyncPDSUpdateListener;
@@ -112,7 +111,7 @@ import java.util.concurrent.TimeUnit;
 public abstract class WeightedBoomerang<W extends Weight> {
     public static final boolean DEBUG = false;
     protected ObservableICFG<Unit, SootMethod> icfg;
-    private static final Logger logger = LogManager.getLogger();
+    private static final Logger logger = LoggerFactory.getLogger(WeightedBoomerang.class);
     private Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField = new HashMap<>();
     private long lastTick;
     private IBoomerangStats<W> stats;

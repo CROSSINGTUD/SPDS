@@ -1,13 +1,14 @@
 package boomerang.debugger;
 
 import boomerang.Query;
+import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.solver.AbstractBoomerangSolver;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
+
 import soot.Kind;
 import soot.SootMethod;
 import soot.Unit;
@@ -20,13 +21,16 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Can be used to obtain a dot file which can be plotted into a graphical representation of the call graph. Call graph
  * includes all edges and all methods which have edges incoming or outgoing.
  */
 public class CallGraphDebugger<W extends Weight> extends Debugger<W> {
 
-    private static final Logger logger = LogManager.getLogger();
+	private static final Logger logger = LoggerFactory.getLogger(CallGraphDebugger.class);
 
     private File dotFile;
     private ObservableICFG<Unit, SootMethod> icfg;

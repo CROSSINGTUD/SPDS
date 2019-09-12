@@ -24,10 +24,11 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.*;
 import com.google.common.collect.Table.Cell;
 import org.apache.commons.lang3.StringEscapeUtils;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.*;
@@ -46,7 +47,7 @@ import java.util.Map.Entry;
 public class IDEVizDebugger<W extends Weight> extends Debugger<W> {
 
     private static boolean ONLY_CFG = false;
-    private static final Logger logger = LogManager.getLogger();
+    private static final Logger logger = LoggerFactory.getLogger(IDEVizDebugger.class);
     private File ideVizFile;
     private ObservableICFG<Unit, SootMethod> icfg;
     private Table<Query, SootMethod, Set<Rule<Statement, INode<Val>, W>>> rules = HashBasedTable.create();

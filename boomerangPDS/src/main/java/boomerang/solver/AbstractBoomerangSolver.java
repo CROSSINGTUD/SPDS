@@ -18,8 +18,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
@@ -34,6 +34,7 @@ import boomerang.Query;
 import boomerang.Util;
 import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
+import boomerang.debugger.IDEVizDebugger;
 import boomerang.jimple.AllocVal;
 import boomerang.jimple.Field;
 import boomerang.jimple.Statement;
@@ -160,7 +161,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight> extends SyncPDSS
         }
     }
 
-    protected static final Logger logger = LogManager.getLogger();
+    protected static final Logger logger = LoggerFactory.getLogger(AbstractBoomerangSolver.class);
     protected final ObservableICFG<Unit, SootMethod> icfg;
     protected final Query query;
     protected boolean INTERPROCEDURAL = true;
