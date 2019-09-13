@@ -9,8 +9,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.HashMultimap;
@@ -149,7 +151,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Unit, SootMethod> {
     private static final String THREAD_START_SIGNATURE = "<java.lang.Thread: void start()>";
     private static final String THREAD_RUN_SUB_SIGNATURE = "void run()";
 
-    private static final Logger logger = LogManager.getLogger();
+    private static final Logger logger = LoggerFactory.getLogger(ObservableDynamicICFG.class);
 
     private int numberOfEdgesTakenFromPrecomputedCallGraph = 0;
 

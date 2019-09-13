@@ -17,6 +17,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Stopwatch;
 
 import boomerang.ForwardQuery;
@@ -28,8 +31,6 @@ import boomerang.results.ForwardBoomerangResults;
 import boomerang.seedfactory.SeedFactory;
 import boomerang.seedfactory.SimpleSeedFactory;
 import com.google.common.base.Stopwatch;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import soot.SootMethod;
 import soot.Unit;
 import soot.jimple.Stmt;
@@ -41,7 +42,7 @@ import java.util.*;
 
 public class IDEALAnalysis<W extends Weight> {
 
-    private static final Logger logger = LogManager.getLogger();
+	private static final Logger logger = LoggerFactory.getLogger(IDEALAnalysis.class);
 
     public static boolean PRINT_OPTIONS = false;
 

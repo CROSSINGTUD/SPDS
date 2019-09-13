@@ -18,8 +18,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
@@ -57,7 +57,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
         FIELDS, CALLS
     }
 
-    private static final Logger logger = LogManager.getLogger();
+    private static final Logger logger = LoggerFactory.getLogger(SyncPDSSolver.class);
     private static final boolean FieldSensitive = true;
     private static final boolean ContextSensitive = true;
     protected final WeightedPushdownSystem<Stmt, INode<Fact>, W> callingPDS = new WeightedPushdownSystem<Stmt, INode<Fact>, W>() {
@@ -745,7 +745,7 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
     }
 
     public void debugOutput() {
-        logger.debug(this.getClass());
+        logger.debug(this.getClass().toString());
         logger.debug("All reachable states");
         prettyPrintSet(getReachedStates());
 
@@ -761,9 +761,9 @@ public abstract class SyncPDSSolver<Stmt extends Location, Fact, Field extends L
             logger.debug("Field matching reachable");
             prettyPrintSet(notCallingContextReachable);
         }
-        logger.debug(fieldPDS);
+        logger.debug(fieldPDS.toString());
         logger.debug(fieldAutomaton.toDotString());
-        logger.debug(callingPDS);
+        logger.debug(callingPDS.toString());
         logger.debug(callAutomaton.toDotString());
         logger.debug("===== end === " + this.getClass());
     }
