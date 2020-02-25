@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>de.fraunhofer.iem</groupId>
 	<artifactId>SPDS</artifactId>
-	<version>2.5-SNAPSHOT</version>
+	<version>3.0-ALPHA-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>SPDS</name>
 	<modules>
@@ -13,7 +13,7 @@
 		<module>SynchronizedPDS</module>
 		<module>testCore</module>
 		<module>boomerangPDS</module>
-		<module>idealPDS</module>
+		<!--<module>idealPDS</module>-->
 	</modules>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

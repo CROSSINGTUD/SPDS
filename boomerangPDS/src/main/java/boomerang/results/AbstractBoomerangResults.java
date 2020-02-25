@@ -1,19 +1,17 @@
 package boomerang.results;
 
-import java.util.Set;
-import java.util.Map.Entry;
-
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
-
 import boomerang.ForwardQuery;
-import boomerang.Query;
-import boomerang.jimple.Statement;
-import boomerang.jimple.Val;
+import boomerang.scene.Statement;
+import boomerang.scene.Val;
 import boomerang.solver.AbstractBoomerangSolver;
-import heros.utilities.DefaultValueMap;
-import soot.Local;
+import boomerang.solver.ForwardBoomerangSolver;
+import boomerang.util.DefaultValueMap;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
+import java.util.Map.Entry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -25,304 +23,274 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
 
 public class AbstractBoomerangResults<W extends Weight> {
-    protected final DefaultValueMap<Query, AbstractBoomerangSolver<W>> queryToSolvers;
+  protected final DefaultValueMap<ForwardQuery, ForwardBoomerangSolver<W>> queryToSolvers;
+  protected final Logger LOGGER = LoggerFactory.getLogger(AbstractBoomerangResults.class);
 
-    public AbstractBoomerangResults(DefaultValueMap<Query, AbstractBoomerangSolver<W>> solverMap) {
-        this.queryToSolvers = solverMap;
+  public AbstractBoomerangResults(
+      DefaultValueMap<ForwardQuery, ForwardBoomerangSolver<W>> solverMap) {
+    this.queryToSolvers = solverMap;
+  }
+
+  protected Context constructContextGraph(
+      ForwardQuery forwardQuery, Node<Statement, Val> targetFact) {
+    Context context = new Context(targetFact, forwardQuery);
+    AbstractBoomerangSolver<W> forwardSolver = queryToSolvers.get(forwardQuery);
+    computeUnmatchedOpeningContext(context, forwardSolver, targetFact);
+    computeUnmatchedClosingContext(context, forwardSolver);
+    return context;
+  }
+
+  public void computeUnmatchedClosingContext(
+      Context context, AbstractBoomerangSolver<W> forwardSolver) {
+    for (Transition<Statement, INode<Val>> t : forwardSolver.getCallAutomaton().getTransitions()) {
+      if (t.getTarget().fact().isUnbalanced()) {
+        INode<Val> v = t.getTarget();
+        forwardSolver
+            .getCallAutomaton()
+            .registerListener(new ClosingCallStackExtracter<W>(v, v, context, forwardSolver));
+      }
+    }
+  }
+
+  public void computeUnmatchedOpeningContext(
+      Context context, AbstractBoomerangSolver<W> forwardSolver, Node<Statement, Val> node) {
+    SingleNode<Val> initialState = new SingleNode<Val>(node.fact());
+    forwardSolver
+        .getCallAutomaton()
+        .registerListener(
+            new OpeningCallStackExtracter<W>(initialState, initialState, context, forwardSolver));
+  }
+
+  public Table<Statement, Val, W> asStatementValWeightTable(ForwardQuery query) {
+    final Table<Statement, Val, W> results = HashBasedTable.create();
+    Stopwatch sw = Stopwatch.createStarted();
+    LOGGER.trace("Computing final weighted results for {}", query);
+    WeightedPAutomaton<Statement, INode<Val>, W> callAut =
+        queryToSolvers.getOrCreate(query).getCallAutomaton();
+    for (Entry<Transition<Statement, INode<Val>>, W> e :
+        callAut.getTransitionsToFinalWeights().entrySet()) {
+      Transition<Statement, INode<Val>> t = e.getKey();
+      W w = e.getValue();
+      if (t.getLabel().equals(Statement.epsilon())) continue;
+      if (t.getStart().fact().isLocal()
+          && !t.getLabel().getMethod().equals(t.getStart().fact().m())) continue;
+      results.put(t.getLabel(), t.getStart().fact(), w);
+    }
+    LOGGER.trace("Computed final weighted results for {} in {}", query, sw);
+    return results;
+  }
+
+  private static class OpeningCallStackExtracter<W extends Weight>
+      extends WPAStateListener<Statement, INode<Val>, W> {
+
+    private AbstractBoomerangSolver<W> solver;
+    private INode<Val> source;
+    private Context context;
+
+    public OpeningCallStackExtracter(
+        INode<Val> state, INode<Val> source, Context context, AbstractBoomerangSolver<W> solver) {
+      super(state);
+      this.source = source;
+      this.context = context;
+      this.solver = solver;
     }
 
-    protected Context constructContextGraph(ForwardQuery forwardQuery, Node<Statement, Val> targetFact) {
-        AbstractBoomerangResults<W>.Context context = new Context(targetFact, forwardQuery);
-        context.computeUnmatchedOpeningContext();
-        context.computeUnmatchedClosingContext();
-        return context;
+    @Override
+    public void onOutTransitionAdded(
+        Transition<Statement, INode<Val>> t,
+        W w,
+        WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {
+      if (weightedPAutomaton.getInitialStates().contains(t.getTarget())) {
+        return;
+      }
+
+      // TODO Doesn't work anymore!
+      if (t.getLabel().getMethod() != null) {
+        if (t.getStart() instanceof GeneratedState) {
+          context
+              .getOpeningContext()
+              .addTransition(
+                  new Transition<Statement, INode<Val>>(source, t.getLabel(), t.getTarget()));
+        } else {
+          weightedPAutomaton.registerListener(
+              new OpeningCallStackExtracter<W>(t.getTarget(), source, context, solver));
+          return;
+        }
+      }
+      weightedPAutomaton.registerListener(
+          new OpeningCallStackExtracter<W>(t.getTarget(), t.getTarget(), context, solver));
     }
 
-    public Table<Statement, Val, W> asStatementValWeightTable(ForwardQuery query) {
-        final Table<Statement, Val, W> results = HashBasedTable.create();
-        WeightedPAutomaton<Statement, INode<Val>, W> callAut = queryToSolvers.getOrCreate(query).getCallAutomaton();
-        for (Entry<Transition<Statement, INode<Val>>, W> e : callAut.getTransitionsToFinalWeights().entrySet()) {
-            Transition<Statement, INode<Val>> t = e.getKey();
-            W w = e.getValue();
-            if (t.getLabel().equals(Statement.epsilon()))
-                continue;
-            if (t.getStart().fact().value() instanceof Local
-                    && !t.getLabel().getMethod().equals(t.getStart().fact().m()))
-                continue;
-            if (t.getLabel().getUnit().isPresent())
-                results.put(t.getLabel(), t.getStart().fact(), w);
-        }
-        return results;
+    @Override
+    public void onInTransitionAdded(
+        Transition<Statement, INode<Val>> t,
+        W w,
+        WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {}
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = super.hashCode();
+      result = prime * result + ((context == null) ? 0 : context.hashCode());
+      result = prime * result + ((solver == null) ? 0 : solver.hashCode());
+      result = prime * result + ((source == null) ? 0 : source.hashCode());
+      return result;
     }
 
-    private class OpeningCallStackExtracter extends WPAStateListener<Statement, INode<Val>, W> {
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) return true;
+      if (!super.equals(obj)) return false;
+      if (getClass() != obj.getClass()) return false;
+      OpeningCallStackExtracter other = (OpeningCallStackExtracter) obj;
+      if (context == null) {
+        if (other.context != null) return false;
+      } else if (!context.equals(other.context)) return false;
+      if (solver == null) {
+        if (other.solver != null) return false;
+      } else if (!solver.equals(other.solver)) return false;
+      if (source == null) {
+        if (other.source != null) return false;
+      } else if (!source.equals(other.source)) return false;
+      return true;
+    }
+  }
 
-        private AbstractBoomerangSolver<W> solver;
-        private INode<Val> source;
-        private AbstractBoomerangResults<W>.Context context;
+  private static class ClosingCallStackExtracter<W extends Weight>
+      extends WPAStateListener<Statement, INode<Val>, W> {
 
-        public OpeningCallStackExtracter(INode<Val> state, INode<Val> source,
-                AbstractBoomerangResults<W>.Context context, AbstractBoomerangSolver<W> solver) {
-            super(state);
-            this.source = source;
-            this.context = context;
-            this.solver = solver;
-        }
+    private AbstractBoomerangSolver<W> solver;
+    private INode<Val> source;
+    private Context context;
 
-        @Override
-        public void onOutTransitionAdded(Transition<Statement, INode<Val>> t, W w,
-                WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {
-            if (t.getTarget().equals(weightedPAutomaton.getInitialState())) {
-                return;
-            }
-            if (t.getTarget().fact().isUnbalanced()) {
-                context.addUnbalancedNodes(t.getTarget());
-            }
-            if (t.getLabel().getMethod() != null && solver.getReachableMethods().contains(t.getLabel().getMethod())) {
-                if (t.getStart() instanceof GeneratedState) {
-                    context.getOpeningContext()
-                            .addTransition(new Transition<Statement, INode<Val>>(source, t.getLabel(), t.getTarget()));
-                } else {
-                    weightedPAutomaton
-                            .registerListener(new OpeningCallStackExtracter(t.getTarget(), source, context, solver));
-                    return;
-                }
-            }
-            weightedPAutomaton
-                    .registerListener(new OpeningCallStackExtracter(t.getTarget(), t.getTarget(), context, solver));
-        }
-
-        @Override
-        public void onInTransitionAdded(Transition<Statement, INode<Val>> t, W w,
-                WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {
-
-        }
-
-        @Override
-        public int hashCode() {
-            final int prime = 31;
-            int result = super.hashCode();
-            result = prime * result + getOuterType().hashCode();
-            result = prime * result + ((context == null) ? 0 : context.hashCode());
-            result = prime * result + ((solver == null) ? 0 : solver.hashCode());
-            result = prime * result + ((source == null) ? 0 : source.hashCode());
-            return result;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj)
-                return true;
-            if (!super.equals(obj))
-                return false;
-            if (getClass() != obj.getClass())
-                return false;
-            OpeningCallStackExtracter other = (OpeningCallStackExtracter) obj;
-            if (!getOuterType().equals(other.getOuterType()))
-                return false;
-            if (context == null) {
-                if (other.context != null)
-                    return false;
-            } else if (!context.equals(other.context))
-                return false;
-            if (solver == null) {
-                if (other.solver != null)
-                    return false;
-            } else if (!solver.equals(other.solver))
-                return false;
-            if (source == null) {
-                if (other.source != null)
-                    return false;
-            } else if (!source.equals(other.source))
-                return false;
-            return true;
-        }
-
-        private AbstractBoomerangResults getOuterType() {
-            return AbstractBoomerangResults.this;
-        }
-
+    public ClosingCallStackExtracter(
+        INode<Val> state, INode<Val> source, Context context, AbstractBoomerangSolver<W> solver) {
+      super(state);
+      this.source = source;
+      this.context = context;
+      this.solver = solver;
     }
 
-    private class ClosingCallStackExtracter extends WPAStateListener<Statement, INode<Val>, W> {
+    @Override
+    public void onOutTransitionAdded(
+        Transition<Statement, INode<Val>> t,
+        W w,
+        WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {}
 
-        private AbstractBoomerangSolver<W> solver;
-        private INode<Val> source;
-        private AbstractBoomerangResults<W>.Context context;
-
-        public ClosingCallStackExtracter(INode<Val> state, INode<Val> source,
-                AbstractBoomerangResults<W>.Context context, AbstractBoomerangSolver<W> solver) {
-            super(state);
-            this.source = source;
-            this.context = context;
-            this.solver = solver;
+    @Override
+    public void onInTransitionAdded(
+        Transition<Statement, INode<Val>> t,
+        W w,
+        WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {
+      if (weightedPAutomaton.isUnbalancedState(t.getStart())) {
+        if (!t.getStart().fact().isStatic()) {
+          context.getClosingContext().addTransition(t);
         }
-
-        @Override
-        public void onOutTransitionAdded(Transition<Statement, INode<Val>> t, W w,
-                WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {
-        }
-
-        @Override
-        public void onInTransitionAdded(Transition<Statement, INode<Val>> t, W w,
-                WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {
-            if (weightedPAutomaton.isUnbalancedState(t.getStart())) {
-                if (!t.getStart().fact().isStatic()) {
-                    context.getClosingContext().addTransition(t);
-                }
-            }
-        }
-
-        @Override
-        public int hashCode() {
-            final int prime = 31;
-            int result = super.hashCode();
-            result = prime * result + getOuterType().hashCode();
-            result = prime * result + ((context == null) ? 0 : context.hashCode());
-            result = prime * result + ((solver == null) ? 0 : solver.hashCode());
-            result = prime * result + ((source == null) ? 0 : source.hashCode());
-            return result;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj)
-                return true;
-            if (!super.equals(obj))
-                return false;
-            if (getClass() != obj.getClass())
-                return false;
-            ClosingCallStackExtracter other = (ClosingCallStackExtracter) obj;
-            if (!getOuterType().equals(other.getOuterType()))
-                return false;
-            if (context == null) {
-                if (other.context != null)
-                    return false;
-            } else if (!context.equals(other.context))
-                return false;
-            if (solver == null) {
-                if (other.solver != null)
-                    return false;
-            } else if (!solver.equals(other.solver))
-                return false;
-            if (source == null) {
-                if (other.source != null)
-                    return false;
-            } else if (!source.equals(other.source))
-                return false;
-            return true;
-        }
-
-        private AbstractBoomerangResults getOuterType() {
-            return AbstractBoomerangResults.this;
-        }
-
+      }
     }
 
-    public class Context {
-        final Node<Statement, Val> node;
-        private final PAutomaton<Statement, INode<Val>> openingContext;
-        private final PAutomaton<Statement, INode<Val>> closingContext;
-        private final Set<INode<Val>> unbalancedClosingContexts = Sets.newHashSet();
-        private ForwardQuery forwardQuery;
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = super.hashCode();
+      result = prime * result + ((context == null) ? 0 : context.hashCode());
+      result = prime * result + ((solver == null) ? 0 : solver.hashCode());
+      result = prime * result + ((source == null) ? 0 : source.hashCode());
+      return result;
+    }
 
-        public Context(Node<Statement, Val> node, ForwardQuery forwardQuery) {
-            this.node = node;
-            this.forwardQuery = forwardQuery;
-            this.openingContext = new PAutomaton<Statement, INode<Val>>(new SingleNode<Val>(node.fact())) {
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) return true;
+      if (!super.equals(obj)) return false;
+      if (getClass() != obj.getClass()) return false;
+      ClosingCallStackExtracter other = (ClosingCallStackExtracter) obj;
+      if (context == null) {
+        if (other.context != null) return false;
+      } else if (!context.equals(other.context)) return false;
+      if (solver == null) {
+        if (other.solver != null) return false;
+      } else if (!solver.equals(other.solver)) return false;
+      if (source == null) {
+        if (other.source != null) return false;
+      } else if (!source.equals(other.source)) return false;
+      return true;
+    }
+  }
 
-                @Override
-                public INode<Val> createState(INode<Val> d, Statement loc) {
-                    throw new RuntimeException("Not implemented");
-                }
+  public static class Context {
+    final Node<Statement, Val> node;
+    private final PAutomaton<Statement, INode<Val>> openingContext;
+    private final PAutomaton<Statement, INode<Val>> closingContext;
 
-                @Override
-                public boolean isGeneratedState(INode<Val> d) {
-                    throw new RuntimeException("Not implemented");
-                }
+    public Context(Node<Statement, Val> node, ForwardQuery forwardQuery) {
+      this.node = node;
+      this.openingContext =
+          new PAutomaton<Statement, INode<Val>>() {
 
-                @Override
-                public Statement epsilon() {
-                    return Statement.epsilon();
-                }
-            };
-            this.closingContext = new PAutomaton<Statement, INode<Val>>(new SingleNode<Val>(node.fact())) {
-
-                @Override
-                public INode<Val> createState(INode<Val> d, Statement loc) {
-                    throw new RuntimeException("Not implemented");
-                }
-
-                @Override
-                public boolean isGeneratedState(INode<Val> d) {
-                    throw new RuntimeException("Not implemented");
-                }
-
-                @Override
-                public Statement epsilon() {
-                    return Statement.epsilon();
-                }
-            };
-        }
-
-        public void computeUnmatchedClosingContext() {
-            for (INode<Val> v : unbalancedClosingContexts) {
-                queryToSolvers.get(forwardQuery).getCallAutomaton()
-                        .registerListener(new ClosingCallStackExtracter(v, v, this, queryToSolvers.get(forwardQuery)));
+            @Override
+            public INode<Val> createState(INode<Val> d, Statement loc) {
+              throw new RuntimeException("Not implemented");
             }
 
-        }
+            @Override
+            public boolean isGeneratedState(INode<Val> d) {
+              throw new RuntimeException("Not implemented");
+            }
 
-        public void computeUnmatchedOpeningContext() {
-            SingleNode<Val> initialState = new SingleNode<Val>(node.fact());
-            queryToSolvers.get(forwardQuery).getCallAutomaton().registerListener(
-                    new OpeningCallStackExtracter(initialState, initialState, this, queryToSolvers.get(forwardQuery)));
-        }
+            @Override
+            public Statement epsilon() {
+              return Statement.epsilon();
+            }
+          };
+      this.closingContext =
+          new PAutomaton<Statement, INode<Val>>() {
 
-        public void addUnbalancedNodes(INode<Val> target) {
-            unbalancedClosingContexts.add(target);
-        }
+            @Override
+            public INode<Val> createState(INode<Val> d, Statement loc) {
+              throw new RuntimeException("Not implemented");
+            }
 
-        @Override
-        public int hashCode() {
-            final int prime = 31;
-            int result = 1;
-            result = prime * result + getOuterType().hashCode();
-            result = prime * result + ((closingContext == null) ? 0 : closingContext.hashCode());
-            result = prime * result + ((node == null) ? 0 : node.hashCode());
-            result = prime * result + ((openingContext == null) ? 0 : openingContext.hashCode());
-            return result;
-        }
+            @Override
+            public boolean isGeneratedState(INode<Val> d) {
+              throw new RuntimeException("Not implemented");
+            }
 
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj)
-                return true;
-            if (obj == null)
-                return false;
-            if (getClass() != obj.getClass())
-                return false;
-            Context other = (Context) obj;
-            if (!getOuterType().equals(other.getOuterType()))
-                return false;
-            if (node == null) {
-                if (other.node != null)
-                    return false;
-            } else if (!node.equals(other.node))
-                return false;
-            return true;
-        }
-
-        private AbstractBoomerangResults getOuterType() {
-            return AbstractBoomerangResults.this;
-        }
-
-        public PAutomaton<Statement, INode<Val>> getOpeningContext() {
-            return openingContext;
-        }
-
-        public PAutomaton<Statement, INode<Val>> getClosingContext() {
-            return closingContext;
-        }
+            @Override
+            public Statement epsilon() {
+              return Statement.epsilon();
+            }
+          };
     }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + ((closingContext == null) ? 0 : closingContext.hashCode());
+      result = prime * result + ((node == null) ? 0 : node.hashCode());
+      result = prime * result + ((openingContext == null) ? 0 : openingContext.hashCode());
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) return true;
+      if (obj == null) return false;
+      if (getClass() != obj.getClass()) return false;
+      Context other = (Context) obj;
+      if (node == null) {
+        if (other.node != null) return false;
+      } else if (!node.equals(other.node)) return false;
+      return true;
+    }
+
+    public PAutomaton<Statement, INode<Val>> getOpeningContext() {
+      return openingContext;
+    }
+
+    public PAutomaton<Statement, INode<Val>> getClosingContext() {
+      return closingContext;
+    }
+  }
 }

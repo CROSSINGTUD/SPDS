@@ -1,28 +1,28 @@
-/*******************************************************************************
- * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
+/**
+ * ***************************************************************************** Copyright (c) 2018
+ * Fraunhofer IEM, Paderborn, Germany. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
- * SPDX-License-Identifier: EPL-2.0
  *
- * Contributors:
- *     Johannes Spaeth - initial API and implementation
- *******************************************************************************/
+ * <p>SPDX-License-Identifier: EPL-2.0
+ *
+ * <p>Contributors: Johannes Spaeth - initial API and implementation
+ * *****************************************************************************
+ */
 package test.cases.sets;
 
 public class MyMap {
-    MyInnerMap m = new MyInnerMap();
+  MyInnerMap m = new MyInnerMap();
 
-    public void add(Object o) {
-        MyInnerMap map = this.m;
-        map.innerAdd(o);
-        MyInnerMap alias = this.m;
-        Object retrieved = alias.content;
-    }
+  public void add(Object o) {
+    MyInnerMap map = this.m;
+    map.innerAdd(o);
+    MyInnerMap alias = this.m;
+    Object retrieved = alias.content;
+  }
 
-    public Object get() {
-        MyInnerMap map = this.m;
-        return map.get();
-    }
+  public Object get() {
+    MyInnerMap map = this.m;
+    return map.get();
+  }
 }

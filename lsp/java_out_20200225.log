@@ -1,0 +1,53 @@
+{
+  "jsonrpc": "2.0",
+  "id": "1",
+  "method": "initialize",
+  "params": {
+    "processId": null,
+    "rootUri": "file:///Users/johannesspath/WPDS/",
+    "capabilities": {
+      "workspace": {
+        "applyEdit": true,
+        "workspaceEdit": {
+          "documentChanges": true
+        },
+        "didChangeWatchedFiles": {},
+        "symbol": {},
+        "executeCommand": {},
+        "workspaceFolders": false,
+        "configuration": false
+      },
+      "textDocument": {
+        "synchronization": {
+          "willSave": true,
+          "willSaveWaitUntil": true,
+          "didSave": true
+        },
+        "completion": {
+          "completionItem": {
+            "snippetSupport": false
+          }
+        },
+        "hover": {},
+        "signatureHelp": {},
+        "references": {},
+        "documentHighlight": {},
+        "formatting": {},
+        "rangeFormatting": {},
+        "onTypeFormatting": {},
+        "definition": {},
+        "codeAction": {},
+        "rename": {},
+        "semanticHighlightingCapabilities": {
+          "semanticHighlighting": false
+        }
+      }
+    }
+  }
+}
+{
+  "jsonrpc": "2.0",
+  "id": "2",
+  "method": "shutdown",
+  "params": null
+}

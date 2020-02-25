@@ -25,7 +25,7 @@ pipeline {
 
 		stage('Deploy'){
 		    when { 
-		    	anyOf { branch 'master'; branch 'on-demand-icfg' } 
+		    	anyOf { branch 'master'; branch '3.0-ALPHA' } 
 			}
 	        steps {
 				configFileProvider(

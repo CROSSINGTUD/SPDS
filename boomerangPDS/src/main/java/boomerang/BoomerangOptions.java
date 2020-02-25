@@ -1,68 +1,87 @@
-/*******************************************************************************
- * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
+/**
+ * ***************************************************************************** Copyright (c) 2018
+ * Fraunhofer IEM, Paderborn, Germany. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
- * SPDX-License-Identifier: EPL-2.0
  *
- * Contributors:
- *     Johannes Spaeth - initial API and implementation
- *******************************************************************************/
+ * <p>SPDX-License-Identifier: EPL-2.0
+ *
+ * <p>Contributors: Johannes Spaeth - initial API and implementation
+ * *****************************************************************************
+ */
 package boomerang;
 
-import com.google.common.base.Optional;
-
+import boomerang.callgraph.BoomerangResolver;
+import boomerang.callgraph.ICallerCalleeResolutionStrategy;
 import boomerang.callgraph.ObservableICFG;
-import boomerang.jimple.AllocVal;
-import boomerang.jimple.Val;
+import boomerang.scene.AllocVal;
+import boomerang.scene.Method;
+import boomerang.scene.Statement;
+import boomerang.scene.Val;
 import boomerang.stats.IBoomerangStats;
-import soot.SootMethod;
-import soot.Unit;
-import soot.Value;
-import soot.jimple.Stmt;
+import com.google.common.base.Optional;
 
 public interface BoomerangOptions {
 
-    public boolean staticFlows();
+  default ICallerCalleeResolutionStrategy.Factory getResolutionStrategy() {
+    return BoomerangResolver.FACTORY;
+  }
 
-    public boolean arrayFlows();
+  enum StaticFieldStrategy {
+    FLOW_SENSITIVE,
+    SINGLETON,
+    IGNORE
+  }
 
-    public boolean typeCheck();
+  StaticFieldStrategy getStaticFieldStrategy();
 
-    public boolean onTheFlyCallGraph();
+  boolean arrayFlows();
 
-    public boolean throwFlows();
+  boolean typeCheck();
 
-    public boolean callSummaries();
+  boolean onTheFlyCallGraph();
 
-    public boolean fieldSummaries();
+  boolean throwFlows();
 
-    public int analysisTimeoutMS();
+  boolean callSummaries();
 
-    public boolean isAllocationVal(Value val);
+  boolean fieldSummaries();
 
-    public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact,
-            ObservableICFG<Unit, SootMethod> icfg);
+  int analysisTimeoutMS();
 
-    public boolean isIgnoredMethod(SootMethod method);
+  boolean isAllocationVal(Val val);
 
-    public IBoomerangStats statsFactory();
+  // TODO remove icfg here.
+  Optional<AllocVal> getAllocationVal(
+      Method m, Statement stmt, Val fact, ObservableICFG<Statement, Method> icfg);
 
-    public boolean aliasing();
+  IBoomerangStats statsFactory();
 
-    /**
-     * Assume we propagate an object of soot.NullType in variable y and the propagation reaches a statement x = (Object)
-     * y.
-     * 
-     * @return If set to true, the propagation will NOT continue in x. This does not match the runtime semantics. At
-     *         runtime, null can be cast to any RefType! Though a check (null instanceof Object) returns false.
-     */
-    public boolean killNullAtCast();
+  boolean aliasing();
 
-    boolean trackReturnOfInstanceOf();
+  /**
+   * Assume we propagate an object of soot.NullType in variable y and the propagation reaches a
+   * statement x = (Object) y.
+   *
+   * @return If set to true, the propagation will NOT continue in x. This does not match the runtime
+   *     semantics. At runtime, null can be cast to any RefType! Though a check (null instanceof
+   *     Object) returns false.
+   */
+  boolean killNullAtCast();
 
-    boolean trackStaticFieldAtEntryPointToClinit();
+  boolean trackReturnOfInstanceOf();
 
-    boolean trackFields();
+  boolean trackStaticFieldAtEntryPointToClinit();
+
+  boolean trackFields();
+
+  int maxFieldDepth();
+
+  int maxCallDepth();
+
+  int maxUnbalancedCallDepth();
+
+  boolean ignoreInnerClassFields();
+
+  boolean allowMultipleQueries();
 }

@@ -1,11 +1,10 @@
 package boomerang;
 
+import boomerang.scene.Statement;
 import java.util.Collection;
 
-import boomerang.jimple.Statement;
-
 public interface IContextRequester {
-    public Collection<Context> getCallSiteOf(Context child);
+  public Collection<Context> getCallSiteOf(Context child);
 
-    public Context initialContext(Statement stmt);
+  public Context initialContext(Statement stmt);
 }
