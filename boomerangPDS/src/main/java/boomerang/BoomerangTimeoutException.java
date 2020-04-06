@@ -13,7 +13,7 @@ package boomerang;
 
 import boomerang.stats.IBoomerangStats;
 
-class BoomerangTimeoutException extends RuntimeException {
+public class BoomerangTimeoutException extends RuntimeException {
 
     private IBoomerangStats stats;
     private long elapsed;
