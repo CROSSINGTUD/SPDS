@@ -9,13 +9,15 @@
  * <p>Contributors: Johannes Spaeth - initial API and implementation
  * *****************************************************************************
  */
-package ideal;
+package test;
 
 import boomerang.scene.Statement;
-import boomerang.scene.Val;
-import sync.pds.solver.nodes.Node;
 
-public interface NonOneFlowListener {
+public interface ComparableResult<State, Val> {
 
-  void nonOneFlow(Node<Statement, Val> curr);
+  public Val getVal();
+
+  public Statement getStmt();
+
+  public void computedResults(State val);
 }

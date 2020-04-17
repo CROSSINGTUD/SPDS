@@ -13,7 +13,7 @@
 		<module>SynchronizedPDS</module>
 		<module>testCore</module>
 		<module>boomerangPDS</module>
-		<!--<module>idealPDS</module>-->
+	<!--	<module>idealPDS</module>-->
 	</modules>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
