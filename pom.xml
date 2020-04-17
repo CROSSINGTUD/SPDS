@@ -99,14 +99,11 @@
 			</snapshots>
 		</repository>
 	</repositories>
+	<!-- To be changed for OSS version-->
 	<distributionManagement>
-		<snapshotRepository>
-			<id>soot-snapshot</id>
-			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-snapshot/</url>
-		</snapshotRepository>
 		<repository>
-			<id>soot-release</id>
-			<url>https://soot-build.cs.uni-paderborn.de/nexus/repository/soot-release/</url>
+			<id>codeshield-snapshots</id>
+			<url>https://nexus.codeshield.de/repository/codeshield-snapshots/</url>
 		</repository>
 	</distributionManagement>
 	<profiles>
