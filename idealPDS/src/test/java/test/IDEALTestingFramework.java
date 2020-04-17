@@ -18,7 +18,6 @@ import boomerang.WeightedForwardQuery;
 import boomerang.callgraph.CallGraph;
 import boomerang.callgraph.CallGraph.Edge;
 import boomerang.debugger.Debugger;
-import boomerang.example.WALAAnalysis;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.scene.CallSiteStatement;
 import boomerang.scene.Method;
@@ -28,42 +27,18 @@ import boomerang.scene.jimple.BoomerangPretransformer;
 import boomerang.scene.jimple.JimpleMethod;
 import boomerang.scene.jimple.SootCallGraph;
 import boomerang.scene.jimple.SootDataFlowScope;
-import boomerang.scene.wala.WALACallGraph;
-import boomerang.scene.wala.WALAMethod;
 import com.google.common.collect.Lists;
-import com.ibm.wala.classLoader.IMethod;
-import com.ibm.wala.ipa.callgraph.AnalysisCacheImpl;
-import com.ibm.wala.ipa.callgraph.AnalysisOptions;
-import com.ibm.wala.ipa.callgraph.AnalysisScope;
-import com.ibm.wala.ipa.callgraph.CallGraphBuilder;
-import com.ibm.wala.ipa.callgraph.CallGraphBuilderCancelException;
-import com.ibm.wala.ipa.callgraph.Entrypoint;
-import com.ibm.wala.ipa.callgraph.IAnalysisCacheView;
-import com.ibm.wala.ipa.callgraph.impl.DefaultEntrypoint;
-import com.ibm.wala.ipa.callgraph.impl.Util;
-import com.ibm.wala.ipa.callgraph.propagation.InstanceKey;
-import com.ibm.wala.ipa.cha.ClassHierarchyException;
-import com.ibm.wala.ipa.cha.ClassHierarchyFactory;
-import com.ibm.wala.ipa.cha.IClassHierarchy;
-import com.ibm.wala.types.ClassLoaderReference;
-import com.ibm.wala.types.MethodReference;
-import com.ibm.wala.util.config.AnalysisScopeReader;
-import com.ibm.wala.util.io.FileProvider;
 import ideal.IDEALAnalysis;
 import ideal.IDEALAnalysisDefinition;
 import ideal.IDEALResultHandler;
 import ideal.IDEALSeedSolver;
 import ideal.StoreIDEALResultHandler;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 import soot.Scene;
@@ -145,78 +120,6 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework {
         });
   }
 
-  @Before
-  public void beforeTestCaseExecution() {
-    if (WALA) {
-      runWithWala();
-      // To never execute the @Test method...
-      org.junit.Assume.assumeTrue(false);
-      return;
-    }
-    super.beforeTestCaseExecution();
-  }
-
-  private void runWithWala() {
-    AnalysisScope walaScope;
-    try {
-      walaScope =
-          AnalysisScopeReader.readJavaScope(
-              "testScope.txt",
-              (new FileProvider()).getFile("exclusion.txt"),
-              WALAAnalysis.class.getClassLoader());
-      IClassHierarchy cha = ClassHierarchyFactory.make(walaScope);
-      String testCaseClassName = getTestCaseClassName().replace(".", "/").replace("class ", "");
-
-      final MethodReference ref =
-          MethodReference.findOrCreate(
-              ClassLoaderReference.Application,
-              "L" + testCaseClassName,
-              walatestMethodName.getMethodName(),
-              "()V");
-
-      IMethod method = cha.resolveMethod(ref);
-      Iterable<Entrypoint> singleton =
-          new Iterable<Entrypoint>() {
-
-            @Override
-            public Iterator<Entrypoint> iterator() {
-              ArrayList<Entrypoint> list = Lists.newArrayList();
-              list.add(new DefaultEntrypoint(method, cha));
-              Iterator<Entrypoint> ret = list.iterator();
-              return ret;
-            }
-          };
-      AnalysisOptions options = new AnalysisOptions(walaScope, singleton);
-      IAnalysisCacheView cache = new AnalysisCacheImpl();
-      //		      CallGraphBuilder<InstanceKey> rtaBuilder =
-      // Util.makeZeroOneCFABuilder(Language.JAVA, options, cache, cha, walaScope);
-      CallGraphBuilder<InstanceKey> rtaBuilder =
-          Util.makeRTABuilder(options, cache, cha, walaScope);
-      com.ibm.wala.ipa.callgraph.CallGraph makeCallGraph = null;
-      try {
-        makeCallGraph = rtaBuilder.makeCallGraph(options, null);
-      } catch (IllegalArgumentException | CallGraphBuilderCancelException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-        //			}
-        //			CHACallGraph CG = new CHACallGraph(cha);
-        //			try {
-        //				CG.init(singleton);
-        //			} catch (CancelException e) {
-        //				// TODO Auto-generated catch block
-        //				e.printStackTrace();
-      }
-      System.out.println("Build call graph");
-      callGraph = new WALACallGraph(makeCallGraph, cha);
-      dataFlowScope = DataFlowScope.INCLUDE_ALL;
-      System.out.println("Converted call graph");
-      analyze(new WALAMethod(method, cache.getIR(method), cha));
-    } catch (IOException | ClassHierarchyException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
-    }
-  }
-
   @Override
   protected SceneTransformer createAnalysisTransformer() throws ImprecisionException {
     return new SceneTransformer() {
@@ -226,7 +129,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework {
         BoomerangPretransformer.v().apply();
         callGraph = new SootCallGraph();
         dataFlowScope = SootDataFlowScope.make(Scene.v());
-        analyze(new JimpleMethod(sootTestMethod));
+        analyze(JimpleMethod.of(sootTestMethod));
       }
     };
   }
