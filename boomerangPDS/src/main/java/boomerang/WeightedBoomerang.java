@@ -12,6 +12,7 @@
 package boomerang;
 
 import boomerang.callgraph.*;
+import boomerang.controlflowgraph.DynamicCFG;
 import boomerang.controlflowgraph.ObservableControlFlowGraph;
 import boomerang.controlflowgraph.StaticCFG;
 import boomerang.customize.BackwardEmptyCalleeFlow;
@@ -26,8 +27,12 @@ import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.scene.*;
 import boomerang.solver.*;
+import boomerang.solver.ForwardBoomerangSolver.ControlFlowLatticeElement;
+import boomerang.solver.ForwardBoomerangSolver.KillElement;
+import boomerang.solver.ForwardBoomerangSolver.UnknownElement;
 import boomerang.stats.IBoomerangStats;
 import boomerang.util.DefaultValueMap;
+import boomerang.util.Pair;
 import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.*;
@@ -208,9 +213,15 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
   public WeightedBoomerang(CallGraph cg, DataFlowScope scope, BoomerangOptions options) {
     this.options = options;
+    this.options.checkValid();
     this.stats = options.statsFactory();
     this.dataFlowscope = scope;
-    this.cfg = new StaticCFG();
+
+    if (options.onTheFlyControlFlow()) {
+      this.cfg = new DynamicCFG();
+    } else {
+      this.cfg = new StaticCFG();
+    }
 
     if (options.onTheFlyCallGraph()) {
       icfg = new ObservableDynamicICFG(cfg, options.getResolutionStrategy().newInstance(this, cg));
@@ -293,6 +304,41 @@ public abstract class WeightedBoomerang<W extends Weight> {
                     killedTransition);
             copyAccessPathChain.exec();
             queryGraph.addEdge(sourceQuery, killedTransition.getStart().fact(), backwardQuery);
+          }
+
+          @Override
+          protected void propagateUnbalancedToCallSite(
+              CallSiteStatement callSite, Transition<Statement, INode<Val>> transInCallee) {
+            if (options.onTheFlyControlFlow()
+                && visited.add(new Pair<>(callSite, callSite.getReturnSiteStatement()))) {
+              if (visited.add(
+                  new Pair<>(
+                      callSite.getReturnSiteStatement(), callSite.getReturnSiteStatement()))) {
+                worklist.add(callSite.getReturnSiteStatement());
+              }
+            }
+            super.propagateUnbalancedToCallSite(callSite, transInCallee);
+          }
+
+          @Override
+          public Collection<? extends State> computeCallFlow(
+              Method caller,
+              CallSiteStatement callSite,
+              ReturnSiteStatement returnSiteStatement,
+              InvokeExpr invokeExpr,
+              Node<Statement, Val> currNode,
+              Method callee,
+              Statement calleeSp) {
+            // TODO Auto-generated method stub
+            Collection<? extends State> out =
+                super.computeCallFlow(
+                    caller, callSite, returnSiteStatement, invokeExpr, currNode, callee, calleeSp);
+            if (options.onTheFlyControlFlow() && !out.isEmpty()) {
+              if (visited.add(new Pair<>(calleeSp, calleeSp))) {
+                worklist.add(calleeSp);
+              }
+            }
+            return out;
           }
 
           @Override
@@ -426,6 +472,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
     this.cfg.unregisterAllListeners();
     this.queryGraph.unregisterAllListeners();
     this.poiListeners.clear();
+    this.worklist.clear();
     this.activatedPoi.clear();
     this.fieldWrites.clear();
   }
@@ -656,7 +703,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
         this.queryToSolvers,
         getStats(),
         analysisWatch,
-        visitedMethods);
+        visitedMethods,
+        options.trackDataFlowPath(),
+        options.prunePathConditions(),
+        options.trackImplicitFlows());
   }
 
   public BackwardBoomerangResults<W> solve(BackwardQuery query) {
@@ -717,7 +767,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
     AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
     INode<Node<Statement, Val>> fieldTarget = solver.createQueryNodeField(query);
     INode<Val> callTarget =
-        solver.generateCallState(new SingleNode<>(query.var()), query.stmt());
+        solver.generateCallState(new SingleNode<Val>(query.var()), query.stmt());
     if (!(stmt.isFieldStore())
         && (stmt.isMultiArrayAllocation() || query.var().getType().isArrayType())
         && options.arrayFlows()) {
@@ -777,7 +827,39 @@ public abstract class WeightedBoomerang<W extends Weight> {
       solver.solve(new Node<>(stmt, var), field, fieldTarget, stmt, callTarget);
     }
 
+    if (options.onTheFlyControlFlow()) {
+      worklist.add(stmt);
+      controlFlowAnalysis();
+    }
     return solver;
+  }
+
+  Set<Pair<Statement, Statement>> visited = Sets.newHashSet();
+  LinkedList<Statement> worklist = Lists.newLinkedList();
+
+  private void controlFlowAnalysis() {
+    if (!options.onTheFlyControlFlow()) {
+      return;
+    }
+    while (!worklist.isEmpty()) {
+      Statement first = worklist.pop();
+      Collection<Statement> succs = first.getMethod().getControlFlowGraph().getSuccsOf(first);
+      for (Statement succ : succs) {
+        ControlFlowLatticeElement latticeEl = UnknownElement.create();
+        for (ForwardQuery q : Lists.newArrayList(queryToSolvers.keySet())) {
+          ForwardBoomerangSolver<W> solver = queryToSolvers.get(q);
+          latticeEl = latticeEl.merge(solver.controlFlowStep(first, succ, succs));
+        }
+        if (visited.add(new Pair<Statement, Statement>(first, succ))) {
+          if (!(latticeEl instanceof KillElement)) {
+            cfg.step(first, succ);
+            worklist.add(succ);
+          } else {
+            LOGGER.trace("Killing control flow from {} to {}", first, succ);
+          }
+        }
+      }
+    }
   }
 
   private boolean insertTransition(
@@ -862,8 +944,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
     }
   }
 
-  public void registerActivationListener(
-      WeightedBoomerang<W>.SolverPair solverPair, ExecuteImportFieldStmtPOI<W> exec) {
+  public void registerActivationListener(SolverPair solverPair, ExecuteImportFieldStmtPOI<W> exec) {
     Collection<INode<Node<Statement, Val>>> listeners = activatedPoi.get(solverPair);
     for (INode<Node<Statement, Val>> node : Lists.newArrayList(listeners)) {
       exec.trigger(node);

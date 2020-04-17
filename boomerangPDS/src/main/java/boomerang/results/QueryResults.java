@@ -8,11 +8,11 @@ import java.util.Set;
 public class QueryResults {
   private Query query;
   private final Collection<Method> visitedMethods;
-  private final Collection<NullPointerDereference> affectedLocations;
+  private final Collection<AffectedLocation> affectedLocations;
   private final boolean timedout;
 
   public QueryResults(
-      Query query, Set<NullPointerDereference> npes, Set<Method> visMethod, boolean timedout) {
+      Query query, Set<AffectedLocation> npes, Set<Method> visMethod, boolean timedout) {
     this.query = query;
     this.visitedMethods = visMethod;
     this.affectedLocations = npes;
@@ -27,7 +27,7 @@ public class QueryResults {
     return visitedMethods;
   }
 
-  public Collection<NullPointerDereference> getAffectedLocations() {
+  public Collection<AffectedLocation> getAffectedLocations() {
     return affectedLocations;
   }
 

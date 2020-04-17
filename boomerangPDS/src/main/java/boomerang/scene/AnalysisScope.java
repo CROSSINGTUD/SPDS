@@ -11,10 +11,6 @@ import java.util.LinkedList;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sync.pds.solver.nodes.GeneratedState;
-import sync.pds.solver.nodes.INode;
-import wpds.impl.Weight;
-import wpds.impl.WeightedPAutomaton;
 
 public abstract class AnalysisScope {
 

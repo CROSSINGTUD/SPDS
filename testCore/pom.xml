@@ -4,7 +4,7 @@
 	<parent>
 	    <groupId>de.fraunhofer.iem</groupId>
 	    <artifactId>SPDS</artifactId>
-	    <version>3.0-ALPHA-SNAPSHOT</version>
+	    <version>3.1-ALPHA-SNAPSHOT</version>
     	<relativePath>../pom.xml</relativePath>
   	</parent>
 	<modelVersion>4.0.0</modelVersion>
@@ -13,7 +13,7 @@
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
 			<artifactId>WPDS</artifactId>
-			<version>3.0-ALPHA-SNAPSHOT</version>
+			<version>3.1-ALPHA-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.google.guava</groupId>

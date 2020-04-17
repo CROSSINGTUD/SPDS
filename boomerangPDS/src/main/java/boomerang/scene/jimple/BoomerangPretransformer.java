@@ -151,7 +151,7 @@ public class BoomerangPretransformer extends BodyTransformer {
    * @param assignStmt
    */
   private void backPropagateSourceLineTags(ValueBox valueBox, AssignStmt assignStmt) {
-    String srcLnPosTag = new SourceLnPosTag(-1,-1,-1,-1).getName();
+    String srcLnPosTag = new SourceLnPosTag(-1, -1, -1, -1).getName();
     Tag tag = valueBox.getTag(srcLnPosTag);
     if (tag != null) {
       // in case that we copied a line number tag from the original statement, we want to remove
