@@ -18,14 +18,19 @@ import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
 import boomerang.stats.IBoomerangStats;
 import boomerang.util.DefaultValueMap;
+import boomerang.weights.DataFlowPathWeight;
+import boomerang.weights.PathConditionWeight.ConditionDomain;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import soot.jimple.IntConstant;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
@@ -45,7 +50,10 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
   private long maxMemory;
   private ObservableICFG<Statement, Method> icfg;
   private Set<Method> visitedMethods;
+  private final boolean trackDataFlowPath;
+  private final boolean pruneContradictoryDataFlowPath;
   private ObservableControlFlowGraph cfg;
+  private boolean pruneImplictFlows;
 
   public ForwardBoomerangResults(
       ForwardQuery query,
@@ -55,7 +63,10 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
       DefaultValueMap<ForwardQuery, ForwardBoomerangSolver<W>> queryToSolvers,
       IBoomerangStats<W> stats,
       Stopwatch analysisWatch,
-      Set<Method> visitedMethods) {
+      Set<Method> visitedMethods,
+      boolean trackDataFlowPath,
+      boolean pruneContradictoryDataFlowPath,
+      boolean pruneImplictFlows) {
     super(queryToSolvers);
     this.query = query;
     this.icfg = icfg;
@@ -64,6 +75,9 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
     this.stats = stats;
     this.analysisWatch = analysisWatch;
     this.visitedMethods = visitedMethods;
+    this.trackDataFlowPath = trackDataFlowPath;
+    this.pruneContradictoryDataFlowPath = pruneContradictoryDataFlowPath;
+    this.pruneImplictFlows = pruneImplictFlows;
     stats.terminated(query, this);
     this.maxMemory = Util.getReallyUsedMemory();
   }
@@ -138,7 +152,7 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
       }
       boolean valueUsedInStmt = false;
       for (Entry<Val, W> e : row.entrySet()) {
-        if (curr.valueUsedInStatement(e.getKey())) {
+        if (curr.uses(e.getKey())) {
           destructingStatement.put(curr, e.getKey(), e.getValue());
           valueUsedInStmt = true;
         }
@@ -212,14 +226,140 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
         res.add(nullPointerNode);
       }
     }
-    Set<NullPointerDereference> resWithContext = Sets.newHashSet();
+    Set<AffectedLocation> resWithContext = Sets.newHashSet();
     for (Node<Statement, Val> r : res) {
-      resWithContext.add(
-          new NullPointerDereference(query, r.stmt(), r.fact(), null, null));
+      // Context context = constructContextGraph(query, r);
+      if (trackDataFlowPath) {
+        DataFlowPathWeight dataFlowPath = getDataFlowPathWeight(query, r);
+        if (isValidPath(dataFlowPath)) {
+          List<PathElement> p = transformPath(dataFlowPath.getAllStatements(), r);
+          resWithContext.add(new NullPointerDereference(query, r.stmt(), r.fact(), null, null, p));
+        }
+      } else {
+        List<PathElement> dataFlowPath = Lists.newArrayList();
+        resWithContext.add(
+            new NullPointerDereference(query, r.stmt(), r.fact(), null, null, dataFlowPath));
+      }
     }
     QueryResults nullPointerResult =
         new QueryResults(query, resWithContext, visitedMethods, timedout);
     return nullPointerResult;
+  }
+
+  private boolean isValidPath(DataFlowPathWeight dataFlowPath) {
+    if (!pruneContradictoryDataFlowPath) {
+      return true;
+    }
+    Map<Statement, ConditionDomain> conditions = dataFlowPath.getConditions();
+    for (Entry<Statement, ConditionDomain> c : conditions.entrySet()) {
+      if (contradiction(c.getKey(), c.getValue(), dataFlowPath.getEvaluationMap())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private DataFlowPathWeight getDataFlowPathWeight(
+      ForwardQuery query, Node<Statement, Val> sinkLocation) {
+    WeightedPAutomaton<Statement, INode<Val>, W> callAut =
+        queryToSolvers.getOrCreate(query).getCallAutomaton();
+    // Iterating over whole set to find the matching transition is not the most elegant solution....
+    for (Entry<Transition<Statement, INode<Val>>, W> e :
+        callAut.getTransitionsToFinalWeights().entrySet()) {
+      Transition<Statement, INode<Val>> t = e.getKey();
+      if (t.getLabel().equals(Statement.epsilon())) {
+        continue;
+      }
+      if (t.getStart().fact().isLocal()
+          && !t.getLabel().getMethod().equals(t.getStart().fact().m())) {
+        continue;
+      }
+      if (t.getStart().fact().equals(sinkLocation.fact())
+          && t.getLabel().equals(sinkLocation.stmt())) {
+        if (e.getValue() instanceof DataFlowPathWeight) {
+          DataFlowPathWeight v = (DataFlowPathWeight) e.getValue();
+          return v;
+        }
+      }
+    }
+    return null;
+  }
+
+  private boolean contradiction(
+      Statement ifStmt, ConditionDomain mustBeVal, Map<Val, ConditionDomain> evaluationMap) {
+    if (ifStmt.isIfStmt()) {
+      IfStatement ifStmt1 = ifStmt.getIfStmt();
+      for (Transition<Field, INode<Node<Statement, Val>>> t :
+          queryToSolvers.get(query).getFieldAutomaton().getTransitions()) {
+
+        if (!t.getStart().fact().stmt().equals(ifStmt)) {
+          continue;
+        }
+        if (!t.getLabel().equals(Field.empty()) || t.getStart() instanceof GeneratedState) {
+          continue;
+        }
+
+        Node<Statement, Val> node = t.getStart().fact();
+        Val fact = node.fact();
+        switch (ifStmt1.evaluate(fact)) {
+          case TRUE:
+            if (mustBeVal.equals(ConditionDomain.FALSE)) {
+              return true;
+            }
+            break;
+          case FALSE:
+            if (mustBeVal.equals(ConditionDomain.TRUE)) {
+              return true;
+            }
+        }
+      }
+      if (pruneImplictFlows) {
+        for (Entry<Val, ConditionDomain> e : evaluationMap.entrySet()) {
+
+          if (ifStmt1.uses(e.getKey())) {
+            Evaluation eval = null;
+            if (e.getValue().equals(ConditionDomain.TRUE)) {
+              // Map first to JimpleVal
+              eval = ifStmt1.evaluate(new JimpleVal(IntConstant.v(1), e.getKey().m()));
+            } else if (e.getValue().equals(ConditionDomain.FALSE)) {
+              // Map first to JimpleVal
+              eval = ifStmt1.evaluate(new JimpleVal(IntConstant.v(0), e.getKey().m()));
+            }
+            if (eval != null) {
+              if (mustBeVal.equals(ConditionDomain.FALSE)) {
+                if (eval.equals(Evaluation.FALSE)) {
+                  return true;
+                }
+              } else if (mustBeVal.equals(ConditionDomain.TRUE)) {
+                if (eval.equals(Evaluation.TRUE)) {
+                  return true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  private List<PathElement> transformPath(
+      List<Node<Statement, Val>> allStatements, Node<Statement, Val> sinkLocation) {
+    List<PathElement> res = Lists.newArrayList();
+    int index = 0;
+    for (Node<Statement, Val> x : allStatements) {
+      res.add(new PathElement(x.stmt(), x.fact(), index++));
+    }
+    // TODO The analysis misses
+    if (!allStatements.contains(sinkLocation)) {
+      res.add(new PathElement(sinkLocation.stmt(), sinkLocation.fact(), index));
+    }
+
+    for (PathElement n : res) {
+      LOGGER.trace(
+          "Statement: {}, Variable {}, Index {}", n.getStatement(), n.getVariable(), n.stepIndex());
+    }
+    return res;
   }
 
   public Context getContext(Node<Statement, Val> node) {

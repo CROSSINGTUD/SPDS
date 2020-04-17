@@ -1,8 +1,7 @@
 package boomerang.scene;
 
 import boomerang.Query;
-import boomerang.callgraph.CallGraph;
-import boomerang.callgraph.CallGraph.Edge;
+import boomerang.scene.CallGraph.Edge;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -11,10 +10,6 @@ import java.util.LinkedList;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sync.pds.solver.nodes.GeneratedState;
-import sync.pds.solver.nodes.INode;
-import wpds.impl.Weight;
-import wpds.impl.WeightedPAutomaton;
 
 public abstract class AnalysisScope {
 

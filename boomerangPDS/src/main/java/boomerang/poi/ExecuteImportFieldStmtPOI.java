@@ -87,11 +87,14 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
       if (isLogEnabled()) {
         LOGGER.trace("Copying {} to {}", newTrans, flowSolver);
       }
-      // It was, might lead to a problem when enabling IDEAL again.
-      // flowSolver.getCallAutomaton().addWeightForTransition(newTrans,this.w);
       if (!t.getStart().equals(start)) {
         if (t.getStart().fact().m().equals(t.getLabel().getMethod())) {
-          flowSolver.getCallAutomaton().addTransition(newTrans);
+          // To compute the right Data-Flow Path, apparently, Weight.ONE is necessary and the
+          // following line works.
+          // flowSolver.getCallAutomaton().addTransition(newTrans);
+          // For IDEAL the Weight this.w must be carried along:
+          // FileMustBeClosedTest.flowViaFieldDirect
+          flowSolver.getCallAutomaton().addWeightForTransition(newTrans, this.w);
         }
       }
     }
@@ -198,7 +201,7 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
         Statement callSite = ((ReturnSiteStatement) returnSiteOrExitStmt).getCallSiteStatement();
         if (returnSiteOrExitStmt.unwrap().isAssign()
             && returnSiteOrExitStmt.unwrap().getLeftOp().equals(t.getStart().fact())) return;
-        if (callSite.containsInvokeExpr() && callSite.valueUsedInStatement(t.getStart().fact())) {
+        if (callSite.containsInvokeExpr() && callSite.uses(t.getStart().fact())) {
           importSolvers(returnSiteOrExitStmt, t.getStart(), t.getTarget(), w);
         }
       }

@@ -11,7 +11,8 @@
  */
 package boomerang;
 
-import boomerang.callgraph.CallGraph;
+import boomerang.scene.CallGraph;
+import boomerang.scene.DataFlowScope;
 import boomerang.scene.Field;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
@@ -43,8 +44,7 @@ public class Boomerang extends WeightedBoomerang<Weight.NoWeight> {
   }
 
   @Override
-  protected WeightFunctions<Statement, Val, Statement, Weight.NoWeight>
-      getBackwardCallWeights() {
+  protected WeightFunctions<Statement, Val, Statement, Weight.NoWeight> getBackwardCallWeights() {
     return getOrCreateCallWeights();
   }
 
@@ -63,8 +63,7 @@ public class Boomerang extends WeightedBoomerang<Weight.NoWeight> {
 
   private WeightFunctions<Statement, Val, Statement, Weight.NoWeight> getOrCreateCallWeights() {
     if (callWeights == null) {
-      callWeights =
-              new OneWeightFunctions<>(Weight.NO_WEIGHT_ONE);
+      callWeights = new OneWeightFunctions<>(Weight.NO_WEIGHT_ONE);
     }
     return callWeights;
   }

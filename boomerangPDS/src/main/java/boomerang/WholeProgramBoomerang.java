@@ -11,8 +11,9 @@
  */
 package boomerang;
 
-import boomerang.callgraph.CallGraph;
 import boomerang.scene.AnalysisScope;
+import boomerang.scene.CallGraph;
+import boomerang.scene.DataFlowScope;
 import boomerang.scene.Statement;
 import java.util.Collection;
 import java.util.Collections;

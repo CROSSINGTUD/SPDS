@@ -4,27 +4,29 @@ import boomerang.Query;
 import boomerang.scene.CallSiteStatement;
 import boomerang.scene.Field;
 import boomerang.scene.Method;
+import boomerang.scene.Pair;
 import boomerang.scene.ReturnSiteStatement;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
-import boomerang.util.Pair;
 import java.util.List;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.PAutomaton;
 
-public class NullPointerDereference {
+public class NullPointerDereference implements AffectedLocation {
+  public static final int RULE_INDEX = 0;
 
   private final Statement statement;
   private final Val variable;
   private PAutomaton<Statement, INode<Val>> openingContext;
   private PAutomaton<Statement, INode<Val>> closingContext;
+  private List<PathElement> dataFlowPath;
   private final Statement sourceStatement;
   private final Val sourceVariable;
   private Query query;
 
   public NullPointerDereference(Statement statement) {
-    this(null, statement, null, null, null);
+    this(null, statement, null, null, null, null);
   }
 
   public NullPointerDereference(
@@ -32,7 +34,8 @@ public class NullPointerDereference {
       Statement statement,
       Val variable,
       PAutomaton<Statement, INode<Val>> openingContext,
-      PAutomaton<Statement, INode<Val>> closingContext) {
+      PAutomaton<Statement, INode<Val>> closingContext,
+      List<PathElement> dataFlowPath) {
     this.query = query;
     this.sourceStatement = query.stmt();
     this.sourceVariable = query.var();
@@ -40,6 +43,7 @@ public class NullPointerDereference {
     this.variable = variable;
     this.openingContext = openingContext;
     this.closingContext = closingContext;
+    this.dataFlowPath = dataFlowPath;
   }
 
   /**
@@ -50,6 +54,21 @@ public class NullPointerDereference {
    */
   public Val getVariable() {
     return variable;
+  }
+
+  @Override
+  public List<PathElement> getDataFlowPath() {
+    return dataFlowPath;
+  }
+
+  @Override
+  public String getMessage() {
+    return "Potential **null pointer** dereference";
+  }
+
+  @Override
+  public int getRuleIndex() {
+    return RULE_INDEX;
   }
 
   /**

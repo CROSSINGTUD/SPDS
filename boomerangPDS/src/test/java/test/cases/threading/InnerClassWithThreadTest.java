@@ -15,7 +15,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
-import test.core.AbstractBoomerangTest.AnalysisMode;
 import test.core.selfrunning.AllocatedObject;
 
 public class InnerClassWithThreadTest extends AbstractBoomerangTest {

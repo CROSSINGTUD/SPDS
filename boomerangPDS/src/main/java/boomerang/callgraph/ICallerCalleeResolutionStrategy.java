@@ -1,6 +1,7 @@
 package boomerang.callgraph;
 
 import boomerang.WeightedBoomerang;
+import boomerang.scene.CallGraph;
 import boomerang.scene.InvokeExpr;
 import boomerang.scene.Method;
 import boomerang.scene.Statement;

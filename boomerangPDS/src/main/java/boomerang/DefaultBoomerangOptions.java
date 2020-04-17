@@ -159,6 +159,11 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
   }
 
   @Override
+  public boolean onTheFlyControlFlow() {
+    return false;
+  }
+
+  @Override
   public String toString() {
     Class<? extends DefaultBoomerangOptions> cls = this.getClass();
     List<String> methodToVal = new ArrayList<>();
@@ -185,7 +190,34 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
   }
 
   @Override
+  public boolean trackPathConditions() {
+    return false;
+  }
+
+  @Override
+  public boolean prunePathConditions() {
+    return false;
+  }
+
+  @Override
+  public boolean trackDataFlowPath() {
+    return true;
+  }
+
+  @Override
+  public boolean trackImplicitFlows() {
+    return false;
+  }
+
+  @Override
   public boolean allowMultipleQueries() {
     return false;
+  }
+
+  public void checkValid() {
+    if (trackPathConditions() == false && prunePathConditions()) {
+      throw new RuntimeException(
+          "InvalidCombinations of Options, Path Conditions must be ables when pruning path conditions");
+    }
   }
 }

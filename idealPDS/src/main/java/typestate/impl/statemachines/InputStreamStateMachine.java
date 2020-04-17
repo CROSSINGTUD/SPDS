@@ -1,27 +1,19 @@
-/*******************************************************************************
- * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
+/**
+ * ***************************************************************************** Copyright (c) 2018
+ * Fraunhofer IEM, Paderborn, Germany. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
- * SPDX-License-Identifier: EPL-2.0
  *
- * Contributors:
- *     Johannes Spaeth - initial API and implementation
- *******************************************************************************/
+ * <p>SPDX-License-Identifier: EPL-2.0
+ *
+ * <p>Contributors: Johannes Spaeth - initial API and implementation
+ * *****************************************************************************
+ */
 package typestate.impl.statemachines;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-
 import boomerang.WeightedForwardQuery;
-import soot.Scene;
-import soot.SootClass;
-import soot.SootMethod;
-import soot.Unit;
+import boomerang.scene.Statement;
+import java.util.Collection;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
@@ -31,74 +23,56 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public class InputStreamStateMachine extends TypeStateMachineWeightFunctions {
 
-    private Set<SootMethod> closeMethods;
-    private Set<SootMethod> readMethods;
+  private static final String CLOSE_METHODS = ".* close.*";
+  private static final String READ_METHODS = ".* read.*";
+  private static final String TYPE = "java.io.InputStream";
 
-    public static enum States implements State {
-        NONE, CLOSED, ERROR;
+  public static enum States implements State {
+    CLOSED,
+    ERROR;
 
-        @Override
-        public boolean isErrorState() {
-            return this == ERROR;
-        }
-
-        @Override
-        public boolean isInitialState() {
-            return false;
-        }
-
-        @Override
-        public boolean isAccepting() {
-            return false;
-        }
-    }
-
-    public InputStreamStateMachine() {
-        addTransition(new MatcherTransition(States.NONE, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
-        addTransition(
-                new MatcherTransition(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
-        addTransition(new MatcherTransition(States.CLOSED, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-        addTransition(new MatcherTransition(States.ERROR, readMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-
-        addTransition(new MatcherTransition(States.CLOSED,
-                Collections.singleton(Scene.v().getMethod("<java.io.InputStream: int read()>")), Parameter.This,
-                States.ERROR, Type.OnCallToReturn));
-        addTransition(new MatcherTransition(States.ERROR,
-                Collections.singleton(Scene.v().getMethod("<java.io.InputStream: int read()>")), Parameter.This,
-                States.ERROR, Type.OnCallToReturn));
-    }
-
-    private Set<SootMethod> closeMethods() {
-        if (closeMethods == null)
-            closeMethods = selectMethodByName(getImplementersOf("java.io.InputStream"), "close");
-        return closeMethods;
-    }
-
-    private Set<SootMethod> readMethods() {
-        if (readMethods == null) {
-            readMethods = selectMethodByName(getImplementersOf("java.io.InputStream"), "read");
-        }
-
-        return readMethods;
-    }
-
-    private List<SootClass> getImplementersOf(String className) {
-        SootClass sootClass = Scene.v().getSootClass(className);
-        List<SootClass> list = Scene.v().getActiveHierarchy().getSubclassesOfIncluding(sootClass);
-        List<SootClass> res = new LinkedList<>();
-        for (SootClass c : list) {
-            res.add(c);
-        }
-        return res;
+    @Override
+    public boolean isErrorState() {
+      return this == ERROR;
     }
 
     @Override
-    public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit) {
-        return this.generateThisAtAnyCallSitesOf(method, unit, closeMethods());
+    public boolean isInitialState() {
+      return false;
     }
 
     @Override
-    public State initialState() {
-        return States.NONE;
+    public boolean isAccepting() {
+      return false;
     }
+  }
+
+  public InputStreamStateMachine() {
+    addTransition(
+        new MatcherTransition(
+            States.CLOSED, CLOSE_METHODS, Parameter.This, States.CLOSED, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.CLOSED, READ_METHODS, Parameter.This, States.ERROR, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.ERROR, READ_METHODS, Parameter.This, States.ERROR, Type.OnCall));
+
+    addTransition(
+        new MatcherTransition(
+            States.CLOSED, READ_METHODS, Parameter.This, States.ERROR, Type.OnCallToReturn));
+    addTransition(
+        new MatcherTransition(
+            States.ERROR, READ_METHODS, Parameter.This, States.ERROR, Type.OnCallToReturn));
+  }
+
+  @Override
+  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement unit) {
+    return this.generateThisAtAnyCallSitesOf(unit, TYPE, CLOSE_METHODS);
+  }
+
+  @Override
+  public State initialState() {
+    return States.CLOSED;
+  }
 }

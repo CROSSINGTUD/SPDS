@@ -13,17 +13,17 @@ package test.core;
 
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
-import boomerang.DataFlowScope;
 import boomerang.DefaultBoomerangOptions;
 import boomerang.Query;
 import boomerang.WeightedBoomerang;
-import boomerang.callgraph.CallGraph;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.scene.AnalysisScope;
+import boomerang.scene.CallGraph;
+import boomerang.scene.DataFlowScope;
+import boomerang.scene.SootDataFlowScope;
 import boomerang.scene.Val;
 import boomerang.scene.jimple.BoomerangPretransformer;
 import boomerang.scene.jimple.SootCallGraph;
-import boomerang.scene.jimple.SootDataFlowScope;
 import com.google.common.base.Joiner;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
@@ -96,8 +96,6 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
 
   private void compareQuery(Query query, Collection<? extends Query> results) {
     Collection<Query> expectedResults = expectedAllocsForQuery.get(query);
-    System.out.println("Boomerang Results: " + results);
-    System.out.println("Expected Results: " + expectedResults);
     Collection<Query> falseNegativeAllocationSites = new HashSet<>();
     for (Query res : expectedResults) {
       if (!results.contains(res)) falseNegativeAllocationSites.add(res);

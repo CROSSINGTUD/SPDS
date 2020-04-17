@@ -1,7 +1,8 @@
 package boomerang.callgraph;
 
-import boomerang.callgraph.CallGraph.Edge;
 import boomerang.controlflowgraph.ObservableControlFlowGraph;
+import boomerang.scene.CallGraph;
+import boomerang.scene.CallGraph.Edge;
 import boomerang.scene.CallSiteStatement;
 import boomerang.scene.InvokeExpr;
 import boomerang.scene.Method;

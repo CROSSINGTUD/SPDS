@@ -24,11 +24,14 @@ public abstract class StackListener<N extends Location, D extends State, W exten
   public void onOutTransitionAdded(
       Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton) {
     if (t.getLabel().equals(aut.epsilon())) return;
+    if (this.aut.getInitialStates().contains(t.getTarget())) {
+      if (t.getLabel().equals(source)) {
+        anyContext(source);
+      }
+      return;
+    }
     if (this.aut.isGeneratedState(t.getTarget())) {
       aut.registerListener(new SubStackListener(t.getTarget(), this));
-    }
-    if (this.aut.getInitialStates().contains(t.getTarget()) && t.getLabel().equals(source)) {
-      anyContext(source);
     }
   }
 

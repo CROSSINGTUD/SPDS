@@ -57,7 +57,7 @@ public abstract class Query {
   public boolean equals(Object obj) {
     if (this == obj) return true;
     if (obj == null) return false;
-    if (getClass() != obj.getClass()) return false;
+    if (obj.getClass() != this.getClass()) return false;
     Query other = (Query) obj;
     if (stmt == null) {
       if (other.stmt != null) return false;

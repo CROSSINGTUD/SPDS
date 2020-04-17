@@ -12,24 +12,26 @@
 package boomerang.solver;
 
 import boomerang.BoomerangOptions;
-import boomerang.DataFlowScope;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.controlflowgraph.ObservableControlFlowGraph;
 import boomerang.controlflowgraph.SuccessorListener;
+import boomerang.results.NullPointerDereference;
 import boomerang.scene.AllocVal;
 import boomerang.scene.CallSiteStatement;
+import boomerang.scene.DataFlowScope;
 import boomerang.scene.Field;
+import boomerang.scene.IfStatement;
 import boomerang.scene.InvokeExpr;
 import boomerang.scene.Method;
+import boomerang.scene.Pair;
 import boomerang.scene.ReturnSiteStatement;
 import boomerang.scene.Statement;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Type;
 import boomerang.scene.Val;
-import boomerang.util.Pair;
 import com.google.common.collect.Sets;
 import java.util.Collection;
 import java.util.Collections;
@@ -46,7 +48,10 @@ import sync.pds.solver.nodes.NodeWithLocation;
 import sync.pds.solver.nodes.PopNode;
 import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.*;
+import wpds.impl.NestedWeightedPAutomatons;
+import wpds.impl.Transition;
+import wpds.impl.Weight;
+import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 
@@ -323,6 +328,11 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
         }
       }
     }
+    if (returnedFact.isStatic()) {
+      out.add(
+          new Node<>(
+              returnSiteStatement, returnedFact.withNewMethod(returnSiteStatement.getMethod())));
+    }
     for (Node<Statement, Val> xs : out) {
       addNormalCallFlow(new Node<>(returnSiteStatement, returnedFact), xs);
       addNormalFieldFlow(new Node<>(returnSite, returnedFact), xs);
@@ -378,8 +388,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
 
   @Override
   protected boolean killFlow(Method m, Statement curr, Val value) {
-    if (!m.getLocals().contains(value) && !value.isStatic())
-      return true;
+    if (!m.getLocals().contains(value) && !value.isStatic()) return true;
     if (curr.isThrowStmt() || curr.isCatchStmt()) {
       return true;
     }
@@ -578,7 +587,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
     }
     Set<State> out = Sets.newHashSet();
     if (curr.isReturnStmt()) {
-      if (curr.getOp().equals(value)) {
+      if (curr.getReturnOp().equals(value)) {
         out.add(new PopNode<>(value, PDSSystem.CALLS));
       }
     }
@@ -598,8 +607,97 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
     }
     return out;
   }
+
+  public ControlFlowLatticeElement controlFlowStep(
+      Statement curr, Statement succ, Collection<Statement> succs) {
+    if (query.getType().isNullType() && curr.isIfStmt()) {
+      boolean successorIsTarget = false;
+      IfStatement ifStmt = curr.getIfStmt();
+      if (succ instanceof CallSiteStatement) {
+        CallSiteStatement callSiteStatement = (CallSiteStatement) succ;
+        if (ifStmt.getTarget().equals(callSiteStatement)) {
+          successorIsTarget = true;
+        }
+      } else if (ifStmt.getTarget().equals(succ)) {
+        successorIsTarget = true;
+      }
+      for (Transition<Field, INode<Node<Statement, Val>>> t :
+          perStatementFieldTransitions.get(curr)) {
+        if (!t.getLabel().equals(Field.empty()) || t.getStart() instanceof GeneratedState) {
+          continue;
+        }
+        Node<Statement, Val> node = t.getStart().fact();
+        Val fact = node.fact();
+        switch (ifStmt.evaluate(fact)) {
+          case TRUE:
+            if (!successorIsTarget) {
+              return KillElement.create();
+            }
+            break;
+          case FALSE:
+            if (successorIsTarget) {
+              return KillElement.create();
+            }
+        }
+      }
+    }
+    if (query.getType().isNullType()) {
+      for (Transition<Field, INode<Node<Statement, Val>>> t :
+          perStatementFieldTransitions.get(curr)) {
+        if (t.getLabel().equals(Field.empty())
+            && NullPointerDereference.isNullPointerNode(t.getStart().fact()))
+          return KillElement.create();
+      }
+    }
+    return UnknownElement.create();
+  }
+
   @Override
   public String toString() {
     return "ForwardSolver: " + query;
+  }
+
+  public interface ControlFlowLatticeElement {
+    ControlFlowLatticeElement merge(ControlFlowLatticeElement other);
+  }
+
+  public static class KillElement implements ControlFlowLatticeElement {
+    private KillElement() {}
+
+    public static KillElement create() {
+      return new KillElement();
+    }
+
+    @Override
+    public ControlFlowLatticeElement merge(ControlFlowLatticeElement other) {
+      if (other instanceof ContinueElement) return other;
+      return this;
+    }
+  }
+
+  public static class ContinueElement implements ControlFlowLatticeElement {
+    private ContinueElement() {}
+
+    public static ContinueElement create() {
+      return new ContinueElement();
+    }
+
+    @Override
+    public ControlFlowLatticeElement merge(ControlFlowLatticeElement other) {
+      return this;
+    }
+  }
+
+  public static class UnknownElement implements ControlFlowLatticeElement {
+    private UnknownElement() {}
+
+    public static UnknownElement create() {
+      return new UnknownElement();
+    }
+
+    @Override
+    public ControlFlowLatticeElement merge(ControlFlowLatticeElement other) {
+      return other;
+    }
   }
 }

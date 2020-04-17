@@ -27,6 +27,10 @@ public interface BoomerangOptions {
     return BoomerangResolver.FACTORY;
   }
 
+  void checkValid();
+
+  boolean trackImplicitFlows();
+
   enum StaticFieldStrategy {
     FLOW_SENSITIVE,
     SINGLETON,
@@ -81,7 +85,15 @@ public interface BoomerangOptions {
 
   int maxUnbalancedCallDepth();
 
+  boolean onTheFlyControlFlow();
+
   boolean ignoreInnerClassFields();
+
+  boolean trackPathConditions();
+
+  boolean prunePathConditions();
+
+  boolean trackDataFlowPath();
 
   boolean allowMultipleQueries();
 }

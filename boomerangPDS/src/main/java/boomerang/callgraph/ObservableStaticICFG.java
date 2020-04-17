@@ -1,6 +1,7 @@
 package boomerang.callgraph;
 
-import boomerang.callgraph.CallGraph.Edge;
+import boomerang.scene.CallGraph;
+import boomerang.scene.CallGraph.Edge;
 import boomerang.scene.Method;
 import boomerang.scene.Statement;
 import java.util.Collection;
@@ -37,8 +38,11 @@ public class ObservableStaticICFG implements ObservableICFG<Statement, Method> {
         LOGGER.trace("\t callee {}", e.tgt());
       }
     }
-    for (boomerang.callgraph.CallGraph.Edge e : edges) {
+    for (boomerang.scene.CallGraph.Edge e : edges) {
       listener.onCalleeAdded(listener.getObservedCaller(), e.tgt());
+    }
+    if (edges.size() == 0) {
+      listener.onNoCalleeFound();
     }
   }
 
@@ -54,7 +58,7 @@ public class ObservableStaticICFG implements ObservableICFG<Statement, Method> {
         LOGGER.trace("\t callsite {}", e.src());
       }
     }
-    for (boomerang.callgraph.CallGraph.Edge e : edges) {
+    for (boomerang.scene.CallGraph.Edge e : edges) {
       listener.onCallerAdded(e.src(), listener.getObservedCallee());
     }
   }

@@ -1,11 +1,11 @@
 package boomerang.debugger;
 
 import boomerang.ForwardQuery;
-import boomerang.callgraph.CallGraph;
-import boomerang.callgraph.CallGraph.Edge;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.callgraph.ObservableStaticICFG;
 import boomerang.controlflowgraph.ObservableControlFlowGraph;
+import boomerang.scene.CallGraph;
+import boomerang.scene.CallGraph.Edge;
 import boomerang.scene.Method;
 import boomerang.scene.Statement;
 import boomerang.solver.ForwardBoomerangSolver;

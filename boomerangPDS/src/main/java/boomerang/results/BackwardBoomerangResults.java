@@ -8,7 +8,7 @@ import boomerang.scene.Field;
 import boomerang.scene.Statement;
 import boomerang.scene.Type;
 import boomerang.scene.Val;
-import boomerang.solver.AbstractBoomerangSolver;
+import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
 import boomerang.stats.IBoomerangStats;
 import boomerang.util.AccessPath;
@@ -29,6 +29,7 @@ import wpds.impl.WeightedPAutomaton;
 public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomerangResults<W> {
 
   private final BackwardQuery query;
+  private final BackwardBoomerangSolver<W> backwardSolver;
   private Map<ForwardQuery, Context> allocationSites;
   private final boolean timedout;
   private final IBoomerangStats<W> stats;
@@ -39,6 +40,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
       BackwardQuery query,
       boolean timedout,
       DefaultValueMap<ForwardQuery, ForwardBoomerangSolver<W>> queryToSolvers,
+      BackwardBoomerangSolver<W> backwardSolver,
       IBoomerangStats<W> stats,
       Stopwatch analysisWatch) {
     super(queryToSolvers);
@@ -46,6 +48,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
     this.timedout = timedout;
     this.stats = stats;
     this.analysisWatch = analysisWatch;
+    this.backwardSolver = backwardSolver;
     stats.terminated(query, this);
     maxMemory = Util.getReallyUsedMemory();
   }
@@ -137,9 +140,8 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
    * @return Set of types the backward analysis propagates
    */
   public Set<Type> getPropagationType() {
-    AbstractBoomerangSolver<W> solver = queryToSolvers.get(query);
     Set<Type> types = Sets.newHashSet();
-    for (Transition<Statement, INode<Val>> t : solver.getCallAutomaton().getTransitions()) {
+    for (Transition<Statement, INode<Val>> t : backwardSolver.getCallAutomaton().getTransitions()) {
       if (!t.getStart().fact().isStatic()) types.add(t.getStart().fact().getType());
     }
     return types;
@@ -163,7 +165,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
       if (t.getLabel().equals(Statement.epsilon())) continue;
       if (t.getStart().fact().isLocal()
           && !t.getLabel().getMethod().equals(t.getStart().fact().m())) continue;
-      if (t.getLabel().valueUsedInStatement(t.getStart().fact()))
+      if (t.getLabel().uses(t.getStart().fact()))
         dataFlowPath.add(new Node<Statement, Val>(t.getLabel(), t.getStart().fact()));
     }
     return dataFlowPath;

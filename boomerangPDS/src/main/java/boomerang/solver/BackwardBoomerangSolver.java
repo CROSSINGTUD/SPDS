@@ -13,21 +13,21 @@ package boomerang.solver;
 
 import boomerang.BackwardQuery;
 import boomerang.BoomerangOptions;
-import boomerang.DataFlowScope;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.controlflowgraph.ObservableControlFlowGraph;
 import boomerang.scene.AllocVal;
 import boomerang.scene.CallSiteStatement;
+import boomerang.scene.DataFlowScope;
 import boomerang.scene.Field;
 import boomerang.scene.InvokeExpr;
 import boomerang.scene.Method;
+import boomerang.scene.Pair;
 import boomerang.scene.ReturnSiteStatement;
 import boomerang.scene.Statement;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Type;
 import boomerang.scene.Val;
-import boomerang.util.Pair;
 import com.google.common.collect.Sets;
 import java.util.AbstractMap;
 import java.util.Collection;
@@ -178,7 +178,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
     if ((stmt instanceof ReturnSiteStatement)) {
       ReturnSiteStatement returnSiteStatement = (ReturnSiteStatement) stmt;
       CallSiteStatement callSite = returnSiteStatement.getCallSiteStatement();
-      return callSite.valueUsedInStatement(value);
+      return callSite.uses(value);
     }
     return false;
   }
@@ -228,7 +228,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
       if (callSite.getLeftOp().equals(fact)) {
         out.add(
             new PushNode<Statement, Val, Statement>(
-                calleeSp, calleeSp.getOp(), callSite, PDSSystem.CALLS));
+                calleeSp, calleeSp.getReturnOp(), callSite, PDSSystem.CALLS));
       }
     }
     if (fact.isStatic()) {

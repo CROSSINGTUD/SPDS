@@ -1,29 +1,26 @@
-/*******************************************************************************
- * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
+/**
+ * ***************************************************************************** Copyright (c) 2018
+ * Fraunhofer IEM, Paderborn, Germany. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
- * SPDX-License-Identifier: EPL-2.0
  *
- * Contributors:
- *     Johannes Spaeth - initial API and implementation
- *******************************************************************************/
+ * <p>SPDX-License-Identifier: EPL-2.0
+ *
+ * <p>Contributors: Johannes Spaeth - initial API and implementation
+ * *****************************************************************************
+ */
 package typestate.impl.statemachines;
 
+import boomerang.WeightedForwardQuery;
+import boomerang.scene.DeclaredMethod;
+import boomerang.scene.Statement;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
-import boomerang.WeightedForwardQuery;
-import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
-import soot.Unit;
-import soot.jimple.toolkits.callgraph.Edge;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
@@ -33,109 +30,124 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public class SignatureStateMachine extends TypeStateMachineWeightFunctions {
 
-    public static enum States implements State {
-        NONE, UNITIALIZED, SIGN_CHECK, VERIFY_CHECK, ERROR;
+  private static final String INIT_SIGN = "initSign";
+  private static final String INIT_VERIFY = "initVerify";
+  private static final String SIGN = "sign";
+  private static final String UPDATE = "update";
+  private static final String VERIFY = "verify";
+  private static final String GET_INSTANCE = "getInstance";
 
-        @Override
-        public boolean isErrorState() {
-            return this == ERROR;
-        }
+  public static enum States implements State {
+    NONE,
+    UNITIALIZED,
+    SIGN_CHECK,
+    VERIFY_CHECK,
+    ERROR;
 
-        @Override
-        public boolean isInitialState() {
-            return false;
-        }
-
-        @Override
-        public boolean isAccepting() {
-            return false;
-        }
-    }
-
-    public SignatureStateMachine() {
-        addTransition(
-                new MatcherTransition(States.NONE, constructor(), Parameter.This, States.UNITIALIZED, Type.OnReturn));
-        addTransition(new MatcherTransition(States.UNITIALIZED, initSign(), Parameter.This, States.SIGN_CHECK,
-                Type.OnReturn));
-        addTransition(new MatcherTransition(States.UNITIALIZED, initVerify(), Parameter.This, States.VERIFY_CHECK,
-                Type.OnReturn));
-        addTransition(new MatcherTransition(States.UNITIALIZED, sign(), Parameter.This, States.ERROR, Type.OnReturn));
-        addTransition(new MatcherTransition(States.UNITIALIZED, verify(), Parameter.This, States.ERROR, Type.OnReturn));
-        addTransition(new MatcherTransition(States.UNITIALIZED, update(), Parameter.This, States.ERROR, Type.OnReturn));
-
-        addTransition(
-                new MatcherTransition(States.SIGN_CHECK, initSign(), Parameter.This, States.SIGN_CHECK, Type.OnReturn));
-        addTransition(new MatcherTransition(States.SIGN_CHECK, initVerify(), Parameter.This, States.VERIFY_CHECK,
-                Type.OnReturn));
-        addTransition(
-                new MatcherTransition(States.SIGN_CHECK, sign(), Parameter.This, States.SIGN_CHECK, Type.OnReturn));
-        addTransition(new MatcherTransition(States.SIGN_CHECK, verify(), Parameter.This, States.ERROR, Type.OnReturn));
-        addTransition(
-                new MatcherTransition(States.SIGN_CHECK, update(), Parameter.This, States.SIGN_CHECK, Type.OnReturn));
-
-        addTransition(new MatcherTransition(States.VERIFY_CHECK, initSign(), Parameter.This, States.SIGN_CHECK,
-                Type.OnReturn));
-        addTransition(new MatcherTransition(States.VERIFY_CHECK, initVerify(), Parameter.This, States.VERIFY_CHECK,
-                Type.OnReturn));
-        addTransition(new MatcherTransition(States.VERIFY_CHECK, sign(), Parameter.This, States.ERROR, Type.OnReturn));
-        addTransition(new MatcherTransition(States.VERIFY_CHECK, verify(), Parameter.This, States.VERIFY_CHECK,
-                Type.OnReturn));
-        addTransition(new MatcherTransition(States.VERIFY_CHECK, update(), Parameter.This, States.VERIFY_CHECK,
-                Type.OnReturn));
-
-        addTransition(new MatcherTransition(States.ERROR, initSign(), Parameter.This, States.ERROR, Type.OnReturn));
-        addTransition(new MatcherTransition(States.ERROR, initVerify(), Parameter.This, States.ERROR, Type.OnReturn));
-        addTransition(new MatcherTransition(States.ERROR, sign(), Parameter.This, States.ERROR, Type.OnReturn));
-        addTransition(new MatcherTransition(States.ERROR, verify(), Parameter.This, States.ERROR, Type.OnReturn));
-        addTransition(new MatcherTransition(States.ERROR, update(), Parameter.This, States.ERROR, Type.OnReturn));
-    }
-
-    private Set<SootMethod> constructor() {
-        List<SootClass> subclasses = getSubclassesOf("java.security.Signature");
-        Set<SootMethod> out = new HashSet<>();
-        for (SootClass c : subclasses) {
-            for (SootMethod m : c.getMethods())
-                if (m.isPublic() && m.getName().equals("getInstance"))
-                    out.add(m);
-        }
-        return out;
-    }
-
-    private Set<SootMethod> verify() {
-        return selectMethodByName(getSubclassesOf("java.security.Signature"), "verify");
-    }
-
-    private Set<SootMethod> update() {
-        return selectMethodByName(getSubclassesOf("java.security.Signature"), "update");
-    }
-
-    private Set<SootMethod> sign() {
-        return selectMethodByName(getSubclassesOf("java.security.Signature"), "sign");
-    }
-
-    private Set<SootMethod> initSign() {
-        return selectMethodByName(getSubclassesOf("java.security.Signature"), "initSign");
-    }
-
-    private Set<SootMethod> initVerify() {
-        return selectMethodByName(getSubclassesOf("java.security.Signature"), "initVerify");
+    @Override
+    public boolean isErrorState() {
+      return this == ERROR;
     }
 
     @Override
-    public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
-        for (SootMethod cons : constructor()) {
-            Iterator<Edge> edIt = Scene.v().getCallGraph().edgesOutOf(unit);
-            while (edIt.hasNext()) {
-                SootMethod calledMethod = edIt.next().getTgt().method();
-                if (calledMethod.equals(cons))
-                    return getLeftSideOf(m, unit);
-            }
-        }
-        return Collections.emptySet();
+    public boolean isInitialState() {
+      return false;
     }
 
     @Override
-    protected State initialState() {
-        return States.UNITIALIZED;
+    public boolean isAccepting() {
+      return false;
     }
+  }
+
+  public SignatureStateMachine() {
+    addTransition(
+        new MatcherTransition(
+            States.NONE, GET_INSTANCE, Parameter.This, States.UNITIALIZED, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.UNITIALIZED, INIT_SIGN, Parameter.This, States.SIGN_CHECK, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.UNITIALIZED, INIT_VERIFY, Parameter.This, States.VERIFY_CHECK, Type.OnCall));
+    addTransition(
+        new MatcherTransition(States.UNITIALIZED, SIGN, Parameter.This, States.ERROR, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.UNITIALIZED, VERIFY, Parameter.This, States.ERROR, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.UNITIALIZED, UPDATE, Parameter.This, States.ERROR, Type.OnCall));
+
+    addTransition(
+        new MatcherTransition(
+            States.SIGN_CHECK, INIT_SIGN, Parameter.This, States.SIGN_CHECK, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.SIGN_CHECK, INIT_VERIFY, Parameter.This, States.VERIFY_CHECK, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.SIGN_CHECK, SIGN, Parameter.This, States.SIGN_CHECK, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.SIGN_CHECK, VERIFY, Parameter.This, States.ERROR, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.SIGN_CHECK, UPDATE, Parameter.This, States.SIGN_CHECK, Type.OnCall));
+
+    addTransition(
+        new MatcherTransition(
+            States.VERIFY_CHECK, INIT_SIGN, Parameter.This, States.SIGN_CHECK, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.VERIFY_CHECK, INIT_VERIFY, Parameter.This, States.VERIFY_CHECK, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.VERIFY_CHECK, SIGN, Parameter.This, States.ERROR, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.VERIFY_CHECK, VERIFY, Parameter.This, States.VERIFY_CHECK, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.VERIFY_CHECK, UPDATE, Parameter.This, States.VERIFY_CHECK, Type.OnCall));
+
+    addTransition(
+        new MatcherTransition(States.ERROR, INIT_SIGN, Parameter.This, States.ERROR, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.ERROR, INIT_VERIFY, Parameter.This, States.ERROR, Type.OnCall));
+    addTransition(
+        new MatcherTransition(States.ERROR, SIGN, Parameter.This, States.ERROR, Type.OnCall));
+    addTransition(
+        new MatcherTransition(States.ERROR, VERIFY, Parameter.This, States.ERROR, Type.OnCall));
+    addTransition(
+        new MatcherTransition(States.ERROR, UPDATE, Parameter.This, States.ERROR, Type.OnCall));
+  }
+
+  private Set<SootMethod> constructor() {
+    List<SootClass> subclasses = getSubclassesOf("java.security.Signature");
+    Set<SootMethod> out = new HashSet<>();
+    for (SootClass c : subclasses) {
+      for (SootMethod m : c.getMethods())
+        if (m.isPublic() && m.getName().equals("getInstance")) out.add(m);
+    }
+    return out;
+  }
+
+  @Override
+  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement unit) {
+    if (unit.containsInvokeExpr()) {
+      DeclaredMethod method = unit.getInvokeExpr().getMethod();
+      if (method.getName().equals("getInstance")
+          && method.getSubSignature().contains("Signature")) {
+        return getLeftSideOf(unit);
+      }
+    }
+    return Collections.emptySet();
+  }
+
+  @Override
+  protected State initialState() {
+    return States.UNITIALIZED;
+  }
 }

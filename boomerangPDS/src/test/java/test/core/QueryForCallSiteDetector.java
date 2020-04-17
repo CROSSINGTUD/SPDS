@@ -2,8 +2,8 @@ package test.core;
 
 import boomerang.BackwardQuery;
 import boomerang.Query;
-import boomerang.callgraph.CallGraph;
 import boomerang.scene.AnalysisScope;
+import boomerang.scene.CallGraph;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.scene.jimple.AccessPathParser;

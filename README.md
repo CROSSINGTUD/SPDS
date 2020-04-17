@@ -1,16 +1,3 @@
-# Changes between 2.x and 3.0-ALPHA
-
-This is an alpha release branch for version 3.0. At the current state, IDEal is excluded from this branch.
-If you want to use IDEal, for now, stick to version 2.x.
-
-* Performance Optimization. Fixed a lapsed listener problem
-* Added strategies for data-flows of static fields
-* Added options to control depth (k-limit) of Field-PDS and Call-PDS. The default option, -1, means k = \infty. (under-approximaton. Analysis turns unsound afterwards).
-* *API change:* Introduced the wrapper class `boomerang.callgraph.SootCallGraph`. Pass `new SootCallGraph()` to Boomerang (and do not use `ObservableDynamicICFG` or `ObservableStaticICFG` anymore).
-* *API change:* Added interface `boomerang.DataFlowScope` which can be used to exclude methods during the data-flow analysis (but shall not be excluded during call graph construction from Soot)
-* Other minor internal refactoring 
-
-
 # WPDS
 
 [![Build Status](https://soot-build.cs.uni-paderborn.de/jenkins/buildStatus/icon?job=boomerang%2FWPDS-Multibranch%2Fmaster)](https://soot-build.cs.uni-paderborn.de/jenkins/job/boomerang/job/WPDS-Multibranch/job/master/)
