@@ -36,6 +36,17 @@ public class StaticFieldFlows extends AbstractBoomerangTest {
   }
 
   @Test
+  public void withCallInbetween() {
+    alloc = new Alloc();
+    alloc.toString();
+    foo();
+    queryFor(alloc);
+  }
+
+  private void foo() {
+  }
+
+  @Test
   public void singleton() {
     Alloc singleton = StaticFieldFlows.v();
     Object alias = singleton;
