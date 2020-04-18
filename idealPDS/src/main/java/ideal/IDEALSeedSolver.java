@@ -32,6 +32,8 @@ import com.google.common.collect.Sets;
 import java.util.Collection;
 import java.util.Map.Entry;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.SyncPDSSolver.OnAddedSummaryListener;
@@ -40,7 +42,6 @@ import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
-import wpds.impl.ConnectPushListener;
 import wpds.impl.NormalRule;
 import wpds.impl.PushRule;
 import wpds.impl.Rule;
@@ -53,6 +54,7 @@ import wpds.interfaces.WPAUpdateListener;
 
 public class IDEALSeedSolver<W extends Weight> {
 
+  private static Logger LOGGER = LoggerFactory.getLogger(IDEALSeedSolver.class);
   private final IDEALAnalysisDefinition<W> analysisDefinition;
   private final ForwardQuery seed;
   private final IDEALWeightFunctions<W> idealWeightFunctions;
@@ -117,60 +119,6 @@ public class IDEALSeedSolver<W extends Weight> {
     }
   }
 
-  private final class IndirectFlowsAtCallSite
-      implements ConnectPushListener<Statement, INode<Val>, W> {
-
-    private final AbstractBoomerangSolver<W> solver;
-    private final Statement cs;
-
-    private IndirectFlowsAtCallSite(AbstractBoomerangSolver<W> solver, Statement cs) {
-      this.solver = solver;
-      this.cs = cs;
-    }
-
-    @Override
-    public void connect(Statement callSite, INode<Val> returnedFact, W w) {
-      if (!callSite.valueUsedInStatement(returnedFact.fact())) {
-        return;
-      }
-      if (callSite.equals(cs)) {
-        solver
-            .getCallAutomaton()
-            .registerListener(new AddIndirectFlowAtCallSite(callSite, returnedFact.fact()));
-      }
-    }
-
-    @Override
-    public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result + getOuterType().hashCode();
-      result = prime * result + ((cs == null) ? 0 : cs.hashCode());
-      result = prime * result + ((solver == null) ? 0 : solver.hashCode());
-      return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj) return true;
-      if (obj == null) return false;
-      if (getClass() != obj.getClass()) return false;
-      IndirectFlowsAtCallSite other = (IndirectFlowsAtCallSite) obj;
-      if (!getOuterType().equals(other.getOuterType())) return false;
-      if (cs == null) {
-        if (other.cs != null) return false;
-      } else if (!cs.equals(other.cs)) return false;
-      if (solver == null) {
-        if (other.solver != null) return false;
-      } else if (!solver.equals(other.solver)) return false;
-      return true;
-    }
-
-    private IDEALSeedSolver getOuterType() {
-      return IDEALSeedSolver.this;
-    }
-  }
-
   private final class TriggerBackwardQuery
       extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
 
@@ -182,7 +130,7 @@ public class IDEALSeedSolver<W extends Weight> {
         AbstractBoomerangSolver<W> seedSolver,
         WeightedBoomerang<W> boomerang,
         Node<Statement, Val> curr) {
-      super(new SingleNode<Node<Statement, Val>>(curr));
+      super(new SingleNode<>(curr));
       this.seedSolver = seedSolver;
       this.boomerang = boomerang;
       this.strongUpdateNode = curr;
@@ -206,7 +154,6 @@ public class IDEALSeedSolver<W extends Weight> {
               .getPredsOf(strongUpdateNode.stmt())) {
         BackwardQuery query = BackwardQuery.make(u, strongUpdateNode.fact());
         BackwardBoomerangResults<W> queryResults = boomerang.solve(query);
-
         Set<ForwardQuery> queryAllocationSites = queryResults.getAllocationSites().keySet();
         setWeakUpdateIfNecessary();
         injectAliasesAtStrongUpdates(queryAllocationSites);
@@ -232,42 +179,49 @@ public class IDEALSeedSolver<W extends Weight> {
                   for (ForwardQuery e : queryAllocationSites) {
                     AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
 
-                    solver.addApplySummaryListener(new OnAddedSummaryListener<Statement, Val>() {
-                      @Override
-                      public void apply(Statement summaryCallSite, Val factInCallee, Statement spInCallee,
-                          Statement exitStmt, Val returnedFact) {
-                        if (callSite.equals(summaryCallSite)) {
+                    solver.addApplySummaryListener(
+                        (OnAddedSummaryListener<Statement, Val>) (summaryCallSite, factInCallee, spInCallee, exitStmt, returnedFact) -> {
+                          if (callSite.equals(summaryCallSite)) {
 
-                          CallSiteStatement actualCallSite = ((ReturnSiteStatement) summaryCallSite).getCallSiteStatement();
+                            CallSiteStatement actualCallSite =
+                                ((ReturnSiteStatement) summaryCallSite).getCallSiteStatement();
 
-                          Set<Node<Statement, Val>> out = Sets.newHashSet();
-                          if (actualCallSite.containsInvokeExpr()) {
-                            if (returnedFact.isThisLocal()) {
-                              if (actualCallSite.getInvokeExpr().isInstanceInvokeExpr()) {
-                                solver
-                                    .getCallAutomaton()
-                                    .registerListener(new AddIndirectFlowAtCallSite(callSite,  actualCallSite.getInvokeExpr().getBase()));
+                            Set<Node<Statement, Val>> out = Sets.newHashSet();
+                            if (actualCallSite.containsInvokeExpr()) {
+                              if (returnedFact.isThisLocal()) {
+                                if (actualCallSite.getInvokeExpr().isInstanceInvokeExpr()) {
+                                  solver
+                                      .getCallAutomaton()
+                                      .registerListener(
+                                          new AddIndirectFlowAtCallSite(
+                                              callSite,
+                                              actualCallSite.getInvokeExpr().getBase()));
+                                }
                               }
-                            }
-                          /*  if (returnedFact.isReturnLocal()) {
-                              if (callSite.isAssign()) {
-                                solver
-                                    .getCallAutomaton()
-                                    .registerListener(new AddIndirectFlowAtCallSite(callSite,  callSite.getInvokeExpr().getBase()));
+                              if (returnedFact.isReturnLocal()) {
+                                if (actualCallSite.isAssign()) {
+                                  solver
+                                      .getCallAutomaton()
+                                      .registerListener(
+                                          new AddIndirectFlowAtCallSite(
+                                              callSite, actualCallSite.getLeftOp()));
+                                }
                               }
-                            }*/
-                            for (int i = 0; i < actualCallSite.getInvokeExpr().getArgs().size(); i++) {
-                              if (returnedFact.isParameterLocal(i)) {
-                                solver
-                                    .getCallAutomaton()
-                                    .registerListener(new AddIndirectFlowAtCallSite(callSite, actualCallSite.getInvokeExpr().getArg(i)));
+                              for (int i = 0;
+                                  i < actualCallSite.getInvokeExpr().getArgs().size();
+                                  i++) {
+                                if (returnedFact.isParameterLocal(i)) {
+                                  solver
+                                      .getCallAutomaton()
+                                      .registerListener(
+                                          new AddIndirectFlowAtCallSite(
+                                              callSite,
+                                              actualCallSite.getInvokeExpr().getArg(i)));
+                                }
                               }
                             }
                           }
-                        }
-                      }
-                    });
-
+                        });
                   }
                 }
               });
@@ -279,22 +233,16 @@ public class IDEALSeedSolver<W extends Weight> {
         solver
             .getCallAutomaton()
             .registerListener(
-                new WPAUpdateListener<Statement, INode<Val>, W>() {
-                  @Override
-                  public void onWeightAdded(
-                      Transition<Statement, INode<Val>> t,
-                      W w,
-                      WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+                (t, w, aut) -> {
 
-                    if (t.getLabel()
-                        .equals(
-                            strongUpdateNode
-                                .stmt()) /* && !t.getStart().fact().equals(curr.fact()) */) {
-                      idealWeightFunctions.addNonKillFlow(strongUpdateNode);
-                      idealWeightFunctions.addIndirectFlow(
-                          strongUpdateNode,
-                          new Node<Statement, Val>(strongUpdateNode.stmt(), t.getStart().fact()));
-                    }
+                  if (t.getLabel()
+                      .equals(
+                          strongUpdateNode
+                              .stmt()) /* && !t.getStart().fact().equals(curr.fact()) */) {
+                    idealWeightFunctions.addNonKillFlow(strongUpdateNode);
+                    idealWeightFunctions.addIndirectFlow(
+                        strongUpdateNode,
+                        new Node<>(strongUpdateNode.stmt(), t.getStart().fact()));
                   }
                 });
       }
@@ -306,12 +254,9 @@ public class IDEALSeedSolver<W extends Weight> {
         e.getValue()
             .synchedEmptyStackReachable(
                 strongUpdateNode,
-                new EmptyStackWitnessListener<Statement, Val>() {
-                  @Override
-                  public void witnessFound(Node<Statement, Val> targetFact) {
-                    if (!e.getKey().asNode().equals(seed.asNode())) {
-                      setWeakUpdate(strongUpdateNode);
-                    }
+                targetFact -> {
+                  if (!e.getKey().asNode().equals(seed.asNode())) {
+                    setWeakUpdate(strongUpdateNode);
                   }
                 });
       }
@@ -341,6 +286,7 @@ public class IDEALSeedSolver<W extends Weight> {
   }
 
   public ForwardBoomerangResults<W> run() {
+    LOGGER.debug("Starting Phase 1 of IDEal");
     ForwardBoomerangResults<W> resultPhase1 = runPhase(this.phase1Solver, Phases.ObjectFlow);
     if (resultPhase1.isTimedout()) {
       if (analysisStopwatch.isRunning()) {
@@ -348,6 +294,7 @@ public class IDEALSeedSolver<W extends Weight> {
       }
       throw new IDEALSeedTimeout(this, this.phase1Solver, resultPhase1);
     }
+    LOGGER.debug("Starting Phase 2 of IDEal");
     ForwardBoomerangResults<W> resultPhase2 = runPhase(this.phase2Solver, Phases.ValueFlow);
     if (resultPhase2.isTimedout()) {
       if (analysisStopwatch.isRunning()) {
@@ -423,44 +370,20 @@ public class IDEALSeedSolver<W extends Weight> {
       final WeightedBoomerang<W> boomerang, final Phases phase) {
     analysisStopwatch.start();
     idealWeightFunctions.setPhase(phase);
-    final WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton =
-        boomerang.getSolvers().getOrCreate(seed).getCallAutomaton();
 
     if (phase.equals(Phases.ValueFlow)) {
       registerIndirectFlowListener(boomerang.getSolvers().getOrCreate(seed));
     }
-    callAutomaton.registerConnectPushListener(
-        new ConnectPushListener<Statement, INode<Val>, W>() {
-
-          @Override
-          public void connect(Statement callSite, INode<Val> returnedFact, W w) {
-            if(callSite instanceof ReturnSiteStatement){
-              callSite = ((ReturnSiteStatement) callSite).getCallSiteStatement();
-            }
-            if (callSite instanceof CallSiteStatement) {
-              CallSiteStatement callSiteStatement = (CallSiteStatement) callSite;
-              if (!callSite.getMethod().equals(returnedFact.fact().m())) return;
-              if (!callSite.valueUsedInStatement(returnedFact.fact())) return;
-              if (!w.equals(one)) {
-                idealWeightFunctions.addOtherThanOneWeight(
-                    new Node<>(callSiteStatement.getReturnSiteStatement(), returnedFact.fact()));
-              }
-            }
-          }
-        });
 
     idealWeightFunctions.registerListener(
-        new NonOneFlowListener() {
-          @Override
-          public void nonOneFlow(final Node<Statement, Val> curr) {
-            if (phase.equals(Phases.ValueFlow)) {
+        curr -> {
+          if (phase.equals(Phases.ValueFlow)) {
               return;
-            }
-            AbstractBoomerangSolver<W> seedSolver = boomerang.getSolvers().getOrCreate(seed);
-            seedSolver
-                .getFieldAutomaton()
-                .registerListener(new TriggerBackwardQuery(seedSolver, boomerang, curr));
           }
+          AbstractBoomerangSolver<W> seedSolver = boomerang.getSolvers().getOrCreate(seed);
+          seedSolver
+              .getFieldAutomaton()
+              .registerListener(new TriggerBackwardQuery(seedSolver, boomerang, curr));
         });
     ForwardBoomerangResults<W> res = boomerang.solve(seed);
     analysisStopwatch.stop();
@@ -489,34 +412,27 @@ public class IDEALSeedSolver<W extends Weight> {
   private void registerIndirectFlowListener(AbstractBoomerangSolver<W> solver) {
     WeightedPAutomaton<Statement, INode<Val>, W> callAutomaton = solver.getCallAutomaton();
     callAutomaton.registerListener(
-        new WPAUpdateListener<Statement, INode<Val>, W>() {
-
-          @Override
-          public void onWeightAdded(
-              Transition<Statement, INode<Val>> t,
-              W w,
-              WeightedPAutomaton<Statement, INode<Val>, W> aut) {
-            if (t.getStart() instanceof GeneratedState) return;
-            Node<Statement, Val> source =
-                new Node<Statement, Val>(t.getLabel(), t.getStart().fact());
-            Collection<Node<Statement, Val>> indirectFlows =
-                idealWeightFunctions.getAliasesFor(source);
-            for (Node<Statement, Val> indirectFlow : indirectFlows) {
-              solver.addCallRule(
-                  new NormalRule<>(
-                      new SingleNode<Val>(source.fact()),
-                      source.stmt(),
-                      new SingleNode<Val>(indirectFlow.fact()),
-                      indirectFlow.stmt(),
-                      one));
-              solver.addFieldRule(
-                  new NormalRule<>(
-                      solver.asFieldFact(source),
-                      solver.fieldWildCard(),
-                      solver.asFieldFact(indirectFlow),
-                      solver.fieldWildCard(),
-                      one));
-            }
+        (t, w, aut) -> {
+          if (t.getStart() instanceof GeneratedState) return;
+          Node<Statement, Val> source =
+              new Node<>(t.getLabel(), t.getStart().fact());
+          Collection<Node<Statement, Val>> indirectFlows =
+              idealWeightFunctions.getAliasesFor(source);
+          for (Node<Statement, Val> indirectFlow : indirectFlows) {
+            solver.addCallRule(
+                new NormalRule<>(
+                    new SingleNode<>(source.fact()),
+                    source.stmt(),
+                    new SingleNode<>(indirectFlow.fact()),
+                    indirectFlow.stmt(),
+                    one));
+            solver.addFieldRule(
+                new NormalRule<>(
+                    solver.asFieldFact(source),
+                    solver.fieldWildCard(),
+                    solver.asFieldFact(indirectFlow),
+                    solver.fieldWildCard(),
+                    one));
           }
         });
   }

@@ -477,28 +477,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
     return nested;
   }
 
-  public void reconnectPush(N returnSite, D returnedFact, W returnedWeight) {
-    WeightedPAutomaton<N, D, W>.ReturnSiteWithWeights returnSiteWithWeights =
-        new ReturnSiteWithWeights(returnSite, returnedFact, returnedWeight);
-    if (connectedPushes.add(returnSiteWithWeights)) {
-      for (ConnectPushListener<N, D, W> l : Lists.newArrayList(conntectedPushListeners)) {
-        l.connect(
-            returnSiteWithWeights.returnSite,
-            returnSiteWithWeights.returnedFact,
-            returnSiteWithWeights.returnedWeight);
-      }
-    }
-  }
-
-  public void registerConnectPushListener(ConnectPushListener<N, D, W> l) {
-    if (conntectedPushListeners.add(l)) {
-      for (WeightedPAutomaton<N, D, W>.ReturnSiteWithWeights e :
-          Lists.newArrayList(connectedPushes)) {
-        l.connect(e.returnSite, e.returnedFact, e.returnedWeight);
-      }
-    }
-  }
-
   public void registerUnbalancedPopListener(UnbalancedPopListener<N, D, W> l) {
     if (unbalancedPopListeners.add(l)) {
       for (Entry<UnbalancedPopEntry, W> e : Lists.newArrayList(unbalancedPops.entrySet())) {
@@ -600,7 +578,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
     }
 
     @Override
-
     public int hashCode() {
       final int prime = 31;
       int result = 1;
@@ -709,9 +686,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 
     for (SummaryListener<N, D> e : Lists.newArrayList(summaryEdgeListener)) {
       nested.addSummaryListener(e);
-    }
-    for (ConnectPushListener<N, D, W> e : Lists.newArrayList(conntectedPushListeners)) {
-      nested.registerConnectPushListener(e);
     }
 
     for (UnbalancedPopListener<N, D, W> e : Lists.newArrayList(unbalancedPopListeners)) {

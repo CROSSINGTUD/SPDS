@@ -54,7 +54,7 @@ public class IDEALWeightFunctions<W extends Weight>
     if (isObjectFlowPhase() && !weight.equals(getOne())) {
       if (succ instanceof PushNode) {
         PushNode<Statement, Val, Statement> pushNode = (PushNode<Statement, Val, Statement>) succ;
-        addOtherThanOneWeight(new Node<Statement, Val>(pushNode.location(), curr.fact()));
+        addOtherThanOneWeight(new Node<>(pushNode.location(), curr.fact()));
       }
     }
     return weight;

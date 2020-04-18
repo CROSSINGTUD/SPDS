@@ -727,14 +727,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
       queryGraph.addRoot(query);
       LOGGER.trace("Starting backward analysis of: {}", query);
       backwardSolve(query);
-      if (LOGGER.isDebugEnabled()) {
-        LOGGER.trace("Query Graph \n{}", queryGraph.toDotString());
-        LOGGER.trace("Terminated backward analysis of: {}", query);
-        LOGGER.trace("#ForwardSolvers: {}", queryToSolvers.size());
-        printAllAutomata();
-        printAllForwardCallAutomatonFlow();
-        printAllBackwardCallAutomatonFlow();
-      }
     } catch (BoomerangTimeoutException e) {
       timedout = true;
       LOGGER.info("Timeout ({}) of query: {} ", analysisWatch, query);
@@ -749,6 +741,15 @@ public abstract class WeightedBoomerang<W extends Weight> {
     }
     return new BackwardBoomerangResults<W>(
         query, timedout, this.queryToSolvers, getStats(), analysisWatch);
+  }
+
+  public void debugOutput() {
+    LOGGER.trace("Query Graph \n{}", queryGraph.toDotString());
+    // LOGGER.trace("Terminated backward analysis of: {}", query);
+    LOGGER.trace("#ForwardSolvers: {}", queryToSolvers.size());
+    printAllAutomata();
+    printAllForwardCallAutomatonFlow();
+    printAllBackwardCallAutomatonFlow();
   }
 
   protected void backwardSolve(BackwardQuery query) {

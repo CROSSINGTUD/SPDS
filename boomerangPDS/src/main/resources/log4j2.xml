@@ -11,8 +11,14 @@
   </appender>
 
   <root>
-    <level value="debug" />
+    <level value="trace" />
     <appender-ref ref="console" />
   </root>
+  <logger name="boomerang.solver">
+  <level value="INFO"/>
+  </logger>
 
+  <logger name="sync.pds.solver">
+    <level value="INFO"/>
+  </logger>
 </log4j:configuration>

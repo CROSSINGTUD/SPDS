@@ -90,9 +90,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
     public void onOutTransitionAdded(Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> aut) {
       W extendWith = (W) w.extendWith(newWeight);
       update(new Transition<>(start, t.getLabel(), t.getTarget()), extendWith);
-      //fa.reconnectPush(label, start, extendWith);
-
-      fa.reconnectPush(t.getLabel(), start, extendWith);
     }
 
     @Override
@@ -281,7 +278,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
         final Transition<N, D> calleeTransition = new Transition<N, D>(p, gammaPrime, irState);
         W weightAtCallsite = (W) weight.extendWith(rule.getWeight());
         update(callSiteTransition, weightAtCallsite);
-        fa.registerListener(new UpdateEpsilonOnPushListener(callSiteTransition));
         if (!fa.nested()) {
           update(calleeTransition, fa.getOne());
         } else {
@@ -332,46 +328,6 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
       if (rule == null) {
         if (other.rule != null) return false;
       } else if (!rule.equals(other.rule)) return false;
-      return true;
-    }
-  }
-
-  private class UpdateEpsilonOnPushListener extends WPAStateListener<N, D, W> {
-    private N succOfCallSite;
-
-    public UpdateEpsilonOnPushListener(Transition<N, D> transition) {
-      super(transition.getStart());
-      this.succOfCallSite = transition.getLabel();
-    }
-
-    @Override
-    public void onOutTransitionAdded(
-        Transition<N, D> t, W weight, WeightedPAutomaton<N, D, W> aut) {}
-
-    @Override
-    public void onInTransitionAdded(Transition<N, D> t, W weight, WeightedPAutomaton<N, D, W> aut) {
-      if (t.getLabel().equals(fa.epsilon())) {
-        fa.reconnectPush(succOfCallSite, t.getStart(), weight);
-      }
-    }
-
-    @Override
-    public int hashCode() {
-      final int prime = 31;
-      int result = super.hashCode();
-      result = prime * result + ((succOfCallSite == null) ? 0 : succOfCallSite.hashCode());
-      return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj) return true;
-      if (!super.equals(obj)) return false;
-      if (getClass() != obj.getClass()) return false;
-      UpdateEpsilonOnPushListener other = (UpdateEpsilonOnPushListener) obj;
-      if (succOfCallSite == null) {
-        if (other.succOfCallSite != null) return false;
-      } else if (!succOfCallSite.equals(other.succOfCallSite)) return false;
       return true;
     }
   }
