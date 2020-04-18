@@ -477,15 +477,12 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
     return nested;
   }
 
-  public void reconnectPush(
-      D callSite, N exitStmt, N returnSite, D returnedFact, W returnedWeight) {
+  public void reconnectPush(N returnSite, D returnedFact, W returnedWeight) {
     WeightedPAutomaton<N, D, W>.ReturnSiteWithWeights returnSiteWithWeights =
-        new ReturnSiteWithWeights(callSite, exitStmt, returnSite, returnedFact, returnedWeight);
+        new ReturnSiteWithWeights(returnSite, returnedFact, returnedWeight);
     if (connectedPushes.add(returnSiteWithWeights)) {
       for (ConnectPushListener<N, D, W> l : Lists.newArrayList(conntectedPushListeners)) {
         l.connect(
-            returnSiteWithWeights.callSite,
-            returnSiteWithWeights.exitStmt,
             returnSiteWithWeights.returnSite,
             returnSiteWithWeights.returnedFact,
             returnSiteWithWeights.returnedWeight);
@@ -497,7 +494,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
     if (conntectedPushListeners.add(l)) {
       for (WeightedPAutomaton<N, D, W>.ReturnSiteWithWeights e :
           Lists.newArrayList(connectedPushes)) {
-        l.connect(e.callSite, e.exitStmt, e.returnSite, e.returnedFact, e.returnedWeight);
+        l.connect(e.returnSite, e.returnedFact, e.returnedWeight);
       }
     }
   }
@@ -545,7 +542,7 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
     }
   }
 
-  public static interface SummaryListener<N extends Location, D extends State> {
+  public interface SummaryListener<N extends Location, D extends State> {
     void addedSummary(Transition<N, D> t);
   }
 
@@ -592,30 +589,24 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
 
   private class ReturnSiteWithWeights {
 
-    private N exitStmt;
     private final N returnSite;
     private final W returnedWeight;
     private final D returnedFact;
-    private final D callSite;
 
-    public ReturnSiteWithWeights(
-        D callSite, N exitStmt, N returnSite, D returnedFact, W returnedWeight) {
-      this.callSite = callSite;
-      this.exitStmt = exitStmt;
+    public ReturnSiteWithWeights(N returnSite, D returnedFact, W returnedWeight) {
       this.returnSite = returnSite;
       this.returnedFact = returnedFact;
       this.returnedWeight = returnedWeight;
     }
 
     @Override
+
     public int hashCode() {
       final int prime = 31;
       int result = 1;
       result = prime * result + getOuterType().hashCode();
-      result = prime * result + ((callSite == null) ? 0 : callSite.hashCode());
       result = prime * result + ((returnSite == null) ? 0 : returnSite.hashCode());
       result = prime * result + ((returnedFact == null) ? 0 : returnedFact.hashCode());
-      result = prime * result + ((exitStmt == null) ? 0 : exitStmt.hashCode());
       return result;
     }
 
@@ -626,9 +617,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
       if (getClass() != obj.getClass()) return false;
       ReturnSiteWithWeights other = (ReturnSiteWithWeights) obj;
       if (!getOuterType().equals(other.getOuterType())) return false;
-      if (callSite == null) {
-        if (other.callSite != null) return false;
-      } else if (!callSite.equals(other.callSite)) return false;
       if (returnSite == null) {
         if (other.returnSite != null) return false;
       } else if (!returnSite.equals(other.returnSite)) return false;
@@ -638,9 +626,6 @@ public abstract class WeightedPAutomaton<N extends Location, D extends State, W 
       if (returnedWeight == null) {
         if (other.returnedWeight != null) return false;
       } else if (!returnedWeight.equals(other.returnedWeight)) return false;
-      if (exitStmt == null) {
-        if (other.exitStmt != null) return false;
-      } else if (!exitStmt.equals(other.exitStmt)) return false;
       return true;
     }
 

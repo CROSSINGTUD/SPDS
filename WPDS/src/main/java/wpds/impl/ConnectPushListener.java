@@ -16,5 +16,5 @@ import wpds.interfaces.State;
 
 public interface ConnectPushListener<N extends Location, D extends State, W extends Weight> {
 
-  void connect(D factBeforeReturn, N exitStmt, N returnSite, D returnedFact, W returnedWeight);
+  void connect(N returnSite, D returnedFact, W returnedWeight);
 }

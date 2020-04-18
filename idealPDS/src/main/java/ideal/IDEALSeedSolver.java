@@ -19,6 +19,7 @@ import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.scene.CallSiteStatement;
 import boomerang.scene.Field;
+import boomerang.scene.ReturnSiteStatement;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.solver.AbstractBoomerangSolver;
@@ -33,6 +34,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
+import sync.pds.solver.SyncPDSSolver.OnAddedSummaryListener;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
@@ -127,8 +129,7 @@ public class IDEALSeedSolver<W extends Weight> {
     }
 
     @Override
-    public void connect(
-        INode<Val> x, Statement callSite, Statement y, INode<Val> returnedFact, W w) {
+    public void connect(Statement callSite, INode<Val> returnedFact, W w) {
       if (!callSite.valueUsedInStatement(returnedFact.fact())) {
         return;
       }
@@ -230,9 +231,43 @@ public class IDEALSeedSolver<W extends Weight> {
                   addAffectedPotentialStrongUpdate(strongUpdateNode, callSite);
                   for (ForwardQuery e : queryAllocationSites) {
                     AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
-                    solver
-                        .getCallAutomaton()
-                        .registerConnectPushListener(new IndirectFlowsAtCallSite(solver, callSite));
+
+                    solver.addApplySummaryListener(new OnAddedSummaryListener<Statement, Val>() {
+                      @Override
+                      public void apply(Statement summaryCallSite, Val factInCallee, Statement spInCallee,
+                          Statement exitStmt, Val returnedFact) {
+                        if (callSite.equals(summaryCallSite)) {
+
+                          CallSiteStatement actualCallSite = ((ReturnSiteStatement) summaryCallSite).getCallSiteStatement();
+
+                          Set<Node<Statement, Val>> out = Sets.newHashSet();
+                          if (actualCallSite.containsInvokeExpr()) {
+                            if (returnedFact.isThisLocal()) {
+                              if (actualCallSite.getInvokeExpr().isInstanceInvokeExpr()) {
+                                solver
+                                    .getCallAutomaton()
+                                    .registerListener(new AddIndirectFlowAtCallSite(callSite,  actualCallSite.getInvokeExpr().getBase()));
+                              }
+                            }
+                          /*  if (returnedFact.isReturnLocal()) {
+                              if (callSite.isAssign()) {
+                                solver
+                                    .getCallAutomaton()
+                                    .registerListener(new AddIndirectFlowAtCallSite(callSite,  callSite.getInvokeExpr().getBase()));
+                              }
+                            }*/
+                            for (int i = 0; i < actualCallSite.getInvokeExpr().getArgs().size(); i++) {
+                              if (returnedFact.isParameterLocal(i)) {
+                                solver
+                                    .getCallAutomaton()
+                                    .registerListener(new AddIndirectFlowAtCallSite(callSite, actualCallSite.getInvokeExpr().getArg(i)));
+                              }
+                            }
+                          }
+                        }
+                      }
+                    });
+
                   }
                 }
               });
@@ -398,8 +433,10 @@ public class IDEALSeedSolver<W extends Weight> {
         new ConnectPushListener<Statement, INode<Val>, W>() {
 
           @Override
-          public void connect(
-              INode<Val> y, Statement x, Statement callSite, INode<Val> returnedFact, W w) {
+          public void connect(Statement callSite, INode<Val> returnedFact, W w) {
+            if(callSite instanceof ReturnSiteStatement){
+              callSite = ((ReturnSiteStatement) callSite).getCallSiteStatement();
+            }
             if (callSite instanceof CallSiteStatement) {
               CallSiteStatement callSiteStatement = (CallSiteStatement) callSite;
               if (!callSite.getMethod().equals(returnedFact.fact().m())) return;
@@ -427,6 +464,7 @@ public class IDEALSeedSolver<W extends Weight> {
         });
     ForwardBoomerangResults<W> res = boomerang.solve(seed);
     analysisStopwatch.stop();
+    boomerang.unregisterAllListeners();
     return res;
   }
 

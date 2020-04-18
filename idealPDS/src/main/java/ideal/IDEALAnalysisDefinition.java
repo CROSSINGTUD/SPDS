@@ -69,6 +69,11 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
       public StaticFieldStrategy getStaticFieldStrategy() {
         return StaticFieldStrategy.FLOW_SENSITIVE;
       }
+
+      @Override
+      public boolean allowMultipleQueries() {
+        return true;
+      }
     };
   }
 

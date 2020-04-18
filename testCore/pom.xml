@@ -38,7 +38,7 @@
 		<dependency>
 			<groupId>de.fraunhofer.iem</groupId>
 			<artifactId>synchronizedPDS</artifactId>
-			<version>2.4-SNAPSHOT</version>
+			<version>3.1-ALPHA-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
 </project>

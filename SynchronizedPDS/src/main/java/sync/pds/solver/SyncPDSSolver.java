@@ -11,6 +11,7 @@
  */
 package sync.pds.solver;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -40,6 +41,7 @@ import wpds.impl.Rule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
+import wpds.impl.WeightedPAutomaton.SummaryListener;
 import wpds.impl.WeightedPushdownSystem;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
@@ -643,9 +645,66 @@ public abstract class SyncPDSSolver<
           Stmt exitStmt = t.getLabel();
           Fact returnedFact = t.getStart().fact();
           if (spInCallee.equals(sp) && factInCallee.equals(v)) {
+            if(summaries.add(new Summary(callSite, factInCallee, spInCallee, exitStmt, returnedFact))){
+              for(OnAddedSummaryListener<Stmt,Fact> s : Lists.newArrayList(summaryListeners)){
+                s.apply(callSite,factInCallee,spInCallee,exitStmt,returnedFact);
+              }
+            }
+            //TODO can be removed and
             applyCallSummary(callSite, factInCallee, spInCallee, exitStmt, returnedFact);
           }
         });
+  }
+
+  Set<Summary> summaries = Sets.newHashSet();
+  Set<OnAddedSummaryListener> summaryListeners = Sets.newHashSet();
+
+  public void addApplySummaryListener(OnAddedSummaryListener l) {
+    if(summaryListeners.add(l)) {
+      for (Summary s : Lists.newArrayList(summaries)) {
+        l.apply(s.callSite,s.factInCallee,s.spInCallee,s.exitStmt,s.returnedFact);
+      }
+    }
+  }
+
+  public interface OnAddedSummaryListener<Stmt,Fact>{
+    void apply(Stmt callSite, Fact factInCallee, Stmt spInCallee, Stmt exitStmt, Fact returnedFact);
+  }
+  private class Summary{
+    private final Stmt callSite;
+    private final Fact factInCallee;
+    private final Stmt spInCallee;
+    private final Stmt exitStmt;
+    private final Fact returnedFact;
+
+    private Summary(Stmt callSite, Fact factInCallee, Stmt spInCallee, Stmt exitStmt, Fact returnedFact){
+      this.callSite = callSite;
+      this.factInCallee = factInCallee;
+      this.spInCallee = spInCallee;
+      this.exitStmt = exitStmt;
+      this.returnedFact = returnedFact;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      Summary summary = (Summary) o;
+      return Objects.equal(callSite, summary.callSite) &&
+          Objects.equal(factInCallee, summary.factInCallee) &&
+          Objects.equal(spInCallee, summary.spInCallee) &&
+          Objects.equal(exitStmt, summary.exitStmt) &&
+          Objects.equal(returnedFact, summary.returnedFact);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(callSite, factInCallee, spInCallee, exitStmt, returnedFact);
+    }
   }
 
   public abstract void applyCallSummary(
