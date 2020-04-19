@@ -528,63 +528,6 @@ public abstract class SyncPDSSolver<
             getCallWeights().normal(curr, succ)));
   }
 
-  public void synchedEmptyStackReachable(
-      final Node<Stmt, Fact> sourceNode, final EmptyStackWitnessListener<Stmt, Fact> listener) {
-    synchedReachable(
-        sourceNode,
-        new WitnessListener<Stmt, Fact, Field>() {
-          Multimap<Fact, Node<Stmt, Fact>> potentialFieldCandidate = HashMultimap.create();
-          Set<Fact> potentialCallCandidate = Sets.newHashSet();
-
-          @Override
-          public void fieldWitness(Transition<Field, INode<Node<Stmt, Fact>>> t) {
-            if (t.getTarget() instanceof GeneratedState) return;
-            if (!t.getLabel().equals(emptyField())) return;
-            Node<Stmt, Fact> targetFact = t.getTarget().fact();
-            if (!potentialFieldCandidate.put(targetFact.fact(), targetFact)) return;
-            if (potentialCallCandidate.contains(targetFact.fact())) {
-              listener.witnessFound(targetFact);
-            }
-          }
-
-          @Override
-          public void callWitness(Transition<Stmt, INode<Fact>> t) {
-            if (t.getTarget() instanceof GeneratedState) return;
-            Fact targetFact = t.getTarget().fact();
-            if (!potentialCallCandidate.add(targetFact)) return;
-            if (potentialFieldCandidate.containsKey(targetFact)) {
-              for (Node<Stmt, Fact> w : potentialFieldCandidate.get(targetFact)) {
-                listener.witnessFound(w);
-              }
-            }
-          }
-        });
-  }
-
-  public void synchedReachable(
-      final Node<Stmt, Fact> sourceNode, final WitnessListener<Stmt, Fact, Field> listener) {
-    registerListener(
-        new SyncPDSUpdateListener<Stmt, Fact>() {
-          @Override
-          public void onReachableNodeAdded(Node<Stmt, Fact> reachableNode) {
-            if (!reachableNode.equals(sourceNode)) return;
-            fieldAutomaton.registerListener(
-                (t, w, aut) -> {
-                  if (t.getStart() instanceof GeneratedState) return;
-                  if (!t.getStart().fact().equals(sourceNode)) return;
-                  listener.fieldWitness(t);
-                });
-            callAutomaton.registerListener(
-                (t, w, aut) -> {
-                  if (t.getStart() instanceof GeneratedState) return;
-                  if (!t.getStart().fact().equals(sourceNode.fact())) return;
-                  if (!t.getLabel().equals(sourceNode.stmt())) return;
-                  listener.callWitness(t);
-                });
-          }
-        });
-  }
-
   public void addNormalFieldFlow(final Node<Stmt, Fact> curr, final Node<Stmt, Fact> succ) {
     if (succ instanceof ExclusionNode) {
       ExclusionNode<Stmt, Fact, Field> exNode = (ExclusionNode) succ;

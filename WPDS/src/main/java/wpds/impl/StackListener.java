@@ -25,7 +25,7 @@ public abstract class StackListener<N extends Location, D extends State, W exten
       Transition<N, D> t, W w, WeightedPAutomaton<N, D, W> weightedPAutomaton) {
     if (t.getLabel().equals(aut.epsilon())) return;
     if (this.aut.getInitialStates().contains(t.getTarget())) {
-      if(t.getLabel().equals(source)) {
+      if (t.getLabel().equals(source)) {
         anyContext(source);
       }
       return;

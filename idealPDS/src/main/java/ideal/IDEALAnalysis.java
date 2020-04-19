@@ -73,7 +73,6 @@ public class IDEALAnalysis<W extends Weight> {
           (seedCount - timedoutSeeds.size()),
           timedoutSeeds.size(),
           initialSeeds.size());
-      analysisDefinition.getResultHandler().report(seed, res);
     }
   }
 

@@ -52,8 +52,7 @@ public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
 
   public HasNextStateMachine() {
     addTransition(
-        new MatcherTransition(
-            States.INIT, NEXT_METHOD, Parameter.This, States.ERROR, Type.OnCall));
+        new MatcherTransition(States.INIT, NEXT_METHOD, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
         new MatcherTransition(
             States.ERROR, NEXT_METHOD, Parameter.This, States.ERROR, Type.OnCall));

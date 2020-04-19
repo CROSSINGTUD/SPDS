@@ -34,7 +34,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.SyncPDSSolver.OnAddedSummaryListener;
 import sync.pds.solver.WeightFunctions;
@@ -65,6 +64,7 @@ public class IDEALSeedSolver<W extends Weight> {
   private Multimap<Node<Statement, Val>, Statement> affectedStrongUpdateStmt =
       HashMultimap.create();
   private Set<Node<Statement, Val>> weakUpdates = Sets.newHashSet();
+  private int killedRules;
 
   private final class AddIndirectFlowAtCallSite
       implements WPAUpdateListener<Statement, INode<Val>, W> {
@@ -180,48 +180,49 @@ public class IDEALSeedSolver<W extends Weight> {
                     AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
 
                     solver.addApplySummaryListener(
-                        (OnAddedSummaryListener<Statement, Val>) (summaryCallSite, factInCallee, spInCallee, exitStmt, returnedFact) -> {
-                          if (callSite.equals(summaryCallSite)) {
+                        (OnAddedSummaryListener<Statement, Val>)
+                            (summaryCallSite, factInCallee, spInCallee, exitStmt, returnedFact) -> {
+                              if (callSite.equals(summaryCallSite)) {
 
-                            CallSiteStatement actualCallSite =
-                                ((ReturnSiteStatement) summaryCallSite).getCallSiteStatement();
+                                CallSiteStatement actualCallSite =
+                                    ((ReturnSiteStatement) summaryCallSite).getCallSiteStatement();
 
-                            Set<Node<Statement, Val>> out = Sets.newHashSet();
-                            if (actualCallSite.containsInvokeExpr()) {
-                              if (returnedFact.isThisLocal()) {
-                                if (actualCallSite.getInvokeExpr().isInstanceInvokeExpr()) {
-                                  solver
-                                      .getCallAutomaton()
-                                      .registerListener(
-                                          new AddIndirectFlowAtCallSite(
-                                              callSite,
-                                              actualCallSite.getInvokeExpr().getBase()));
+                                Set<Node<Statement, Val>> out = Sets.newHashSet();
+                                if (actualCallSite.containsInvokeExpr()) {
+                                  if (returnedFact.isThisLocal()) {
+                                    if (actualCallSite.getInvokeExpr().isInstanceInvokeExpr()) {
+                                      solver
+                                          .getCallAutomaton()
+                                          .registerListener(
+                                              new AddIndirectFlowAtCallSite(
+                                                  callSite,
+                                                  actualCallSite.getInvokeExpr().getBase()));
+                                    }
+                                  }
+                                  if (returnedFact.isReturnLocal()) {
+                                    if (actualCallSite.isAssign()) {
+                                      solver
+                                          .getCallAutomaton()
+                                          .registerListener(
+                                              new AddIndirectFlowAtCallSite(
+                                                  callSite, actualCallSite.getLeftOp()));
+                                    }
+                                  }
+                                  for (int i = 0;
+                                      i < actualCallSite.getInvokeExpr().getArgs().size();
+                                      i++) {
+                                    if (returnedFact.isParameterLocal(i)) {
+                                      solver
+                                          .getCallAutomaton()
+                                          .registerListener(
+                                              new AddIndirectFlowAtCallSite(
+                                                  callSite,
+                                                  actualCallSite.getInvokeExpr().getArg(i)));
+                                    }
+                                  }
                                 }
                               }
-                              if (returnedFact.isReturnLocal()) {
-                                if (actualCallSite.isAssign()) {
-                                  solver
-                                      .getCallAutomaton()
-                                      .registerListener(
-                                          new AddIndirectFlowAtCallSite(
-                                              callSite, actualCallSite.getLeftOp()));
-                                }
-                              }
-                              for (int i = 0;
-                                  i < actualCallSite.getInvokeExpr().getArgs().size();
-                                  i++) {
-                                if (returnedFact.isParameterLocal(i)) {
-                                  solver
-                                      .getCallAutomaton()
-                                      .registerListener(
-                                          new AddIndirectFlowAtCallSite(
-                                              callSite,
-                                              actualCallSite.getInvokeExpr().getArg(i)));
-                                }
-                              }
-                            }
-                          }
-                        });
+                            });
                   }
                 }
               });
@@ -234,15 +235,13 @@ public class IDEALSeedSolver<W extends Weight> {
             .getCallAutomaton()
             .registerListener(
                 (t, w, aut) -> {
-
                   if (t.getLabel()
                       .equals(
                           strongUpdateNode
                               .stmt()) /* && !t.getStart().fact().equals(curr.fact()) */) {
                     idealWeightFunctions.addNonKillFlow(strongUpdateNode);
                     idealWeightFunctions.addIndirectFlow(
-                        strongUpdateNode,
-                        new Node<>(strongUpdateNode.stmt(), t.getStart().fact()));
+                        strongUpdateNode, new Node<>(strongUpdateNode.stmt(), t.getStart().fact()));
                   }
                 });
       }
@@ -256,7 +255,9 @@ public class IDEALSeedSolver<W extends Weight> {
                 strongUpdateNode,
                 targetFact -> {
                   if (!e.getKey().asNode().equals(seed.asNode())) {
-                    setWeakUpdate(strongUpdateNode);
+                    if (!e.getKey().asNode().fact().isNull()) {
+                      setWeakUpdate(strongUpdateNode);
+                    }
                   }
                 });
       }
@@ -302,6 +303,7 @@ public class IDEALSeedSolver<W extends Weight> {
       }
       throw new IDEALSeedTimeout(this, this.phase2Solver, resultPhase2);
     }
+    LOGGER.debug("Killed Strong Update Rules {}", killedRules);
     return resultPhase2;
   }
 
@@ -350,6 +352,7 @@ public class IDEALSeedSolver<W extends Weight> {
     if (rule.getS1().equals(rule.getS2())) {
       if (idealWeightFunctions.isStrongUpdateStatement(rule.getL2())) {
         if (idealWeightFunctions.isKillFlow(new Node<>(rule.getL2(), rule.getS2().fact()))) {
+          killedRules++;
           return true;
         }
       }
@@ -359,6 +362,7 @@ public class IDEALSeedSolver<W extends Weight> {
       Statement callSite = pushRule.getCallSite();
       if (idealWeightFunctions.isStrongUpdateStatement(callSite)) {
         if (idealWeightFunctions.isKillFlow(new Node<>(callSite, rule.getS1().fact()))) {
+          killedRules++;
           return true;
         }
       }
@@ -378,8 +382,9 @@ public class IDEALSeedSolver<W extends Weight> {
     idealWeightFunctions.registerListener(
         curr -> {
           if (phase.equals(Phases.ValueFlow)) {
-              return;
+            return;
           }
+          System.out.println("Addiasdasdng " + curr);
           AbstractBoomerangSolver<W> seedSolver = boomerang.getSolvers().getOrCreate(seed);
           seedSolver
               .getFieldAutomaton()
@@ -387,8 +392,8 @@ public class IDEALSeedSolver<W extends Weight> {
         });
     ForwardBoomerangResults<W> res = boomerang.solve(seed);
     analysisStopwatch.stop();
-    if(LOGGER.isDebugEnabled()){
-      boomerang.debugOutput();
+    if (LOGGER.isDebugEnabled()) {
+      boomerang.printAllForwardCallAutomatonFlow();
     }
     boomerang.unregisterAllListeners();
     return res;
@@ -405,6 +410,7 @@ public class IDEALSeedSolver<W extends Weight> {
   }
 
   private void setWeakUpdate(Node<Statement, Val> curr) {
+    LOGGER.debug("Weak update @ {}", curr);
     if (weakUpdates.add(curr)) {
       for (Statement s : Lists.newArrayList(affectedStrongUpdateStmt.get(curr))) {
         idealWeightFunctions.weakUpdate(s);
@@ -417,8 +423,7 @@ public class IDEALSeedSolver<W extends Weight> {
     callAutomaton.registerListener(
         (t, w, aut) -> {
           if (t.getStart() instanceof GeneratedState) return;
-          Node<Statement, Val> source =
-              new Node<>(t.getLabel(), t.getStart().fact());
+          Node<Statement, Val> source = new Node<>(t.getLabel(), t.getStart().fact());
           Collection<Node<Statement, Val>> indirectFlows =
               idealWeightFunctions.getAliasesFor(source);
           for (Node<Statement, Val> indirectFlow : indirectFlows) {

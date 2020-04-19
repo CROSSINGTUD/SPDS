@@ -89,10 +89,12 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
       }
       if (!t.getStart().equals(start)) {
         if (t.getStart().fact().m().equals(t.getLabel().getMethod())) {
-          //To compute the right Data-Flow Path, apparently, Weight.ONE is necessary and the following line works.
-          //flowSolver.getCallAutomaton().addTransition(newTrans);
-          //For IDEAL the Weight this.w must be carried along: FileMustBeClosedTest.flowViaFieldDirect
-          flowSolver.getCallAutomaton().addWeightForTransition(newTrans,this.w);
+          // To compute the right Data-Flow Path, apparently, Weight.ONE is necessary and the
+          // following line works.
+          // flowSolver.getCallAutomaton().addTransition(newTrans);
+          // For IDEAL the Weight this.w must be carried along:
+          // FileMustBeClosedTest.flowViaFieldDirect
+          flowSolver.getCallAutomaton().addWeightForTransition(newTrans, this.w);
         }
       }
     }

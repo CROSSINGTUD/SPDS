@@ -63,7 +63,7 @@ public class AllocVal extends Val {
   }
 
   public boolean isNull() {
-    return delegate.isNull();
+    return allocationVal.isNull();
   }
 
   public boolean isStringConstant() {

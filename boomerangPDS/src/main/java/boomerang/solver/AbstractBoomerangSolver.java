@@ -18,6 +18,7 @@ import boomerang.callgraph.BackwardsObservableICFG;
 import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.controlflowgraph.ObservableControlFlowGraph;
+import boomerang.scene.AllocVal;
 import boomerang.scene.CallSiteStatement;
 import boomerang.scene.Field;
 import boomerang.scene.Method;
@@ -31,14 +32,18 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import org.slf4j.LoggerFactory;
 import pathexpression.IRegEx;
+import sync.pds.solver.EmptyStackWitnessListener;
 import sync.pds.solver.SyncPDSSolver;
+import sync.pds.solver.WitnessListener;
 import sync.pds.solver.nodes.*;
 import wpds.impl.*;
 import wpds.interfaces.State;
@@ -147,6 +152,69 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
     return new SingleNode(
         /* TODO Replace by new designated type */ new Node<>(
             query.stmt(), query.asNode().fact().asUnbalanced(query.stmt())));
+  }
+
+  public void synchedEmptyStackReachable(
+      final Node<Statement, Val> sourceNode,
+      final EmptyStackWitnessListener<Statement, Val> listener) {
+    synchedReachable(
+        sourceNode,
+        new WitnessListener<Statement, Val, Field>() {
+          Multimap<Val, Node<Statement, Val>> potentialFieldCandidate = HashMultimap.create();
+          Set<Val> potentialCallCandidate = Sets.newHashSet();
+
+          @Override
+          public void fieldWitness(Transition<Field, INode<Node<Statement, Val>>> t) {
+            if (t.getTarget() instanceof GeneratedState) return;
+            if (!t.getLabel().equals(emptyField())) return;
+            Node<Statement, Val> targetFact =
+                new Node<>(
+                    t.getTarget().fact().stmt(), t.getTarget().fact().fact().asUnbalanced(null));
+            if (!potentialFieldCandidate.put(targetFact.fact(), targetFact)) return;
+            if (potentialCallCandidate.contains(targetFact.fact())) {
+              listener.witnessFound(targetFact);
+            }
+          }
+
+          @Override
+          public void callWitness(Transition<Statement, INode<Val>> t) {
+
+            Val targetFact = t.getTarget().fact();
+            if (targetFact instanceof AllocVal) {
+              targetFact = ((AllocVal) targetFact).getDelegate();
+              if (!potentialCallCandidate.add(targetFact)) return;
+              if (potentialFieldCandidate.containsKey(targetFact)) {
+                for (Node<Statement, Val> w : potentialFieldCandidate.get(targetFact)) {
+                  listener.witnessFound(w);
+                }
+              }
+            }
+          }
+        });
+  }
+
+  public void synchedReachable(
+      final Node<Statement, Val> sourceNode,
+      final WitnessListener<Statement, Val, Field> listener) {
+    registerListener(
+        reachableNode -> {
+          if (!reachableNode.equals(sourceNode)) return;
+          fieldAutomaton.registerListener(
+              (t, w, aut) -> {
+                if (t.getStart() instanceof GeneratedState) return;
+                if (!t.getStart().fact().equals(sourceNode)) return;
+                listener.fieldWitness(t);
+              });
+          callAutomaton.registerListener(
+              (t, w, aut) -> {
+                if (t.getStart() instanceof GeneratedState) return;
+                if (!t.getStart().fact().equals(sourceNode.fact())) return;
+                if (!t.getLabel().equals(sourceNode.stmt())) return;
+                if (callAutomaton.isUnbalancedState(t.getTarget())) {
+                  listener.callWitness(t);
+                }
+              });
+        });
   }
 
   protected void addPotentialUnbalancedFlow(

@@ -43,8 +43,7 @@ public class StaticFieldFlows extends AbstractBoomerangTest {
     queryFor(alloc);
   }
 
-  private void foo() {
-  }
+  private void foo() {}
 
   @Test
   public void singleton() {

@@ -18,7 +18,6 @@ import boomerang.scene.ReturnSiteStatement;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import com.google.common.base.Joiner;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Sets;
 import java.util.Collection;
@@ -67,8 +66,9 @@ public abstract class TypeStateMachineWeightFunctions
             : push),
         Collections2.filter(
             transition,
-            input -> input.getType().equals(Type.OnCall)
-                || input.getType().equals(Type.OnCallOrOnCallToReturn)),
+            input ->
+                input.getType().equals(Type.OnCall)
+                    || input.getType().equals(Type.OnCallOrOnCallToReturn)),
         Type.OnCall);
   }
 
@@ -95,7 +95,7 @@ public abstract class TypeStateMachineWeightFunctions
       }
     }
     if (!res.isEmpty()) {
-      LOGGER.debug("Typestate transition at {} to {}, [{}]", succ.stmt(), res, Type.OnCallToReturn);
+      LOGGER.trace("Typestate transition at {} to {}, [{}]", succ.stmt(), res, Type.OnCallToReturn);
     }
     return (res.isEmpty()
         ? getOne()

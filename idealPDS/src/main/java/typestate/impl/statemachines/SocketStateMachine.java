@@ -27,7 +27,7 @@ public class SocketStateMachine extends TypeStateMachineWeightFunctions {
 
   private static String CONNECT_METHOD = ".* connect.*";
 
-  public static enum States implements State {
+  public enum States implements State {
     INIT,
     CONNECTED,
     ERROR;
@@ -51,17 +51,34 @@ public class SocketStateMachine extends TypeStateMachineWeightFunctions {
   public SocketStateMachine() {
     addTransition(
         new MatcherTransition(
-            States.INIT, CONNECT_METHOD, Parameter.This, States.CONNECTED, Type.OnCallOrOnCallToReturn));
+            States.INIT,
+            CONNECT_METHOD,
+            Parameter.This,
+            States.CONNECTED,
+            Type.OnCallOrOnCallToReturn));
     addTransition(
         new MatcherTransition(
-            States.ERROR, CONNECT_METHOD, Parameter.This, States.ERROR, Type.OnCallOrOnCallToReturn));
+            States.ERROR,
+            CONNECT_METHOD,
+            Parameter.This,
+            States.ERROR,
+            Type.OnCallOrOnCallToReturn));
     addTransition(
-        new UseMethodMatcher(States.CONNECTED, Parameter.This, States.CONNECTED, Type.OnCallOrOnCallToReturn));
-    addTransition(new UseMethodMatcher(States.INIT, Parameter.This, States.ERROR, Type.OnCallOrOnCallToReturn));
+        new UseMethodMatcher(
+            States.CONNECTED, Parameter.This, States.CONNECTED, Type.OnCallOrOnCallToReturn));
+    addTransition(
+        new UseMethodMatcher(
+            States.INIT, Parameter.This, States.ERROR, Type.OnCallOrOnCallToReturn));
     addTransition(
         new MatcherTransition(
-            States.CONNECTED, CONNECT_METHOD, Parameter.This, States.CONNECTED, Type.OnCallOrOnCallToReturn));
-    addTransition(new UseMethodMatcher(States.ERROR, Parameter.This, States.ERROR, Type.OnCallOrOnCallToReturn));
+            States.CONNECTED,
+            CONNECT_METHOD,
+            Parameter.This,
+            States.CONNECTED,
+            Type.OnCallOrOnCallToReturn));
+    addTransition(
+        new UseMethodMatcher(
+            States.ERROR, Parameter.This, States.ERROR, Type.OnCallOrOnCallToReturn));
   }
 
   @Override

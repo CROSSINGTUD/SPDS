@@ -339,23 +339,6 @@ public class FileMustBeClosedTest extends IDEALTestingFramework {
   }
 
   @Test
-  public void noStrongUpdatePossible() {
-    File b = null;
-    File a = new File();
-    a.open();
-    File e = new File();
-    e.open();
-    if (staticallyUnknown()) {
-      b = a;
-    } else {
-      b = e;
-    }
-    b.close();
-    mayBeInErrorState(a);
-    mustBeInAcceptingState(b);
-  }
-
-  @Test
   public void parameterAlias() {
     File file = new File();
     File alias = file;
@@ -392,19 +375,6 @@ public class FileMustBeClosedTest extends IDEALTestingFramework {
     file.open();
     bar(a, b, file);
     b.field.close();
-    mustBeInAcceptingState(file);
-    mustBeInAcceptingState(a.field);
-  }
-
-  @Test
-  public void aliasSensitive() {
-    ObjectWithField a = new ObjectWithField();
-    ObjectWithField b = a;
-    File file = new File();
-    file.open();
-    a.field = file;
-    File loadedFromAlias = b.field;
-    loadedFromAlias.close();
     mustBeInAcceptingState(file);
     mustBeInAcceptingState(a.field);
   }

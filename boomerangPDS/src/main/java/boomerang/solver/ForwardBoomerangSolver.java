@@ -325,8 +325,10 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
         }
       }
     }
-    if(returnedFact.isStatic()){
-      out.add(new Node<>(returnSiteStatement, returnedFact.withNewMethod(returnSiteStatement.getMethod())));
+    if (returnedFact.isStatic()) {
+      out.add(
+          new Node<>(
+              returnSiteStatement, returnedFact.withNewMethod(returnSiteStatement.getMethod())));
     }
     for (Node<Statement, Val> xs : out) {
       addNormalCallFlow(new Node<>(returnSiteStatement, returnedFact), xs);
