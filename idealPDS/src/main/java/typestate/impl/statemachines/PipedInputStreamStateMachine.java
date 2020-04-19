@@ -50,16 +50,16 @@ public class PipedInputStreamStateMachine extends TypeStateMachineWeightFunction
   public PipedInputStreamStateMachine() {
     addTransition(
         new MatcherTransition(
-            States.INIT, CONNECT_METHODS, Parameter.This, States.CONNECTED, Type.OnReturn));
+            States.INIT, CONNECT_METHODS, Parameter.This, States.CONNECTED, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.INIT, READ_METHODS, Parameter.This, States.ERROR, Type.OnReturn));
+            States.INIT, READ_METHODS, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.CONNECTED, READ_METHODS, Parameter.This, States.CONNECTED, Type.OnReturn));
+            States.CONNECTED, READ_METHODS, Parameter.This, States.CONNECTED, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.ERROR, READ_METHODS, Parameter.This, States.ERROR, Type.OnReturn));
+            States.ERROR, READ_METHODS, Parameter.This, States.ERROR, Type.OnCall));
   }
 
   //    private Set<SootMethod> connect() {

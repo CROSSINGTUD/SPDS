@@ -53,22 +53,22 @@ public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
   public HasNextStateMachine() {
     addTransition(
         new MatcherTransition(
-            States.INIT, NEXT_METHOD, Parameter.This, States.ERROR, Type.OnReturn));
+            States.INIT, NEXT_METHOD, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.ERROR, NEXT_METHOD, Parameter.This, States.ERROR, Type.OnReturn));
+            States.ERROR, NEXT_METHOD, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.HASNEXT, NEXT_METHOD, Parameter.This, States.INIT, Type.OnReturn));
+            States.HASNEXT, NEXT_METHOD, Parameter.This, States.INIT, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.INIT, HAS_NEXT_METHOD, Parameter.This, States.HASNEXT, Type.OnReturn));
+            States.INIT, HAS_NEXT_METHOD, Parameter.This, States.HASNEXT, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.HASNEXT, HAS_NEXT_METHOD, Parameter.This, States.HASNEXT, Type.OnReturn));
+            States.HASNEXT, HAS_NEXT_METHOD, Parameter.This, States.HASNEXT, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.ERROR, HAS_NEXT_METHOD, Parameter.This, States.ERROR, Type.OnReturn));
+            States.ERROR, HAS_NEXT_METHOD, Parameter.This, States.ERROR, Type.OnCall));
   }
 
   public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement unit) {

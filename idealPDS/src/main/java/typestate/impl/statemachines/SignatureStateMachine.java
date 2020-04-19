@@ -63,67 +63,67 @@ public class SignatureStateMachine extends TypeStateMachineWeightFunctions {
   public SignatureStateMachine() {
     addTransition(
         new MatcherTransition(
-            States.NONE, GET_INSTANCE, Parameter.This, States.UNITIALIZED, Type.OnReturn));
+            States.NONE, GET_INSTANCE, Parameter.This, States.UNITIALIZED, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.UNITIALIZED, INIT_SIGN, Parameter.This, States.SIGN_CHECK, Type.OnReturn));
+            States.UNITIALIZED, INIT_SIGN, Parameter.This, States.SIGN_CHECK, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.UNITIALIZED, INIT_VERIFY, Parameter.This, States.VERIFY_CHECK, Type.OnReturn));
+            States.UNITIALIZED, INIT_VERIFY, Parameter.This, States.VERIFY_CHECK, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.UNITIALIZED, SIGN, Parameter.This, States.ERROR, Type.OnReturn));
+            States.UNITIALIZED, SIGN, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.UNITIALIZED, VERIFY, Parameter.This, States.ERROR, Type.OnReturn));
+            States.UNITIALIZED, VERIFY, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.UNITIALIZED, UPDATE, Parameter.This, States.ERROR, Type.OnReturn));
+            States.UNITIALIZED, UPDATE, Parameter.This, States.ERROR, Type.OnCall));
 
     addTransition(
         new MatcherTransition(
-            States.SIGN_CHECK, INIT_SIGN, Parameter.This, States.SIGN_CHECK, Type.OnReturn));
+            States.SIGN_CHECK, INIT_SIGN, Parameter.This, States.SIGN_CHECK, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.SIGN_CHECK, INIT_VERIFY, Parameter.This, States.VERIFY_CHECK, Type.OnReturn));
+            States.SIGN_CHECK, INIT_VERIFY, Parameter.This, States.VERIFY_CHECK, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.SIGN_CHECK, SIGN, Parameter.This, States.SIGN_CHECK, Type.OnReturn));
+            States.SIGN_CHECK, SIGN, Parameter.This, States.SIGN_CHECK, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.SIGN_CHECK, VERIFY, Parameter.This, States.ERROR, Type.OnReturn));
+            States.SIGN_CHECK, VERIFY, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.SIGN_CHECK, UPDATE, Parameter.This, States.SIGN_CHECK, Type.OnReturn));
+            States.SIGN_CHECK, UPDATE, Parameter.This, States.SIGN_CHECK, Type.OnCall));
 
     addTransition(
         new MatcherTransition(
-            States.VERIFY_CHECK, INIT_SIGN, Parameter.This, States.SIGN_CHECK, Type.OnReturn));
+            States.VERIFY_CHECK, INIT_SIGN, Parameter.This, States.SIGN_CHECK, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.VERIFY_CHECK, INIT_VERIFY, Parameter.This, States.VERIFY_CHECK, Type.OnReturn));
+            States.VERIFY_CHECK, INIT_VERIFY, Parameter.This, States.VERIFY_CHECK, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.VERIFY_CHECK, SIGN, Parameter.This, States.ERROR, Type.OnReturn));
+            States.VERIFY_CHECK, SIGN, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.VERIFY_CHECK, VERIFY, Parameter.This, States.VERIFY_CHECK, Type.OnReturn));
+            States.VERIFY_CHECK, VERIFY, Parameter.This, States.VERIFY_CHECK, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.VERIFY_CHECK, UPDATE, Parameter.This, States.VERIFY_CHECK, Type.OnReturn));
+            States.VERIFY_CHECK, UPDATE, Parameter.This, States.VERIFY_CHECK, Type.OnCall));
 
     addTransition(
         new MatcherTransition(
-            States.ERROR, INIT_SIGN, Parameter.This, States.ERROR, Type.OnReturn));
+            States.ERROR, INIT_SIGN, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.ERROR, INIT_VERIFY, Parameter.This, States.ERROR, Type.OnReturn));
+            States.ERROR, INIT_VERIFY, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
-        new MatcherTransition(States.ERROR, SIGN, Parameter.This, States.ERROR, Type.OnReturn));
+        new MatcherTransition(States.ERROR, SIGN, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
-        new MatcherTransition(States.ERROR, VERIFY, Parameter.This, States.ERROR, Type.OnReturn));
+        new MatcherTransition(States.ERROR, VERIFY, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
-        new MatcherTransition(States.ERROR, UPDATE, Parameter.This, States.ERROR, Type.OnReturn));
+        new MatcherTransition(States.ERROR, UPDATE, Parameter.This, States.ERROR, Type.OnCall));
   }
 
   private Set<SootMethod> constructor() {

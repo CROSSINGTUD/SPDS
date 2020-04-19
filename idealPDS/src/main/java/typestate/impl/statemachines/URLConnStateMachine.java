@@ -53,10 +53,10 @@ public class URLConnStateMachine extends TypeStateMachineWeightFunctions {
   public URLConnStateMachine() {
     addTransition(
         new MatcherTransition(
-            States.CONNECTED, ILLEGAL_OPERTIONS, Parameter.This, States.ERROR, Type.OnReturn));
+            States.CONNECTED, ILLEGAL_OPERTIONS, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.ERROR, ILLEGAL_OPERTIONS, Parameter.This, States.ERROR, Type.OnReturn));
+            States.ERROR, ILLEGAL_OPERTIONS, Parameter.This, States.ERROR, Type.OnCall));
   }
 
   @Override

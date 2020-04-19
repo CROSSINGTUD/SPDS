@@ -54,35 +54,35 @@ public class VectorStateMachine extends TypeStateMachineWeightFunctions {
   public VectorStateMachine() {
     addTransition(
         new MatcherTransition(
-            States.INIT, ADD_ELEMENT_METHODS, Parameter.This, States.NOT_EMPTY, Type.OnReturn));
+            States.INIT, ADD_ELEMENT_METHODS, Parameter.This, States.NOT_EMPTY, Type.OnCall));
     addTransition(
         new MatcherTransition(
             States.INIT,
             ACCESS_ELEMENT_METHODS,
             Parameter.This,
             States.ACCESSED_EMPTY,
-            Type.OnReturn));
+            Type.OnCall));
     addTransition(
         new MatcherTransition(
             States.NOT_EMPTY,
             ACCESS_ELEMENT_METHODS,
             Parameter.This,
             States.NOT_EMPTY,
-            Type.OnReturn));
+            Type.OnCall));
 
     addTransition(
         new MatcherTransition(
-            States.NOT_EMPTY, REMOVE_ALL_METHODS, Parameter.This, States.INIT, Type.OnReturn));
+            States.NOT_EMPTY, REMOVE_ALL_METHODS, Parameter.This, States.INIT, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.INIT, REMOVE_ALL_METHODS, Parameter.This, States.INIT, Type.OnReturn));
+            States.INIT, REMOVE_ALL_METHODS, Parameter.This, States.INIT, Type.OnCall));
     addTransition(
         new MatcherTransition(
             States.ACCESSED_EMPTY,
             ACCESS_ELEMENT_METHODS,
             Parameter.This,
             States.ACCESSED_EMPTY,
-            Type.OnReturn));
+            Type.OnCall));
   }
 
   @Override

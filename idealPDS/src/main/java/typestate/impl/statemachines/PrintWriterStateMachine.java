@@ -51,16 +51,16 @@ public class PrintWriterStateMachine extends TypeStateMachineWeightFunctions {
   public PrintWriterStateMachine() {
     addTransition(
         new MatcherTransition(
-            States.NONE, CLOSE_METHODS, Parameter.This, States.CLOSED, Type.OnReturn));
+            States.NONE, CLOSE_METHODS, Parameter.This, States.CLOSED, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.CLOSED, CLOSE_METHODS, Parameter.This, States.CLOSED, Type.OnReturn));
+            States.CLOSED, CLOSE_METHODS, Parameter.This, States.CLOSED, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.CLOSED, READ_METHODS, Parameter.This, States.ERROR, Type.OnReturn));
+            States.CLOSED, READ_METHODS, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.ERROR, READ_METHODS, Parameter.This, States.ERROR, Type.OnReturn));
+            States.ERROR, READ_METHODS, Parameter.This, States.ERROR, Type.OnCall));
   }
 
   //    private Set<SootMethod> closeMethods() {

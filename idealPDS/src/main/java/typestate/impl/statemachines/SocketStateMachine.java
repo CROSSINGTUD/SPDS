@@ -51,17 +51,17 @@ public class SocketStateMachine extends TypeStateMachineWeightFunctions {
   public SocketStateMachine() {
     addTransition(
         new MatcherTransition(
-            States.INIT, CONNECT_METHOD, Parameter.This, States.CONNECTED, Type.OnReturn));
+            States.INIT, CONNECT_METHOD, Parameter.This, States.CONNECTED, Type.OnCallOrOnCallToReturn));
     addTransition(
         new MatcherTransition(
-            States.ERROR, CONNECT_METHOD, Parameter.This, States.ERROR, Type.OnReturn));
+            States.ERROR, CONNECT_METHOD, Parameter.This, States.ERROR, Type.OnCallOrOnCallToReturn));
     addTransition(
-        new UseMethodMatcher(States.CONNECTED, Parameter.This, States.CONNECTED, Type.OnReturn));
-    addTransition(new UseMethodMatcher(States.INIT, Parameter.This, States.ERROR, Type.OnReturn));
+        new UseMethodMatcher(States.CONNECTED, Parameter.This, States.CONNECTED, Type.OnCallOrOnCallToReturn));
+    addTransition(new UseMethodMatcher(States.INIT, Parameter.This, States.ERROR, Type.OnCallOrOnCallToReturn));
     addTransition(
         new MatcherTransition(
-            States.CONNECTED, CONNECT_METHOD, Parameter.This, States.CONNECTED, Type.OnReturn));
-    addTransition(new UseMethodMatcher(States.ERROR, Parameter.This, States.ERROR, Type.OnReturn));
+            States.CONNECTED, CONNECT_METHOD, Parameter.This, States.CONNECTED, Type.OnCallOrOnCallToReturn));
+    addTransition(new UseMethodMatcher(States.ERROR, Parameter.This, States.ERROR, Type.OnCallOrOnCallToReturn));
   }
 
   @Override

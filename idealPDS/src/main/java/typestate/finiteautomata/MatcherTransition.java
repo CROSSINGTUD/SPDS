@@ -25,7 +25,6 @@ public class MatcherTransition extends Transition {
 
   public enum Type {
     OnCall,
-    OnReturn,
     None,
     OnCallToReturn,
     OnCallOrOnCallToReturn

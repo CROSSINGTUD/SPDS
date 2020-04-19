@@ -67,13 +67,8 @@ public abstract class TypeStateMachineWeightFunctions
             : push),
         Collections2.filter(
             transition,
-            new Predicate<MatcherTransition>() {
-              @Override
-              public boolean apply(MatcherTransition input) {
-                return input.getType().equals(Type.OnCall)
-                    || input.getType().equals(Type.OnCallOrOnCallToReturn);
-              }
-            }),
+            input -> input.getType().equals(Type.OnCall)
+                || input.getType().equals(Type.OnCallOrOnCallToReturn)),
         Type.OnCall);
   }
 

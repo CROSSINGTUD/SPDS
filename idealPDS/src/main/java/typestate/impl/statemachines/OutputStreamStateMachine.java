@@ -51,16 +51,16 @@ public class OutputStreamStateMachine extends TypeStateMachineWeightFunctions {
   public OutputStreamStateMachine() {
     addTransition(
         new MatcherTransition(
-            States.NONE, CLOSE_METHODS, Parameter.This, States.CLOSED, Type.OnReturn));
+            States.NONE, CLOSE_METHODS, Parameter.This, States.CLOSED, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.CLOSED, CLOSE_METHODS, Parameter.This, States.CLOSED, Type.OnReturn));
+            States.CLOSED, CLOSE_METHODS, Parameter.This, States.CLOSED, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.CLOSED, WRITE_METHODS, Parameter.This, States.ERROR, Type.OnReturn));
+            States.CLOSED, WRITE_METHODS, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.ERROR, WRITE_METHODS, Parameter.This, States.ERROR, Type.OnReturn));
+            States.ERROR, WRITE_METHODS, Parameter.This, States.ERROR, Type.OnCall));
   }
 
   @Override

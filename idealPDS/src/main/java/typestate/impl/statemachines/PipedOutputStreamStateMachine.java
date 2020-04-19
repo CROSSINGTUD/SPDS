@@ -50,16 +50,16 @@ public class PipedOutputStreamStateMachine extends TypeStateMachineWeightFunctio
   public PipedOutputStreamStateMachine() {
     addTransition(
         new MatcherTransition(
-            States.INIT, CONNECT_METHODS, Parameter.This, States.CONNECTED, Type.OnReturn));
+            States.INIT, CONNECT_METHODS, Parameter.This, States.CONNECTED, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.INIT, WRITE_METHODS, Parameter.This, States.ERROR, Type.OnReturn));
+            States.INIT, WRITE_METHODS, Parameter.This, States.ERROR, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.CONNECTED, WRITE_METHODS, Parameter.This, States.CONNECTED, Type.OnReturn));
+            States.CONNECTED, WRITE_METHODS, Parameter.This, States.CONNECTED, Type.OnCall));
     addTransition(
         new MatcherTransition(
-            States.ERROR, WRITE_METHODS, Parameter.This, States.ERROR, Type.OnReturn));
+            States.ERROR, WRITE_METHODS, Parameter.This, States.ERROR, Type.OnCall));
   }
 
   @Override

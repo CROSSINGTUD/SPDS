@@ -387,6 +387,9 @@ public class IDEALSeedSolver<W extends Weight> {
         });
     ForwardBoomerangResults<W> res = boomerang.solve(seed);
     analysisStopwatch.stop();
+    if(LOGGER.isDebugEnabled()){
+      boomerang.debugOutput();
+    }
     boomerang.unregisterAllListeners();
     return res;
   }
