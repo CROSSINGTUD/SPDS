@@ -1,4 +1,21 @@
-# Changes between 2.x and 3.0-ALPHA
+# Notes on this Repository
+
+This is a closed source repository of 
+https://www.github.com/CryptoAnalysis/WPDS
+
+We make public releases from time to time. For the public release the Jenkinsfile of the OSS version must be used. Also remove
+
+```
+	<distributionManagement>
+		<repository>
+			<id>codeshield-snapshots</id>
+			<url>https://nexus.codeshield.de/repository/codeshield-snapshots/</url>
+		</repository>
+	</distributionManagement>
+``` 
+from `pom.xml`.
+
+# Changes between 2.x and 3.0
 
 This is an alpha release branch for version 3.0. At the current state, IDEal is excluded from this branch.
 If you want to use IDEal, for now, stick to version 2.x.
