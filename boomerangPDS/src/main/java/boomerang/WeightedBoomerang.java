@@ -172,7 +172,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
                 @Override
                 public void onWeightAdded(Transition<Statement, INode<Val>> t, W w,
                         WeightedPAutomaton<Statement, INode<Val>, W> aut) {
-                    checkTimeout();
+                    throwOnEarlyTermination();
                 }
             });
             solver.getFieldAutomaton().registerListener(new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
@@ -180,7 +180,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
                 @Override
                 public void onWeightAdded(Transition<Field, INode<Node<Statement, Val>>> t, W w,
                         WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-                    checkTimeout();
+                    throwOnEarlyTermination();
                 }
             });
             SeedFactory<W> seedFactory = getSeedFactory();
@@ -201,6 +201,15 @@ public abstract class WeightedBoomerang<W extends Weight> {
         } else {
             unbalancedListeners.put(unbalancedPopPair, unbalancedPopInfo);
         }
+
+    }
+
+    public final void throwOnEarlyTermination() {
+        checkAborted();
+        checkTimeout();
+    }
+
+    public void checkAborted() {
 
     }
 
@@ -301,7 +310,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
             @Override
             protected void onManyStateListenerRegister() {
-                checkTimeout();
+                throwOnEarlyTermination();
             }
 
         };
@@ -423,7 +432,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
             @Override
             protected void onManyStateListenerRegister() {
-                checkTimeout();
+                throwOnEarlyTermination();
             }
 
         };
@@ -606,7 +615,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
     public BackwardBoomerangResults<W> backwardSolveUnderScope(BackwardQuery backwardQuery, ForwardQuery forwardQuery,
             Node<Statement, Val> node) {
         scopedQueries.add(backwardQuery);
-        boolean timedout = false;
+        boolean aborted = false;
         try {
             backwardSolve(backwardQuery);
             final AbstractBoomerangSolver<W> bwSolver = queryToSolvers.getOrCreate(backwardQuery);
@@ -634,12 +643,12 @@ public abstract class WeightedBoomerang<W extends Weight> {
                     }
                 }
             });
-        } catch (BoomerangTimeoutException e) {
-            timedout = true;
+        } catch (BoomerangAbortedException e) {
+            aborted = true;
             cleanup();
         }
 
-        return new BackwardBoomerangResults<W>(backwardQuery, timedout, this.queryToSolvers, getStats(), analysisWatch);
+        return new BackwardBoomerangResults<W>(backwardQuery, aborted, this.queryToSolvers, getStats(), analysisWatch);
     }
 
     private void cleanup() {
@@ -653,7 +662,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
     public BackwardBoomerangResults<W> backwardSolveUnderScope(BackwardQuery backwardQuery,
             IContextRequester requester) {
         scopedQueries.add(backwardQuery);
-        boolean timedout = false;
+        boolean aborted = false;
         try {
             if (analysisWatch.isRunning()) {
                 analysisWatch.stop();
@@ -670,12 +679,12 @@ public abstract class WeightedBoomerang<W extends Weight> {
             if (analysisWatch.isRunning()) {
                 analysisWatch.stop();
             }
-        } catch (BoomerangTimeoutException e) {
-            timedout = true;
+        } catch (BoomerangAbortedException e) {
+            aborted = true;
             cleanup();
         }
 
-        return new BackwardBoomerangResults<W>(backwardQuery, timedout, this.queryToSolvers, getStats(), analysisWatch);
+        return new BackwardBoomerangResults<W>(backwardQuery, aborted, this.queryToSolvers, getStats(), analysisWatch);
     }
 
     private final class UnbalancedPopCallerListener implements CallerListener<Unit, SootMethod> {
@@ -1077,13 +1086,13 @@ public abstract class WeightedBoomerang<W extends Weight> {
         if (!analysisWatch.isRunning()) {
             analysisWatch.start();
         }
-        boolean timedout = false;
+        boolean aborted = false;
         try {
             logger.debug("Starting forward analysis of: {}", query);
             forwardSolve(query);
             logger.debug("Terminated forward analysis of: {}", query);
-        } catch (BoomerangTimeoutException e) {
-            timedout = true;
+        } catch (BoomerangAbortedException e) {
+            aborted = true;
             cleanup();
             logger.debug("Timeout of query: {}", query);
         }
@@ -1091,7 +1100,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
         if (analysisWatch.isRunning()) {
             analysisWatch.stop();
         }
-        return new ForwardBoomerangResults<W>(query, icfg(), timedout, this.queryToSolvers, getStats(), analysisWatch);
+        return new ForwardBoomerangResults<W>(query, icfg(), aborted, this.queryToSolvers, getStats(), analysisWatch);
     }
 
     public BackwardBoomerangResults<W> solve(BackwardQuery query) {
@@ -1103,13 +1112,13 @@ public abstract class WeightedBoomerang<W extends Weight> {
         if (timing && !analysisWatch.isRunning()) {
             analysisWatch.start();
         }
-        boolean timedout = false;
+        boolean aborted = false;
         try {
             logger.debug("Starting backward analysis of: {}", query);
             backwardSolve(query);
             logger.debug("Terminated backward analysis of: {}", query);
-        } catch (BoomerangTimeoutException e) {
-            timedout = true;
+        } catch (BoomerangAbortedException e) {
+            aborted = true;
             cleanup();
             logger.debug("Timeout of query: {}", query);
         }
@@ -1117,7 +1126,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
             analysisWatch.stop();
         }
 
-        return new BackwardBoomerangResults<W>(query, timedout, this.queryToSolvers, getStats(), analysisWatch);
+        return new BackwardBoomerangResults<W>(query, aborted, this.queryToSolvers, getStats(), analysisWatch);
     }
 
     protected void backwardSolve(BackwardQuery query) {
