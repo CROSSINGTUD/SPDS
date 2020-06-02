@@ -237,7 +237,7 @@ public class IDEALSeedSolver<W extends Weight> {
 
                         @Override
                         public void stackElement(Statement callSite) {
-                            boomerang.checkTimeout();
+                            boomerang.throwOnEarlyTermination();
                             addAffectedPotentialStrongUpdate(strongUpdateNode, callSite);
                             for (ForwardQuery e : queryAllocationSites) {
                                 AbstractBoomerangSolver<W> solver = boomerang.getSolvers().get(e);
