@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>de.fraunhofer.iem</groupId>
   <artifactId>SPDS</artifactId>
-  <version>3.0.1-SNAPSHOT</version>
+  <version>3.0.1</version>
   <packaging>pom</packaging>
   <name>SPDS</name>
 
@@ -21,6 +19,7 @@
     <connection>scm:git:git@github.com:CodeShield-Security/SPDS.git</connection>
     <developerConnection>scm:git:git@github.com:CodeShield-Security/SPDS.git</developerConnection>
     <url>https://github.com/CodeShield-Security/SPDS</url>
+    <tag>SPDS-3.0.1</tag>
   </scm>
 
   <developers>
@@ -149,7 +148,7 @@
       <dependency>
         <groupId>ca.mcgill.sable</groupId>
         <artifactId>soot</artifactId>
-        <version>4.1.0-SNAPSHOT</version>
+        <version>4.1.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.commons</groupId>
