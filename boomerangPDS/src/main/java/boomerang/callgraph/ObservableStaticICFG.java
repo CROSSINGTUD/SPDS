@@ -1,169 +1,117 @@
 package boomerang.callgraph;
 
-import soot.Scene;
-import soot.SootMethod;
-import soot.Unit;
-import soot.Value;
-import soot.jimple.Stmt;
-import soot.jimple.toolkits.callgraph.CallGraph;
-import soot.jimple.toolkits.callgraph.Edge;
-import soot.jimple.toolkits.ide.icfg.BiDiInterproceduralCFG;
-
+import boomerang.scene.CallGraph;
+import boomerang.scene.CallGraph.Edge;
+import boomerang.scene.Method;
+import boomerang.scene.Statement;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import com.google.common.collect.Sets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
- * An interprocedural control-flow graph, for which caller-callee edges can be observed using {@link CalleeListener} and
- * {@link CallerListener}. This call graph wraps a precomputed call graph and notifies listeners about all
- * interprocedual edges for the requested relation at once.
- *
+ * An interprocedural control-flow graph, for which caller-callee edges can be observed using {@link
+ * CalleeListener} and {@link CallerListener}. This call graph wraps a precomputed call graph and
+ * notifies listeners about all interprocedual edges for the requested relation at once.
  *
  * @author Melanie Bruns on 04.05.2018
  */
-public class ObservableStaticICFG implements ObservableICFG<Unit, SootMethod> {
-    /**
-     * Wrapped static ICFG. If available, this is used to handle all queries.
-     */
-    private BoomerangICFG precomputedGraph;
-    private Set<SootMethod> unbalancedMethods = Sets.newHashSet();
+public class ObservableStaticICFG implements ObservableICFG<Statement, Method> {
+  /** Wrapped static ICFG. If available, this is used to handle all queries. */
+  private CallGraph precomputedGraph;
 
-    public ObservableStaticICFG(BoomerangICFG icfg) {
-        this.precomputedGraph = icfg;
-    }
+  private static final Logger LOGGER = LoggerFactory.getLogger(ObservableStaticICFG.class);
+  private static final int IMPRECISE_CALL_GRAPH_WARN_THRESHOLD = 30000;
 
-    @Override
-    public SootMethod getMethodOf(Unit unit) {
-        return precomputedGraph.getMethodOf(unit);
-    }
+  public ObservableStaticICFG(CallGraph icfg) {
+    this.precomputedGraph = icfg;
+  }
 
-    @Override
-    public List<Unit> getPredsOf(Unit unit) {
-        return precomputedGraph.getPredsOf(unit);
+  @Override
+  public void addCalleeListener(CalleeListener<Statement, Method> listener) {
+    Collection<Edge> edges = precomputedGraph.edgesOutOf(listener.getObservedCaller());
+    if (edges.size() > IMPRECISE_CALL_GRAPH_WARN_THRESHOLD) {
+      LOGGER.debug(
+          "Call graph has more than {} callees at {}",
+          IMPRECISE_CALL_GRAPH_WARN_THRESHOLD,
+          listener.getObservedCaller());
+      for (Edge e : edges) {
+        LOGGER.trace("\t callee {}", e.tgt());
+      }
     }
+    for (boomerang.scene.CallGraph.Edge e : edges) {
+      listener.onCalleeAdded(listener.getObservedCaller(), e.tgt());
+    }
+    if (edges.size() == 0) {
+      listener.onNoCalleeFound();
+    }
+  }
 
-    @Override
-    public List<Unit> getSuccsOf(Unit unit) {
-        return precomputedGraph.getSuccsOf(unit);
+  @Override
+  public void addCallerListener(CallerListener<Statement, Method> listener) {
+    Collection<Edge> edges = precomputedGraph.edgesInto(listener.getObservedCallee());
+    if (edges.size() > IMPRECISE_CALL_GRAPH_WARN_THRESHOLD) {
+      LOGGER.debug(
+          "Call graph has more than {} caller of {}",
+          IMPRECISE_CALL_GRAPH_WARN_THRESHOLD,
+          listener.getObservedCallee());
+      for (Edge e : edges) {
+        LOGGER.trace("\t callsite {}", e.src());
+      }
     }
+    for (boomerang.scene.CallGraph.Edge e : edges) {
+      listener.onCallerAdded(e.src(), listener.getObservedCallee());
+    }
+  }
 
-    @Override
-    public void addCalleeListener(CalleeListener<Unit, SootMethod> listener) {
-        for (SootMethod method : precomputedGraph.getCalleesOfCallAt(listener.getObservedCaller())) {
-            listener.onCalleeAdded(listener.getObservedCaller(), method);
-        }
-    }
+  @Override
+  public Collection<Statement> getStartPointsOf(Method m) {
+    return m.getControlFlowGraph().getStartPoints();
+  }
 
-    @Override
-    public void addCallerListener(CallerListener<Unit, SootMethod> listener) {
-        for (Unit unit : precomputedGraph.getCallersOf(listener.getObservedCallee())) {
-            listener.onCallerAdded(unit, listener.getObservedCallee());
-        }
-    }
+  @Override
+  public boolean isCallStmt(Statement stmt) {
+    return stmt.containsInvokeExpr();
+  }
 
-    @Override
-    public Collection<Unit> getAllPrecomputedCallers(SootMethod sootMethod) {
-        for(Unit u : precomputedGraph.getCallersOf(sootMethod)) {
-          this.unbalancedMethods.add(getMethodOf(u));
-        }
-        return precomputedGraph.getCallersOf(sootMethod);
-    }
+  @Override
+  public boolean isExitStmt(Statement stmt) {
+    return stmt.getMethod().getControlFlowGraph().getEndPoints().contains(stmt);
+  }
 
-    @Override
-    public Set<Unit> getCallsFromWithin(SootMethod sootMethod) {
-        return precomputedGraph.getCallsFromWithin(sootMethod);
-    }
+  @Override
+  public boolean isStartPoint(Statement stmt) {
+    return stmt.getMethod().getControlFlowGraph().getStartPoints().contains(stmt);
+  }
 
-    @Override
-    public Collection<Unit> getStartPointsOf(SootMethod sootMethod) {
-        return precomputedGraph.getStartPointsOf(sootMethod);
-    }
+  @Override
+  public Collection<Statement> getEndPointsOf(Method m) {
+    return m.getControlFlowGraph().getEndPoints();
+  }
 
-    @Override
-    public boolean isCallStmt(Unit stmt) {
-        return precomputedGraph.isCallStmt(stmt);
-    }
+  /**
+   * Returns negative number to signify all edges are precomputed. CallGraphDebugger will add the
+   * actual number in.
+   *
+   * @return -1 as all edges are precomputed, but we don't have access to the actual number
+   */
+  @Override
+  public int getNumberOfEdgesTakenFromPrecomputedGraph() {
+    return -1;
+  }
 
-    @Override
-    public boolean isExitStmt(Unit stmt) {
-        return precomputedGraph.isExitStmt(stmt);
-    }
+  @Override
+  public void resetCallGraph() {
+    // Static call graph does not need to be reset, ignore this
+  }
 
-    @Override
-    public boolean isStartPoint(Unit stmt) {
-        return precomputedGraph.isStartPoint(stmt);
-    }
+  @Override
+  public void computeFallback() {
+    // TODO Auto-generated method stub
 
-    @Override
-    public Set<Unit> allNonCallStartNodes() {
-        return precomputedGraph.allNonCallStartNodes();
-    }
+  }
 
-    @Override
-    public Collection<Unit> getEndPointsOf(SootMethod sootMethod) {
-        return precomputedGraph.getEndPointsOf(sootMethod);
-    }
-
-    @Override
-    public Set<Unit> allNonCallEndNodes() {
-        return precomputedGraph.allNonCallEndNodes();
-    }
-
-    @Override
-    public List<Value> getParameterRefs(SootMethod sootMethod) {
-        return precomputedGraph.getParameterRefs(sootMethod);
-    }
-
-    @Override
-    public boolean isReachable(Unit u) {
-        return precomputedGraph.isReachable(u);
-    }
-
-    public CallGraph getCallGraphCopy() {
-        CallGraph copy = new CallGraph();
-        HashSet<SootMethod> visited = new HashSet<>();
-        for (SootMethod entryPoint : Scene.v().getEntryPoints()) {
-            if (!visited.contains(entryPoint)) {
-                addEdgesForCallees(entryPoint, visited, copy);
-            }
-        }
-        return copy;
-    }
-
-    private void addEdgesForCallees(SootMethod sootMethod, HashSet<SootMethod> visited, CallGraph copy) {
-        visited.add(sootMethod);
-        for (Unit callsite : precomputedGraph.getCallsFromWithin(sootMethod)) {
-            for (SootMethod callee : precomputedGraph.getCalleesOfCallAt(callsite)) {
-                copy.addEdge(new Edge(sootMethod, (Stmt) callsite, callee));
-                if (!visited.contains(callee)) {
-                    addEdgesForCallees(callee, visited, copy);
-                }
-            }
-        }
-    }
-    @Override
-    public boolean isUnbalancedMethod(SootMethod method) {
-      return unbalancedMethods.contains(method);
-    }
-
-    @Override
-    public void addUnbalancedMethod(SootMethod method) {
-      unbalancedMethods.add(method);
-    }
-    /**
-     * Returns negative number to signify all edges are precomputed. CallGraphDebugger will add the actual number in.
-     * 
-     * @return -1 as all edges are precomputed, but we don't have access to the actual number
-     */
-    @Override
-    public int getNumberOfEdgesTakenFromPrecomputedGraph() {
-        return -1;
-    }
-
-    @Override
-    public void resetCallGraph() {
-        // Static call graph does not need to be reset, ignore this
-    }
+  @Override
+  public void addEdges(Edge e) {
+    throw new RuntimeException("Unnecessary");
+  }
 }

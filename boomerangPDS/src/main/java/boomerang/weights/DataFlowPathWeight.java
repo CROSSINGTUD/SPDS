@@ -1,120 +1,107 @@
 package boomerang.weights;
 
-import java.util.Set;
-
-import com.google.common.collect.Sets;
-
-import boomerang.jimple.Statement;
+import boomerang.scene.Method;
+import boomerang.scene.Statement;
+import boomerang.scene.Val;
+import boomerang.weights.PathConditionWeight.ConditionDomain;
+import com.google.common.base.Objects;
+import java.util.List;
+import java.util.Map;
+import sync.pds.solver.nodes.Node;
 import wpds.impl.Weight;
 
 public class DataFlowPathWeight extends Weight {
 
-    private static DataFlowPathWeight one;
-    private static DataFlowPathWeight zero;
+  private static DataFlowPathWeight one;
 
-    /**
-     * This set keeps track of all statement that use an alias from source to sink.
-     */
-    private Set<Statement> allStatements;
+  private PathTrackingWeight path;
+  private PathConditionWeight condition;
 
-    /**
-     * A subset of {@link #allStatements} that lists only the last usage of a variable. When data-flow at branches is
-     * joined, the set can contain multiple statement that use the variable
-     */
-    private Set<Statement> lastStatements;
+  private DataFlowPathWeight() {
+    path = PathTrackingWeight.one();
+    condition = PathConditionWeight.one();
+  }
 
-    private String rep;
+  public DataFlowPathWeight(Node<Statement, Val> path) {
+    this.path = new PathTrackingWeight(path);
+    this.condition = PathConditionWeight.one();
+  }
 
-    private DataFlowPathWeight(String rep) {
-        this.rep = rep;
-    }
+  public DataFlowPathWeight(Node<Statement, Val> path, Statement callSite, Method callee) {
+    this.path = new PathTrackingWeight(path);
+    this.condition = new PathConditionWeight(callSite, callee);
+  }
 
-    private DataFlowPathWeight(Set<Statement> allStatement, Set<Statement> lastStatements) {
-        this.allStatements = allStatement;
-        this.lastStatements = lastStatements;
-    }
+  public DataFlowPathWeight(Statement callSite, Method callee) {
+    this.path = PathTrackingWeight.one();
+    this.condition = new PathConditionWeight(callSite, callee);
+  }
 
-    public DataFlowPathWeight(Statement relevantStatement) {
-        allStatements = Sets.newHashSet();
-        lastStatements = Sets.newHashSet();
-        allStatements.add(relevantStatement);
-        lastStatements.add(relevantStatement);
-    }
+  public DataFlowPathWeight(Statement ifStatement, Boolean condition) {
+    this.path = PathTrackingWeight.one();
+    this.condition = new PathConditionWeight(ifStatement, condition);
+  }
 
-    @Override
-    public Weight extendWith(Weight o) {
-        if (!(o instanceof DataFlowPathWeight))
-            throw new RuntimeException("Cannot extend to different types of weight!");
-        DataFlowPathWeight other = (DataFlowPathWeight) o;
-        if (other.equals(one()))
-            return this;
-        if (this.equals(one()))
-            return other;
-        if (other.equals(zero()) || this.equals(zero())) {
-            return zero();
-        }
-        Set<Statement> newAllStatements = Sets.newHashSet();
-        newAllStatements.addAll(allStatements);
-        newAllStatements.addAll(other.allStatements);
-        return new DataFlowPathWeight(newAllStatements, other.lastStatements);
-    }
+  private DataFlowPathWeight(PathTrackingWeight path, PathConditionWeight condition) {
+    this.path = path;
+    this.condition = condition;
+  }
 
-    @Override
-    public Weight combineWith(Weight other) {
-        return extendWith(other);
-    }
+  public DataFlowPathWeight(Val leftOp, ConditionDomain conditionVal) {
+    this.path = PathTrackingWeight.one();
+    this.condition = new PathConditionWeight(leftOp, conditionVal);
+  }
 
-    public static DataFlowPathWeight one() {
-        if (one == null)
-            one = new DataFlowPathWeight("ONE");
-        return one;
-    }
+  public DataFlowPathWeight(Val returnVal) {
+    this.path = PathTrackingWeight.one();
+    this.condition = new PathConditionWeight(returnVal);
+  }
 
-    public static DataFlowPathWeight zero() {
-        if (zero == null)
-            zero = new DataFlowPathWeight("ZERO");
-        return zero;
-    }
+  public static DataFlowPathWeight one() {
+    if (one == null) one = new DataFlowPathWeight();
+    return one;
+  }
 
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((allStatements == null) ? 0 : allStatements.hashCode());
-        result = prime * result + ((lastStatements == null) ? 0 : lastStatements.hashCode());
-        result = prime * result + ((rep == null) ? 0 : rep.hashCode());
-        return result;
-    }
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    DataFlowPathWeight that = (DataFlowPathWeight) o;
+    return Objects.equal(path, that.path) && Objects.equal(condition, that.condition);
+  }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        DataFlowPathWeight other = (DataFlowPathWeight) obj;
-        if (allStatements == null) {
-            if (other.allStatements != null)
-                return false;
-        } else if (!allStatements.equals(other.allStatements))
-            return false;
-        if (lastStatements == null) {
-            if (other.lastStatements != null)
-                return false;
-        } else if (!lastStatements.equals(other.lastStatements))
-            return false;
-        if (rep == null) {
-            if (other.rep != null)
-                return false;
-        } else if (!rep.equals(other.rep))
-            return false;
-        return true;
-    }
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(path, condition);
+  }
 
-    @Override
-    public String toString() {
-        return "\nLast relevant: " + lastStatements + "\nAll statements: " + allStatements;
-    }
+  public List<Node<Statement, Val>> getAllStatements() {
+    return path.getAllStatements();
+  }
+
+  public Map<Statement, ConditionDomain> getConditions() {
+    return condition.getConditions();
+  }
+
+  public Map<Val, ConditionDomain> getEvaluationMap() {
+    return condition.getEvaluationMap();
+  }
+
+  @Override
+  public String toString() {
+    return /*"PATH" + path +*/ " COND: " + condition;
+  }
+
+  public Weight extendWith(Weight other) {
+    return new DataFlowPathWeight(
+        (PathTrackingWeight) path.extendWith(((DataFlowPathWeight) other).path),
+        (PathConditionWeight) condition.extendWith(((DataFlowPathWeight) other).condition));
+  }
+
+  @Override
+  public Weight combineWith(Weight other) {
+    return new DataFlowPathWeight(
+        (PathTrackingWeight) path.combineWith(((DataFlowPathWeight) other).path),
+        (PathConditionWeight) condition.combineWith(((DataFlowPathWeight) other).condition));
+  }
 }

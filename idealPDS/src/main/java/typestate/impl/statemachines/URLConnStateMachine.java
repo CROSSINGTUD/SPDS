@@ -1,24 +1,19 @@
-/*******************************************************************************
- * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
+/**
+ * ***************************************************************************** Copyright (c) 2018
+ * Fraunhofer IEM, Paderborn, Germany. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
- * SPDX-License-Identifier: EPL-2.0
  *
- * Contributors:
- *     Johannes Spaeth - initial API and implementation
- *******************************************************************************/
+ * <p>SPDX-License-Identifier: EPL-2.0
+ *
+ * <p>Contributors: Johannes Spaeth - initial API and implementation
+ * *****************************************************************************
+ */
 package typestate.impl.statemachines;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-
 import boomerang.WeightedForwardQuery;
-import soot.SootClass;
-import soot.SootMethod;
-import soot.Unit;
+import boomerang.scene.Statement;
+import java.util.Collection;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
@@ -28,49 +23,49 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public class URLConnStateMachine extends TypeStateMachineWeightFunctions {
 
-    public static enum States implements State {
-        NONE, INIT, CONNECTED, ERROR;
+  private static final String CONNECT_METHOD = ".* connect.*";
+  private static final String TYPE = "java.net.URLConnection";
+  private static final String ILLEGAL_OPERTIONS =
+      ".* (setDoInput|setDoOutput|setAllowUserInteraction|setUseCaches|setIfModifiedSince|setRequestProperty|addRequestProperty|getRequestProperty|getRequestProperties).*";
 
-        @Override
-        public boolean isErrorState() {
-            return this == ERROR;
-        }
+  public static enum States implements State {
+    NONE,
+    INIT,
+    CONNECTED,
+    ERROR;
 
-        @Override
-        public boolean isInitialState() {
-            return false;
-        }
-
-        @Override
-        public boolean isAccepting() {
-            return false;
-        }
-    }
-
-    public URLConnStateMachine() {
-        addTransition(new MatcherTransition(States.CONNECTED, illegalOpertaion(), Parameter.This, States.ERROR,
-                Type.OnReturn));
-        addTransition(
-                new MatcherTransition(States.ERROR, illegalOpertaion(), Parameter.This, States.ERROR, Type.OnReturn));
-    }
-
-    private Set<SootMethod> connect() {
-        return selectMethodByName(getSubclassesOf("java.net.URLConnection"), "connect");
-    }
-
-    private Set<SootMethod> illegalOpertaion() {
-        List<SootClass> subclasses = getSubclassesOf("java.net.URLConnection");
-        return selectMethodByName(subclasses,
-                "setDoInput|setDoOutput|setAllowUserInteraction|setUseCaches|setIfModifiedSince|setRequestProperty|addRequestProperty|getRequestProperty|getRequestProperties");
+    @Override
+    public boolean isErrorState() {
+      return this == ERROR;
     }
 
     @Override
-    public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod m, Unit unit) {
-        return this.generateThisAtAnyCallSitesOf(m, unit, connect());
+    public boolean isInitialState() {
+      return false;
     }
 
     @Override
-    protected State initialState() {
-        return States.CONNECTED;
+    public boolean isAccepting() {
+      return false;
     }
+  }
+
+  public URLConnStateMachine() {
+    addTransition(
+        new MatcherTransition(
+            States.CONNECTED, ILLEGAL_OPERTIONS, Parameter.This, States.ERROR, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.ERROR, ILLEGAL_OPERTIONS, Parameter.This, States.ERROR, Type.OnCall));
+  }
+
+  @Override
+  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement unit) {
+    return this.generateThisAtAnyCallSitesOf(unit, TYPE, CONNECT_METHOD);
+  }
+
+  @Override
+  protected State initialState() {
+    return States.CONNECTED;
+  }
 }

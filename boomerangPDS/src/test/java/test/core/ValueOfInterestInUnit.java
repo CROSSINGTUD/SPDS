@@ -1,10 +1,9 @@
 package test.core;
 
 import boomerang.Query;
-import soot.jimple.Stmt;
-
+import boomerang.scene.Statement;
 import java.util.Optional;
 
 public interface ValueOfInterestInUnit {
-    Optional<? extends Query> test(Stmt unit);
+  Optional<? extends Query> test(Statement unit);
 }

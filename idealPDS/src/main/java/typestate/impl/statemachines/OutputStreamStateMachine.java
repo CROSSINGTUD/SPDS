@@ -1,26 +1,19 @@
-/*******************************************************************************
- * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
+/**
+ * ***************************************************************************** Copyright (c) 2018
+ * Fraunhofer IEM, Paderborn, Germany. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
- * SPDX-License-Identifier: EPL-2.0
  *
- * Contributors:
- *     Johannes Spaeth - initial API and implementation
- *******************************************************************************/
+ * <p>SPDX-License-Identifier: EPL-2.0
+ *
+ * <p>Contributors: Johannes Spaeth - initial API and implementation
+ * *****************************************************************************
+ */
 package typestate.impl.statemachines;
 
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-
 import boomerang.WeightedForwardQuery;
-import soot.Scene;
-import soot.SootClass;
-import soot.SootMethod;
-import soot.Unit;
+import boomerang.scene.Statement;
+import java.util.Collection;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.MatcherTransition;
 import typestate.finiteautomata.MatcherTransition.Parameter;
@@ -30,59 +23,53 @@ import typestate.finiteautomata.TypeStateMachineWeightFunctions;
 
 public class OutputStreamStateMachine extends TypeStateMachineWeightFunctions {
 
-    public static enum States implements State {
-        NONE, CLOSED, ERROR;
+  private static final String CLOSE_METHODS = ".* close.*";
+  private static final String WRITE_METHODS = ".* write.*";
+  private static final String TYPE = "java.io.OutputStream";;
 
-        @Override
-        public boolean isErrorState() {
-            return this == ERROR;
-        }
+  public static enum States implements State {
+    NONE,
+    CLOSED,
+    ERROR;
 
-        @Override
-        public boolean isInitialState() {
-            return false;
-        }
-
-        @Override
-        public boolean isAccepting() {
-            return false;
-        }
-    }
-
-    public OutputStreamStateMachine() {
-        addTransition(new MatcherTransition(States.NONE, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
-        addTransition(
-                new MatcherTransition(States.CLOSED, closeMethods(), Parameter.This, States.CLOSED, Type.OnReturn));
-        addTransition(
-                new MatcherTransition(States.CLOSED, writeMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-        addTransition(new MatcherTransition(States.ERROR, writeMethods(), Parameter.This, States.ERROR, Type.OnReturn));
-    }
-
-    private Set<SootMethod> closeMethods() {
-        return selectMethodByName(getImplementersOf("java.io.OutputStream"), "close");
-    }
-
-    private Set<SootMethod> writeMethods() {
-        return selectMethodByName(getImplementersOf("java.io.OutputStream"), "write");
-    }
-
-    private List<SootClass> getImplementersOf(String className) {
-        SootClass sootClass = Scene.v().getSootClass(className);
-        List<SootClass> list = Scene.v().getActiveHierarchy().getSubclassesOfIncluding(sootClass);
-        List<SootClass> res = new LinkedList<>();
-        for (SootClass c : list) {
-            res.add(c);
-        }
-        return res;
+    @Override
+    public boolean isErrorState() {
+      return this == ERROR;
     }
 
     @Override
-    public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(SootMethod method, Unit unit) {
-        return generateThisAtAnyCallSitesOf(method, unit, closeMethods());
+    public boolean isInitialState() {
+      return false;
     }
 
     @Override
-    protected State initialState() {
-        return States.NONE;
+    public boolean isAccepting() {
+      return false;
     }
+  }
+
+  public OutputStreamStateMachine() {
+    addTransition(
+        new MatcherTransition(
+            States.NONE, CLOSE_METHODS, Parameter.This, States.CLOSED, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.CLOSED, CLOSE_METHODS, Parameter.This, States.CLOSED, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.CLOSED, WRITE_METHODS, Parameter.This, States.ERROR, Type.OnCall));
+    addTransition(
+        new MatcherTransition(
+            States.ERROR, WRITE_METHODS, Parameter.This, States.ERROR, Type.OnCall));
+  }
+
+  @Override
+  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement unit) {
+    return generateThisAtAnyCallSitesOf(unit, TYPE, CLOSE_METHODS);
+  }
+
+  @Override
+  protected State initialState() {
+    return States.NONE;
+  }
 }

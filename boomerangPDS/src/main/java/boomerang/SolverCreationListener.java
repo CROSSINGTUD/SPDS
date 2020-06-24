@@ -5,6 +5,5 @@ import wpds.impl.Weight;
 
 public interface SolverCreationListener<W extends Weight> {
 
-    void onCreatedSolver(Query query, AbstractBoomerangSolver<W> solver);
-
+  void onCreatedSolver(Query query, AbstractBoomerangSolver<W> solver);
 }

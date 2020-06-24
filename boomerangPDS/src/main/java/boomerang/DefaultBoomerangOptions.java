@@ -1,226 +1,223 @@
-/*******************************************************************************
- * Copyright (c) 2018 Fraunhofer IEM, Paderborn, Germany.
- * This program and the accompanying materials are made available under the
- * terms of the Eclipse Public License 2.0 which is available at
+/**
+ * ***************************************************************************** Copyright (c) 2018
+ * Fraunhofer IEM, Paderborn, Germany. This program and the accompanying materials are made
+ * available under the terms of the Eclipse Public License 2.0 which is available at
  * http://www.eclipse.org/legal/epl-2.0.
- *  
- * SPDX-License-Identifier: EPL-2.0
  *
- * Contributors:
- *     Johannes Spaeth - initial API and implementation
- *******************************************************************************/
+ * <p>SPDX-License-Identifier: EPL-2.0
+ *
+ * <p>Contributors: Johannes Spaeth - initial API and implementation
+ * *****************************************************************************
+ */
 package boomerang;
 
-import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
-import boomerang.jimple.AllocVal;
-import boomerang.jimple.Statement;
-import boomerang.jimple.Val;
+import boomerang.scene.AllocVal;
+import boomerang.scene.Method;
+import boomerang.scene.Statement;
+import boomerang.scene.Val;
 import boomerang.stats.IBoomerangStats;
 import boomerang.stats.SimpleBoomerangStats;
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import soot.*;
-import soot.jimple.*;
-
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DefaultBoomerangOptions implements BoomerangOptions {
 
-    public boolean isAllocationVal(Value val) {
-        if (!trackStrings() && isStringAllocationType(val.getType())) {
-            return false;
+  public boolean isAllocationVal(Val val) {
+    if (!trackStrings() && val.isStringBufferOrBuilder()) {
+      return false;
+    }
+    if (trackNullAssignments() && val.isNull()) {
+      return true;
+    }
+    if (arrayFlows() && val.isArrayAllocationVal()) {
+      return true;
+    }
+    if (trackStrings() && val.isStringConstant()) {
+      return true;
+    }
+    if (!trackAnySubclassOfThrowable() && val.isThrowableAllocationType()) {
+      return false;
+    }
+
+    return val.isNewExpr();
+  }
+
+  @Override
+  public StaticFieldStrategy getStaticFieldStrategy() {
+    return StaticFieldStrategy.SINGLETON;
+  }
+
+  @Override
+  public boolean arrayFlows() {
+    return true;
+  }
+
+  @Override
+  public boolean typeCheck() {
+    return true;
+  }
+
+  @Override
+  public boolean trackReturnOfInstanceOf() {
+    return false;
+  }
+
+  @Override
+  public boolean onTheFlyCallGraph() {
+    return false;
+  }
+
+  @Override
+  public boolean throwFlows() {
+    return false;
+  }
+
+  @Override
+  public boolean callSummaries() {
+    return false;
+  }
+
+  @Override
+  public boolean fieldSummaries() {
+    return false;
+  }
+
+  public boolean trackAnySubclassOfThrowable() {
+    return false;
+  }
+
+  public boolean trackStrings() {
+    return false;
+  }
+
+  public boolean trackNullAssignments() {
+    return true;
+  }
+
+  @Override
+  public Optional<AllocVal> getAllocationVal(
+      Method m, Statement stmt, Val fact, ObservableICFG<Statement, Method> icfg) {
+    if (!stmt.isAssign()) {
+      return Optional.absent();
+    }
+    if (!stmt.getLeftOp().equals(fact)) {
+      return Optional.absent();
+    }
+    if (isAllocationVal(stmt.getRightOp())) {
+      return Optional.of(new AllocVal(stmt.getLeftOp(), stmt, stmt.getRightOp()));
+    }
+    return Optional.absent();
+  }
+
+  @Override
+  public int analysisTimeoutMS() {
+    return 10000;
+  }
+
+  @Override
+  public IBoomerangStats statsFactory() {
+    return new SimpleBoomerangStats();
+  }
+
+  @Override
+  public boolean aliasing() {
+    return true;
+  }
+
+  @Override
+  public boolean killNullAtCast() {
+    return false;
+  }
+
+  @Override
+  public boolean trackStaticFieldAtEntryPointToClinit() {
+    return false;
+  }
+
+  @Override
+  public boolean trackFields() {
+    return true;
+  }
+
+  @Override
+  public int maxCallDepth() {
+    return -1;
+  }
+
+  @Override
+  public int maxUnbalancedCallDepth() {
+    return -1;
+  }
+
+  @Override
+  public int maxFieldDepth() {
+    return -1;
+  }
+
+  @Override
+  public boolean onTheFlyControlFlow() {
+    return false;
+  }
+
+  @Override
+  public String toString() {
+    Class<? extends DefaultBoomerangOptions> cls = this.getClass();
+    List<String> methodToVal = new ArrayList<>();
+    String s = cls.getName();
+    for (java.lang.reflect.Method m : cls.getMethods()) {
+      String name = m.getName();
+      if (name.contains("toString")) continue;
+
+      if (m.getParameterCount() == 0) {
+        try {
+          Object val = m.invoke(this);
+          methodToVal.add(name + "=" + val);
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
         }
-        if (trackNullAssignments() && val instanceof NullConstant) {
-            return true;
-        }
-        if (arrayFlows() && isArrayAllocationVal(val)) {
-            return true;
-        }
-        if (trackStrings() && val instanceof StringConstant) {
-            return true;
-        }
-        if (!trackAnySubclassOfThrowable() && isThrowableAllocationType(val.getType())) {
-            return false;
-        }
-
-        return val instanceof NewExpr;
+      }
     }
+    String joined = Joiner.on(",").join(methodToVal);
+    return "[" + s + "{" + joined + "}]";
+  }
 
-    protected boolean isThrowableAllocationType(Type type) {
-        return Scene.v().getOrMakeFastHierarchy().canStoreType(type, Scene.v().getType("java.lang.Throwable"));
+  @Override
+  public boolean ignoreInnerClassFields() {
+    return false;
+  }
+
+  @Override
+  public boolean trackPathConditions() {
+    return false;
+  }
+
+  @Override
+  public boolean prunePathConditions() {
+    return false;
+  }
+
+  @Override
+  public boolean trackDataFlowPath() {
+    return true;
+  }
+
+  @Override
+  public boolean trackImplicitFlows() {
+    return false;
+  }
+
+  @Override
+  public boolean allowMultipleQueries() {
+    return false;
+  }
+
+  public void checkValid() {
+    if (trackPathConditions() == false && prunePathConditions()) {
+      throw new RuntimeException(
+          "InvalidCombinations of Options, Path Conditions must be ables when pruning path conditions");
     }
-
-    protected boolean isStringAllocationType(Type type) {
-        return type.toString().equals("java.lang.String") || type.toString().equals("java.lang.StringBuilder")
-                || type.toString().equals("java.lang.StringBuffer");
-    }
-
-    protected boolean isArrayAllocationVal(Value val) {
-        if (val instanceof NewArrayExpr) {
-            NewArrayExpr expr = (NewArrayExpr) val;
-            return expr.getBaseType() instanceof RefType;
-        } else if (val instanceof NewMultiArrayExpr) {
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public boolean staticFlows() {
-        return true;
-    }
-
-    @Override
-    public boolean arrayFlows() {
-        return true;
-    }
-
-    @Override
-    public boolean typeCheck() {
-        return true;
-    }
-
-    @Override
-    public boolean trackReturnOfInstanceOf() {
-        return false;
-    }
-
-    @Override
-    public boolean onTheFlyCallGraph() {
-        return true;
-    }
-
-    @Override
-    public boolean throwFlows() {
-        return false;
-    }
-
-    @Override
-    public boolean callSummaries() {
-        return false;
-    }
-
-    @Override
-    public boolean fieldSummaries() {
-        return false;
-    }
-
-    public boolean trackAnySubclassOfThrowable() {
-        return false;
-    }
-
-    public boolean trackStrings() {
-        return false;
-    }
-
-    public boolean trackNullAssignments() {
-        return false;
-    }
-
-    @Override
-    public boolean isIgnoredMethod(SootMethod method) {
-        return trackAnySubclassOfThrowable() && Scene.v().getFastHierarchy()
-                .canStoreType(method.getDeclaringClass().getType(), Scene.v().getType("java.lang.Throwable"));
-    }
-
-    @Override
-    public Optional<AllocVal> getAllocationVal(SootMethod m, Stmt stmt, Val fact,
-            ObservableICFG<Unit, SootMethod> icfg) {
-        if (!(stmt instanceof AssignStmt)) {
-            return Optional.absent();
-        }
-        AssignStmt as = (AssignStmt) stmt;
-        if (!as.getLeftOp().equals(fact.value())) {
-            return Optional.absent();
-        }
-        if (isAllocationVal(as.getRightOp())) {
-            return Optional.of(new AllocVal(as.getLeftOp(), m, as.getRightOp(), new Statement(stmt, m)));
-        }
-        if (as.containsInvokeExpr()) {
-            AtomicReference<AllocVal> returnValue = new AtomicReference<>();
-            icfg.addCalleeListener(new AllocationValCalleeListener(returnValue, as, icfg, m));
-            if (returnValue.get() != null) {
-                return Optional.of(returnValue.get());
-            }
-        }
-        return Optional.absent();
-    }
-
-    protected class AllocationValCalleeListener implements CalleeListener<Unit, SootMethod> {
-        AtomicReference<AllocVal> returnValue;
-        AssignStmt as;
-        ObservableICFG<Unit, SootMethod> icfg;
-        SootMethod m;
-
-        AllocationValCalleeListener(AtomicReference<AllocVal> returnValue, AssignStmt as,
-                ObservableICFG<Unit, SootMethod> icfg, SootMethod m) {
-            this.returnValue = returnValue;
-            this.as = as;
-            this.icfg = icfg;
-            this.m = m;
-        }
-
-        @Override
-        public Unit getObservedCaller() {
-            return as;
-        }
-
-        @Override
-        public void onCalleeAdded(Unit unit, SootMethod sootMethod) {
-            for (Unit u : icfg.getEndPointsOf(sootMethod)) {
-                if (u instanceof ReturnStmt && isAllocationVal(((ReturnStmt) u).getOp())) {
-                    returnValue
-                            .set(new AllocVal(as.getLeftOp(), m, ((ReturnStmt) u).getOp(), new Statement((Stmt) u, m)));
-                }
-            }
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o)
-                return true;
-            if (o == null || getClass() != o.getClass())
-                return false;
-            AllocationValCalleeListener that = (AllocationValCalleeListener) o;
-            return Objects.equals(returnValue, that.returnValue) && Objects.equals(as, that.as)
-                    && Objects.equals(m, that.m);
-        }
-
-        @Override
-        public int hashCode() {
-
-            return Objects.hash(returnValue, as, m);
-        }
-    }
-
-    @Override
-    public int analysisTimeoutMS() {
-        return 60000;
-    }
-
-    @Override
-    public IBoomerangStats statsFactory() {
-        return new SimpleBoomerangStats();
-    }
-
-    @Override
-    public boolean aliasing() {
-        return true;
-    }
-
-    @Override
-    public boolean killNullAtCast() {
-        return false;
-    }
-
-    @Override
-    public boolean trackStaticFieldAtEntryPointToClinit() {
-        return false;
-    }
-
-    @Override
-    public boolean trackFields() {
-        return true;
-    }
+  }
 }
