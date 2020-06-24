@@ -21,11 +21,12 @@ jobs:
       name: Release
       needs: [BuildAndTest]
       if: github.ref == 'refs/heads/master'
-      uses: qcastel/github-actions-maven-release@master
-      with:
-        release-branch-name: "master"
+      steps:
+       - uses: qcastel/github-actions-maven-release@master
+       - with:
+          release-branch-name: "master"
 
-        git-release-bot-name: "spds-release-bot"
-        git-release-bot-email: "info@codeshield.de"
+          git-release-bot-name: "spds-release-bot"
+          git-release-bot-email: "info@codeshield.de"
 
-        access-token: ${{ secrets.GITHUB_ACCESS_TOKEN }}
+          access-token: ${{ secrets.GITHUB_ACCESS_TOKEN }}
