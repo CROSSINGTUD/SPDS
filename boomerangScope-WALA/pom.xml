@@ -17,6 +17,13 @@
       <artifactId>boomerangScope</artifactId>
       <version>3.0.2-SNAPSHOT</version>
     </dependency>
+
+    <dependency>
+      <groupId>de.fraunhofer.iem</groupId>
+      <artifactId>boomerangPDS</artifactId>
+      <version>3.0.1</version>
+      <scope>test</scope>
+    </dependency>
     <!-- wala  -->
     <dependency>
       <groupId>com.ibm.wala</groupId>
