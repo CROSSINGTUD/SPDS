@@ -2,15 +2,11 @@ name: Java CI with Maven
 
 on:
   push:
-    branches: [ master, develop ]
   pull_request:
-    branches: [ master, develop ]
 
 jobs:
-  build:
-
+  BuildAndTest:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - name: Set up JDK 1.8
@@ -19,3 +15,18 @@ jobs:
         java-version: 1.8
     - name: Build with Maven
       run: mvn -B verify --file pom.xml
+
+
+  Release:
+    name: Release
+    needs: [BuildAndTest]
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - uses: qcastel/github-actions-maven-release@master
+        with:
+        release-branch-name: "master"
+
+        git-release-bot-name: "spds-release-bot"
+        git-release-bot-email: "info@codeshield.de"
+
+        access-token: ${{ secrets.GITHUB_ACCESS_TOKEN }}
