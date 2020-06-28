@@ -39,10 +39,10 @@ import soot.Transformer;
 import soot.options.Options;
 import wpds.impl.Weight;
 
-public class ExampleMain {
+public class ExampleMain1 {
   public static void main(String... args) {
     String sootClassPath = getSootClassPath();
-    String mainClass = "boomerang.example.BoomerangExampleTarget";
+    String mainClass = "boomerang.example.BoomerangExampleTarget1";
     setupSoot(sootClassPath, mainClass);
     analyze();
   }

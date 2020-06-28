@@ -11,26 +11,22 @@
  */
 package boomerang.example;
 
-public class BoomerangExampleTarget {
+public class BoomerangExampleTarget2 {
   public static void main(String... args) {
     ClassWithField a = new ClassWithField();
-    a.field = new ObjectOfInterest();
     ClassWithField b = a;
     NestedClassWithField n = new NestedClassWithField();
     n.nested = b;
-    staticCallOnFile(a, n);
+    staticCallOnFile(n);
   }
 
-  private static void staticCallOnFile(ClassWithField x, NestedClassWithField n) {
-    ObjectOfInterest queryVariable = x.field;
-    // The analysis triggers a query for the following variable
-    queryFor(queryVariable);
+  private static void staticCallOnFile(NestedClassWithField n) {
+    System.out.println("Will print value 10");
+    System.out.println(n.nested.field);
   }
-
-  private static void queryFor(ObjectOfInterest queryVariable) {}
 
   public static class ClassWithField {
-    public ObjectOfInterest field;
+    public int field = 10;
   }
 
   public static class ObjectOfInterest {}
