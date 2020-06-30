@@ -53,8 +53,6 @@ public interface BoomerangOptions {
 
   int analysisTimeoutMS();
 
-  boolean isAllocationVal(Val val);
-
   // TODO remove icfg here.
   Optional<AllocVal> getAllocationVal(
       Method m, Statement stmt, Val fact, ObservableICFG<Statement, Method> icfg);

@@ -242,7 +242,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
   @Override
   protected Collection<State> computeNormalFlow(
       Method method, Statement curr, Val fact, Statement succ) {
-    if (options.isAllocationVal(fact)) {
+    if (options.getAllocationVal(method, curr, fact, icfg).isPresent()) {
       return Collections.emptySet();
     }
     if (curr.isThrowStmt()) {
