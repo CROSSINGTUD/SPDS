@@ -91,7 +91,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
   }
 
   public boolean trackStrings() {
-    return false;
+    return true;
   }
 
   public boolean trackNullAssignments() {

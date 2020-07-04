@@ -40,4 +40,29 @@ public class KeySensitiveTest extends AbstractBoomerangTest {
     Object t = x.get("key");
     queryFor(t);
   }
+
+  @Test
+  public void accessWithAliasedKey() {
+    AllocatedObject someValue = new Alloc();
+    Map<String,Object> x = new HashMap<>();
+    String key = "key";
+    x.put(key, someValue);
+    x.put("key2", new Object());
+    Object t = x.get(key);
+    queryFor(t);
+  }
+
+  @Test
+  public void accessWithKeyFromReturn() {
+    AllocatedObject someValue = new Alloc();
+    Map<String,Object> x = new HashMap<>();
+    x.put(getKey(), someValue);
+    x.put("key2", new Object());
+    Object t = x.get(getKey());
+    queryFor(t);
+  }
+
+  private String getKey() {
+    return "KEY";
+  }
 }

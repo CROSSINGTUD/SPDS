@@ -183,11 +183,32 @@ public abstract class WeightedBoomerang<W extends Weight> {
                       .registerListener(new EmptyFieldListener(key, node));
                 }
                 addVisitedMethod(node.stmt().getMethod());
+
+                handleMaps(node);
               });
           backwardSolverIns = backwardSolver;
           return backwardSolver;
         }
       };
+
+  protected void handleMaps(Node<Statement, Val> node){
+    if(node.stmt() instanceof ReturnSiteStatement){
+      ReturnSiteStatement rstmt = ((ReturnSiteStatement) node.stmt());
+      Statement unwrap = rstmt.unwrap();
+      if(unwrap.isAssign() && rstmt.getCallSiteStatement().getInvokeExpr().toString().contains("get")){
+        if(rstmt.getLeftOp().equals(node.fact())){
+          for(Statement s  : rstmt.getMethod().getControlFlowGraph().getPredsOf(rstmt.getCallSiteStatement())) {
+            System.out.println("YYET");
+            System.out.println(BackwardQuery
+                .make(s, rstmt.getCallSiteStatement().getInvokeExpr().getArg(0)));
+            backwardSolve(
+                BackwardQuery.make(s, rstmt.getCallSiteStatement().getInvokeExpr().getArg(0)));
+          }
+        }
+      }
+    }
+  }
+
   private BackwardBoomerangSolver<W> backwardSolverIns;
   private boolean solving;
 
@@ -841,8 +862,6 @@ public abstract class WeightedBoomerang<W extends Weight> {
       LOGGER.trace("Starting backward analysis of: {}", query);
       backwardSolve(query);
 
-      System.out.println(backwardSolverIns.getFieldAutomaton().toDotString());
-
     } catch (BoomerangTimeoutException e) {
       timedout = true;
       LOGGER.info("Timeout ({}) of query: {} ", analysisWatch, query);
@@ -881,6 +900,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
   private AbstractBoomerangSolver<W> forwardSolve(ForwardQuery query) {
     Statement stmt = query.asNode().stmt();
+    System.out.println(query);
     AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
     INode<Node<Statement, Val>> fieldTarget = solver.createQueryNodeField(query);
     INode<Val> callTarget = solver.generateCallState(new SingleNode<>(query.var()), query.stmt());
