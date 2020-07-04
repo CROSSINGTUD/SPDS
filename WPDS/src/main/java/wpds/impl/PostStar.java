@@ -139,7 +139,7 @@ public abstract class PostStar<N extends Location, D extends State, W extends We
     @Override
     public void onOutTransitionAdded(
         final Transition<N, D> t, W weight, WeightedPAutomaton<N, D, W> aut) {
-      if (t.getLabel().equals(popLabel)) {
+      if (t.getLabel().accepts(popLabel) || popLabel.accepts(t.getLabel())) {
         if (fa.isGeneratedState(t.getTarget())) {
           if (popLabel instanceof Empty) {
             throw new RuntimeException("IllegalState");

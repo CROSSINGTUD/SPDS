@@ -19,10 +19,10 @@ import boomerang.scene.Val;
 import boomerang.stats.IBoomerangStats;
 import boomerang.stats.SimpleBoomerangStats;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class DefaultBoomerangOptions implements BoomerangOptions {
 
@@ -33,7 +33,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
     if (trackNullAssignments() && val.isNull()) {
       return true;
     }
-    if (arrayFlows() && val.isArrayAllocationVal()) {
+    if (getArrayStrategy() != ArrayStrategy.DISABLED && val.isArrayAllocationVal()) {
       return true;
     }
     if (trackStrings() && val.isStringConstant()) {
@@ -52,8 +52,8 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
   }
 
   @Override
-  public boolean arrayFlows() {
-    return true;
+  public ArrayStrategy getArrayStrategy() {
+    return ArrayStrategy.INDEX_SENSITIVE;
   }
 
   @Override
@@ -102,15 +102,15 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
   public Optional<AllocVal> getAllocationVal(
       Method m, Statement stmt, Val fact, ObservableICFG<Statement, Method> icfg) {
     if (!stmt.isAssign()) {
-      return Optional.absent();
+      return Optional.empty();
     }
     if (!stmt.getLeftOp().equals(fact)) {
-      return Optional.absent();
+      return Optional.empty();
     }
     if (isAllocationVal(stmt.getRightOp())) {
       return Optional.of(new AllocVal(stmt.getLeftOp(), stmt, stmt.getRightOp()));
     }
-    return Optional.absent();
+    return Optional.empty();
   }
 
   @Override

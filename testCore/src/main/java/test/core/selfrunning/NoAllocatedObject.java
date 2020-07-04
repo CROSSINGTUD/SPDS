@@ -9,8 +9,6 @@
  * <p>Contributors: Johannes Spaeth - initial API and implementation
  * *****************************************************************************
  */
-package wpds.interfaces;
+package test.core.selfrunning;
 
-public interface Location {
-  boolean accepts(Location other);
-}
+public interface NoAllocatedObject {}

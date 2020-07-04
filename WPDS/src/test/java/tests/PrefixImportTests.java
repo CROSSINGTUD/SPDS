@@ -172,5 +172,10 @@ public class PrefixImportTests {
     private PrefixImportTests getOuterType() {
       return PrefixImportTests.this;
     }
+
+    @Override
+    public boolean accepts(Location other) {
+      return this.equals(other);
+    }
   }
 }

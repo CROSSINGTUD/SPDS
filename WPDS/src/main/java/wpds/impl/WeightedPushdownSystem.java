@@ -222,4 +222,9 @@ public class WeightedPushdownSystem<N extends Location, D extends State, W exten
   public void unregisterAllListeners() {
     listeners.clear();
   }
+
+  @Override
+  public boolean isForward() {
+    return true;
+  }
 }

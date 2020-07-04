@@ -50,4 +50,6 @@ public interface IPushdownSystem<N extends Location, D extends State, W extends 
   void registerUpdateListener(WPDSUpdateListener<N, D, W> listener);
 
   void unregisterAllListeners();
+
+  boolean isForward();
 }

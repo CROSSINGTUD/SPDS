@@ -679,6 +679,11 @@ public class DoublePDSTest {
     public Statement(int name) {
       super(Integer.toString(name));
     }
+
+    @Override
+    public boolean accepts(Location other) {
+      return this.equals(other);
+    }
   }
 
   private static class Variable extends StringBasedObj {
@@ -736,6 +741,11 @@ public class DoublePDSTest {
   private static class FieldRef extends StringBasedObj implements Location {
     public FieldRef(String name) {
       super(name);
+    }
+
+    @Override
+    public boolean accepts(Location other) {
+      return this.equals(other);
     }
   }
 
