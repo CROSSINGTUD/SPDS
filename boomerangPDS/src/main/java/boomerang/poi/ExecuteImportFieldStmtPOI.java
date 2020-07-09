@@ -552,9 +552,7 @@ public abstract class ExecuteImportFieldStmtPOI<W extends Weight> {
     INode<Node<Statement, Val>> intermediateState =
         flowSolver
             .getFieldAutomaton()
-            .createState(
-                new SingleNode<Node<Statement, Val>>(new Node<Statement, Val>(curr, baseVar)),
-                field);
+            .createState(new SingleNode<>(new Node<>(curr, baseVar)), field);
     Transition<Field, INode<Node<Statement, Val>>> connectingTrans =
         new Transition<Field, INode<Node<Statement, Val>>>(start, field, intermediateState);
     if (isLogEnabled()) {
