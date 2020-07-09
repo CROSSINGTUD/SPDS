@@ -77,6 +77,10 @@ public class Field implements Location {
     }
   }
 
+  public static Field string(String key) {
+    return new Field(key);
+  }
+
   public static Field epsilon() {
     return new EmptyField("eps_f");
   }

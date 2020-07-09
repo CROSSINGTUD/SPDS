@@ -24,10 +24,10 @@ public class AllocVal extends Val {
   public String toString() {
     if (allocStatement.isAssign()) {
       if (allocStatement.getRightOp().isIntConstant()) {
-        return Integer.toString(allocStatement.getRightOp().getIntValue());
+        return delegate + " Value (int): " + allocStatement.getRightOp().getIntValue();
       }
       if (allocStatement.getRightOp().isStringConstant()) {
-        return allocStatement.getRightOp().getStringValue();
+        return delegate + " Value (String): " + allocStatement.getRightOp().getStringValue();
       }
     }
     if (delegate == null) return "";

@@ -31,6 +31,8 @@ public interface BoomerangOptions {
 
   boolean trackImplicitFlows();
 
+  boolean handleMaps();
+
   enum StaticFieldStrategy {
     FLOW_SENSITIVE,
     SINGLETON,

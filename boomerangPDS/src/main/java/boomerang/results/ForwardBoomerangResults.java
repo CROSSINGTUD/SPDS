@@ -39,7 +39,6 @@ import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.State;
-import wpds.interfaces.WPAUpdateListener;
 
 public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerangResults<W> {
 
@@ -186,25 +185,18 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
         .get(query)
         .getFieldAutomaton()
         .registerListener(
-            new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
-
-              @Override
-              public void onWeightAdded(
-                  Transition<Field, INode<Node<Statement, Val>>> t,
-                  W w,
-                  WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-                if (!t.getLabel().equals(Field.empty()) || t.getStart() instanceof GeneratedState) {
-                  return;
-                }
-                Node<Statement, Val> node = t.getStart().fact();
-                Val fact = node.fact();
-                Statement curr = node.stmt();
-                if (curr.containsInvokeExpr()) {
-                  if (curr.getInvokeExpr().isInstanceInvokeExpr()) {
-                    Val base = curr.getInvokeExpr().getBase();
-                    if (base.equals(fact)) {
-                      invokedMethodsOnInstance.put(curr, curr.getInvokeExpr().getMethod());
-                    }
+            (t, w, aut) -> {
+              if (!t.getLabel().equals(Field.empty()) || t.getStart() instanceof GeneratedState) {
+                return;
+              }
+              Node<Statement, Val> node = t.getStart().fact();
+              Val fact = node.fact();
+              Statement curr = node.stmt();
+              if (curr.containsInvokeExpr()) {
+                if (curr.getInvokeExpr().isInstanceInvokeExpr()) {
+                  Val base = curr.getInvokeExpr().getBase();
+                  if (base.equals(fact)) {
+                    invokedMethodsOnInstance.put(curr, curr.getInvokeExpr().getMethod());
                   }
                 }
               }

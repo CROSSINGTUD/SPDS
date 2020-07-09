@@ -91,7 +91,7 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
   }
 
   public boolean trackStrings() {
-    return false;
+    return true;
   }
 
   public boolean trackNullAssignments() {
@@ -219,5 +219,10 @@ public class DefaultBoomerangOptions implements BoomerangOptions {
       throw new RuntimeException(
           "InvalidCombinations of Options, Path Conditions must be ables when pruning path conditions");
     }
+  }
+
+  @Override
+  public boolean handleMaps() {
+    return true;
   }
 }

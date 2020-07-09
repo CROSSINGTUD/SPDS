@@ -182,15 +182,13 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
   }
 
   protected void normalFlow(Method method, Node<Statement, Val> currNode) {
-    Set<State> out = Sets.newHashSet();
     Statement curr = currNode.stmt();
     Val value = currNode.fact();
     for (Statement succ : curr.getMethod().getControlFlowGraph().getPredsOf(curr)) {
       Collection<State> flow = computeNormalFlow(method, curr, value, succ);
-      out.addAll(flow);
-    }
-    for (State s : out) {
-      propagate(currNode, s);
+      for (State s : flow) {
+        propagate(currNode, s);
+      }
     }
   }
 

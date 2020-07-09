@@ -69,10 +69,14 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sync.pds.solver.SyncPDSSolver.PDSSystem;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.NodeWithLocation;
+import sync.pds.solver.nodes.PopNode;
+import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.NestedWeightedPAutomatons;
 import wpds.impl.Rule;
@@ -82,7 +86,6 @@ import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
-import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedBoomerang<W extends Weight> {
   protected ObservableICFG<Statement, Method> icfg;
@@ -183,11 +186,134 @@ public abstract class WeightedBoomerang<W extends Weight> {
                       .registerListener(new EmptyFieldListener(key, node));
                 }
                 addVisitedMethod(node.stmt().getMethod());
+
+                if (options.handleMaps()) {
+                  handleMapsBackward(node);
+                }
               });
           backwardSolverIns = backwardSolver;
           return backwardSolver;
         }
       };
+
+  private static final String MAP_PUT_SUB_SIGNATURE =
+      "<java.util.Map: java.lang.Object put(java.lang.Object,java.lang.Object)>";
+  private static final String MAP_GET_SUB_SIGNATURE =
+      "<java.util.Map: java.lang.Object get(java.lang.Object)>";
+
+  protected void handleMapsBackward(Node<Statement, Val> node) {
+    if (node.stmt() instanceof ReturnSiteStatement) {
+      ReturnSiteStatement rstmt = ((ReturnSiteStatement) node.stmt());
+      Statement unwrap = rstmt.unwrap();
+      if (unwrap.isAssign()
+          && rstmt
+              .getCallSiteStatement()
+              .getInvokeExpr()
+              .toString()
+              .contains(MAP_GET_SUB_SIGNATURE)) {
+        if (rstmt.getLeftOp().equals(node.fact())) {
+          for (Statement s :
+              rstmt.getMethod().getControlFlowGraph().getPredsOf(rstmt.getCallSiteStatement())) {
+
+            BackwardQuery bwq =
+                BackwardQuery.make(s, rstmt.getCallSiteStatement().getInvokeExpr().getArg(0));
+            backwardSolve(bwq);
+            for (ForwardQuery q : Lists.newArrayList(queryToSolvers.keySet())) {
+              if (queryToSolvers.get(q).getReachedStates().contains(bwq.asNode())) {
+                Val var = q.var();
+                AllocVal v = (AllocVal) var;
+                if (v.getAllocVal().isStringConstant()) {
+                  String key = v.getAllocVal().getStringValue();
+                  backwardSolverIns.propagate(
+                      node,
+                      new PushNode<>(
+                          s,
+                          rstmt.getCallSiteStatement().getInvokeExpr().getBase(),
+                          Field.string(key),
+                          PDSSystem.FIELDS));
+                }
+              }
+            }
+          }
+        }
+      }
+      if (rstmt.getCallSiteStatement().getInvokeExpr().toString().contains(MAP_PUT_SUB_SIGNATURE)) {
+        if (rstmt.getCallSiteStatement().getInvokeExpr().getBase().equals(node.fact())) {
+          for (Statement s :
+              rstmt.getMethod().getControlFlowGraph().getPredsOf(rstmt.getCallSiteStatement())) {
+            BackwardQuery bwq =
+                BackwardQuery.make(s, rstmt.getCallSiteStatement().getInvokeExpr().getArg(0));
+            backwardSolve(bwq);
+            for (ForwardQuery q : Lists.newArrayList(queryToSolvers.keySet())) {
+              if (queryToSolvers.get(q).getReachedStates().contains(bwq.asNode())) {
+                Val var = q.var();
+                AllocVal v = (AllocVal) var;
+                if (v.getAllocVal().isStringConstant()) {
+                  String key = v.getAllocVal().getStringValue();
+                  NodeWithLocation<Statement, Val, Field> succNode =
+                      new NodeWithLocation<>(
+                          s,
+                          rstmt.getCallSiteStatement().getInvokeExpr().getArg(1),
+                          Field.string(key));
+                  backwardSolverIns.propagate(node, new PopNode<>(succNode, PDSSystem.FIELDS));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  protected void handleMapsForward(ForwardBoomerangSolver<W> solver, Node<Statement, Val> node) {
+    if (node.stmt() instanceof CallSiteStatement) {
+      CallSiteStatement rstmt = ((CallSiteStatement) node.stmt());
+      Statement unwrap = rstmt.unwrap();
+      if (unwrap.isAssign() && rstmt.getInvokeExpr().toString().contains(MAP_GET_SUB_SIGNATURE)) {
+        if (rstmt.getInvokeExpr().getBase().equals(node.fact())) {
+          BackwardQuery bwq = BackwardQuery.make(rstmt, rstmt.getInvokeExpr().getArg(0));
+          backwardSolve(bwq);
+          for (ForwardQuery q : Lists.newArrayList(queryToSolvers.keySet())) {
+            if (queryToSolvers.get(q).getReachedStates().contains(bwq.asNode())) {
+              Val var = q.var();
+              AllocVal v = (AllocVal) var;
+              if (v.getAllocVal().isStringConstant()) {
+                String key = v.getAllocVal().getStringValue();
+                NodeWithLocation<Statement, Val, Field> succNode =
+                    new NodeWithLocation<>(
+                        rstmt.getReturnSiteStatement(), unwrap.getLeftOp(), Field.string(key));
+                solver.propagate(node, new PopNode<>(succNode, PDSSystem.FIELDS));
+              }
+            }
+          }
+        }
+      }
+      if (rstmt.getInvokeExpr().toString().contains(MAP_PUT_SUB_SIGNATURE)) {
+        if (rstmt.getInvokeExpr().getArg(1).equals(node.fact())) {
+
+          BackwardQuery bwq = BackwardQuery.make(rstmt, rstmt.getInvokeExpr().getArg(0));
+          backwardSolve(bwq);
+          for (ForwardQuery q : Lists.newArrayList(queryToSolvers.keySet())) {
+            if (queryToSolvers.get(q).getReachedStates().contains(bwq.asNode())) {
+              Val var = q.var();
+              AllocVal v = (AllocVal) var;
+              if (v.getAllocVal().isStringConstant()) {
+                String key = v.getAllocVal().getStringValue();
+                solver.propagate(
+                    node,
+                    new PushNode<>(
+                        rstmt.getReturnSiteStatement(),
+                        rstmt.getInvokeExpr().getBase(),
+                        Field.string(key),
+                        PDSSystem.FIELDS));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   private BackwardBoomerangSolver<W> backwardSolverIns;
   private boolean solving;
 
@@ -398,6 +524,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
           }
 
           addVisitedMethod(node.stmt().getMethod());
+
+          if (options.handleMaps()) {
+            handleMapsForward(solver, node);
+          }
         });
 
     return solver;
@@ -840,13 +970,11 @@ public abstract class WeightedBoomerang<W extends Weight> {
       queryGraph.addRoot(query);
       LOGGER.trace("Starting backward analysis of: {}", query);
       backwardSolve(query);
-
-      System.out.println(backwardSolverIns.getFieldAutomaton().toDotString());
-
     } catch (BoomerangTimeoutException e) {
       timedout = true;
       LOGGER.info("Timeout ({}) of query: {} ", analysisWatch, query);
     } catch (Throwable e) {
+      System.err.println("Boomerang CRASHED" + e);
       LOGGER.error("Boomerang crashed in {} ", e);
     }
     if (!options.allowMultipleQueries()) {
@@ -908,12 +1036,12 @@ public abstract class WeightedBoomerang<W extends Weight> {
         ForwardQueryArray arrayQuery = ((ForwardQueryArray) query);
         Node<Statement, Val> node =
             new Node<>(query.stmt(), ((AllocVal) query.var()).getDelegate());
-        SingleNode<Node<Statement, Val>> sourveVal = new SingleNode<>(node);
+        SingleNode<Node<Statement, Val>> sourceVal = new SingleNode<>(node);
         INode<Node<Statement, Val>> genState =
-            solver.generateFieldState(sourveVal, Field.array(arrayQuery.getIndex()));
+            solver.generateFieldState(sourceVal, Field.array(arrayQuery.getIndex()));
         insertTransition(
             solver.getFieldAutomaton(),
-            new Transition<>(sourveVal, Field.array(arrayQuery.getIndex()), genState));
+            new Transition<>(sourceVal, Field.array(arrayQuery.getIndex()), genState));
         insertTransition(
             solver.getFieldAutomaton(), new Transition<>(genState, Field.empty(), fieldTarget));
       }
@@ -985,7 +1113,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
           ForwardBoomerangSolver<W> solver = queryToSolvers.get(q);
           latticeEl = latticeEl.merge(solver.controlFlowStep(first, succ, succs));
         }
-        if (visited.add(new Pair<Statement, Statement>(first, succ))) {
+        if (visited.add(new Pair<>(first, succ))) {
           if (!(latticeEl instanceof KillElement)) {
             cfg.step(first, succ);
             worklist.add(succ);

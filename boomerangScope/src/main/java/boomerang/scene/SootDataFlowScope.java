@@ -20,15 +20,8 @@ public class SootDataFlowScope {
   private static final String TO_STRING_SUB_SIG = "java.lang.String toString()";
   private static final String EQUALS_SUB_SIG = "boolean equals(java.lang.Object)";
   private static final String CLONE_SIG = "java.lang.Object clone()";
-  public static Predicate<SootClass>[] classFilters =
-      new Predicate[] {new MapFilter(), new IterableFilter()};
-  public static Predicate<SootMethod>[] methodFilters =
-      new Predicate[] {
-        new SubSignatureFilter(HASH_CODE_SUB_SIG),
-        new SubSignatureFilter(TO_STRING_SUB_SIG),
-        new SubSignatureFilter(EQUALS_SUB_SIG),
-        new SubSignatureFilter(CLONE_SIG)
-      };
+  public static Predicate<SootClass>[] classFilters;
+  public static Predicate<SootMethod>[] methodFilters;
 
   /**
    * Default data-flow scope that only excludes phantom and native methods.
@@ -37,6 +30,7 @@ public class SootDataFlowScope {
    * @return
    */
   public static DataFlowScope make(Scene scene) {
+    reset();
     return new DataFlowScope() {
       @Override
       public boolean isExcluded(DeclaredMethod method) {
@@ -56,6 +50,7 @@ public class SootDataFlowScope {
    * java.util.Maps and com.google.common.collect.Multimap
    */
   public static DataFlowScope excludeComplex(Scene scene) {
+    reset();
     return new DataFlowScope() {
       @Override
       public boolean isExcluded(DeclaredMethod method) {
@@ -81,7 +76,7 @@ public class SootDataFlowScope {
           }
         }
         for (Predicate<SootMethod> f : methodFilters) {
-          if (f.apply((SootMethod) m.getDelegate())) {
+          if (f.apply(m.getDelegate())) {
             return true;
           }
         }
@@ -161,5 +156,16 @@ public class SootDataFlowScope {
     public boolean apply(SootMethod m) {
       return excludes.contains(m);
     }
+  }
+
+  private static void reset() {
+    classFilters = new Predicate[] {new MapFilter(), new IterableFilter()};
+    methodFilters =
+        new Predicate[] {
+          new SubSignatureFilter(HASH_CODE_SUB_SIG),
+          new SubSignatureFilter(TO_STRING_SUB_SIG),
+          new SubSignatureFilter(EQUALS_SUB_SIG),
+          new SubSignatureFilter(CLONE_SIG)
+        };
   }
 }

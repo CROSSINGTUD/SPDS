@@ -108,7 +108,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
         BoomerangPretransformer.v().reset();
         BoomerangPretransformer.v().apply();
         callGraph = new SootCallGraph();
-        dataFlowScope = SootDataFlowScope.make(Scene.v());
+        dataFlowScope = getDataFlowScope();
         analyzeWithCallGraph();
       }
     };
@@ -280,7 +280,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
     for (final Query query : queries) {
       BoomerangOptions options = createBoomerangOptions();
-      Boomerang solver = new Boomerang(callGraph, dataFlowScope, options);
+      Boomerang solver = new Boomerang(callGraph, getDataFlowScope(), options);
       if (query instanceof BackwardQuery) {
         Stopwatch watch = Stopwatch.createStarted();
         BackwardBoomerangResults<Weight.NoWeight> res = solver.solve((BackwardQuery) query);
@@ -303,6 +303,10 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
       }
     }
     return results;
+  }
+
+  protected DataFlowScope getDataFlowScope() {
+    return SootDataFlowScope.make(Scene.v());
   }
 
   protected BoomerangOptions createBoomerangOptions() {
