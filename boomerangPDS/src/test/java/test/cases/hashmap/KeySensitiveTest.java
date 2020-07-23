@@ -11,12 +11,9 @@
  */
 package test.cases.hashmap;
 
-import com.google.common.collect.Maps;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.Test;
-import test.cases.basic.Allocation;
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
@@ -34,7 +31,7 @@ public class KeySensitiveTest extends AbstractBoomerangTest {
   @Test
   public void directAccess2Keys() {
     AllocatedObject someValue = new Alloc();
-    Map<String,Object> x = new HashMap<>();
+    Map<String, Object> x = new HashMap<>();
     x.put("key", someValue);
     x.put("key2", new Object());
     Object t = x.get("key");
