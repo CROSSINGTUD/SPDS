@@ -29,6 +29,12 @@
             <organization>CodeShield GmbH</organization>
             <organizationUrl>https://codeshield.de/</organizationUrl>
         </developer>
+        <developer>
+            <name>Manuel Benz</name>
+            <email>manuel.benz@codeshield.de</email>
+            <organization>CodeShield GmbH</organization>
+            <organizationUrl>https://codeshield.de/</organizationUrl>
+        </developer>
     </developers>
 
     <modules>
