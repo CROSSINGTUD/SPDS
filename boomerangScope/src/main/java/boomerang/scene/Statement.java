@@ -266,7 +266,7 @@ public abstract class Statement implements Location {
     }
 
     @Override
-    public Val getArrayBase() {
+    public Pair<Val, Integer> getArrayBase() {
       // TODO Auto-generated method stub
       return null;
     }
@@ -453,7 +453,7 @@ public abstract class Statement implements Location {
 
   public abstract Collection<Val> getPhiVals();
 
-  public abstract Val getArrayBase();
+  public abstract Pair<Val, Integer> getArrayBase();
 
   @Override
   public int hashCode() {
@@ -488,6 +488,11 @@ public abstract class Statement implements Location {
   public abstract int getEndColumnNumber();
 
   public abstract boolean isCatchStmt();
+
+  @Override
+  public boolean accepts(Location other) {
+    return this.equals(other);
+  }
 
   public Statement unwrap() {
     if (this instanceof ReturnSiteStatement) {

@@ -7,6 +7,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
+  <groupId>de.codeshield</groupId>
     <artifactId>boomerangScope-WALA</artifactId>
 
     <properties>
@@ -16,6 +17,13 @@
         <dependency>
             <groupId>de.fraunhofer.iem</groupId>
             <artifactId>boomerangScope</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>de.fraunhofer.iem</groupId>
+      <artifactId>boomerangPDS</artifactId>
+  
+      <scope>test</scope>
         </dependency>
         <!-- wala  -->
         <dependency>

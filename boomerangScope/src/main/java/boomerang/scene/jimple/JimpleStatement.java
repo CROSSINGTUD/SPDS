@@ -131,6 +131,10 @@ public class JimpleStatement extends Statement {
       StaticFieldRef staticFieldRef = (StaticFieldRef) as.getLeftOp();
       return new JimpleField(staticFieldRef.getField());
     }
+
+    if (as.getLeftOp() instanceof ArrayRef) {
+      return Field.array(getArrayBase().getY());
+    }
     InstanceFieldRef ifr = (InstanceFieldRef) as.getLeftOp();
     return new JimpleField(ifr.getField());
   }
@@ -139,6 +143,10 @@ public class JimpleStatement extends Statement {
     if (isAssign() && isFieldStore()) {
       Pair<Val, Field> instanceFieldRef = getFieldStore();
       return instanceFieldRef.getX().equals(base);
+    }
+    if (isAssign() && isArrayStore()) {
+      Pair<Val, Integer> arrayBase = getArrayBase();
+      return arrayBase.getX().equals(base);
     }
     return false;
   }
@@ -446,7 +454,7 @@ public class JimpleStatement extends Statement {
   }
 
   @Override
-  public Val getArrayBase() {
+  public Pair<Val, Integer> getArrayBase() {
     if (isArrayLoad()) {
       Val rightOp = getRightOp();
       return rightOp.getArrayBase();
