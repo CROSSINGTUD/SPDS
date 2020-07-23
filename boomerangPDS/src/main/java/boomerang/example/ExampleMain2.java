@@ -11,12 +11,10 @@
  */
 package boomerang.example;
 
-import boomerang.BackwardQuery;
 import boomerang.Boomerang;
 import boomerang.DefaultBoomerangOptions;
 import boomerang.ForwardQuery;
 import boomerang.Query;
-import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.scene.AllocVal;
 import boomerang.scene.AnalysisScope;
@@ -33,17 +31,14 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import polyglot.ast.Return;
 import soot.G;
 import soot.PackManager;
 import soot.Scene;
 import soot.SceneTransformer;
 import soot.SootClass;
-import soot.SootMethod;
 import soot.Transform;
 import soot.Transformer;
 import soot.options.Options;
-import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
 
 public class ExampleMain2 {
@@ -109,11 +104,11 @@ public class ExampleMain2 {
       c.setApplicationClass();
     }
 
-    //Force resolve inner classes, as the setup does currently not load them automatically.
-    c = Scene.v().forceResolve(mainClass+"$NestedClassWithField", SootClass.BODIES);
+    // Force resolve inner classes, as the setup does currently not load them automatically.
+    c = Scene.v().forceResolve(mainClass + "$NestedClassWithField", SootClass.BODIES);
     c.setApplicationClass();
 
-    c = Scene.v().forceResolve(mainClass+"$ClassWithField", SootClass.BODIES);
+    c = Scene.v().forceResolve(mainClass + "$ClassWithField", SootClass.BODIES);
     c.setApplicationClass();
   }
 
@@ -134,10 +129,15 @@ public class ExampleMain2 {
             new AnalysisScope(sootCallGraph) {
               @Override
               protected Collection<? extends Query> generate(Statement statement) {
-                if (statement.getMethod().toString().contains("ClassWithField") && statement.getMethod().isConstructor() && statement.isAssign()){
-                  if(statement.getRightOp().isIntConstant()) {
-                    return Collections
-                        .singleton(new ForwardQuery(statement, new AllocVal(statement.getLeftOp(), statement, statement.getRightOp())));
+                if (statement.getMethod().toString().contains("ClassWithField")
+                    && statement.getMethod().isConstructor()
+                    && statement.isAssign()) {
+                  if (statement.getRightOp().isIntConstant()) {
+                    return Collections.singleton(
+                        new ForwardQuery(
+                            statement,
+                            new AllocVal(
+                                statement.getLeftOp(), statement, statement.getRightOp())));
                   }
                 }
                 return Collections.emptySet();
@@ -155,15 +155,16 @@ public class ExampleMain2 {
           ForwardBoomerangResults<NoWeight> forwardBoomerangResults =
               solver.solve((ForwardQuery) query);
 
-          //3. Process forward results
-          Table<Statement, Val, NoWeight> results = forwardBoomerangResults
-              .asStatementValWeightTable();
-          for(Statement s : results.rowKeySet()){
-            // 4. Filter results based on your use statement, in our case the call of System.out.println(n.nested.field)
+          // 3. Process forward results
+          Table<Statement, Val, NoWeight> results =
+              forwardBoomerangResults.asStatementValWeightTable();
+          for (Statement s : results.rowKeySet()) {
+            // 4. Filter results based on your use statement, in our case the call of
+            // System.out.println(n.nested.field)
             if (s instanceof ReturnSiteStatement && s.toString().contains("println")) {
               // 5. Check that a propagated value is used at the particular statement.
-              for(Val reachingVal : results.row(s).keySet()){
-                if(s.uses(reachingVal)){
+              for (Val reachingVal : results.row(s).keySet()) {
+                if (s.uses(reachingVal)) {
                   System.out.println(query + " reaches " + s);
                 }
               }
