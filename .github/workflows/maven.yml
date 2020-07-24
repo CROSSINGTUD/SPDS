@@ -42,7 +42,7 @@ jobs:
           
           maven-repo-server-id: CodeShield-Security
           maven-repo-server-username: ${{ secrets.CI_USER }}
-          maven-repo-server-password: ${{ secrets.CI_USER_PW }}
+          maven-repo-server-password: ${{ secrets.GITHUB_ACCESS_TOKEN }}
 
           git-release-bot-name:  ${{ secrets.CI_USER }}
           git-release-bot-email: "admin@codeshield.de"
