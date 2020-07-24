@@ -125,6 +125,9 @@
                 <version>3.1.1</version>
                 <configuration>
                     <source>8</source>
+                    <additionalOptions>
+                        <additionalOption>-Xdoclint:none</additionalOption>
+                    </additionalOptions>
                 </configuration>
                 <executions>
                     <execution>
