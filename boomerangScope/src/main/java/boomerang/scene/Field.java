@@ -11,7 +11,6 @@
  */
 package boomerang.scene;
 
-import com.google.common.base.Objects;
 import wpds.interfaces.Empty;
 import wpds.interfaces.Location;
 import wpds.wildcard.ExclusionWildcard;
@@ -81,9 +80,8 @@ public class Field implements Location {
     return new EmptyField("eps_f");
   }
 
-  public static Field array(int index) {
-    if (index == -1) return new ArrayField();
-    return new ArrayField(index);
+  public static Field array() {
+    return new Field("array");
   }
 
   private static class WildcardField extends Field implements Wildcard {
@@ -141,64 +139,8 @@ public class Field implements Location {
     }
   }
 
-  public static class ArrayField extends Field {
-    int index = -1;
-
-    private ArrayField(int index) {
-      super("array");
-      if (index < 0) {
-        throw new RuntimeException("Illegal Array field construction");
-      }
-      this.index = index;
-    }
-
-    public ArrayField() {
-      super("array");
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      if (!super.equals(o)) {
-        return false;
-      }
-      ArrayField that = (ArrayField) o;
-      return index == that.index;
-    }
-
-    @Override
-    public String toString() {
-      return super.toString() + (index == -1 ? " ANY_INDEX" : "Index: " + index);
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hashCode(super.hashCode(), index);
-    }
-
-    @Override
-    public boolean accepts(Location other) {
-      if (this.equals(other)) return true;
-      return index == -1 && other instanceof ArrayField;
-    }
-
-    public int getIndex() {
-      return index;
-    }
-  }
-
   public static Field exclusionWildcard(Field exclusion) {
     return new ExclusionWildcardField(exclusion);
-  }
-
-  @Override
-  public boolean accepts(Location other) {
-    return this.equals(other);
   }
 
   public boolean isInnerClassField() {

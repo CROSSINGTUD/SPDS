@@ -12,18 +12,18 @@
 package boomerang;
 
 import boomerang.callgraph.BoomerangResolver;
-import boomerang.callgraph.ICallerCalleeResolutionStrategy.Factory;
+import boomerang.callgraph.ICallerCalleeResolutionStrategy;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.scene.AllocVal;
 import boomerang.scene.Method;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.stats.IBoomerangStats;
-import java.util.Optional;
+import com.google.common.base.Optional;
 
 public interface BoomerangOptions {
 
-  default Factory getResolutionStrategy() {
+  default ICallerCalleeResolutionStrategy.Factory getResolutionStrategy() {
     return BoomerangResolver.FACTORY;
   }
 
@@ -39,13 +39,7 @@ public interface BoomerangOptions {
 
   StaticFieldStrategy getStaticFieldStrategy();
 
-  enum ArrayStrategy {
-    DISABLED,
-    INDEX_SENSITIVE,
-    INDEX_INSENSITIVE
-  }
-
-  ArrayStrategy getArrayStrategy();
+  boolean arrayFlows();
 
   boolean typeCheck();
 
@@ -58,6 +52,8 @@ public interface BoomerangOptions {
   boolean fieldSummaries();
 
   int analysisTimeoutMS();
+
+  boolean isAllocationVal(Val val);
 
   // TODO remove icfg here.
   Optional<AllocVal> getAllocationVal(

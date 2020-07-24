@@ -12,7 +12,6 @@
 package boomerang.scene.jimple;
 
 import boomerang.scene.Method;
-import boomerang.scene.Pair;
 import boomerang.scene.Statement;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Type;
@@ -151,12 +150,8 @@ public class JimpleVal extends Val {
   }
 
   @Override
-  public Pair<Val, Integer> getArrayBase() {
-    return new Pair<>(
-        new JimpleVal(((ArrayRef) v).getBase(), m),
-        ((ArrayRef) v).getIndex() instanceof IntConstant
-            ? ((IntConstant) ((ArrayRef) v).getIndex()).value
-            : -1);
+  public Val getArrayBase() {
+    return new JimpleVal(((ArrayRef) v).getBase(), m);
   }
 
   public boolean isInstanceOfExpr() {

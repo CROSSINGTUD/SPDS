@@ -13,7 +13,6 @@ package boomerang.scene.jimple;
 
 import boomerang.scene.Field;
 import boomerang.scene.Method;
-import boomerang.scene.Pair;
 import boomerang.scene.Statement;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Type;
@@ -191,7 +190,7 @@ public class JimpleStaticFieldVal extends StaticFieldVal {
   }
 
   @Override
-  public Pair<Val, Integer> getArrayBase() {
+  public Val getArrayBase() {
     return null;
   }
 

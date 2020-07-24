@@ -163,7 +163,7 @@ public class CallSiteStatement extends Statement {
     return delegate.getPhiVals();
   }
 
-  public Pair<Val, Integer> getArrayBase() {
+  public Val getArrayBase() {
     return delegate.getArrayBase();
   }
 

@@ -12,7 +12,6 @@
 package test.cases.array;
 
 import org.junit.Test;
-import test.cases.array.ArrayTest.NoAllocation;
 import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
@@ -58,14 +57,14 @@ public class ArrayContainerTest extends AbstractBoomerangTest {
   @Test
   public void insertAndGetDouble() {
     ArrayOfArrayOfContainers outerContainer = new ArrayOfArrayOfContainers();
-    ArrayContainer innerContainer1 = new ArrayContainer();
-    Object o1 = new NoAllocation();
-    innerContainer1.put(o1);
+    ArrayContainer container = new ArrayContainer();
+    Object o1 = new Object();
+    container.put(o1);
     AllocatedObject o2 = new Alloc();
-    innerContainer1.put(o2);
-    outerContainer.put(innerContainer1);
-    ArrayContainer innerContainer2 = outerContainer.get();
-    AllocatedObject alias = innerContainer2.get();
+    container.put(o2);
+    outerContainer.put(container);
+    ArrayContainer aliasContainer = outerContainer.get();
+    AllocatedObject alias = aliasContainer.get();
     queryFor(alias);
   }
 

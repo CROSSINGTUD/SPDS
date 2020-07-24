@@ -18,7 +18,6 @@ import boomerang.WeightedBoomerang;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.scene.Field;
-import boomerang.scene.Field.ArrayField;
 import boomerang.scene.Method;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
@@ -38,8 +37,11 @@ import sync.pds.solver.nodes.Node;
 import wpds.impl.Rule;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
+import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.Location;
 import wpds.interfaces.State;
+import wpds.interfaces.WPAUpdateListener;
+import wpds.interfaces.WPDSUpdateListener;
 
 public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats<W> {
 
@@ -63,18 +65,23 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
   private Set<Method> fieldVisitedMethods = Sets.newHashSet();
   private int arrayFlows;
   private int staticFlows;
+  private int fieldWritePOIs;
+  private int fieldReadPOIs;
   private boolean COUNT_TOP_METHODS = false;
   private Map<String, Integer> backwardFieldMethodsRules = new TreeMap<>();
   private Map<String, Integer> backwardCallMethodsRules = new TreeMap<>();
 
   private Map<String, Integer> forwardFieldMethodsRules = new TreeMap<>();
   private Map<String, Integer> forwardCallMethodsRules = new TreeMap<>();
+  private long maxMemory;
 
   public static <K> Map<K, Integer> sortByValues(final Map<K, Integer> map) {
     Comparator<K> valueComparator =
-        (k1, k2) -> {
-          if (map.get(k2) > map.get(k1)) return 1;
-          else return -1;
+        new Comparator<K>() {
+          public int compare(K k1, K k2) {
+            if (map.get(k2) > map.get(k1)) return 1;
+            else return -1;
+          }
         };
     Map<K, Integer> sortedByValues = new TreeMap<K, Integer>(valueComparator);
     sortedByValues.putAll(map);
@@ -90,57 +97,78 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
     solver
         .getFieldAutomaton()
         .registerListener(
-            (t, w, aut) -> {
-              if (!globalFieldTransitions.add(new WeightedTransition<>(t, w))) {
-                fieldTransitionCollisions++;
-              }
-              fieldVisitedMethods.add(t.getStart().fact().stmt().getMethod());
-              if (t.getLabel() instanceof ArrayField) {
-                arrayFlows++;
+            new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
+              @Override
+              public void onWeightAdded(
+                  Transition<Field, INode<Node<Statement, Val>>> t,
+                  W w,
+                  WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+                if (!globalFieldTransitions.add(
+                    new WeightedTransition<Field, INode<Node<Statement, Val>>, W>(t, w))) {
+                  fieldTransitionCollisions++;
+                }
+                fieldVisitedMethods.add(t.getStart().fact().stmt().getMethod());
+                if (t.getLabel().equals(Field.array())) {
+                  arrayFlows++;
+                }
               }
             });
 
     solver
         .getCallAutomaton()
         .registerListener(
-            (t, w, aut) -> {
-              if (!globalCallTransitions.add(new WeightedTransition<>(t, w))) {
-                callTransitionCollisions++;
-              }
-              callVisitedMethods.add(t.getLabel().getMethod());
+            new WPAUpdateListener<Statement, INode<Val>, W>() {
+              @Override
+              public void onWeightAdded(
+                  Transition<Statement, INode<Val>> t,
+                  W w,
+                  WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+                if (!globalCallTransitions.add(
+                    new WeightedTransition<Statement, INode<Val>, W>(t, w))) {
+                  callTransitionCollisions++;
+                }
+                callVisitedMethods.add(t.getLabel().getMethod());
 
-              if (t.getStart().fact().isStatic()) {
-                staticFlows++;
+                if (t.getStart().fact().isStatic()) {
+                  staticFlows++;
+                }
               }
             });
 
     solver
         .getFieldPDS()
         .registerUpdateListener(
-            rule -> {
-              if (!globalFieldRules.add(rule)) {
-                fieldRulesCollisions++;
-              } else if (COUNT_TOP_METHODS) {
-                increaseMethod(
-                    rule.getS1().fact().stmt().getMethod().toString(),
-                    (solver instanceof BackwardBoomerangSolver
-                        ? backwardFieldMethodsRules
-                        : forwardFieldMethodsRules));
+            new WPDSUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
+              @Override
+              public void onRuleAdded(Rule<Field, INode<Node<Statement, Val>>, W> rule) {
+                if (!globalFieldRules.add(rule)) {
+                  fieldRulesCollisions++;
+                } else if (COUNT_TOP_METHODS) {
+                  increaseMethod(
+                      rule.getS1().fact().stmt().getMethod().toString(),
+                      (solver instanceof BackwardBoomerangSolver
+                          ? backwardFieldMethodsRules
+                          : forwardFieldMethodsRules));
+                }
               }
             });
     solver
         .getCallPDS()
         .registerUpdateListener(
-            rule -> {
-              if (!globalCallRules.add(rule)) {
-                callRulesCollisions++;
+            new WPDSUpdateListener<Statement, INode<Val>, W>() {
 
-              } else if (COUNT_TOP_METHODS) {
-                increaseMethod(
-                    rule.getL1().getMethod().toString(),
-                    (solver instanceof BackwardBoomerangSolver
-                        ? backwardCallMethodsRules
-                        : forwardCallMethodsRules));
+              @Override
+              public void onRuleAdded(Rule<Statement, INode<Val>, W> rule) {
+                if (!globalCallRules.add(rule)) {
+                  callRulesCollisions++;
+
+                } else if (COUNT_TOP_METHODS) {
+                  increaseMethod(
+                      rule.getL1().getMethod().toString(),
+                      (solver instanceof BackwardBoomerangSolver
+                          ? backwardCallMethodsRules
+                          : forwardCallMethodsRules));
+                }
               }
             });
 
@@ -171,7 +199,9 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
   }
 
   @Override
-  public void registerFieldWritePOI(WeightedBoomerang<W>.FieldWritePOI key) {}
+  public void registerFieldWritePOI(WeightedBoomerang<W>.FieldWritePOI key) {
+    fieldWritePOIs++;
+  }
 
   public String toString() {
     String s = "=========== Boomerang Stats =============\n";

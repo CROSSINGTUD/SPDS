@@ -214,7 +214,7 @@ public abstract class Val {
             }
 
             @Override
-            public Pair<Val, Integer> getArrayBase() {
+            public Val getArrayBase() {
               // TODO Auto-generated method stub
               return null;
             }
@@ -317,7 +317,7 @@ public abstract class Val {
 
   public abstract long getLongValue();
 
-  public abstract Pair<Val, Integer> getArrayBase();
+  public abstract Val getArrayBase();
 
   public boolean isThisLocal() {
     return m().isStatic() ? false : m().getThisLocal().equals(this);

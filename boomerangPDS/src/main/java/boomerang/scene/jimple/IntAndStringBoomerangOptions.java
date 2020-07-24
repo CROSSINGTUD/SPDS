@@ -18,7 +18,7 @@ import boomerang.scene.DeclaredMethod;
 import boomerang.scene.Method;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
-import java.util.Optional;
+import com.google.common.base.Optional;
 
 public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
 
@@ -37,10 +37,10 @@ public class IntAndStringBoomerangOptions extends DefaultBoomerangOptions {
   public Optional<AllocVal> getAllocationVal(
       Method m, Statement stmt, Val fact, ObservableICFG<Statement, Method> icfg) {
     if (!(stmt.isAssign())) {
-      return Optional.empty();
+      return Optional.absent();
     }
     if (!stmt.getLeftOp().equals(fact)) {
-      return Optional.empty();
+      return Optional.absent();
     }
     if (stmt.getRightOp().isLengthExpr()) {
       return Optional.of(new AllocVal(stmt.getLeftOp(), stmt, stmt.getRightOp()));

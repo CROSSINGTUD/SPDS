@@ -1,19 +1,7 @@
-/**
- * ***************************************************************************** Copyright (c) 2020
- * CodeShield GmbH, Paderborn, Germany. This program and the accompanying materials are made
- * available under the terms of the Eclipse Public License 2.0 which is available at
- * http://www.eclipse.org/legal/epl-2.0.
- *
- * <p>SPDX-License-Identifier: EPL-2.0
- *
- * <p>Contributors: Johannes Spaeth - initial API and implementation
- * *****************************************************************************
- */
 package boomerang.scene.wala;
 
 import boomerang.scene.Field;
 import boomerang.scene.Method;
-import boomerang.scene.Pair;
 import boomerang.scene.Statement;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Type;
@@ -191,7 +179,7 @@ public class WALAStaticFieldVal extends StaticFieldVal {
   }
 
   @Override
-  public Pair<Val, Integer> getArrayBase() {
+  public Val getArrayBase() {
     // TODO Auto-generated method stub
     return null;
   }

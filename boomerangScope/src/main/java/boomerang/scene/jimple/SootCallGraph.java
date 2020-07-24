@@ -3,6 +3,7 @@ package boomerang.scene.jimple;
 import boomerang.scene.CallGraph;
 import boomerang.scene.CallSiteStatement;
 import boomerang.scene.Statement;
+import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import soot.Scene;
@@ -12,6 +13,7 @@ public class SootCallGraph extends CallGraph {
   Logger LOGGER = LoggerFactory.getLogger(SootCallGraph.class);
 
   public SootCallGraph() {
+    StopWatch watch = StopWatch.createStarted();
     soot.jimple.toolkits.callgraph.CallGraph callGraph = Scene.v().getCallGraph();
     for (soot.jimple.toolkits.callgraph.Edge e : callGraph) {
       if (e.src().hasActiveBody() && e.tgt().hasActiveBody() && e.srcStmt() != null) {
@@ -26,5 +28,6 @@ public class SootCallGraph extends CallGraph {
     for (SootMethod m : Scene.v().getEntryPoints()) {
       if (m.hasActiveBody()) this.addEntryPoint(JimpleMethod.of(m));
     }
+    LOGGER.debug("Converted Soot Call Graph to Boomerang Call Graph in {}", watch);
   }
 }

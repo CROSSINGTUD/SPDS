@@ -29,14 +29,13 @@ import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Type;
 import boomerang.scene.Val;
 import com.google.common.collect.Sets;
-import java.util.AbstractMap.SimpleEntry;
+import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sync.pds.solver.nodes.ExclusionNode;
 import sync.pds.solver.nodes.GeneratedState;
@@ -52,7 +51,8 @@ import wpds.impl.Weight;
 import wpds.interfaces.State;
 
 public abstract class BackwardBoomerangSolver<W extends Weight> extends AbstractBoomerangSolver<W> {
-  private static final Logger LOGGER = LoggerFactory.getLogger(BackwardBoomerangSolver.class);
+  private static final org.slf4j.Logger LOGGER =
+      LoggerFactory.getLogger(BackwardBoomerangSolver.class);
   private final BackwardQuery query;
 
   public BackwardBoomerangSolver(
@@ -88,11 +88,13 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
 
   public INode<Node<Statement, Val>> generateFieldState(
       final INode<Node<Statement, Val>> d, final Field loc) {
-    Entry<INode<Node<Statement, Val>>, Field> e = new SimpleEntry<>(d, loc);
+    Entry<INode<Node<Statement, Val>>, Field> e = new AbstractMap.SimpleEntry<>(d, loc);
     if (!generatedFieldState.containsKey(e)) {
       generatedFieldState.put(
           e,
-          new GeneratedState<>(new SingleNode<>(new Node<>(Statement.epsilon(), Val.zero())), loc));
+          new GeneratedState<Node<Statement, Val>, Field>(
+              new SingleNode<Node<Statement, Val>>(new Node<>(Statement.epsilon(), Val.zero())),
+              loc));
     }
     return generatedFieldState.get(e);
   }
@@ -240,7 +242,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
   @Override
   protected Collection<State> computeNormalFlow(
       Method method, Statement curr, Val fact, Statement succ) {
-    if (options.getAllocationVal(method, curr, fact, icfg).isPresent()) {
+    if (options.isAllocationVal(fact)) {
       return Collections.emptySet();
     }
     if (curr.isThrowStmt()) {
@@ -268,9 +270,9 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
                 .handleBackward(curr, curr.getLeftOp(), curr.getStaticField(), succ, out, this);
           }
         } else if (rightOp.isArrayRef()) {
-          Pair<Val, Integer> arrayBase = curr.getArrayBase();
-          if (options.trackFields()) {
-            strategies.getArrayHandlingStrategy().handleBackward(curr, arrayBase, succ, out, this);
+          Val arrayBase = curr.getArrayBase();
+          if (options.trackFields() && options.arrayFlows()) {
+            out.add(new PushNode<>(succ, arrayBase, Field.array(), PDSSystem.FIELDS));
           }
           // leftSideMatches = false;
         } else if (rightOp.isCast()) {
@@ -292,6 +294,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
         Pair<Val, Field> ifr = curr.getFieldStore();
         Val base = ifr.getX();
         if (base.equals(fact)) {
+          //                	leftSideMatches = true;
           NodeWithLocation<Statement, Val, Field> succNode =
               new NodeWithLocation<>(succ, rightOp, ifr.getY());
           out.add(new PopNode<>(succNode, PDSSystem.FIELDS));
@@ -302,10 +305,10 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
           out.add(new Node<>(succ, rightOp));
         }
       } else if (leftOp.isArrayRef()) {
-        Pair<Val, Integer> arrayBase = curr.getArrayBase();
-        if (arrayBase.getX().equals(fact)) {
+        Val arrayBase = curr.getArrayBase();
+        if (arrayBase.equals(fact)) {
           NodeWithLocation<Statement, Val, Field> succNode =
-              new NodeWithLocation<>(succ, rightOp, Field.array(arrayBase.getY()));
+              new NodeWithLocation<>(succ, rightOp, Field.array());
           out.add(new PopNode<>(succNode, PDSSystem.FIELDS));
         }
       }

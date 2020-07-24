@@ -171,9 +171,4 @@ public abstract class Method implements Location {
     }
     return returnLocals;
   }
-
-  @Override
-  public boolean accepts(Location other) {
-    return this.equals(other);
-  }
 }

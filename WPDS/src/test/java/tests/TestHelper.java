@@ -212,10 +212,5 @@ public class TestHelper {
     public String toString() {
       return s;
     }
-
-    @Override
-    public boolean accepts(Location other) {
-      return this.equals(other);
-    }
   }
 }

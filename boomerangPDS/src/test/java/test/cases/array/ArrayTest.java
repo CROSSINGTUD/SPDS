@@ -15,19 +15,16 @@ import org.junit.Ignore;
 import org.junit.Test;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
-import test.core.selfrunning.NoAllocatedObject;
 
 public class ArrayTest extends AbstractBoomerangTest {
 
   public static class A implements AllocatedObject {}
 
-  public static class NoAllocation implements NoAllocatedObject {}
-
   @Test
   public void simpleAssignment() {
     Object[] array = new Object[3];
     A alias = new A();
-    array[2] = alias;
+    array[1] = alias;
     Object query = array[2];
     queryFor(query);
   }
@@ -36,10 +33,10 @@ public class ArrayTest extends AbstractBoomerangTest {
   public void indexInsensitive() {
     Object[] array = new Object[3];
     A alias1 = new A();
-    NoAllocation alias2 = new NoAllocation();
+    A alias2 = new A();
     array[1] = alias1;
     array[2] = alias2;
-    Object query = array[1];
+    Object query = array[2];
     queryFor(query);
   }
 
@@ -48,7 +45,7 @@ public class ArrayTest extends AbstractBoomerangTest {
     Object[][] array = new Object[3][3];
     array[1][2] = new A();
     array[2][3] = new Object();
-    Object query = array[1][2];
+    Object query = array[3][3];
     queryFor(query);
   }
 
@@ -59,11 +56,11 @@ public class ArrayTest extends AbstractBoomerangTest {
     Object alloc = new A();
     load[2] = alloc;
     Object[] unrelatedLoad = array[2];
-    Object unrelatedAlloc = new NoAllocation();
+    Object unrelatedAlloc = new Object();
     unrelatedLoad[3] = unrelatedAlloc;
 
-    Object[] els = array[1];
-    Object query = els[2];
+    Object[] els = array[3];
+    Object query = els[3];
     queryFor(query);
   }
 
@@ -84,7 +81,7 @@ public class ArrayTest extends AbstractBoomerangTest {
     A alias = new A();
     originalArray[1] = alias;
     System.arraycopy(originalArray, 0, copiedArray, 0, 1);
-    Object query = copiedArray[1];
+    Object query = copiedArray[3];
     queryFor(query);
   }
 

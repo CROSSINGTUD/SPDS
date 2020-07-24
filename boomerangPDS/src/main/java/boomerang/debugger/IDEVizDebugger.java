@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.slf4j.Logger;
@@ -397,14 +398,14 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W> {
   private class JSONMethod extends JSONObject {
 
     JSONMethod(Method m) {
-      this.put("methodName", m.toString());
+      this.put("methodName", StringEscapeUtils.escapeHtml4(m.toString()));
       this.put("id", id(m));
     }
   }
 
   private class JSONQuery extends JSONObject {
     JSONQuery(Query m) {
-      this.put("query", prettyPrintQuery(m));
+      this.put("query", StringEscapeUtils.escapeHtml4(prettyPrintQuery(m)));
       this.put("id", id(m));
     }
 
