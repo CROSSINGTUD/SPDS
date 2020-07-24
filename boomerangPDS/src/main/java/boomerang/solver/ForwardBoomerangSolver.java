@@ -151,7 +151,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
         Transition<Field, INode<Node<Statement, Val>>> t,
         W w,
         WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-      if (t.getLabel().equals(Field.array())) {
+      if (t.getLabel().equals(Field.array(nextStmt.getArrayBase().getY()))) {
         LOGGER.trace("Overwriting field {} at {}", t.getLabel(), nextStmt);
         overwriteFieldAtStatement(nextStmt, t);
       }
@@ -457,7 +457,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
     if ((nextStmt.isFieldStore() && nextStmt.getFieldStore().getX().equals(value))) {
       Node<Statement, Val> node = new Node<>(curr, value);
       fieldAutomaton.registerListener(new OverwriteAtFieldStore(new SingleNode<>(node), nextStmt));
-    } else if ((nextStmt.isArrayStore() && nextStmt.getArrayBase().equals(value))) {
+    } else if ((nextStmt.isArrayStore() && nextStmt.getArrayBase().getX().equals(value))) {
       Node<Statement, Val> node = new Node<>(curr, value);
       fieldAutomaton.registerListener(new OverwriteAtArrayStore(new SingleNode<>(node), nextStmt));
     }
@@ -479,7 +479,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
         out.add(new Node<>(succ, fact));
       }
     } else {
-      out.add(new ExclusionNode<Statement, Val, Field>(succ, fact, succ.getWrittenField()));
+      out.add(new ExclusionNode<>(succ, fact, succ.getWrittenField()));
     }
     if (succ.isAssign()) {
       Val leftOp = succ.getLeftOp();
@@ -498,9 +498,9 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
             strategies.getStaticFieldStrategy().handleForward(succ, rightOp, sf, out, this);
           }
         } else if (leftOp.isArrayRef()) {
-          Val arrayBase = succ.getArrayBase();
-          if (options.trackFields() && options.arrayFlows()) {
-            out.add(new PushNode<>(succ, arrayBase, Field.array(), PDSSystem.FIELDS));
+          Pair<Val, Integer> arrayBase = succ.getArrayBase();
+          if (options.trackFields()) {
+            strategies.getArrayHandlingStrategy().handleForward(succ, arrayBase, out, this);
           }
         } else {
           out.add(new Node<>(succ, leftOp));
@@ -519,10 +519,10 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
           out.add(new Node<>(succ, leftOp));
         }
       } else if (rightOp.isArrayRef()) {
-        Val arrayBase = succ.getArrayBase();
-        if (arrayBase.equals(fact)) {
+        Pair<Val, Integer> arrayBase = succ.getArrayBase();
+        if (arrayBase.getX().equals(fact)) {
           NodeWithLocation<Statement, Val, Field> succNode =
-              new NodeWithLocation<>(succ, leftOp, Field.array());
+              new NodeWithLocation<>(succ, leftOp, Field.array(arrayBase.getY()));
 
           //                    out.add(new Node<Statement, Val>(succ, leftOp));
           out.add(new PopNode<>(succNode, PDSSystem.FIELDS));

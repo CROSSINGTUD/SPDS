@@ -182,7 +182,7 @@ public class AllocVal extends Val {
   }
 
   @Override
-  public Val getArrayBase() {
+  public Pair<Val, Integer> getArrayBase() {
     return delegate.getArrayBase();
   }
 

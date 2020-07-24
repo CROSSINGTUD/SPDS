@@ -1,0 +1,2 @@
+Primordial,Java,stdlib,none
+Application,Java,binaryDir,<ADD_ABSOLUTE_PATH_PREFIX>/target/test-classes
