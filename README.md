@@ -1,6 +1,6 @@
 # WPDS
 
-![Java CI with Maven](https://github.com/CodeShield-Security/SPDS/workflows/Java%20CI%20with%20Maven/badge.svg?branch=master)
+[![Java CI with Maven](https://github.com/CodeShield-Security/SPDS/workflows/Java%20CI%20with%20Maven/badge.svg?branch=master)](https://github.com/CodeShield-Security/SPDS/actions)
 
 This repository contains a Java implementation of Weighted Pushdown Systems.
 Additionally, it contains an implementation of [Boomerang](boomerangPDS) and [IDEal](idealPDS) based on a Weighted Pushdown System.
