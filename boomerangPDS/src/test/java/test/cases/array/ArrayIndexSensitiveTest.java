@@ -90,5 +90,4 @@ public class ArrayIndexSensitiveTest extends AbstractBoomerangTest {
     Object q = array2[1];
     queryFor(q);
   }
-
 }
