@@ -40,7 +40,7 @@ jobs:
           gpg-key-id: ${{ secrets.GPG_KEY_ID }}
           gpg-key: ${{ secrets.GPG_KEY }}
           
-          maven-repo-server-id: CodeShield-Security
+          maven-repo-server-id: github
           maven-repo-server-username: ${{ secrets.CI_USER }}
           maven-repo-server-password: ${{ secrets.CI_PACKAGES_TOKEN }}
 
