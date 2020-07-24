@@ -17,7 +17,7 @@ To include a dependency from this repository to your poject, you first have to a
   <dependency>
     <groupId>de.fraunhofer.iem</groupId>
     <artifactId>WPDS</artifactId>
-    <version>3.4.0-SNAPSHOT</version>
+    <version>3.0.5</version>
   </dependency>
 </dependencies>
 <repositories>
