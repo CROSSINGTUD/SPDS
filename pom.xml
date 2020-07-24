@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.fraunhofer.iem</groupId>
     <artifactId>SPDS</artifactId>
-    <version>3.0.8</version>
+    <version>3.0.9-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>SPDS</name>
 
@@ -18,7 +18,7 @@
     <scm>
         <connection>scm:git:https://github.com/CodeShield-Security/SPDS.git</connection>
         <url>https://github.com/CodeShield-Security/SPDS</url>
-        <tag>SPDS-3.0.8</tag>
+        <tag>SPDS-${project.version}</tag>
     </scm>
 
     <developers>
