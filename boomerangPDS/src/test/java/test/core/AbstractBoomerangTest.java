@@ -26,7 +26,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import java.io.File;
 import java.math.BigInteger;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -34,12 +33,12 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import soot.Scene;
 import soot.SceneTransformer;
-import soot.SootMethod;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.INode;
@@ -53,11 +52,24 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
 
 public class AbstractBoomerangTest extends AbstractTestingFramework {
-  private static final boolean FAIL_ON_IMPRECISE = false;
+
+  /**
+   * Fails the test cases, when any instance of the interface {@link
+   * test.core.selfrunning.NoAllocatedObject} is detected.
+   */
+  private static final boolean FAIL_ON_IMPRECISE = true;
+
+  /**
+   * Fails the test cases, when Boomerang's result set contains any object that does not inherit
+   * from {@link test.core.selfrunning.AllocatedObject}.
+   */
+  private static final boolean TRACK_IMPLICIT_IMPRECISE = false;
+
   private static final Logger LOGGER = LoggerFactory.getLogger(AbstractBoomerangTest.class);
 
   private QueryForCallSiteDetector queryDetector;
-  private Collection<? extends Query> allocationSites;
+  private Collection<? extends Query> expectedAllocationSites;
+  private Collection<? extends Node<Statement, Val>> explicitlyUnexpectedAllocationSites;
   protected Collection<? extends Query> queryForCallSites;
   protected Collection<Error> unsoundErrors = Sets.newHashSet();
   protected Collection<Error> imprecisionErrors = Sets.newHashSet();
@@ -83,10 +95,6 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
     return 1;
   }
 
-  protected SootMethod sootTestMethod;
-  protected File ideVizFile;
-  protected File dotFile;
-
   @Before
   public void beforeTestCaseExecution() {
     super.beforeTestCaseExecution();
@@ -100,7 +108,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
         BoomerangPretransformer.v().reset();
         BoomerangPretransformer.v().apply();
         callGraph = new SootCallGraph();
-        dataFlowScope = SootDataFlowScope.make(Scene.v());
+        dataFlowScope = getDataFlowScope();
         analyzeWithCallGraph();
       }
     };
@@ -112,11 +120,16 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
     if (queryDetector.integerQueries) {
       Preanalysis an = new Preanalysis(callGraph, new IntegerAllocationSiteOf());
-      allocationSites = an.computeSeeds();
+      expectedAllocationSites = an.computeSeeds();
     } else {
       Preanalysis an =
           new Preanalysis(callGraph, new AllocationSiteOf("test.core.selfrunning.AllocatedObject"));
-      allocationSites = an.computeSeeds();
+      expectedAllocationSites = an.computeSeeds();
+      an =
+          new Preanalysis(
+              callGraph, new AllocationSiteOf("test.core.selfrunning.NoAllocatedObject"));
+      explicitlyUnexpectedAllocationSites =
+          an.computeSeeds().stream().map(x -> x.asNode()).collect(Collectors.toList());
     }
     for (int i = 0; i < getIterations(); i++) {
       for (AnalysisMode analysis : getAnalyses()) {
@@ -159,25 +172,23 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
           @Override
           protected WeightFunctions<Statement, Val, Field, NoWeight> getForwardFieldWeights() {
-            return new OneWeightFunctions<Statement, Val, Field, NoWeight>(NoWeight.NO_WEIGHT_ONE);
+            return new OneWeightFunctions<>(NoWeight.NO_WEIGHT_ONE);
           }
 
           @Override
           protected WeightFunctions<Statement, Val, Field, NoWeight> getBackwardFieldWeights() {
-            return new OneWeightFunctions<Statement, Val, Field, NoWeight>(NoWeight.NO_WEIGHT_ONE);
+            return new OneWeightFunctions<>(NoWeight.NO_WEIGHT_ONE);
           }
 
           @Override
           protected WeightFunctions<Statement, Val, Statement, NoWeight> getBackwardCallWeights() {
-            return new OneWeightFunctions<Statement, Val, Statement, NoWeight>(
-                NoWeight.NO_WEIGHT_ONE);
+            return new OneWeightFunctions<>(NoWeight.NO_WEIGHT_ONE);
           }
 
           @Override
           protected WeightFunctions<Statement, Val, Statement, NoWeight> getForwardCallWeights(
               ForwardQuery sourceQuery) {
-            return new OneWeightFunctions<Statement, Val, Statement, NoWeight>(
-                NoWeight.NO_WEIGHT_ONE);
+            return new OneWeightFunctions<>(NoWeight.NO_WEIGHT_ONE);
           }
         };
     solver.wholeProgramAnalysis();
@@ -189,7 +200,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
             .getFieldAutomaton()
             .registerListener(
                 new WPAStateListener<Field, INode<Node<Statement, Val>>, NoWeight>(
-                    new SingleNode<Node<Statement, Val>>(queryForCallSite.asNode())) {
+                    new SingleNode<>(queryForCallSite.asNode())) {
 
                   @Override
                   public void onOutTransitionAdded(
@@ -219,7 +230,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
       }
     }
 
-    compareQuery(allocationSites, results, AnalysisMode.WholeProgram);
+    compareQuery(expectedAllocationSites, results, AnalysisMode.WholeProgram);
     System.out.println();
   }
 
@@ -229,7 +240,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
     if (queryDetector.integerQueries) {
       compareIntegerResults(backwardResults, AnalysisMode.DemandDrivenBackward);
     } else {
-      compareQuery(allocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
+      compareQuery(expectedAllocationSites, backwardResults, AnalysisMode.DemandDrivenBackward);
     }
   }
 
@@ -269,7 +280,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
     for (final Query query : queries) {
       BoomerangOptions options = createBoomerangOptions();
-      Boomerang solver = new Boomerang(callGraph, dataFlowScope, options);
+      Boomerang solver = new Boomerang(callGraph, getDataFlowScope(), options);
       if (query instanceof BackwardQuery) {
         Stopwatch watch = Stopwatch.createStarted();
         BackwardBoomerangResults<Weight.NoWeight> res = solver.solve((BackwardQuery) query);
@@ -294,27 +305,17 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
     return results;
   }
 
+  protected DataFlowScope getDataFlowScope() {
+    return SootDataFlowScope.make(Scene.v());
+  }
+
   protected BoomerangOptions createBoomerangOptions() {
     return (queryDetector.integerQueries
-        ? new IntAndStringBoomerangOptions() {
-          public boolean onTheFlyCallGraph() {
-            return false;
-          };
-        }
+        ? new IntAndStringBoomerangOptions()
         : new DefaultBoomerangOptions() {
-          @Override
-          public boolean arrayFlows() {
-            return true;
-          }
-
           @Override
           public int analysisTimeoutMS() {
             return analysisTimeout;
-          }
-
-          @Override
-          public boolean onTheFlyCallGraph() {
-            return false;
           }
         });
   }
@@ -343,12 +344,18 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
     if (!falseNegativeAllocationSites.isEmpty()) {
       unsoundErrors.add(new Error(analysis + " Unsound results for:" + answer));
     }
-    if (!falsePositiveAllocationSites.isEmpty())
+    if (TRACK_IMPLICIT_IMPRECISE && !falsePositiveAllocationSites.isEmpty())
       imprecisionErrors.add(new Error(analysis + " Imprecise results for:" + answer));
 
     if (queryDetector.resultsMustNotBeEmpty && results.isEmpty()) {
       throw new RuntimeException(
           "Expected some results, but Boomerang returned no allocation sites.");
+    }
+
+    for (Node<Statement, Val> r : results) {
+      if (explicitlyUnexpectedAllocationSites.contains(r)) {
+        imprecisionErrors.add(new Error(analysis + " Imprecise results for:" + answer));
+      }
     }
   }
 

@@ -11,6 +11,7 @@
  */
 package boomerang;
 
+import boomerang.BoomerangOptions.ArrayStrategy;
 import boomerang.callgraph.BackwardsObservableICFG;
 import boomerang.callgraph.ObservableDynamicICFG;
 import boomerang.callgraph.ObservableICFG;
@@ -33,6 +34,7 @@ import boomerang.scene.CallGraph;
 import boomerang.scene.CallSiteStatement;
 import boomerang.scene.DataFlowScope;
 import boomerang.scene.Field;
+import boomerang.scene.Field.ArrayField;
 import boomerang.scene.InvokeExpr;
 import boomerang.scene.Method;
 import boomerang.scene.Pair;
@@ -49,7 +51,6 @@ import boomerang.solver.StatementBasedFieldTransitionListener;
 import boomerang.solver.Strategies;
 import boomerang.stats.IBoomerangStats;
 import boomerang.util.DefaultValueMap;
-import com.google.common.base.Optional;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
@@ -63,14 +64,19 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sync.pds.solver.SyncPDSSolver.PDSSystem;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
+import sync.pds.solver.nodes.NodeWithLocation;
+import sync.pds.solver.nodes.PopNode;
+import sync.pds.solver.nodes.PushNode;
 import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.NestedWeightedPAutomatons;
 import wpds.impl.Rule;
@@ -80,7 +86,6 @@ import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
-import wpds.interfaces.WPAUpdateListener;
 
 public abstract class WeightedBoomerang<W extends Weight> {
   protected ObservableICFG<Statement, Method> icfg;
@@ -181,11 +186,134 @@ public abstract class WeightedBoomerang<W extends Weight> {
                       .registerListener(new EmptyFieldListener(key, node));
                 }
                 addVisitedMethod(node.stmt().getMethod());
+
+                if (options.handleMaps()) {
+                  handleMapsBackward(node);
+                }
               });
           backwardSolverIns = backwardSolver;
           return backwardSolver;
         }
       };
+
+  private static final String MAP_PUT_SUB_SIGNATURE =
+      "<java.util.Map: java.lang.Object put(java.lang.Object,java.lang.Object)>";
+  private static final String MAP_GET_SUB_SIGNATURE =
+      "<java.util.Map: java.lang.Object get(java.lang.Object)>";
+
+  protected void handleMapsBackward(Node<Statement, Val> node) {
+    if (node.stmt() instanceof ReturnSiteStatement) {
+      ReturnSiteStatement rstmt = ((ReturnSiteStatement) node.stmt());
+      Statement unwrap = rstmt.unwrap();
+      if (unwrap.isAssign()
+          && rstmt
+              .getCallSiteStatement()
+              .getInvokeExpr()
+              .toString()
+              .contains(MAP_GET_SUB_SIGNATURE)) {
+        if (rstmt.getLeftOp().equals(node.fact())) {
+          for (Statement s :
+              rstmt.getMethod().getControlFlowGraph().getPredsOf(rstmt.getCallSiteStatement())) {
+
+            BackwardQuery bwq =
+                BackwardQuery.make(s, rstmt.getCallSiteStatement().getInvokeExpr().getArg(0));
+            backwardSolve(bwq);
+            for (ForwardQuery q : Lists.newArrayList(queryToSolvers.keySet())) {
+              if (queryToSolvers.get(q).getReachedStates().contains(bwq.asNode())) {
+                Val var = q.var();
+                AllocVal v = (AllocVal) var;
+                if (v.getAllocVal().isStringConstant()) {
+                  String key = v.getAllocVal().getStringValue();
+                  backwardSolverIns.propagate(
+                      node,
+                      new PushNode<>(
+                          s,
+                          rstmt.getCallSiteStatement().getInvokeExpr().getBase(),
+                          Field.string(key),
+                          PDSSystem.FIELDS));
+                }
+              }
+            }
+          }
+        }
+      }
+      if (rstmt.getCallSiteStatement().getInvokeExpr().toString().contains(MAP_PUT_SUB_SIGNATURE)) {
+        if (rstmt.getCallSiteStatement().getInvokeExpr().getBase().equals(node.fact())) {
+          for (Statement s :
+              rstmt.getMethod().getControlFlowGraph().getPredsOf(rstmt.getCallSiteStatement())) {
+            BackwardQuery bwq =
+                BackwardQuery.make(s, rstmt.getCallSiteStatement().getInvokeExpr().getArg(0));
+            backwardSolve(bwq);
+            for (ForwardQuery q : Lists.newArrayList(queryToSolvers.keySet())) {
+              if (queryToSolvers.get(q).getReachedStates().contains(bwq.asNode())) {
+                Val var = q.var();
+                AllocVal v = (AllocVal) var;
+                if (v.getAllocVal().isStringConstant()) {
+                  String key = v.getAllocVal().getStringValue();
+                  NodeWithLocation<Statement, Val, Field> succNode =
+                      new NodeWithLocation<>(
+                          s,
+                          rstmt.getCallSiteStatement().getInvokeExpr().getArg(1),
+                          Field.string(key));
+                  backwardSolverIns.propagate(node, new PopNode<>(succNode, PDSSystem.FIELDS));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  protected void handleMapsForward(ForwardBoomerangSolver<W> solver, Node<Statement, Val> node) {
+    if (node.stmt() instanceof CallSiteStatement) {
+      CallSiteStatement rstmt = ((CallSiteStatement) node.stmt());
+      Statement unwrap = rstmt.unwrap();
+      if (unwrap.isAssign() && rstmt.getInvokeExpr().toString().contains(MAP_GET_SUB_SIGNATURE)) {
+        if (rstmt.getInvokeExpr().getBase().equals(node.fact())) {
+          BackwardQuery bwq = BackwardQuery.make(rstmt, rstmt.getInvokeExpr().getArg(0));
+          backwardSolve(bwq);
+          for (ForwardQuery q : Lists.newArrayList(queryToSolvers.keySet())) {
+            if (queryToSolvers.get(q).getReachedStates().contains(bwq.asNode())) {
+              Val var = q.var();
+              AllocVal v = (AllocVal) var;
+              if (v.getAllocVal().isStringConstant()) {
+                String key = v.getAllocVal().getStringValue();
+                NodeWithLocation<Statement, Val, Field> succNode =
+                    new NodeWithLocation<>(
+                        rstmt.getReturnSiteStatement(), unwrap.getLeftOp(), Field.string(key));
+                solver.propagate(node, new PopNode<>(succNode, PDSSystem.FIELDS));
+              }
+            }
+          }
+        }
+      }
+      if (rstmt.getInvokeExpr().toString().contains(MAP_PUT_SUB_SIGNATURE)) {
+        if (rstmt.getInvokeExpr().getArg(1).equals(node.fact())) {
+
+          BackwardQuery bwq = BackwardQuery.make(rstmt, rstmt.getInvokeExpr().getArg(0));
+          backwardSolve(bwq);
+          for (ForwardQuery q : Lists.newArrayList(queryToSolvers.keySet())) {
+            if (queryToSolvers.get(q).getReachedStates().contains(bwq.asNode())) {
+              Val var = q.var();
+              AllocVal v = (AllocVal) var;
+              if (v.getAllocVal().isStringConstant()) {
+                String key = v.getAllocVal().getStringValue();
+                solver.propagate(
+                    node,
+                    new PushNode<>(
+                        rstmt.getReturnSiteStatement(),
+                        rstmt.getInvokeExpr().getBase(),
+                        Field.string(key),
+                        PDSSystem.FIELDS));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   private BackwardBoomerangSolver<W> backwardSolverIns;
   private boolean solving;
 
@@ -259,8 +387,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
       icfg = new ObservableStaticICFG(cg);
     }
     this.callGraph = cg;
-    this.strategies = new Strategies<W>(options, this);
-    this.queryGraph = new QueryGraph<W>(this);
+    this.strategies = new Strategies<>(options, this);
+    this.queryGraph = new QueryGraph<>(this);
   }
 
   public WeightedBoomerang(CallGraph cg, DataFlowScope scope) {
@@ -390,11 +518,16 @@ public abstract class WeightedBoomerang<W extends Weight> {
         node -> {
           if (node.stmt().isFieldStore()) {
             forwardHandleFieldWrite(node, createFieldStore(node.stmt()), sourceQuery);
-          } else if (options.arrayFlows() && node.stmt().isArrayStore()) {
+          } else if (options.getArrayStrategy() != ArrayStrategy.DISABLED
+              && node.stmt().isArrayStore()) {
             forwardHandleFieldWrite(node, createArrayFieldStore(node.stmt()), sourceQuery);
           }
 
           addVisitedMethod(node.stmt().getMethod());
+
+          if (options.handleMaps()) {
+            handleMapsForward(solver, node);
+          }
         });
 
     return solver;
@@ -458,8 +591,9 @@ public abstract class WeightedBoomerang<W extends Weight> {
   }
 
   protected FieldWritePOI createArrayFieldStore(Statement s) {
-    Val base = s.getArrayBase();
-    return fieldWrites.getOrCreate(new FieldWritePOI(s, base, Field.array(), s.getRightOp()));
+    Pair<Val, Integer> base = s.getArrayBase();
+    return fieldWrites.getOrCreate(
+        new FieldWritePOI(s, base.getX(), Field.array(base.getY()), s.getRightOp()));
   }
 
   protected FieldWritePOI createFieldStore(Statement s) {
@@ -546,11 +680,72 @@ public abstract class WeightedBoomerang<W extends Weight> {
         Transition<Field, INode<Node<Statement, Val>>> t,
         W w,
         WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
-      if (!t.getLabel().equals(Field.empty()) && !t.getLabel().equals(Field.array())) return;
+      if (!t.getLabel().equals(Field.empty()) && !(t.getLabel() instanceof ArrayField)) return;
       Optional<AllocVal> allocNode = isAllocationNode(node.stmt(), node.fact());
       if (allocNode.isPresent()) {
         AllocVal val = allocNode.get();
-        ForwardQuery forwardQuery = new ForwardQuery(node.stmt(), val);
+        ForwardQuery forwardQuery;
+        if (t.getLabel() instanceof ArrayField) {
+          WeightedBoomerang.this
+              .backwardSolverIns
+              .getFieldAutomaton()
+              .registerListener(
+                  new ArrayAllocationListener(
+                      ((ArrayField) t.getLabel()).getIndex(), t.getTarget(), val, key, node));
+        } else {
+          forwardQuery = new ForwardQuery(node.stmt(), val);
+          forwardSolve(forwardQuery);
+          queryGraph.addEdge(key, node, forwardQuery);
+        }
+      }
+    }
+
+    @Override
+    public void onInTransitionAdded(
+        Transition<Field, INode<Node<Statement, Val>>> t,
+        W w,
+        WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {}
+
+    private WeightedBoomerang getEnclosingInstance() {
+      return WeightedBoomerang.this;
+    }
+  }
+
+  private final class ArrayAllocationListener
+      extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+
+    private final int arrayAccessIndex;
+    private AllocVal val;
+    private BackwardQuery key;
+    private Node<Statement, Val> node;
+
+    public ArrayAllocationListener(
+        int arrayAccessIndex,
+        INode<Node<Statement, Val>> target,
+        AllocVal val,
+        BackwardQuery key,
+        Node<Statement, Val> node) {
+      super(target);
+      this.arrayAccessIndex = arrayAccessIndex;
+      this.val = val;
+      this.key = key;
+      this.node = node;
+    }
+
+    @Override
+    public void onOutTransitionAdded(
+        Transition<Field, INode<Node<Statement, Val>>> t,
+        W w,
+        WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+      if (t.getLabel().equals(Field.empty())) {
+        ForwardQueryArray forwardQuery = new ForwardQueryArray(node.stmt(), val, arrayAccessIndex);
+        forwardSolve(forwardQuery);
+        queryGraph.addEdge(key, node, forwardQuery);
+      }
+      if (t.getLabel() instanceof ArrayField) {
+        ForwardQueryMultiDimensionalArray forwardQuery =
+            new ForwardQueryMultiDimensionalArray(
+                node.stmt(), val, arrayAccessIndex, ((ArrayField) t.getLabel()).getIndex());
         forwardSolve(forwardQuery);
         queryGraph.addEdge(key, node, forwardQuery);
       }
@@ -564,6 +759,24 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
     private WeightedBoomerang getEnclosingInstance() {
       return WeightedBoomerang.this;
+    }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = super.hashCode();
+      result = prime * result + getEnclosingInstance().hashCode();
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) return true;
+      if (!super.equals(obj)) return false;
+      if (getClass() != obj.getClass()) return false;
+      ArrayAllocationListener other = (ArrayAllocationListener) obj;
+      if (!getEnclosingInstance().equals(other.getEnclosingInstance())) return false;
+      return true;
     }
   }
 
@@ -761,6 +974,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
       timedout = true;
       LOGGER.info("Timeout ({}) of query: {} ", analysisWatch, query);
     } catch (Throwable e) {
+      System.err.println("Boomerang CRASHED" + e);
       LOGGER.error("Boomerang crashed in {} ", e);
     }
     if (!options.allowMultipleQueries()) {
@@ -797,22 +1011,40 @@ public abstract class WeightedBoomerang<W extends Weight> {
     Statement stmt = query.asNode().stmt();
     AbstractBoomerangSolver<W> solver = queryToSolvers.getOrCreate(query);
     INode<Node<Statement, Val>> fieldTarget = solver.createQueryNodeField(query);
-    INode<Val> callTarget =
-        solver.generateCallState(new SingleNode<Val>(query.var()), query.stmt());
+    INode<Val> callTarget = solver.generateCallState(new SingleNode<>(query.var()), query.stmt());
     if (!(stmt.isFieldStore())
-        && (stmt.isMultiArrayAllocation() || query.var().getType().isArrayType())
-        && options.arrayFlows()) {
-      // TODO fix; adjust as below;
-      Node<Statement, Val> node =
-          new Node<Statement, Val>(query.stmt(), ((AllocVal) query.var()).getDelegate());
-      SingleNode<Node<Statement, Val>> sourveVal = new SingleNode<>(node);
-      INode<Node<Statement, Val>> genState = solver.generateFieldState(sourveVal, Field.array());
-      insertTransition(
-          solver.getFieldAutomaton(), new Transition<>(sourveVal, Field.array(), genState));
-      insertTransition(
-          solver.getFieldAutomaton(), new Transition<>(genState, Field.array(), genState));
-      insertTransition(
-          solver.getFieldAutomaton(), new Transition<>(genState, Field.empty(), fieldTarget));
+        && query instanceof ForwardQueryArray
+        && options.getArrayStrategy() != ArrayStrategy.DISABLED) {
+      if (query instanceof ForwardQueryMultiDimensionalArray) {
+        ForwardQueryMultiDimensionalArray arrayQuery = ((ForwardQueryMultiDimensionalArray) query);
+        Node<Statement, Val> node =
+            new Node<>(query.stmt(), ((AllocVal) query.var()).getDelegate());
+        SingleNode<Node<Statement, Val>> sourveVal = new SingleNode<>(node);
+        INode<Node<Statement, Val>> genState1 =
+            solver.generateFieldState(sourveVal, Field.array(arrayQuery.getIndex1()));
+        insertTransition(
+            solver.getFieldAutomaton(),
+            new Transition<>(sourveVal, Field.array(arrayQuery.getIndex1()), genState1));
+        INode<Node<Statement, Val>> genState2 =
+            solver.generateFieldState(sourveVal, Field.array(arrayQuery.getIndex2()));
+        insertTransition(
+            solver.getFieldAutomaton(),
+            new Transition<>(genState1, Field.array(arrayQuery.getIndex2()), genState2));
+        insertTransition(
+            solver.getFieldAutomaton(), new Transition<>(genState2, Field.empty(), fieldTarget));
+      } else {
+        ForwardQueryArray arrayQuery = ((ForwardQueryArray) query);
+        Node<Statement, Val> node =
+            new Node<>(query.stmt(), ((AllocVal) query.var()).getDelegate());
+        SingleNode<Node<Statement, Val>> sourceVal = new SingleNode<>(node);
+        INode<Node<Statement, Val>> genState =
+            solver.generateFieldState(sourceVal, Field.array(arrayQuery.getIndex()));
+        insertTransition(
+            solver.getFieldAutomaton(),
+            new Transition<>(sourceVal, Field.array(arrayQuery.getIndex()), genState));
+        insertTransition(
+            solver.getFieldAutomaton(), new Transition<>(genState, Field.empty(), fieldTarget));
+      }
     }
     if (stmt.isStringAllocation()) {
       // Scene.v().forceResolve("java.lang.String",
@@ -881,7 +1113,7 @@ public abstract class WeightedBoomerang<W extends Weight> {
           ForwardBoomerangSolver<W> solver = queryToSolvers.get(q);
           latticeEl = latticeEl.merge(solver.controlFlowStep(first, succ, succs));
         }
-        if (visited.add(new Pair<Statement, Statement>(first, succ))) {
+        if (visited.add(new Pair<>(first, succ))) {
           if (!(latticeEl instanceof KillElement)) {
             cfg.step(first, succ);
             worklist.add(succ);
@@ -904,18 +1136,11 @@ public abstract class WeightedBoomerang<W extends Weight> {
       forwardFieldSummaries.putSummaryAutomaton(target, aut);
 
       aut.registerListener(
-          new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
-
-            @Override
-            public void onWeightAdded(
-                Transition<Field, INode<Node<Statement, Val>>> t,
-                W w,
-                WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-              if (t.getStart() instanceof GeneratedState) {
-                WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> n =
-                    forwardFieldSummaries.getSummaryAutomaton(t.getStart());
-                aut.addNestedAutomaton(n);
-              }
+          (t, w, aut12) -> {
+            if (t.getStart() instanceof GeneratedState) {
+              WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> n =
+                  forwardFieldSummaries.getSummaryAutomaton(t.getStart());
+              aut12.addNestedAutomaton(n);
             }
           });
       return aut.addTransition(transition);
@@ -923,18 +1148,11 @@ public abstract class WeightedBoomerang<W extends Weight> {
     final WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> nested =
         forwardFieldSummaries.getSummaryAutomaton(target);
     nested.registerListener(
-        new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
-
-          @Override
-          public void onWeightAdded(
-              Transition<Field, INode<Node<Statement, Val>>> t,
-              W w,
-              WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-            if (t.getStart() instanceof GeneratedState) {
-              WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> n =
-                  forwardFieldSummaries.getSummaryAutomaton(t.getStart());
-              aut.addNestedAutomaton(n);
-            }
+        (t, w, aut1) -> {
+          if (t.getStart() instanceof GeneratedState) {
+            WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> n =
+                forwardFieldSummaries.getSummaryAutomaton(t.getStart());
+            aut1.addNestedAutomaton(n);
           }
         });
     return nested.addTransition(transition);
@@ -950,10 +1168,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
     public void execute(final ForwardQuery baseAllocation, final Query flowAllocation) {
       if (flowAllocation instanceof BackwardQuery) {
       } else if (flowAllocation instanceof ForwardQuery) {
-        ForwardBoomerangSolver<W> baseSolver =
-            (ForwardBoomerangSolver<W>) queryToSolvers.get(baseAllocation);
-        ForwardBoomerangSolver<W> flowSolver =
-            (ForwardBoomerangSolver<W>) queryToSolvers.get(flowAllocation);
+        ForwardBoomerangSolver<W> baseSolver = queryToSolvers.get(baseAllocation);
+        ForwardBoomerangSolver<W> flowSolver = queryToSolvers.get(flowAllocation);
         ExecuteImportFieldStmtPOI<W> exec =
             new ExecuteImportFieldStmtPOI<W>(baseSolver, flowSolver, FieldWritePOI.this) {
               public void activate(INode<Node<Statement, Val>> start) {

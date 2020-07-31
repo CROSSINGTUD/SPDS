@@ -40,7 +40,7 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
           @Override
           protected Collection<? extends Query> generate(Statement stmt) {
             if (stmt.isAssign()) {
-              if (options.isAllocationVal(stmt.getRightOp())) {
+              if (stmt.getRightOp().isNewExpr()) {
                 return Collections.singleton(new ForwardQuery(stmt, stmt.getRightOp()));
               }
             }

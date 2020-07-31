@@ -132,11 +132,6 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
     DefaultBoomerangOptions options =
         new DefaultBoomerangOptions() {
           @Override
-          public boolean arrayFlows() {
-            return true;
-          }
-
-          @Override
           public int analysisTimeoutMS() {
             return analysisTimeout;
           }

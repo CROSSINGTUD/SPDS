@@ -11,6 +11,8 @@
  */
 package test.cases.sets;
 
+import boomerang.BoomerangOptions;
+import boomerang.DefaultBoomerangOptions;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.TreeMap;
@@ -102,5 +104,20 @@ public class TreeMapMultipleInstancesTest extends AbstractBoomerangTest {
   @Override
   protected boolean includeJDK() {
     return true;
+  }
+
+  @Override
+  protected BoomerangOptions createBoomerangOptions() {
+    return new DefaultBoomerangOptions() {
+      @Override
+      public boolean handleMaps() {
+        return false;
+      }
+
+      @Override
+      public int analysisTimeoutMS() {
+        return analysisTimeout;
+      }
+    };
   }
 }

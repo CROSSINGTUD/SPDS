@@ -54,11 +54,11 @@ public class AbstractBoomerangResults<W extends Weight> {
 
   public void computeUnmatchedOpeningContext(
       Context context, AbstractBoomerangSolver<W> forwardSolver, Node<Statement, Val> node) {
-    SingleNode<Val> initialState = new SingleNode<Val>(node.fact());
+    SingleNode<Val> initialState = new SingleNode<>(node.fact());
     forwardSolver
         .getCallAutomaton()
         .registerListener(
-            new OpeningCallStackExtracter<W>(initialState, initialState, context, forwardSolver));
+            new OpeningCallStackExtracter<>(initialState, initialState, context, forwardSolver));
   }
 
   public Table<Statement, Val, W> asStatementValWeightTable(ForwardQuery query) {
@@ -109,16 +109,15 @@ public class AbstractBoomerangResults<W extends Weight> {
         if (t.getStart() instanceof GeneratedState) {
           context
               .getOpeningContext()
-              .addTransition(
-                  new Transition<Statement, INode<Val>>(source, t.getLabel(), t.getTarget()));
+              .addTransition(new Transition<>(source, t.getLabel(), t.getTarget()));
         } else {
           weightedPAutomaton.registerListener(
-              new OpeningCallStackExtracter<W>(t.getTarget(), source, context, solver));
+              new OpeningCallStackExtracter<>(t.getTarget(), source, context, solver));
           return;
         }
       }
       weightedPAutomaton.registerListener(
-          new OpeningCallStackExtracter<W>(t.getTarget(), t.getTarget(), context, solver));
+          new OpeningCallStackExtracter<>(t.getTarget(), t.getTarget(), context, solver));
     }
 
     @Override

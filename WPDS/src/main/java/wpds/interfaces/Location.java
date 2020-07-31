@@ -11,4 +11,6 @@
  */
 package wpds.interfaces;
 
-public interface Location {}
+public interface Location {
+  boolean accepts(Location other);
+}

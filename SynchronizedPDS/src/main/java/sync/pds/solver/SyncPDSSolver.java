@@ -452,19 +452,18 @@ public abstract class SyncPDSSolver<
     if (!field.equals(emptyField())) {
       INode<Node<Stmt, Fact>> generateFieldState = generateFieldState(start, field);
       Transition<Field, INode<Node<Stmt, Fact>>> fieldTrans =
-          new Transition<Field, INode<Node<Stmt, Fact>>>(start, field, generateFieldState);
+          new Transition<>(start, field, generateFieldState);
       fieldAutomaton.addTransition(fieldTrans);
       Transition<Field, INode<Node<Stmt, Fact>>> fieldTransToInitial =
-          new Transition<Field, INode<Node<Stmt, Fact>>>(
-              generateFieldState, emptyField(), fieldTarget);
+          new Transition<>(generateFieldState, emptyField(), fieldTarget);
       fieldAutomaton.addTransition(fieldTransToInitial);
     } else {
       Transition<Field, INode<Node<Stmt, Fact>>> fieldTrans =
-          new Transition<Field, INode<Node<Stmt, Fact>>>(start, emptyField(), fieldTarget);
+          new Transition<>(start, emptyField(), fieldTarget);
       fieldAutomaton.addTransition(fieldTrans);
     }
     Transition<Stmt, INode<Fact>> callTrans =
-        new Transition<Stmt, INode<Fact>>(wrap(curr.fact()), curr.stmt(), callTarget);
+        new Transition<>(wrap(curr.fact()), curr.stmt(), callTarget);
     callAutomaton.addWeightForTransition(callTrans, weight);
     processNode(curr);
   }
@@ -483,7 +482,7 @@ public abstract class SyncPDSSolver<
     computeSuccessor(curr);
   }
 
-  protected void propagate(Node<Stmt, Fact> curr, State s) {
+  public void propagate(Node<Stmt, Fact> curr, State s) {
     if (s instanceof Node) {
       Node<Stmt, Fact> succ = (Node<Stmt, Fact>) s;
       if (succ instanceof PushNode) {
