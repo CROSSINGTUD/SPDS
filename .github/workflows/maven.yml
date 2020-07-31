@@ -48,4 +48,4 @@ jobs:
           git-release-bot-email: "admin@codeshield.de"
 
           access-token: ${{ secrets.GITHUB_ACCESS_TOKEN }}
-          maven-args: "-DskipTests -P ci"
+          maven-args: "-P ci"
