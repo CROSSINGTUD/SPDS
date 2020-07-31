@@ -1,9 +1,36 @@
-# WPDS
+[![Java CI with Maven](https://github.com/CodeShield-Security/SPDS/workflows/Java%20CI%20with%20Maven/badge.svg?branch=master)](https://github.com/CodeShield-Security/SPDS/actions)
 
-[![Build Status](https://soot-build.cs.uni-paderborn.de/jenkins/buildStatus/icon?job=boomerang%2FWPDS-Multibranch%2Fmaster)](https://soot-build.cs.uni-paderborn.de/jenkins/job/boomerang/job/WPDS-Multibranch/job/master/)
+# WPDS
 
 This repository contains a Java implementation of Weighted Pushdown Systems.
 Additionally, it contains an implementation of [Boomerang](boomerangPDS) and [IDEal](idealPDS) based on a Weighted Pushdown System.
+
+# Use as Maven dependency
+
+All projects inside this repository are pushed to GitHub's Maven repository for every release.
+
+To include a dependency from this repository to your poject, you first have to add the repository to your pom file:
+
+
+```.xml
+<dependencies>
+  <dependency>
+    <groupId>de.fraunhofer.iem</groupId>
+    <artifactId>WPDS</artifactId>
+    <version>3.0.8</version>
+  </dependency>
+</dependencies>
+<repositories>
+  <repository>
+      <id>github</id>
+      <url>https://maven.pkg.github.com/CodeShield-Security/SPDS/</url>
+  </repository>
+</repositories>	
+```
+
+To access the GitHub packages repository, you also need to set up GitHub credentials in your Maven's `settings.xml` file. Therefore, you need to add a `server` block with the id `github`, your username and an access token that has `package:read` rights to your `setting.xml`.
+An in-depth documentation on how to do this can be found [here](https://docs.github.com/en/packages/using-github-packages-with-your-projects-ecosystem/configuring-apache-maven-for-use-with-github-packages#authenticating-to-github-packages). 
+
 
 # Checkout, Build and Install
 

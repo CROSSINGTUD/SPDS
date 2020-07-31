@@ -113,6 +113,11 @@ public class TreeMapMultipleInstancesTest extends AbstractBoomerangTest {
       public boolean handleMaps() {
         return false;
       }
+
+      @Override
+      public int analysisTimeoutMS() {
+        return analysisTimeout;
+      }
     };
   }
 }

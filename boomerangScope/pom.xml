@@ -2,7 +2,7 @@
   <parent>
     <groupId>de.fraunhofer.iem</groupId>
     <artifactId>SPDS</artifactId>
-    <version>3.0.2-SNAPSHOT</version>
+    <version>3.0.9-SNAPSHOT</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
@@ -20,7 +20,6 @@
     <dependency>
       <groupId>de.fraunhofer.iem</groupId>
       <artifactId>synchronizedPDS</artifactId>
-      <version>3.0.2-SNAPSHOT</version>
     </dependency>
   </dependencies>
 </project>

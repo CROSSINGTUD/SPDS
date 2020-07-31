@@ -311,20 +311,11 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
   protected BoomerangOptions createBoomerangOptions() {
     return (queryDetector.integerQueries
-        ? new IntAndStringBoomerangOptions() {
-          public boolean onTheFlyCallGraph() {
-            return false;
-          };
-        }
+        ? new IntAndStringBoomerangOptions()
         : new DefaultBoomerangOptions() {
           @Override
           public int analysisTimeoutMS() {
             return analysisTimeout;
-          }
-
-          @Override
-          public boolean onTheFlyCallGraph() {
-            return false;
           }
         });
   }
