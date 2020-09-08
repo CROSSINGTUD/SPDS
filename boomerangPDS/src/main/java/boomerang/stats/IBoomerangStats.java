@@ -17,8 +17,8 @@ import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Method;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import java.util.Collection;
@@ -34,7 +34,7 @@ public interface IBoomerangStats<W extends Weight> {
 
   Set<Method> getCallVisitedMethods();
 
-  Collection<? extends Node<Statement, Val>> getForwardReachesNodes();
+  Collection<? extends Node<Edge, Val>> getForwardReachesNodes();
 
   void terminated(ForwardQuery query, ForwardBoomerangResults<W> forwardBoomerangResults);
 

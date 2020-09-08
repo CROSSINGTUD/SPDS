@@ -12,7 +12,7 @@
 package typestate.impl.statemachines;
 
 import boomerang.WeightedForwardQuery;
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Vector;
@@ -86,7 +86,7 @@ public class VectorStateMachine extends TypeStateMachineWeightFunctions {
   }
 
   @Override
-  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement unit) {
+  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Edge unit) {
     if (unit.getMethod().toString().contains("<clinit>")) return Collections.emptySet();
     return generateAtAllocationSiteOf(unit, Vector.class);
   }

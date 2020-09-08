@@ -11,7 +11,7 @@
  */
 package typestate;
 
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import java.util.Collection;
@@ -32,16 +32,15 @@ public class TransitionFunction extends Weight {
 
   private static TransitionFunction zero;
 
-  private Set<Statement> stateChangeStatements;
+  private Set<Edge> stateChangeStatements;
 
-  public TransitionFunction(
-      Set<? extends ITransition> trans, Set<Statement> stateChangeStatements) {
+  public TransitionFunction(Set<? extends ITransition> trans, Set<Edge> stateChangeStatements) {
     this.stateChangeStatements = stateChangeStatements;
     this.value = new HashSet<>(trans);
     this.rep = null;
   }
 
-  public TransitionFunction(ITransition trans, Set<Statement> stateChangeStatements) {
+  public TransitionFunction(ITransition trans, Set<Edge> stateChangeStatements) {
     this(new HashSet<>(Collections.singleton(trans)), stateChangeStatements);
   }
 
@@ -55,7 +54,7 @@ public class TransitionFunction extends Weight {
     return Lists.newArrayList(value);
   }
 
-  public Set<Statement> getLastStateChangeStatements() {
+  public Set<Edge> getLastStateChangeStatements() {
     return stateChangeStatements;
   }
 
@@ -69,7 +68,7 @@ public class TransitionFunction extends Weight {
     TransitionFunction func = (TransitionFunction) other;
     Set<ITransition> otherTransitions = func.value;
     Set<ITransition> ress = new HashSet<>();
-    Set<Statement> newStateChangeStatements = new HashSet<>();
+    Set<Edge> newStateChangeStatements = new HashSet<>();
     for (ITransition first : value) {
       for (ITransition second : otherTransitions) {
         if (second.equals(Transition.identity())) {
@@ -110,7 +109,7 @@ public class TransitionFunction extends Weight {
     }
     Set<ITransition> transitions = new HashSet<>(func.value);
     transitions.addAll(value);
-    HashSet<Statement> newStateChangeStmts = Sets.newHashSet(stateChangeStatements);
+    HashSet<Edge> newStateChangeStmts = Sets.newHashSet(stateChangeStatements);
     newStateChangeStmts.addAll(func.stateChangeStatements);
     return new TransitionFunction(transitions, newStateChangeStmts);
   };

@@ -3,7 +3,6 @@ package boomerang.callgraph;
 import boomerang.controlflowgraph.ObservableControlFlowGraph;
 import boomerang.scene.CallGraph;
 import boomerang.scene.CallGraph.Edge;
-import boomerang.scene.CallSiteStatement;
 import boomerang.scene.InvokeExpr;
 import boomerang.scene.Method;
 import boomerang.scene.Statement;
@@ -121,7 +120,7 @@ public class ObservableDynamicICFG implements ObservableICFG<Statement, Method> 
    * call graph did not change
    */
   protected boolean addCallIfNotInGraph(Statement caller, Method callee) {
-    Edge edge = new Edge((CallSiteStatement) caller, callee);
+    Edge edge = new Edge(caller, callee);
     if (!demandDrivenCallGraph.addEdge(edge)) {
       return false;
     }

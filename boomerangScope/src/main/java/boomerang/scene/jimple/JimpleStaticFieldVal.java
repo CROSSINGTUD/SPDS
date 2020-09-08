@@ -11,10 +11,10 @@
  */
 package boomerang.scene.jimple;
 
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Field;
 import boomerang.scene.Method;
 import boomerang.scene.Pair;
-import boomerang.scene.Statement;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Type;
 import boomerang.scene.Val;
@@ -27,7 +27,7 @@ public class JimpleStaticFieldVal extends StaticFieldVal {
     this(field, m, null);
   }
 
-  private JimpleStaticFieldVal(JimpleField field, Method m, Statement unbalanced) {
+  private JimpleStaticFieldVal(JimpleField field, Method m, Edge unbalanced) {
     super(m, unbalanced);
     this.field = field;
   }
@@ -46,7 +46,7 @@ public class JimpleStaticFieldVal extends StaticFieldVal {
   };
 
   @Override
-  public Val asUnbalanced(Statement stmt) {
+  public Val asUnbalanced(Edge stmt) {
     return new JimpleStaticFieldVal(field, m, stmt);
   }
 

@@ -11,8 +11,8 @@
  */
 package boomerang.arrays;
 
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Pair;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
@@ -24,16 +24,12 @@ public class IgnoreArrayStrategy<W extends Weight> implements ArrayHandlingStrat
 
   @Override
   public void handleForward(
-      Statement storeStmt,
+      Edge storeStmt,
       Pair<Val, Integer> storedVal,
       Set<State> out,
       ForwardBoomerangSolver<W> solver) {}
 
   @Override
   public void handleBackward(
-      Statement curr,
-      Pair<Val, Integer> arrayBase,
-      Statement succ,
-      Set<State> out,
-      BackwardBoomerangSolver<W> solver) {}
+      Edge curr, Pair<Val, Integer> arrayBase, Set<State> out, BackwardBoomerangSolver<W> solver) {}
 }

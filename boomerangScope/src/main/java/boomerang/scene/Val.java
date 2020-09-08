@@ -14,7 +14,7 @@ package boomerang.scene;
 public abstract class Val {
   protected final Method m;
   private final String rep;
-  protected final Statement unbalancedStmt;
+  protected final ControlFlowGraph.Edge unbalancedStmt;
 
   private static Val zeroInstance;
 
@@ -24,7 +24,7 @@ public abstract class Val {
     this.unbalancedStmt = null;
   }
 
-  protected Val(Method m, Statement unbalancedStmt) {
+  protected Val(Method m, ControlFlowGraph.Edge unbalancedStmt) {
     this.rep = null;
     this.m = m;
     this.unbalancedStmt = unbalancedStmt;
@@ -83,7 +83,7 @@ public abstract class Val {
             }
 
             @Override
-            public Val asUnbalanced(Statement stmt) {
+            public Val asUnbalanced(ControlFlowGraph.Edge stmt) {
               // TODO Auto-generated method stub
               return null;
             }
@@ -237,7 +237,7 @@ public abstract class Val {
     return unbalancedStmt != null && rep == null;
   }
 
-  public abstract Val asUnbalanced(Statement stmt);
+  public abstract Val asUnbalanced(ControlFlowGraph.Edge stmt);
 
   public abstract boolean isLocal();
 

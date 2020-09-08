@@ -16,7 +16,7 @@ import boomerang.Query;
 import boomerang.WeightedForwardQuery;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.scene.AnalysisScope;
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import com.google.common.base.Stopwatch;
 import java.util.Collection;
 import java.util.HashMap;
@@ -46,7 +46,7 @@ public class IDEALAnalysis<W extends Weight> {
         new AnalysisScope(analysisDefinition.callGraph()) {
 
           @Override
-          protected Collection<WeightedForwardQuery<W>> generate(Statement stmt) {
+          protected Collection<WeightedForwardQuery<W>> generate(Edge stmt) {
             return analysisDefinition.generate(stmt);
           }
         };
@@ -66,7 +66,7 @@ public class IDEALAnalysis<W extends Weight> {
       LOGGER.info("Analyzing {}", seed);
       Stopwatch watch = Stopwatch.createStarted();
       analysisTime.put(seed, watch);
-      ForwardBoomerangResults<W> res = run(seed);
+      run(seed);
       watch.stop();
       LOGGER.debug(
           "Analyzed (finished,timedout): \t ({},{}) of {} seeds",

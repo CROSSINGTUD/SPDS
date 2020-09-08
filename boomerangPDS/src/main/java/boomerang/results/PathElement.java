@@ -1,22 +1,22 @@
 package boomerang.results;
 
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Val;
 import java.util.Objects;
 
 public class PathElement {
 
-  private final Statement s;
+  private final Edge s;
   private final Val val;
   private final int stepIndex;
 
-  public PathElement(Statement s, Val val, int stepIndex) {
+  public PathElement(Edge s, Val val, int stepIndex) {
     this.s = s;
     this.val = val;
     this.stepIndex = stepIndex;
   }
 
-  public Statement getStatement() {
+  public Edge getEdge() {
     return s;
   }
 
@@ -45,6 +45,6 @@ public class PathElement {
 
   @Override
   public String toString() {
-    return String.format("'%d: %s'", stepIndex(), getStatement());
+    return String.format("'%d: %s'", stepIndex(), getEdge());
   }
 }

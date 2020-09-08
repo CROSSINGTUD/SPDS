@@ -12,7 +12,7 @@
 package typestate.impl.statemachines;
 
 import boomerang.WeightedForwardQuery;
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import java.util.Collection;
 import java.util.Collections;
 import typestate.TransitionFunction;
@@ -63,9 +63,9 @@ public class FileMustBeClosedStateMachineCallToReturn extends TypeStateMachineWe
   }
 
   @Override
-  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement unit) {
+  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Edge edge) {
     try {
-      return generateAtAllocationSiteOf(unit, Class.forName("typestate.test.helper.File"));
+      return generateAtAllocationSiteOf(edge, Class.forName("typestate.test.helper.File"));
     } catch (ClassNotFoundException e) {
       e.printStackTrace();
     }

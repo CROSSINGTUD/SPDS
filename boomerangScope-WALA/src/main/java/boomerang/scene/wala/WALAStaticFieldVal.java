@@ -11,10 +11,10 @@
  */
 package boomerang.scene.wala;
 
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Field;
 import boomerang.scene.Method;
 import boomerang.scene.Pair;
-import boomerang.scene.Statement;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Type;
 import boomerang.scene.Val;
@@ -27,7 +27,7 @@ public class WALAStaticFieldVal extends StaticFieldVal {
     this(declaredField, method, null);
   }
 
-  public WALAStaticFieldVal(Field declaredField, Method method, Statement unbalanced) {
+  public WALAStaticFieldVal(Field declaredField, Method method, Edge unbalanced) {
     super(method);
     this.declaredField = declaredField;
   }
@@ -38,7 +38,7 @@ public class WALAStaticFieldVal extends StaticFieldVal {
   }
 
   @Override
-  public Val asUnbalanced(Statement stmt) {
+  public Val asUnbalanced(Edge stmt) {
     return new WALAStaticFieldVal(declaredField, m, stmt);
   }
 

@@ -18,7 +18,7 @@ import boomerang.Query;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.scene.AllocVal;
 import boomerang.scene.AnalysisScope;
-import boomerang.scene.ReturnSiteStatement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.SootDataFlowScope;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
@@ -128,14 +128,15 @@ public class ExampleMain2 {
         AnalysisScope scope =
             new AnalysisScope(sootCallGraph) {
               @Override
-              protected Collection<? extends Query> generate(Statement statement) {
+              protected Collection<? extends Query> generate(Edge cfgEdge) {
+                Statement statement = cfgEdge.getStart();
                 if (statement.getMethod().toString().contains("ClassWithField")
                     && statement.getMethod().isConstructor()
                     && statement.isAssign()) {
                   if (statement.getRightOp().isIntConstant()) {
                     return Collections.singleton(
                         new ForwardQuery(
-                            statement,
+                            cfgEdge,
                             new AllocVal(
                                 statement.getLeftOp(), statement, statement.getRightOp())));
                   }
@@ -156,15 +157,14 @@ public class ExampleMain2 {
               solver.solve((ForwardQuery) query);
 
           // 3. Process forward results
-          Table<Statement, Val, NoWeight> results =
-              forwardBoomerangResults.asStatementValWeightTable();
-          for (Statement s : results.rowKeySet()) {
+          Table<Edge, Val, NoWeight> results = forwardBoomerangResults.asStatementValWeightTable();
+          for (Edge s : results.rowKeySet()) {
             // 4. Filter results based on your use statement, in our case the call of
             // System.out.println(n.nested.field)
-            if (s instanceof ReturnSiteStatement && s.toString().contains("println")) {
+            if (s.getTarget().toString().contains("println")) {
               // 5. Check that a propagated value is used at the particular statement.
               for (Val reachingVal : results.row(s).keySet()) {
-                if (s.uses(reachingVal)) {
+                if (s.getTarget().uses(reachingVal)) {
                   System.out.println(query + " reaches " + s);
                 }
               }

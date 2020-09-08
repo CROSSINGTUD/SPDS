@@ -11,9 +11,9 @@
  */
 package boomerang.arrays;
 
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Field;
 import boomerang.scene.Pair;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
@@ -27,22 +27,15 @@ public class ArrayIndexSensitiveStrategy<W extends Weight> implements ArrayHandl
 
   @Override
   public void handleForward(
-      Statement curr,
-      Pair<Val, Integer> arrayBase,
-      Set<State> out,
-      ForwardBoomerangSolver<W> solver) {
+      Edge curr, Pair<Val, Integer> arrayBase, Set<State> out, ForwardBoomerangSolver<W> solver) {
     out.add(
         new PushNode<>(curr, arrayBase.getX(), Field.array(arrayBase.getY()), PDSSystem.FIELDS));
   }
 
   @Override
   public void handleBackward(
-      Statement curr,
-      Pair<Val, Integer> arrayBase,
-      Statement succ,
-      Set<State> out,
-      BackwardBoomerangSolver<W> solver) {
+      Edge curr, Pair<Val, Integer> arrayBase, Set<State> out, BackwardBoomerangSolver<W> solver) {
     out.add(
-        new PushNode<>(succ, arrayBase.getX(), Field.array(arrayBase.getY()), PDSSystem.FIELDS));
+        new PushNode<>(curr, arrayBase.getX(), Field.array(arrayBase.getY()), PDSSystem.FIELDS));
   }
 }

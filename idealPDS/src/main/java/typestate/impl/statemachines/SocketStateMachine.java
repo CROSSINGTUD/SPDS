@@ -12,8 +12,8 @@
 package typestate.impl.statemachines;
 
 import boomerang.WeightedForwardQuery;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.DeclaredMethod;
-import boomerang.scene.Statement;
 import java.net.Socket;
 import java.util.Collection;
 import typestate.TransitionFunction;
@@ -82,7 +82,7 @@ public class SocketStateMachine extends TypeStateMachineWeightFunctions {
   }
 
   @Override
-  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement unit) {
+  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Edge unit) {
     return generateAtAllocationSiteOf(unit, Socket.class);
   }
 

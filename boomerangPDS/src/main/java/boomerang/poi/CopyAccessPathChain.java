@@ -1,6 +1,7 @@
 package boomerang.poi;
 
 import boomerang.BackwardQuery;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Field;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
@@ -24,15 +25,15 @@ public class CopyAccessPathChain<W extends Weight> {
   private static final int MAX_WALK_DEPTH = -1;
   private ForwardBoomerangSolver<W> forwardSolver;
   private BackwardBoomerangSolver<W> backwardSolver;
-  private Statement fieldWriteStatement;
+  private Edge fieldWriteStatement;
   // TODO: Source of non-determinsim: not part of hashCode/equals....but also shall not be.
-  private INode<Node<Statement, Val>> killedTransitionTarget;
+  private INode<Node<Edge, Val>> killedTransitionTarget;
 
   public CopyAccessPathChain(
       ForwardBoomerangSolver<W> forwardSolver,
       BackwardBoomerangSolver<W> backwardSolver,
-      Statement fieldWriteStatement,
-      Transition<Field, INode<Node<Statement, Val>>> killedTransition) {
+      Edge fieldWriteStatement,
+      Transition<Field, INode<Node<Edge, Val>>> killedTransition) {
     this.forwardSolver = forwardSolver;
     this.backwardSolver = backwardSolver;
     this.fieldWriteStatement = fieldWriteStatement;
@@ -45,21 +46,19 @@ public class CopyAccessPathChain<W extends Weight> {
         .registerListener(
             new WalkForwardSolverListener(
                 killedTransitionTarget,
-                new SingleNode<Node<Statement, Val>>(
-                    new Node<>(fieldWriteStatement, fieldWriteStatement.getRightOp())),
+                new SingleNode<>(
+                    new Node<>(fieldWriteStatement, fieldWriteStatement.getTarget().getRightOp())),
                 0));
   }
 
   private class WalkForwardSolverListener
-      extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+      extends WPAStateListener<Field, INode<Node<Edge, Val>>, W> {
 
-    private INode<Node<Statement, Val>> stateInBwSolver;
+    private INode<Node<Edge, Val>> stateInBwSolver;
     private int walkDepth;
 
     public WalkForwardSolverListener(
-        INode<Node<Statement, Val>> target,
-        INode<Node<Statement, Val>> stateInBwSolver,
-        int walkDepth) {
+        INode<Node<Edge, Val>> target, INode<Node<Edge, Val>> stateInBwSolver, int walkDepth) {
       super(target);
       this.stateInBwSolver = stateInBwSolver;
       this.walkDepth = walkDepth;
@@ -67,32 +66,34 @@ public class CopyAccessPathChain<W extends Weight> {
 
     @Override
     public void onOutTransitionAdded(
-        Transition<Field, INode<Node<Statement, Val>>> t,
+        Transition<Field, INode<Node<Edge, Val>>> t,
         W w,
-        WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+        WeightedPAutomaton<Field, INode<Node<Edge, Val>>, W> weightedPAutomaton) {
       if (t.getLabel().equals(Field.empty())) {
         if (forwardSolver.getFieldAutomaton().isUnbalancedState(t.getTarget())) {
           if (t.getStart().equals(CopyAccessPathChain.this.killedTransitionTarget)) {
             // Do a simple backwardSolve(...)...
             BackwardQuery query =
-                BackwardQuery.make(fieldWriteStatement, fieldWriteStatement.getRightOp());
-            INode<Node<Statement, Val>> fieldTarget = backwardSolver.createQueryNodeField(query);
+                BackwardQuery.make(
+                    fieldWriteStatement, fieldWriteStatement.getTarget().getRightOp());
+            INode<Node<Edge, Val>> fieldTarget = backwardSolver.createQueryNodeField(query);
             INode<Val> callTarget =
-                backwardSolver.generateCallState(new SingleNode<>(query.var()), query.stmt());
+                backwardSolver.generateCallState(new SingleNode<>(query.var()), query.cfgEdge());
             backwardSolver.solve(
-                query.asNode(), Field.empty(), fieldTarget, query.stmt(), callTarget);
+                query.asNode(), Field.empty(), fieldTarget, query.cfgEdge(), callTarget);
             return;
           }
           // addReachable(stateInBwSolver);
         }
         return;
       }
-      INode<Node<Statement, Val>> targetState =
+      INode<Node<Edge, Val>> targetState =
           backwardSolver.generateFieldState(
-              new SingleNode<>(new Node<>(Statement.epsilon(), Val.zero())), t.getLabel());
-      Transition<Field, INode<Node<Statement, Val>>> insert =
-          new Transition<Field, INode<Node<Statement, Val>>>(
-              stateInBwSolver, t.getLabel(), targetState);
+              new SingleNode<>(
+                  new Node<>(new Edge(Statement.epsilon(), Statement.epsilon()), Val.zero())),
+              t.getLabel());
+      Transition<Field, INode<Node<Edge, Val>>> insert =
+          new Transition<>(stateInBwSolver, t.getLabel(), targetState);
       queueOrAdd(insert);
       int newDepth = walkDepth + 1;
       if (MAX_WALK_DEPTH < 0 || newDepth < MAX_WALK_DEPTH) {
@@ -104,9 +105,9 @@ public class CopyAccessPathChain<W extends Weight> {
 
     @Override
     public void onInTransitionAdded(
-        Transition<Field, INode<Node<Statement, Val>>> t,
+        Transition<Field, INode<Node<Edge, Val>>> t,
         W w,
-        WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {}
+        WeightedPAutomaton<Field, INode<Node<Edge, Val>>, W> weightedPAutomaton) {}
 
     @Override
     public boolean equals(Object o) {
@@ -133,11 +134,11 @@ public class CopyAccessPathChain<W extends Weight> {
 
   // Copied from ExecuteImportFielStmtPOI
 
-  private Set<INode<Node<Statement, Val>>> reachable = Sets.newHashSet();
-  private Multimap<INode<Node<Statement, Val>>, InsertFieldTransitionCallback> delayedTransitions =
+  private Set<INode<Node<Edge, Val>>> reachable = Sets.newHashSet();
+  private Multimap<INode<Node<Edge, Val>>, InsertFieldTransitionCallback> delayedTransitions =
       HashMultimap.create();
 
-  public void addReachable(INode<Node<Statement, Val>> node) {
+  public void addReachable(INode<Node<Edge, Val>> node) {
     if (reachable.add(node)) {
       for (InsertFieldTransitionCallback callback :
           Lists.newArrayList(delayedTransitions.get(node))) {
@@ -146,7 +147,7 @@ public class CopyAccessPathChain<W extends Weight> {
     }
   }
 
-  private void queueOrAdd(Transition<Field, INode<Node<Statement, Val>>> transToInsert) {
+  private void queueOrAdd(Transition<Field, INode<Node<Edge, Val>>> transToInsert) {
     if (reachable.contains(transToInsert.getTarget())) {
       backwardSolver.getFieldAutomaton().addTransition(transToInsert);
     } else {
@@ -156,9 +157,9 @@ public class CopyAccessPathChain<W extends Weight> {
   }
 
   private class InsertFieldTransitionCallback {
-    private final Transition<Field, INode<Node<Statement, Val>>> trans;
+    private final Transition<Field, INode<Node<Edge, Val>>> trans;
 
-    public InsertFieldTransitionCallback(Transition<Field, INode<Node<Statement, Val>>> trans) {
+    public InsertFieldTransitionCallback(Transition<Field, INode<Node<Edge, Val>>> trans) {
       this.trans = trans;
     }
 

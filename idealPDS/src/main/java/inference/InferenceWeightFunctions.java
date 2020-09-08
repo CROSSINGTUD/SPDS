@@ -11,18 +11,16 @@
  */
 package inference;
 
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Method;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.Node;
 
-public class InferenceWeightFunctions
-    implements WeightFunctions<Statement, Val, Statement, InferenceWeight> {
+public class InferenceWeightFunctions implements WeightFunctions<Edge, Val, Edge, InferenceWeight> {
 
   @Override
-  public InferenceWeight push(
-      Node<Statement, Val> curr, Node<Statement, Val> succ, Statement field) {
+  public InferenceWeight push(Node<Edge, Val> curr, Node<Edge, Val> succ, Edge field) {
     Method callee = succ.stmt().getMethod();
     if (!callee.isStatic()) {
       Val thisLocal = callee.getThisLocal();
@@ -34,12 +32,12 @@ public class InferenceWeightFunctions
   }
 
   @Override
-  public InferenceWeight normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
+  public InferenceWeight normal(Node<Edge, Val> curr, Node<Edge, Val> succ) {
     return getOne();
   }
 
   @Override
-  public InferenceWeight pop(Node<Statement, Val> curr) {
+  public InferenceWeight pop(Node<Edge, Val> curr) {
     return getOne();
   }
 

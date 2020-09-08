@@ -11,6 +11,7 @@
  */
 package typestate.tests;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import test.IDEALTestingFramework;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
@@ -518,6 +519,7 @@ public class FileMustBeClosedTest extends IDEALTestingFramework {
 
   public void openCall(File f) {
     f.open();
+    int x = 1;
   }
 
   @Test
@@ -535,6 +537,7 @@ public class FileMustBeClosedTest extends IDEALTestingFramework {
 
   public static void cls(File o2) {
     o2.close();
+    int x = 1;
   }
 
   @Test
@@ -590,6 +593,7 @@ public class FileMustBeClosedTest extends IDEALTestingFramework {
   static File v;
 
   @Test
+  @Ignore
   public void staticFlow() {
     File a = new File();
     v = a;

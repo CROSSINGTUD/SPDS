@@ -17,12 +17,14 @@ import boomerang.callgraph.BackwardsObservableICFG;
 import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.controlflowgraph.ObservableControlFlowGraph;
+import boomerang.controlflowgraph.PredecessorListener;
+import boomerang.controlflowgraph.SuccessorListener;
 import boomerang.scene.AllocVal;
-import boomerang.scene.CallSiteStatement;
+import boomerang.scene.ControlFlowGraph;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.DataFlowScope;
 import boomerang.scene.Field;
 import boomerang.scene.Method;
-import boomerang.scene.ReturnSiteStatement;
 import boomerang.scene.Statement;
 import boomerang.scene.Type;
 import boomerang.scene.Val;
@@ -59,26 +61,29 @@ import wpds.interfaces.State;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class AbstractBoomerangSolver<W extends Weight>
-    extends SyncPDSSolver<Statement, Val, Field, W> {
+    extends SyncPDSSolver<ControlFlowGraph.Edge, Val, Field, W> {
   private static final org.slf4j.Logger LOGGER =
       LoggerFactory.getLogger(AbstractBoomerangSolver.class);
 
   protected final ObservableICFG<Statement, Method> icfg;
   protected final ObservableControlFlowGraph cfg;
   protected boolean INTERPROCEDURAL = true;
-  protected final Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>>
+  protected final Map<
+          Entry<INode<Node<ControlFlowGraph.Edge, Val>>, Field>,
+          INode<Node<ControlFlowGraph.Edge, Val>>>
       generatedFieldState;
-  private Multimap<Method, Transition<Field, INode<Node<Statement, Val>>>>
+  private Multimap<Method, Transition<Field, INode<Node<ControlFlowGraph.Edge, Val>>>>
       perMethodFieldTransitions = HashMultimap.create();
   private Multimap<Method, MethodBasedFieldTransitionListener<W>>
       perMethodFieldTransitionsListener = HashMultimap.create();
-  protected Multimap<Statement, Transition<Field, INode<Node<Statement, Val>>>>
+  protected Multimap<
+          ControlFlowGraph.Edge, Transition<Field, INode<Node<ControlFlowGraph.Edge, Val>>>>
       perStatementFieldTransitions = HashMultimap.create();
-  private Multimap<Statement, StatementBasedFieldTransitionListener<W>>
+  private Multimap<ControlFlowGraph.Edge, ControlFlowEdgeBasedFieldTransitionListener<W>>
       perStatementFieldTransitionsListener = HashMultimap.create();
-  private HashBasedTable<Statement, Transition<Statement, INode<Val>>, W>
+  private HashBasedTable<ControlFlowGraph.Edge, Transition<ControlFlowGraph.Edge, INode<Val>>, W>
       perStatementCallTransitions = HashBasedTable.create();
-  private Multimap<Statement, StatementBasedCallTransitionListener<W>>
+  private Multimap<ControlFlowGraph.Edge, ControlFlowEdgeBasedCallTransitionListener<W>>
       perStatementCallTransitionsListener = HashMultimap.create();
   private Multimap<Method, UnbalancedDataFlow<W>> unbalancedDataFlows = HashMultimap.create();
   private Multimap<Method, UnbalancedDataFlowListener> unbalancedDataFlowListeners =
@@ -92,10 +97,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
   public AbstractBoomerangSolver(
       ObservableICFG<Statement, Method> icfg,
       ObservableControlFlowGraph cfg,
-      Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
+      Map<Entry<INode<Node<Edge, Val>>, Field>, INode<Node<Edge, Val>>> genField,
       BoomerangOptions options,
-      NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
-      NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries,
+      NestedWeightedPAutomatons<ControlFlowGraph.Edge, INode<Val>, W> callSummaries,
+      NestedWeightedPAutomatons<Field, INode<Node<ControlFlowGraph.Edge, Val>>, W> fieldSummaries,
       DataFlowScope scope,
       Strategies<W> strategies,
       Type propagationType) {
@@ -115,40 +120,30 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
     this.type = propagationType;
     this.fieldAutomaton.registerListener(
         (t, w, aut) -> {
-          addTransitionToMethod(t.getStart().fact().stmt().getMethod(), t);
-          addTransitionToMethod(t.getTarget().fact().stmt().getMethod(), t);
+          addTransitionToMethod(t.getStart().fact().stmt().getStart().getMethod(), t);
+          addTransitionToMethod(t.getTarget().fact().stmt().getStart().getMethod(), t);
           addTransitionToStatement(t.getStart().fact().stmt(), t);
         });
     this.callAutomaton.registerListener(
         (t, w, aut) -> {
           addCallTransitionToStatement(t.getLabel(), t, w);
-          if (t.getStart() instanceof GeneratedState) {
-
-            if (isBackward() && !(t.getLabel() instanceof CallSiteStatement)) {
-              throw new RuntimeException(
-                  "The backward analysis shall only have CallSiteStatements on pushs");
-            } else if (!isBackward() && !(t.getLabel() instanceof ReturnSiteStatement)) {
-              throw new RuntimeException(
-                  "The forward analysis shall only have ReturnSiteStatement on pushs");
-            }
-          }
         });
     this.callAutomaton.registerListener(new UnbalancedListener());
-
-    // TODO recap, I assume we can implement this more easily.
     this.generatedFieldState = genField;
   }
 
-  private class UnbalancedListener implements WPAUpdateListener<Statement, INode<Val>, W> {
+  private class UnbalancedListener
+      implements WPAUpdateListener<ControlFlowGraph.Edge, INode<Val>, W> {
 
     @Override
     public void onWeightAdded(
-        Transition<Statement, INode<Val>> t,
-        W w,
-        WeightedPAutomaton<Statement, INode<Val>, W> aut) {
-      if (t.getLabel().equals(Statement.epsilon())) return;
-      if (icfg.isExitStmt(t.getLabel())) {
-        Statement exitStmt = t.getLabel();
+        Transition<Edge, INode<Val>> t, W w, WeightedPAutomaton<Edge, INode<Val>, W> aut) {
+      if (t.getLabel().equals(new Edge(Statement.epsilon(), Statement.epsilon()))) return;
+      if (icfg.isExitStmt(
+          (AbstractBoomerangSolver.this instanceof ForwardBoomerangSolver
+              ? t.getLabel().getTarget()
+              : t.getLabel().getStart()))) {
+        Statement exitStmt = t.getLabel().getTarget();
         Method callee = exitStmt.getMethod();
         if (callAutomaton.getInitialStates().contains(t.getTarget())) {
           addPotentialUnbalancedFlow(callee, t, w);
@@ -157,26 +152,25 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
     }
   }
 
-  public INode<Node<Statement, Val>> createQueryNodeField(Query query) {
+  public INode<Node<ControlFlowGraph.Edge, Val>> createQueryNodeField(Query query) {
     return new SingleNode(
         /* TODO Replace by new designated type */ new Node<>(
-            query.stmt(), query.asNode().fact().asUnbalanced(query.stmt())));
+            query.cfgEdge(), query.asNode().fact().asUnbalanced(query.cfgEdge())));
   }
 
   public void synchedEmptyStackReachable(
-      final Node<Statement, Val> sourceNode,
-      final EmptyStackWitnessListener<Statement, Val> listener) {
+      final Node<Edge, Val> sourceNode, final EmptyStackWitnessListener<Edge, Val> listener) {
     synchedReachable(
         sourceNode,
-        new WitnessListener<Statement, Val, Field>() {
-          Multimap<Val, Node<Statement, Val>> potentialFieldCandidate = HashMultimap.create();
+        new WitnessListener<Edge, Val, Field>() {
+          Multimap<Val, Node<Edge, Val>> potentialFieldCandidate = HashMultimap.create();
           Set<Val> potentialCallCandidate = Sets.newHashSet();
 
           @Override
-          public void fieldWitness(Transition<Field, INode<Node<Statement, Val>>> t) {
+          public void fieldWitness(Transition<Field, INode<Node<Edge, Val>>> t) {
             if (t.getTarget() instanceof GeneratedState) return;
             if (!t.getLabel().equals(emptyField())) return;
-            Node<Statement, Val> targetFact =
+            Node<ControlFlowGraph.Edge, Val> targetFact =
                 new Node<>(
                     t.getTarget().fact().stmt(), t.getTarget().fact().fact().asUnbalanced(null));
             if (!potentialFieldCandidate.put(targetFact.fact(), targetFact)) return;
@@ -186,14 +180,14 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
           }
 
           @Override
-          public void callWitness(Transition<Statement, INode<Val>> t) {
+          public void callWitness(Transition<ControlFlowGraph.Edge, INode<Val>> t) {
 
             Val targetFact = t.getTarget().fact();
             if (targetFact instanceof AllocVal) {
               targetFact = ((AllocVal) targetFact).getDelegate();
               if (!potentialCallCandidate.add(targetFact)) return;
               if (potentialFieldCandidate.containsKey(targetFact)) {
-                for (Node<Statement, Val> w : potentialFieldCandidate.get(targetFact)) {
+                for (Node<ControlFlowGraph.Edge, Val> w : potentialFieldCandidate.get(targetFact)) {
                   listener.witnessFound(w);
                 }
               }
@@ -203,8 +197,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
   }
 
   public void synchedReachable(
-      final Node<Statement, Val> sourceNode,
-      final WitnessListener<Statement, Val, Field> listener) {
+      final Node<ControlFlowGraph.Edge, Val> sourceNode,
+      final WitnessListener<ControlFlowGraph.Edge, Val, Field> listener) {
     registerListener(
         reachableNode -> {
           if (!reachableNode.equals(sourceNode)) return;
@@ -227,12 +221,12 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
   }
 
   protected void addPotentialUnbalancedFlow(
-      Method callee, Transition<Statement, INode<Val>> trans, W weight) {
+      Method callee, Transition<ControlFlowGraph.Edge, INode<Val>> trans, W weight) {
     if (unbalancedDataFlows.put(callee, new UnbalancedDataFlow<>(callee, trans))) {
       Collection<UnbalancedDataFlowListener> existingListeners =
           Lists.newArrayList(unbalancedDataFlowListeners.get(callee));
       for (UnbalancedDataFlowListener l : existingListeners) {
-        propagateUnbalancedToCallSite(l.getCallSite(), trans);
+        propagateUnbalancedToCallSite(l.getCallSiteEdge(), trans);
       }
     }
 
@@ -247,7 +241,23 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
 
             @Override
             public void onCallerAdded(Statement n, Method m) {
-              propagateUnbalancedToCallSite((CallSiteStatement) n, trans);
+              if (AbstractBoomerangSolver.this instanceof ForwardBoomerangSolver) {
+                cfg.addPredsOfListener(
+                    new PredecessorListener(n) {
+                      @Override
+                      public void getPredecessor(Statement pred) {
+                        propagateUnbalancedToCallSite(new Edge(pred, n), trans);
+                      }
+                    });
+              } else if (AbstractBoomerangSolver.this instanceof BackwardBoomerangSolver) {
+                cfg.addSuccsOfListener(
+                    new SuccessorListener(n) {
+                      @Override
+                      public void getSuccessor(Statement succ) {
+                        propagateUnbalancedToCallSite(new Edge(n, succ), trans);
+                      }
+                    });
+              }
             }
           });
     }
@@ -257,29 +267,31 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
     return false;
   }
 
-  public void allowUnbalanced(Method callee, CallSiteStatement callSite) {
+  public void allowUnbalanced(Method callee, Edge callSiteEdge) {
     if (dataFlowScope.isExcluded(callee)) {
       return;
     }
-    UnbalancedDataFlowListener l = new UnbalancedDataFlowListener(callee, callSite);
+    UnbalancedDataFlowListener l = new UnbalancedDataFlowListener(callee, callSiteEdge);
     if (unbalancedDataFlowListeners.put(callee, l)) {
-      LOGGER.trace("Allowing unbalanced propagation from {} to {} of {}", callee, callSite, this);
+      LOGGER.trace(
+          "Allowing unbalanced propagation from {} to {} of {}", callee, callSiteEdge, this);
       for (UnbalancedDataFlow<W> e : Lists.newArrayList(unbalancedDataFlows.get(callee))) {
-        propagateUnbalancedToCallSite(callSite, e.getReturningTransition());
+        propagateUnbalancedToCallSite(callSiteEdge, e.getReturningTransition());
       }
     }
   }
 
   protected abstract void propagateUnbalancedToCallSite(
-      CallSiteStatement callSite, Transition<Statement, INode<Val>> transInCallee);
+      Edge callSiteEdge, Transition<ControlFlowGraph.Edge, INode<Val>> transInCallee);
 
   @Override
-  protected boolean preventCallTransitionAdd(Transition<Statement, INode<Val>> t, W weight) {
+  protected boolean preventCallTransitionAdd(
+      Transition<ControlFlowGraph.Edge, INode<Val>> t, W weight) {
     return false;
   }
 
   @Override
-  public void addCallRule(final Rule<Statement, INode<Val>, W> rule) {
+  public void addCallRule(final Rule<ControlFlowGraph.Edge, INode<Val>, W> rule) {
     if (rule instanceof NormalRule) {
       if (rule.getL1().equals(rule.getL2()) && rule.getS1().equals(rule.getS2())) return;
     }
@@ -287,15 +299,14 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
   }
 
   @Override
-  public void addFieldRule(final Rule<Field, INode<Node<Statement, Val>>, W> rule) {
+  public void addFieldRule(final Rule<Field, INode<Node<ControlFlowGraph.Edge, Val>>, W> rule) {
     if (rule instanceof NormalRule) {
       if (rule.getL1().equals(rule.getL2()) && rule.getS1().equals(rule.getS2())) return;
     }
     super.addFieldRule(rule);
   }
 
-  private void addTransitionToMethod(
-      Method method, Transition<Field, INode<Node<Statement, Val>>> t) {
+  private void addTransitionToMethod(Method method, Transition<Field, INode<Node<Edge, Val>>> t) {
     if (perMethodFieldTransitions.put(method, t)) {
       for (MethodBasedFieldTransitionListener<W> l :
           Lists.newArrayList(perMethodFieldTransitionsListener.get(method))) {
@@ -306,7 +317,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
 
   public void registerFieldTransitionListener(MethodBasedFieldTransitionListener<W> l) {
     if (perMethodFieldTransitionsListener.put(l.getMethod(), l)) {
-      for (Transition<Field, INode<Node<Statement, Val>>> t :
+      for (Transition<Field, INode<Node<ControlFlowGraph.Edge, Val>>> t :
           Lists.newArrayList(perMethodFieldTransitions.get(l.getMethod()))) {
         l.onAddedTransition(t);
       }
@@ -314,56 +325,60 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
   }
 
   private void addTransitionToStatement(
-      Statement s, Transition<Field, INode<Node<Statement, Val>>> t) {
+      ControlFlowGraph.Edge s, Transition<Field, INode<Node<ControlFlowGraph.Edge, Val>>> t) {
     if (perStatementFieldTransitions.put(s, t)) {
-      for (StatementBasedFieldTransitionListener<W> l :
+      for (ControlFlowEdgeBasedFieldTransitionListener<W> l :
           Lists.newArrayList(perStatementFieldTransitionsListener.get(s))) {
         l.onAddedTransition(t);
       }
     }
   }
 
-  public void registerStatementFieldTransitionListener(StatementBasedFieldTransitionListener<W> l) {
-    if (perStatementFieldTransitionsListener.put(l.getStmt(), l)) {
-      for (Transition<Field, INode<Node<Statement, Val>>> t :
-          Lists.newArrayList(perStatementFieldTransitions.get(l.getStmt()))) {
+  public void registerStatementFieldTransitionListener(
+      ControlFlowEdgeBasedFieldTransitionListener<W> l) {
+    if (perStatementFieldTransitionsListener.put(l.getCfgEdge(), l)) {
+      for (Transition<Field, INode<Node<ControlFlowGraph.Edge, Val>>> t :
+          Lists.newArrayList(perStatementFieldTransitions.get(l.getCfgEdge()))) {
         l.onAddedTransition(t);
       }
     }
   }
 
-  private void addCallTransitionToStatement(Statement s, Transition<Statement, INode<Val>> t, W w) {
+  private void addCallTransitionToStatement(Edge s, Transition<Edge, INode<Val>> t, W w) {
     W put = perStatementCallTransitions.get(s, t);
     if (put != null) {
       W combineWith = (W) put.combineWith(w);
       if (!combineWith.equals(put)) {
         perStatementCallTransitions.put(s, t, combineWith);
-        for (StatementBasedCallTransitionListener<W> l :
+        for (ControlFlowEdgeBasedCallTransitionListener<W> l :
             Lists.newArrayList(perStatementCallTransitionsListener.get(s))) {
           l.onAddedTransition(t, w);
         }
       }
     } else {
       perStatementCallTransitions.put(s, t, w);
-      for (StatementBasedCallTransitionListener<W> l :
+      for (ControlFlowEdgeBasedCallTransitionListener<W> l :
           Lists.newArrayList(perStatementCallTransitionsListener.get(s))) {
         l.onAddedTransition(t, w);
       }
     }
   }
 
-  public void registerStatementCallTransitionListener(StatementBasedCallTransitionListener<W> l) {
-    if (perStatementCallTransitionsListener.put(l.getStmt(), l)) {
-      Map<Transition<Statement, INode<Val>>, W> row = perStatementCallTransitions.row(l.getStmt());
-      for (Entry<Transition<Statement, INode<Val>>, W> t : Lists.newArrayList(row.entrySet())) {
+  public void registerStatementCallTransitionListener(
+      ControlFlowEdgeBasedCallTransitionListener<W> l) {
+    if (perStatementCallTransitionsListener.put(l.getControlFlowEdge(), l)) {
+      Map<Transition<ControlFlowGraph.Edge, INode<Val>>, W> row =
+          perStatementCallTransitions.row(l.getControlFlowEdge());
+      for (Entry<Transition<ControlFlowGraph.Edge, INode<Val>>, W> t :
+          Lists.newArrayList(row.entrySet())) {
         l.onAddedTransition(t.getKey(), t.getValue());
       }
     }
   }
 
-  public INode<Node<Statement, Val>> generateFieldState(
-      final INode<Node<Statement, Val>> d, final Field loc) {
-    Entry<INode<Node<Statement, Val>>, Field> e = new AbstractMap.SimpleEntry<>(d, loc);
+  public INode<Node<ControlFlowGraph.Edge, Val>> generateFieldState(
+      final INode<Node<ControlFlowGraph.Edge, Val>> d, final Field loc) {
+    Entry<INode<Node<ControlFlowGraph.Edge, Val>>, Field> e = new AbstractMap.SimpleEntry<>(d, loc);
     if (!generatedFieldState.containsKey(e)) {
       generatedFieldState.put(e, new GeneratedState<>(d, loc));
     }
@@ -379,13 +394,11 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
   protected abstract Collection<? extends State> computeReturnFlow(
       Method method, Statement curr, Val value);
 
-  protected void returnFlow(Method method, Node<Statement, Val> currNode) {
+  protected void returnFlow(Method method, Node<ControlFlowGraph.Edge, Val> currNode) {
     Val value = currNode.fact();
 
-    // Apply summaries here for ,
-    //              (CallSiteStatement) callSite,
-    //              ((CallSiteStatement) callSite).getReturnSiteStatement()
-    Collection<? extends State> outFlow = computeReturnFlow(method, currNode.stmt(), value);
+    Collection<? extends State> outFlow =
+        computeReturnFlow(method, currNode.stmt().getTarget(), value);
 
     for (State s : outFlow) {
       propagate(currNode, s);
@@ -393,10 +406,9 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
   }
 
   protected abstract Collection<? extends State> getEmptyCalleeFlow(
-      Method caller, Statement callSite, Val value, Statement returnSite);
+      Method caller, Edge callSiteEdge, Val value);
 
-  protected abstract Collection<State> computeNormalFlow(
-      Method method, Statement curr, Val value, Statement succ);
+  protected abstract Collection<State> computeNormalFlow(Method method, Edge currEdge, Val value);
 
   @Override
   public Field epsilonField() {
@@ -409,8 +421,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
   }
 
   @Override
-  public Statement epsilonStmt() {
-    return Statement.epsilon();
+  public ControlFlowGraph.Edge epsilonStmt() {
+    return new Edge(Statement.epsilon(), Statement.epsilon());
   }
 
   @Override
@@ -423,19 +435,19 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
     return Field.exclusionWildcard(exclusion);
   }
 
-  public WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> getFieldAutomaton() {
+  public WeightedPAutomaton<Field, INode<Node<ControlFlowGraph.Edge, Val>>, W> getFieldAutomaton() {
     return fieldAutomaton;
   }
 
-  public WeightedPAutomaton<Statement, INode<Val>, W> getCallAutomaton() {
+  public WeightedPAutomaton<ControlFlowGraph.Edge, INode<Val>, W> getCallAutomaton() {
     return callAutomaton;
   }
 
-  public WeightedPushdownSystem<Statement, INode<Val>, W> getCallPDS() {
+  public WeightedPushdownSystem<ControlFlowGraph.Edge, INode<Val>, W> getCallPDS() {
     return callingPDS;
   }
 
-  public WeightedPushdownSystem<Field, INode<Node<Statement, Val>>, W> getFieldPDS() {
+  public WeightedPushdownSystem<Field, INode<Node<ControlFlowGraph.Edge, Val>>, W> getFieldPDS() {
     return fieldPDS;
   }
 
@@ -445,7 +457,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
 
   @Override
   protected boolean preventFieldTransitionAdd(
-      Transition<Field, INode<Node<Statement, Val>>> t, W weight) {
+      Transition<Field, INode<Node<ControlFlowGraph.Edge, Val>>> t, W weight) {
     if (t.getStart().equals(t.getTarget()) && t.getLabel().equals(Field.empty())) {
       LOGGER.warn("Prevented illegal edge addition of {}", t);
       return true;
@@ -481,10 +493,10 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
     return sourceVal.doesCastFail(targetVal, target);
   }
 
-  private boolean isCastNode(Node<Statement, Val> node) {
-    boolean isCast = node.stmt().isCast();
+  private boolean isCastNode(Node<ControlFlowGraph.Edge, Val> node) {
+    boolean isCast = node.stmt().getStart().isCast();
     if (isCast) {
-      Val rightOp = node.stmt().getRightOp();
+      Val rightOp = node.stmt().getStart().getRightOp();
       if (rightOp.isCast()) {
         if (rightOp.getCastOp().equals(node.fact())) {
           return true;
@@ -492,73 +504,6 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
       }
     }
     return false;
-  }
-
-  private final class ReturnFlowCallerListener implements CallerListener<Statement, Method> {
-    private final Statement curr;
-    private final Method method;
-    private final Val value;
-    private final Node<Statement, Val> currNode;
-
-    private ReturnFlowCallerListener(
-        Statement curr, Method method, Val value, Node<Statement, Val> currNode) {
-      this.curr = curr;
-      this.method = method;
-      this.value = value;
-      this.currNode = currNode;
-    }
-
-    @Override
-    public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result + getOuterType().hashCode();
-      result = prime * result + ((curr == null) ? 0 : curr.hashCode());
-      result = prime * result + ((currNode == null) ? 0 : currNode.hashCode());
-      result = prime * result + ((method == null) ? 0 : method.hashCode());
-      result = prime * result + ((value == null) ? 0 : value.hashCode());
-      return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj) return true;
-      if (obj == null) return false;
-      if (getClass() != obj.getClass()) return false;
-      ReturnFlowCallerListener other = (ReturnFlowCallerListener) obj;
-      if (!getOuterType().equals(other.getOuterType())) return false;
-      if (curr == null) {
-        if (other.curr != null) return false;
-      } else if (!curr.equals(other.curr)) return false;
-      if (currNode == null) {
-        if (other.currNode != null) return false;
-      } else if (!currNode.equals(other.currNode)) return false;
-      if (method == null) {
-        if (other.method != null) return false;
-      } else if (!method.equals(other.method)) return false;
-      if (value == null) {
-        if (other.value != null) return false;
-      } else if (!value.equals(other.value)) return false;
-      return true;
-    }
-
-    @Override
-    public void onCallerAdded(Statement callSite, Method m) {
-      if (!callSite.containsInvokeExpr()) {
-        return;
-      }
-      LOGGER.trace(
-          "Balanced return-flow for {} at call site for {}", currNode.fact(), callSite, this);
-    }
-
-    @Override
-    public Method getObservedCallee() {
-      return method;
-    }
-
-    private AbstractBoomerangSolver getOuterType() {
-      return AbstractBoomerangSolver.this;
-    }
   }
 
   public Map<RegExAccessPath, W> getResultsAt(final Statement stmt) {
@@ -569,7 +514,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
             return;
           }
           if (t.getStart().fact().stmt().equals(stmt)) {
-            for (INode<Node<Statement, Val>> initState : fieldAutomaton.getInitialStates()) {
+            for (INode<Node<ControlFlowGraph.Edge, Val>> initState :
+                fieldAutomaton.getInitialStates()) {
               IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), initState);
 
               results.put(new RegExAccessPath(t.getStart().fact().fact(), regEx), w);
@@ -579,17 +525,17 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
     return results;
   }
 
-  public Table<Statement, RegExAccessPath, W> getResults(Method m) {
-    final Table<Statement, RegExAccessPath, W> results = HashBasedTable.create();
+  public Table<Edge, RegExAccessPath, W> getResults(Method m) {
+    final Table<Edge, RegExAccessPath, W> results = HashBasedTable.create();
     LOGGER.debug("Start extracting results from {}", this);
     fieldAutomaton.registerListener(
         (t, w, aut) -> {
           if (t.getStart() instanceof GeneratedState) {
             return;
           }
-          if (t.getStart().fact().stmt().getMethod().equals(m)) {
-
-            for (INode<Node<Statement, Val>> initState : fieldAutomaton.getInitialStates()) {
+          if (t.getStart().fact().stmt().getStart().getMethod().equals(m)) {
+            for (INode<Node<ControlFlowGraph.Edge, Val>> initState :
+                fieldAutomaton.getInitialStates()) {
               IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), initState);
               AbstractBoomerangSolver.this.callAutomaton.registerListener(
                   (callT, w1, aut1) -> {
@@ -610,21 +556,15 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
 
   public void debugFieldAutomaton(final Statement stmt) {
     fieldAutomaton.registerListener(
-        new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
-
-          @Override
-          public void onWeightAdded(
-              Transition<Field, INode<Node<Statement, Val>>> t,
-              W w,
-              WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-            if (t.getStart() instanceof GeneratedState) {
-              return;
-            }
-            if (t.getStart().fact().stmt().equals(stmt)) {
-              for (INode<Node<Statement, Val>> initState : fieldAutomaton.getInitialStates()) {
-                IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), initState);
-                LOGGER.debug(t.getStart().fact().fact() + " " + regEx);
-              }
+        (t, w, aut) -> {
+          if (t.getStart() instanceof GeneratedState) {
+            return;
+          }
+          if (t.getStart().fact().stmt().equals(stmt)) {
+            for (INode<Node<ControlFlowGraph.Edge, Val>> initState :
+                fieldAutomaton.getInitialStates()) {
+              IRegEx<Field> regEx = fieldAutomaton.toRegEx(t.getStart(), initState);
+              LOGGER.debug(t.getStart().fact().fact() + " " + regEx);
             }
           }
         });
@@ -645,14 +585,14 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
   private static class UnbalancedDataFlow<W> {
 
     private final Method callee;
-    private Transition<Statement, INode<Val>> trans;
+    private Transition<ControlFlowGraph.Edge, INode<Val>> trans;
 
-    public UnbalancedDataFlow(Method callee, Transition<Statement, INode<Val>> trans) {
+    public UnbalancedDataFlow(Method callee, Transition<ControlFlowGraph.Edge, INode<Val>> trans) {
       this.callee = callee;
       this.trans = trans;
     }
 
-    public Transition<Statement, INode<Val>> getReturningTransition() {
+    public Transition<ControlFlowGraph.Edge, INode<Val>> getReturningTransition() {
       return trans;
     }
 
@@ -683,14 +623,14 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
 
   private static class UnbalancedDataFlowListener {
     private Method callee;
-    private CallSiteStatement callSite;
+    private Edge callSite;
 
-    public UnbalancedDataFlowListener(Method callee, CallSiteStatement callSite) {
+    public UnbalancedDataFlowListener(Method callee, Edge callSite) {
       this.callee = callee;
       this.callSite = callSite;
     }
 
-    public CallSiteStatement getCallSite() {
+    public Edge getCallSiteEdge() {
       return callSite;
     }
 

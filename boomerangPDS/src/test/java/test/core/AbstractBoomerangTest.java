@@ -11,10 +11,10 @@ import boomerang.WholeProgramBoomerang;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.scene.AllocVal;
 import boomerang.scene.CallGraph;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.DataFlowScope;
 import boomerang.scene.Field;
 import boomerang.scene.SootDataFlowScope;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.scene.jimple.BoomerangPretransformer;
 import boomerang.scene.jimple.IntAndStringBoomerangOptions;
@@ -46,7 +46,6 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.SingleNode;
 import test.core.selfrunning.AbstractTestingFramework;
 import wpds.impl.Transition;
-import wpds.impl.Weight;
 import wpds.impl.Weight.NoWeight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAStateListener;
@@ -69,7 +68,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
   private QueryForCallSiteDetector queryDetector;
   private Collection<? extends Query> expectedAllocationSites;
-  private Collection<? extends Node<Statement, Val>> explicitlyUnexpectedAllocationSites;
+  private Collection<? extends Node<Edge, Val>> explicitlyUnexpectedAllocationSites;
   protected Collection<? extends Query> queryForCallSites;
   protected Collection<Error> unsoundErrors = Sets.newHashSet();
   protected Collection<Error> imprecisionErrors = Sets.newHashSet();
@@ -153,7 +152,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
   }
 
   private void runWholeProgram() {
-    final Set<Node<Statement, Val>> results = Sets.newHashSet();
+    final Set<Node<Edge, Val>> results = Sets.newHashSet();
     WholeProgramBoomerang<NoWeight> solver =
         new WholeProgramBoomerang<NoWeight>(
             callGraph,
@@ -171,22 +170,22 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
             }) {
 
           @Override
-          protected WeightFunctions<Statement, Val, Field, NoWeight> getForwardFieldWeights() {
+          protected WeightFunctions<Edge, Val, Field, NoWeight> getForwardFieldWeights() {
             return new OneWeightFunctions<>(NoWeight.NO_WEIGHT_ONE);
           }
 
           @Override
-          protected WeightFunctions<Statement, Val, Field, NoWeight> getBackwardFieldWeights() {
+          protected WeightFunctions<Edge, Val, Field, NoWeight> getBackwardFieldWeights() {
             return new OneWeightFunctions<>(NoWeight.NO_WEIGHT_ONE);
           }
 
           @Override
-          protected WeightFunctions<Statement, Val, Statement, NoWeight> getBackwardCallWeights() {
+          protected WeightFunctions<Edge, Val, Edge, NoWeight> getBackwardCallWeights() {
             return new OneWeightFunctions<>(NoWeight.NO_WEIGHT_ONE);
           }
 
           @Override
-          protected WeightFunctions<Statement, Val, Statement, NoWeight> getForwardCallWeights(
+          protected WeightFunctions<Edge, Val, Edge, NoWeight> getForwardCallWeights(
               ForwardQuery sourceQuery) {
             return new OneWeightFunctions<>(NoWeight.NO_WEIGHT_ONE);
           }
@@ -199,14 +198,14 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
             .get(q)
             .getFieldAutomaton()
             .registerListener(
-                new WPAStateListener<Field, INode<Node<Statement, Val>>, NoWeight>(
+                new WPAStateListener<Field, INode<Node<Edge, Val>>, NoWeight>(
                     new SingleNode<>(queryForCallSite.asNode())) {
 
                   @Override
                   public void onOutTransitionAdded(
-                      Transition<Field, INode<Node<Statement, Val>>> t,
+                      Transition<Field, INode<Node<Edge, Val>>> t,
                       NoWeight w,
-                      WeightedPAutomaton<Field, INode<Node<Statement, Val>>, NoWeight>
+                      WeightedPAutomaton<Field, INode<Node<Edge, Val>>, NoWeight>
                           weightedPAutomaton) {
                     if (t.getLabel().equals(Field.empty())
                         && t.getTarget().fact().equals(q.asNode())) {
@@ -216,13 +215,13 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
                   @Override
                   public void onInTransitionAdded(
-                      Transition<Field, INode<Node<Statement, Val>>> t,
+                      Transition<Field, INode<Node<Edge, Val>>> t,
                       NoWeight w,
-                      WeightedPAutomaton<Field, INode<Node<Statement, Val>>, NoWeight>
+                      WeightedPAutomaton<Field, INode<Node<Edge, Val>>, NoWeight>
                           weightedPAutomaton) {}
                 });
       }
-      for (Node<Statement, Val> s : solvers.get(q).getReachedStates()) {
+      for (Node<Edge, Val> s : solvers.get(q).getReachedStates()) {
         if (s.stmt().getMethod().toString().contains("unreachable")
             && !q.toString().contains("dummyClass.main")) {
           throw new RuntimeException("Propagation within unreachable method found: " + q);
@@ -236,7 +235,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
   private void runDemandDrivenBackward() {
     // Run backward analysis
-    Set<Node<Statement, Val>> backwardResults = runQuery(queryForCallSites);
+    Set<Node<Edge, Val>> backwardResults = runQuery(queryForCallSites);
     if (queryDetector.integerQueries) {
       compareIntegerResults(backwardResults, AnalysisMode.DemandDrivenBackward);
     } else {
@@ -244,17 +243,16 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
     }
   }
 
-  private void compareIntegerResults(
-      Set<Node<Statement, Val>> backwardResults, AnalysisMode analysis) {
+  private void compareIntegerResults(Set<Node<Edge, Val>> backwardResults, AnalysisMode analysis) {
     if (queryForCallSites.size() > 1) throw new RuntimeException("Not implemented");
     for (Query q : queryForCallSites) {
-      Statement stmt = q.stmt();
-      boomerang.scene.InvokeExpr ie = stmt.getInvokeExpr();
+      Edge stmt = q.cfgEdge();
+      boomerang.scene.InvokeExpr ie = stmt.getStart().getInvokeExpr();
       Val arg = ie.getArg(1);
       Collection<String> expectedResults = parse(arg);
       LOGGER.info("Expected results: {}", expectedResults);
       boolean imprecise = false;
-      for (Node<Statement, Val> v : backwardResults) {
+      for (Node<Edge, Val> v : backwardResults) {
         if (v.fact() instanceof AllocVal) {
           AllocVal allocVal = (AllocVal) v.fact();
           boolean remove = expectedResults.remove(allocVal.toString());
@@ -275,15 +273,16 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
     return Lists.newArrayList(split);
   }
 
-  private Set<Node<Statement, Val>> runQuery(Collection<? extends Query> queries) {
-    final Set<Node<Statement, Val>> results = Sets.newHashSet();
+  private Set<Node<Edge, Val>> runQuery(Collection<? extends Query> queries) {
+    final Set<Node<Edge, Val>> results = Sets.newHashSet();
 
     for (final Query query : queries) {
       BoomerangOptions options = createBoomerangOptions();
-      Boomerang solver = new Boomerang(callGraph, getDataFlowScope(), options);
+      Boomerang solver = new Boomerang(callGraph, getDataFlowScope(), options) {};
+
       if (query instanceof BackwardQuery) {
         Stopwatch watch = Stopwatch.createStarted();
-        BackwardBoomerangResults<Weight.NoWeight> res = solver.solve((BackwardQuery) query);
+        BackwardBoomerangResults<NoWeight> res = solver.solve((BackwardQuery) query);
         globalQueryTime = globalQueryTime.plus(watch.elapsed());
 
         LOGGER.info("Solving query took: {}", watch);
@@ -291,7 +290,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
         for (ForwardQuery q : res.getAllocationSites().keySet()) {
           results.add(q.asNode());
 
-          for (Node<Statement, Val> s : solver.getSolvers().get(q).getReachedStates()) {
+          for (Node<Edge, Val> s : solver.getSolvers().get(q).getReachedStates()) {
             if (s.stmt().getMethod().toString().contains("unreachable")) {
               throw new RuntimeException("Propagation within unreachable method found.");
             }
@@ -322,16 +321,15 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
 
   private void compareQuery(
       Collection<? extends Query> expectedResults,
-      Collection<? extends Node<Statement, Val>> results,
+      Collection<? extends Node<Edge, Val>> results,
       AnalysisMode analysis) {
     LOGGER.info("Boomerang Results: {}", results);
     LOGGER.info("Expected Results: {}", expectedResults);
-    Collection<Node<Statement, Val>> falseNegativeAllocationSites = new HashSet<>();
+    Collection<Node<Edge, Val>> falseNegativeAllocationSites = new HashSet<>();
     for (Query res : expectedResults) {
       if (!results.contains(res.asNode())) falseNegativeAllocationSites.add(res.asNode());
     }
-    Collection<? extends Node<Statement, Val>> falsePositiveAllocationSites =
-        new HashSet<>(results);
+    Collection<? extends Node<Edge, Val>> falsePositiveAllocationSites = new HashSet<>(results);
     for (Query res : expectedResults) {
       falsePositiveAllocationSites.remove(res.asNode());
     }
@@ -352,7 +350,7 @@ public class AbstractBoomerangTest extends AbstractTestingFramework {
           "Expected some results, but Boomerang returned no allocation sites.");
     }
 
-    for (Node<Statement, Val> r : results) {
+    for (Node<Edge, Val> r : results) {
       if (explicitlyUnexpectedAllocationSites.contains(r)) {
         imprecisionErrors.add(new Error(analysis + " Imprecise results for:" + answer));
       }

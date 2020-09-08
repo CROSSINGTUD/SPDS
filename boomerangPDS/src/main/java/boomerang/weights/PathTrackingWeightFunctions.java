@@ -1,13 +1,13 @@
 package boomerang.weights;
 
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Val;
 import boomerang.weights.PathConditionWeight.ConditionDomain;
 import sync.pds.solver.WeightFunctions;
 import sync.pds.solver.nodes.Node;
 
 public class PathTrackingWeightFunctions
-    implements WeightFunctions<Statement, Val, Statement, DataFlowPathWeight> {
+    implements WeightFunctions<Edge, Val, Edge, DataFlowPathWeight> {
 
   private boolean trackDataFlowPath;
   private boolean trackPathConditions;
@@ -21,25 +21,24 @@ public class PathTrackingWeightFunctions
   }
 
   @Override
-  public DataFlowPathWeight push(
-      Node<Statement, Val> curr, Node<Statement, Val> succ, Statement callSite) {
+  public DataFlowPathWeight push(Node<Edge, Val> curr, Node<Edge, Val> succ, Edge callSite) {
     if (trackDataFlowPath && !curr.fact().isStatic()) {
-      if (callSite.uses(curr.fact())) {
-        if (implicitBooleanCondition && callSite.unwrap().isAssign()) {
+      if (callSite.getStart().uses(curr.fact())) {
+        if (implicitBooleanCondition && callSite.getTarget().isAssign()) {
           return new DataFlowPathWeight(
-              new Node<>(callSite, curr.fact()), callSite, succ.stmt().getMethod());
+              new Node<>(callSite, curr.fact()), callSite.getStart(), succ.stmt().getMethod());
         }
         return new DataFlowPathWeight(new Node<>(callSite, curr.fact()));
       }
-      if (implicitBooleanCondition && callSite.unwrap().isAssign()) {
-        return new DataFlowPathWeight(callSite, succ.stmt().getMethod());
+      if (implicitBooleanCondition && callSite.getStart().isAssign()) {
+        return new DataFlowPathWeight(callSite.getStart(), succ.stmt().getMethod());
       }
     }
     return DataFlowPathWeight.one();
   }
 
   @Override
-  public DataFlowPathWeight normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
+  public DataFlowPathWeight normal(Node<Edge, Val> curr, Node<Edge, Val> succ) {
     if (trackDataFlowPath
         && curr.stmt().getMethod().getControlFlowGraph().getStartPoints().contains(curr.stmt())) {
       return new DataFlowPathWeight(curr);
@@ -48,35 +47,35 @@ public class PathTrackingWeightFunctions
       return new DataFlowPathWeight(succ);
     }
     if (trackDataFlowPath
-        && succ.stmt().isReturnStmt()
-        && succ.stmt().getReturnOp().equals(succ.fact())) {
+        && succ.stmt().getTarget().isReturnStmt()
+        && succ.stmt().getTarget().getReturnOp().equals(succ.fact())) {
       return new DataFlowPathWeight(succ);
     }
     if (implicitBooleanCondition
-        && curr.stmt().isAssign()
-        && curr.stmt().getLeftOp().getType().isBooleanType()) {
+        && curr.stmt().getTarget().isAssign()
+        && curr.stmt().getTarget().getLeftOp().getType().isBooleanType()) {
       return new DataFlowPathWeight(
-          curr.stmt().getLeftOp(),
-          curr.stmt().getRightOp().toString().equals("0")
+          curr.stmt().getTarget().getLeftOp(),
+          curr.stmt().getTarget().getRightOp().toString().equals("0")
               ? ConditionDomain.FALSE
               : ConditionDomain.TRUE);
     }
 
-    if (implicitBooleanCondition && succ.stmt().isReturnStmt()) {
-      return new DataFlowPathWeight(succ.stmt().getReturnOp());
+    if (implicitBooleanCondition && succ.stmt().getTarget().isReturnStmt()) {
+      return new DataFlowPathWeight(succ.stmt().getTarget().getReturnOp());
     }
 
-    if (trackPathConditions && curr.stmt().isIfStmt()) {
-      if (curr.stmt().getIfStmt().getTarget().equals(succ.stmt())) {
-        return new DataFlowPathWeight(curr.stmt(), true);
+    if (trackPathConditions && curr.stmt().getTarget().isIfStmt()) {
+      if (curr.stmt().getTarget().getIfStmt().getTarget().equals(succ.stmt())) {
+        return new DataFlowPathWeight(curr.stmt().getTarget(), true);
       }
-      return new DataFlowPathWeight(curr.stmt(), false);
+      return new DataFlowPathWeight(curr.stmt().getTarget(), false);
     }
     return DataFlowPathWeight.one();
   }
 
   @Override
-  public DataFlowPathWeight pop(Node<Statement, Val> curr) {
+  public DataFlowPathWeight pop(Node<Edge, Val> curr) {
     return DataFlowPathWeight.one();
   }
 

@@ -13,6 +13,7 @@ package boomerang;
 
 import boomerang.scene.AnalysisScope;
 import boomerang.scene.CallGraph;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.DataFlowScope;
 import boomerang.scene.Statement;
 import java.util.Collection;
@@ -38,10 +39,11 @@ public abstract class WholeProgramBoomerang<W extends Weight> extends WeightedBo
     AnalysisScope scope =
         new AnalysisScope(callGraph) {
           @Override
-          protected Collection<? extends Query> generate(Statement stmt) {
+          protected Collection<? extends Query> generate(Edge cfgEdge) {
+            Statement stmt = cfgEdge.getStart();
             if (stmt.isAssign()) {
               if (stmt.getRightOp().isNewExpr()) {
-                return Collections.singleton(new ForwardQuery(stmt, stmt.getRightOp()));
+                return Collections.singleton(new ForwardQuery(cfgEdge, stmt.getRightOp()));
               }
             }
             return Collections.emptySet();

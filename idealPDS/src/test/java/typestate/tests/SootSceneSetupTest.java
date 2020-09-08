@@ -12,6 +12,7 @@
 package typestate.tests;
 
 import java.util.List;
+import org.junit.Ignore;
 import org.junit.Test;
 import test.IDEALTestingFramework;
 import typestate.finiteautomata.TypeStateMachineWeightFunctions;
@@ -29,6 +30,7 @@ public class SootSceneSetupTest extends IDEALTestingFramework {
   }
 
   @Test
+  @Ignore
   public void aliassimple() {
     File file = new File();
     File alias = file;

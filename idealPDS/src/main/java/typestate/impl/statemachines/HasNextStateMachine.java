@@ -13,6 +13,7 @@ package typestate.impl.statemachines;
 
 import boomerang.WeightedForwardQuery;
 import boomerang.scene.AllocVal;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Statement;
 import java.util.Collections;
 import java.util.Set;
@@ -70,14 +71,15 @@ public class HasNextStateMachine extends TypeStateMachineWeightFunctions {
             States.ERROR, HAS_NEXT_METHOD, Parameter.This, States.ERROR, Type.OnCall));
   }
 
-  public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement unit) {
+  public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(Edge edge) {
+    Statement unit = edge.getStart();
     if (unit.containsInvokeExpr() && unit.isAssign()) {
       boomerang.scene.InvokeExpr invokeExpr = unit.getInvokeExpr();
       if (invokeExpr.isInstanceInvokeExpr()) {
         if (invokeExpr.getMethod().getName().contains("iterator")) {
           return Collections.singleton(
               new WeightedForwardQuery<>(
-                  unit,
+                  edge,
                   new AllocVal(unit.getLeftOp(), unit, unit.getLeftOp()),
                   initialTransition()));
         }

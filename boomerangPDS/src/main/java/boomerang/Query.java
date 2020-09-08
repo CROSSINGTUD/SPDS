@@ -12,32 +12,33 @@
 package boomerang;
 
 import boomerang.scene.AllocVal;
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Type;
 import boomerang.scene.Val;
 import sync.pds.solver.nodes.Node;
 
 public abstract class Query {
 
-  private final Statement stmt;
+  private final ControlFlowGraph.Edge cfgEdge;
   private final Val variable;
 
-  public Query(Statement stmt, Val variable) {
-    this.stmt = stmt;
+  public Query(ControlFlowGraph.Edge cfgEdge, Val variable) {
+    this.cfgEdge = cfgEdge;
     this.variable = variable;
   }
 
-  public Node<Statement, Val> asNode() {
-    return new Node<Statement, Val>(stmt, variable);
+  public Node<ControlFlowGraph.Edge, Val> asNode() {
+    return new Node<>(cfgEdge, variable);
   }
 
   @Override
   public String toString() {
-    return new Node<Statement, Val>(stmt, variable).toString();
+    return new Node<>(cfgEdge, variable).toString();
   }
 
-  public Statement stmt() {
-    return stmt;
+  public Edge cfgEdge() {
+    return cfgEdge;
   }
 
   public Val var() {
@@ -48,7 +49,7 @@ public abstract class Query {
   public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
+    result = prime * result + ((cfgEdge == null) ? 0 : cfgEdge.hashCode());
     result = prime * result + ((variable == null) ? 0 : variable.hashCode());
     return result;
   }
@@ -59,9 +60,9 @@ public abstract class Query {
     if (obj == null) return false;
     if (obj.getClass() != this.getClass()) return false;
     Query other = (Query) obj;
-    if (stmt == null) {
-      if (other.stmt != null) return false;
-    } else if (!stmt.equals(other.stmt)) return false;
+    if (cfgEdge == null) {
+      if (other.cfgEdge != null) return false;
+    } else if (!cfgEdge.equals(other.cfgEdge)) return false;
     if (variable == null) {
       if (other.variable != null) return false;
     } else if (!variable.equals(other.variable)) return false;

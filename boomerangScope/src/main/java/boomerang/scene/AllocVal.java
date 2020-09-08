@@ -1,5 +1,7 @@
 package boomerang.scene;
 
+import boomerang.scene.ControlFlowGraph.Edge;
+
 public class AllocVal extends Val {
 
   private Val delegate;
@@ -50,7 +52,7 @@ public class AllocVal extends Val {
     return delegate.isUnbalanced();
   }
 
-  public Val asUnbalanced(Statement stmt) {
+  public Val asUnbalanced(Edge stmt) {
     return delegate.asUnbalanced(stmt);
   }
 

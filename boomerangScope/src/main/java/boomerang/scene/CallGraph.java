@@ -21,10 +21,11 @@ public class CallGraph {
 
   public static class Edge {
 
-    private final CallSiteStatement callSite;
+    private final Statement callSite;
     private final Method callee;
 
-    public Edge(CallSiteStatement callSite, Method callee) {
+    public Edge(Statement callSite, Method callee) {
+      assert callSite.containsInvokeExpr();
       this.callSite = callSite;
       this.callee = callee;
     }
@@ -33,7 +34,7 @@ public class CallGraph {
       return callee;
     }
 
-    public CallSiteStatement src() {
+    public Statement src() {
       return callSite;
     }
 

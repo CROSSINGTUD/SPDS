@@ -11,11 +11,11 @@
  */
 package ideal;
 
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Val;
 import sync.pds.solver.nodes.Node;
 
 public interface NonOneFlowListener {
 
-  void nonOneFlow(Node<Statement, Val> curr);
+  void nonOneFlow(Node<Edge, Val> curr);
 }

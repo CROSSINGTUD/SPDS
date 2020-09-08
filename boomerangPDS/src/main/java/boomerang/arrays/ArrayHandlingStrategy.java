@@ -11,8 +11,8 @@
  */
 package boomerang.arrays;
 
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Pair;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.solver.BackwardBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
@@ -22,15 +22,14 @@ import wpds.interfaces.State;
 
 public interface ArrayHandlingStrategy<W extends Weight> {
   void handleForward(
-      Statement arrayStoreStmt,
+      Edge arrayStoreStmt,
       Pair<Val, Integer> arrayBase,
       Set<State> out,
       ForwardBoomerangSolver<W> solver);
 
   void handleBackward(
-      Statement arrayStoreStmt,
+      Edge arrayStoreStmt,
       Pair<Val, Integer> arrayBase,
-      Statement succ,
       Set<State> out,
       BackwardBoomerangSolver<W> solver);
 }

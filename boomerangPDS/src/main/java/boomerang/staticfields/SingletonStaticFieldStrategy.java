@@ -1,6 +1,7 @@
 package boomerang.staticfields;
 
 import boomerang.WeightedBoomerang;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Field;
 import boomerang.scene.Statement;
 import boomerang.scene.StaticFieldVal;
@@ -25,30 +26,35 @@ public class SingletonStaticFieldStrategy<W extends Weight> implements StaticFie
 
   @Override
   public void handleForward(
-      Statement storeStmt,
+      Edge storeStmt,
       Val storedVal,
       StaticFieldVal staticVal,
       Set<State> out,
       ForwardBoomerangSolver<W> solver) {
     for (Statement matchingStore : fieldLoadStatements.get(staticVal.field())) {
-      solver.processNormal(
-          new Node<Statement, Val>(storeStmt, storedVal),
-          new Node<Statement, Val>(matchingStore, matchingStore.getLeftOp()));
+      for (Statement succ :
+          matchingStore.getMethod().getControlFlowGraph().getSuccsOf(matchingStore)) {
+        solver.processNormal(
+            new Node<>(storeStmt, storedVal),
+            new Node<>(new Edge(matchingStore, succ), matchingStore.getLeftOp()));
+      }
     }
   }
 
   @Override
   public void handleBackward(
-      Statement loadStatement,
+      Edge loadStatement,
       Val loadedVal,
       StaticFieldVal staticVal,
-      Statement succ,
       Set<State> out,
       BackwardBoomerangSolver<W> solver) {
     for (Statement matchingStore : fieldStoreStatements.get(staticVal.field())) {
-      solver.processNormal(
-          new Node<Statement, Val>(loadStatement, loadedVal),
-          new Node<Statement, Val>(matchingStore, matchingStore.getRightOp()));
+      for (Statement pred :
+          matchingStore.getMethod().getControlFlowGraph().getPredsOf(matchingStore)) {
+        solver.processNormal(
+            new Node<>(loadStatement, loadedVal),
+            new Node<>(new Edge(pred, matchingStore), matchingStore.getRightOp()));
+      }
     }
   }
 }

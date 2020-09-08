@@ -11,9 +11,9 @@
  */
 package boomerang.solver;
 
+import boomerang.scene.ControlFlowGraph;
 import boomerang.scene.Field;
 import boomerang.scene.Method;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -23,7 +23,7 @@ import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAUpdateListener;
 
 public abstract class MethodBasedFieldTransitionListener<W extends Weight>
-    implements WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> {
+    implements WPAUpdateListener<Field, INode<Node<ControlFlowGraph.Edge, Val>>, W> {
   private final Method method;
 
   public MethodBasedFieldTransitionListener(Method method) {
@@ -36,11 +36,12 @@ public abstract class MethodBasedFieldTransitionListener<W extends Weight>
 
   @Override
   public void onWeightAdded(
-      Transition<Field, INode<Node<Statement, Val>>> t,
+      Transition<Field, INode<Node<ControlFlowGraph.Edge, Val>>> t,
       W w,
-      WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+      WeightedPAutomaton<Field, INode<Node<ControlFlowGraph.Edge, Val>>, W> aut) {
     onAddedTransition(t);
   }
 
-  public abstract void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t);
+  public abstract void onAddedTransition(
+      Transition<Field, INode<Node<ControlFlowGraph.Edge, Val>>> t);
 }

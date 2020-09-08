@@ -11,8 +11,8 @@
  */
 package boomerang.solver;
 
+import boomerang.scene.ControlFlowGraph;
 import boomerang.scene.Field;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
@@ -21,34 +21,35 @@ import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAUpdateListener;
 
-public abstract class StatementBasedFieldTransitionListener<W extends Weight>
-    implements WPAUpdateListener<Field, INode<Node<Statement, Val>>, W> {
+public abstract class ControlFlowEdgeBasedFieldTransitionListener<W extends Weight>
+    implements WPAUpdateListener<Field, INode<Node<ControlFlowGraph.Edge, Val>>, W> {
 
-  private final Statement stmt;
+  private final ControlFlowGraph.Edge cfgEdge;
 
-  public StatementBasedFieldTransitionListener(Statement stmt) {
-    this.stmt = stmt;
+  public ControlFlowEdgeBasedFieldTransitionListener(ControlFlowGraph.Edge cfgEdge) {
+    this.cfgEdge = cfgEdge;
   }
 
-  public Statement getStmt() {
-    return stmt;
+  public ControlFlowGraph.Edge getCfgEdge() {
+    return cfgEdge;
   }
 
   @Override
   public void onWeightAdded(
-      Transition<Field, INode<Node<Statement, Val>>> t,
+      Transition<Field, INode<Node<ControlFlowGraph.Edge, Val>>> t,
       W w,
-      WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+      WeightedPAutomaton<Field, INode<Node<ControlFlowGraph.Edge, Val>>, W> aut) {
     onAddedTransition(t);
   }
 
-  public abstract void onAddedTransition(Transition<Field, INode<Node<Statement, Val>>> t);
+  public abstract void onAddedTransition(
+      Transition<Field, INode<Node<ControlFlowGraph.Edge, Val>>> t);
 
   @Override
   public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
+    result = prime * result + ((cfgEdge == null) ? 0 : cfgEdge.hashCode());
     return result;
   }
 
@@ -57,10 +58,11 @@ public abstract class StatementBasedFieldTransitionListener<W extends Weight>
     if (this == obj) return true;
     if (obj == null) return false;
     if (getClass() != obj.getClass()) return false;
-    StatementBasedFieldTransitionListener other = (StatementBasedFieldTransitionListener) obj;
-    if (stmt == null) {
-      if (other.stmt != null) return false;
-    } else if (!stmt.equals(other.stmt)) return false;
+    ControlFlowEdgeBasedFieldTransitionListener other =
+        (ControlFlowEdgeBasedFieldTransitionListener) obj;
+    if (cfgEdge == null) {
+      if (other.cfgEdge != null) return false;
+    } else if (!cfgEdge.equals(other.cfgEdge)) return false;
     return true;
   }
 }

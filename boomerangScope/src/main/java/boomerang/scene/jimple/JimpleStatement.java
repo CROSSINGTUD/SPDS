@@ -11,13 +11,11 @@
  */
 package boomerang.scene.jimple;
 
-import boomerang.scene.CallSiteStatement;
 import boomerang.scene.Field;
 import boomerang.scene.IfStatement;
 import boomerang.scene.InvokeExpr;
 import boomerang.scene.Method;
 import boomerang.scene.Pair;
-import boomerang.scene.ReturnSiteStatement;
 import boomerang.scene.Statement;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Val;
@@ -55,15 +53,9 @@ public class JimpleStatement extends Statement {
     this.method = m;
   }
 
-  public static Statement[] create(Stmt delegate, Method m) {
+  public static Statement create(Stmt delegate, Method m) {
     JimpleStatement jimpleStatement = new JimpleStatement(delegate, m);
-    if (delegate.containsInvokeExpr()) {
-      return new Statement[] {
-        new CallSiteStatement(jimpleStatement), new ReturnSiteStatement(jimpleStatement)
-      };
-    } else {
-      return new Statement[] {jimpleStatement};
-    }
+    return jimpleStatement;
   }
 
   @Override

@@ -17,10 +17,10 @@ import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Field;
 import boomerang.scene.Field.ArrayField;
 import boomerang.scene.Method;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
@@ -32,7 +32,6 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import sync.pds.solver.SyncPDSUpdateListener;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.Rule;
@@ -44,20 +43,19 @@ import wpds.interfaces.State;
 public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats<W> {
 
   private Map<Query, AbstractBoomerangSolver<W>> queries = Maps.newHashMap();
-  private Set<WeightedTransition<Field, INode<Node<Statement, Val>>, W>> globalFieldTransitions =
+  private Set<WeightedTransition<Field, INode<Node<Edge, Val>>, W>> globalFieldTransitions =
       Sets.newHashSet();
   private int fieldTransitionCollisions;
-  private Set<WeightedTransition<Statement, INode<Val>, W>> globalCallTransitions =
-      Sets.newHashSet();
+  private Set<WeightedTransition<Edge, INode<Val>, W>> globalCallTransitions = Sets.newHashSet();
   private int callTransitionCollisions;
-  private Set<Rule<Field, INode<Node<Statement, Val>>, W>> globalFieldRules = Sets.newHashSet();
+  private Set<Rule<Field, INode<Node<Edge, Val>>, W>> globalFieldRules = Sets.newHashSet();
   private int fieldRulesCollisions;
-  private Set<Rule<Statement, INode<Val>, W>> globalCallRules = Sets.newHashSet();
+  private Set<Rule<Edge, INode<Val>, W>> globalCallRules = Sets.newHashSet();
   private int callRulesCollisions;
-  private Set<Node<Statement, Val>> reachedForwardNodes = Sets.newHashSet();
+  private Set<Node<Edge, Val>> reachedForwardNodes = Sets.newHashSet();
   private int reachedForwardNodeCollisions;
 
-  private Set<Node<Statement, Val>> reachedBackwardNodes = Sets.newHashSet();
+  private Set<Node<Edge, Val>> reachedBackwardNodes = Sets.newHashSet();
   private int reachedBackwardNodeCollisions;
   private Set<Method> callVisitedMethods = Sets.newHashSet();
   private Set<Method> fieldVisitedMethods = Sets.newHashSet();
@@ -145,18 +143,14 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
             });
 
     solver.registerListener(
-        new SyncPDSUpdateListener<Statement, Val>() {
-
-          @Override
-          public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
-            if (solver instanceof ForwardBoomerangSolver) {
-              if (!reachedForwardNodes.add(reachableNode)) {
-                reachedForwardNodeCollisions++;
-              }
-            } else {
-              if (!reachedBackwardNodes.add(reachableNode)) {
-                reachedBackwardNodeCollisions++;
-              }
+        reachableNode -> {
+          if (solver instanceof ForwardBoomerangSolver) {
+            if (!reachedForwardNodes.add(reachableNode)) {
+              reachedForwardNodeCollisions++;
+            }
+          } else {
+            if (!reachedBackwardNodes.add(reachableNode)) {
+              reachedBackwardNodeCollisions++;
             }
           }
         });
@@ -305,8 +299,8 @@ public class AdvancedBoomerangStats<W extends Weight> implements IBoomerangStats
   }
 
   @Override
-  public Collection<? extends Node<Statement, Val>> getForwardReachesNodes() {
-    Set<Node<Statement, Val>> res = Sets.newHashSet();
+  public Collection<? extends Node<Edge, Val>> getForwardReachesNodes() {
+    Set<Node<Edge, Val>> res = Sets.newHashSet();
     for (Query q : queries.keySet()) {
       if (q instanceof ForwardQuery) res.addAll(queries.get(q).getReachedStates());
     }

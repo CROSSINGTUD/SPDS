@@ -1,7 +1,7 @@
 package boomerang.results;
 
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Field;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.util.AccessPath;
@@ -21,34 +21,33 @@ import wpds.interfaces.Empty;
 import wpds.interfaces.WPAStateListener;
 import wpds.interfaces.WPAUpdateListener;
 
-public class ExtractAllAliasListener<W extends Weight>
-    implements SyncPDSUpdateListener<Statement, Val> {
+public class ExtractAllAliasListener<W extends Weight> implements SyncPDSUpdateListener<Edge, Val> {
   private final Set<AccessPath> results;
-  private final Statement stmt;
+  private final Edge stmt;
   private AbstractBoomerangSolver<W> fwSolver;
 
   public ExtractAllAliasListener(
-      AbstractBoomerangSolver<W> fwSolver, Set<AccessPath> results, Statement stmt) {
+      AbstractBoomerangSolver<W> fwSolver, Set<AccessPath> results, Edge stmt) {
     this.fwSolver = fwSolver;
     this.results = results;
     this.stmt = stmt;
   }
 
   @Override
-  public void onReachableNodeAdded(Node<Statement, Val> reachableNode) {
+  public void onReachableNodeAdded(Node<Edge, Val> reachableNode) {
     if (reachableNode.stmt().equals(stmt)) {
       Val base = reachableNode.fact();
-      for (final INode<Node<Statement, Val>> allocNode :
+      for (final INode<Node<Edge, Val>> allocNode :
           fwSolver.getFieldAutomaton().getInitialStates()) {
         fwSolver
             .getFieldAutomaton()
             .registerListener(
-                new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
+                new WPAUpdateListener<Field, INode<Node<Edge, Val>>, W>() {
                   @Override
                   public void onWeightAdded(
-                      Transition<Field, INode<Node<Statement, Val>>> t,
+                      Transition<Field, INode<Node<Edge, Val>>> t,
                       W w,
-                      WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
+                      WeightedPAutomaton<Field, INode<Node<Edge, Val>>, W> aut) {
                     if (t.getStart().fact().stmt().equals(stmt)
                         && !(t.getStart() instanceof GeneratedState)
                         && t.getStart().fact().fact().equals(base)) {
@@ -57,8 +56,7 @@ public class ExtractAllAliasListener<W extends Weight>
                           results.add(new AccessPath(base));
                         }
                       }
-                      List<Transition<Field, INode<Node<Statement, Val>>>> fields =
-                          Lists.newArrayList();
+                      List<Transition<Field, INode<Node<Edge, Val>>>> fields = Lists.newArrayList();
                       if (!(t.getLabel() instanceof Empty)) {
                         fields.add(t);
                       }
@@ -74,19 +72,18 @@ public class ExtractAllAliasListener<W extends Weight>
     }
   }
 
-  class ExtractAccessPathStateListener
-      extends WPAStateListener<Field, INode<Node<Statement, Val>>, W> {
+  class ExtractAccessPathStateListener extends WPAStateListener<Field, INode<Node<Edge, Val>>, W> {
 
-    private INode<Node<Statement, Val>> allocNode;
-    private Collection<Transition<Field, INode<Node<Statement, Val>>>> fields;
+    private INode<Node<Edge, Val>> allocNode;
+    private Collection<Transition<Field, INode<Node<Edge, Val>>>> fields;
     private Set<AccessPath> results;
     private Val base;
 
     public ExtractAccessPathStateListener(
-        INode<Node<Statement, Val>> state,
-        INode<Node<Statement, Val>> allocNode,
+        INode<Node<Edge, Val>> state,
+        INode<Node<Edge, Val>> allocNode,
         Val base,
-        Collection<Transition<Field, INode<Node<Statement, Val>>>> fields,
+        Collection<Transition<Field, INode<Node<Edge, Val>>>> fields,
         Set<AccessPath> results) {
       super(state);
       this.allocNode = allocNode;
@@ -97,11 +94,11 @@ public class ExtractAllAliasListener<W extends Weight>
 
     @Override
     public void onOutTransitionAdded(
-        Transition<Field, INode<Node<Statement, Val>>> t,
+        Transition<Field, INode<Node<Edge, Val>>> t,
         W w,
-        WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {
+        WeightedPAutomaton<Field, INode<Node<Edge, Val>>, W> weightedPAutomaton) {
       if (t.getLabel().equals(Field.epsilon())) return;
-      Collection<Transition<Field, INode<Node<Statement, Val>>>> copiedFields =
+      Collection<Transition<Field, INode<Node<Edge, Val>>>> copiedFields =
           (fields instanceof Set ? Sets.newHashSet(fields) : Lists.newArrayList(fields));
       if (!t.getLabel().equals(Field.empty())) {
         if (copiedFields.contains(t)) {
@@ -119,14 +116,14 @@ public class ExtractAllAliasListener<W extends Weight>
     }
 
     private Collection<Field> convert(
-        Collection<Transition<Field, INode<Node<Statement, Val>>>> fields) {
+        Collection<Transition<Field, INode<Node<Edge, Val>>>> fields) {
       Collection<Field> res;
       if (fields instanceof List) {
         res = Lists.newArrayList();
       } else {
         res = Sets.newHashSet();
       }
-      for (Transition<Field, INode<Node<Statement, Val>>> f : fields) {
+      for (Transition<Field, INode<Node<Edge, Val>>> f : fields) {
         res.add(f.getLabel());
       }
       return res;
@@ -134,9 +131,9 @@ public class ExtractAllAliasListener<W extends Weight>
 
     @Override
     public void onInTransitionAdded(
-        Transition<Field, INode<Node<Statement, Val>>> t,
+        Transition<Field, INode<Node<Edge, Val>>> t,
         W w,
-        WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> weightedPAutomaton) {}
+        WeightedPAutomaton<Field, INode<Node<Edge, Val>>, W> weightedPAutomaton) {}
 
     @Override
     public int hashCode() {

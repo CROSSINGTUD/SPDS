@@ -46,37 +46,28 @@ public class JimpleControlFlowGraph implements ControlFlowGraph {
       if (u instanceof IdentityStmt) {
         continue;
       }
-      Statement[] stmts = JimpleStatement.create((Stmt) u, method);
-      startPointCache.add(stmts[0]);
+      Statement stmt = JimpleStatement.create((Stmt) u, method);
+      startPointCache.add(stmt);
     }
     List<Unit> tails = graph.getTails();
     for (Unit u : tails) {
-      Statement[] stmts = JimpleStatement.create((Stmt) u, method);
-      endPointCache.add(stmts.length == 1 ? stmts[0] : stmts[1]);
+      Statement stmt = JimpleStatement.create((Stmt) u, method);
+      endPointCache.add(stmt);
     }
 
     UnitPatchingChain units = method.getDelegate().getActiveBody().getUnits();
     for (Unit u : units) {
-      Statement[] stmts = JimpleStatement.create((Stmt) u, method);
-      Statement first = stmts[0];
-      Statement second;
+      Statement first = JimpleStatement.create((Stmt) u, method);
       statements.add(first);
-      if (stmts.length == 2) {
-        second = stmts[1];
-        statements.add(second);
-        succsOfCache.put(first, second);
-        predsOfCache.put(second, first);
-      } else {
-        second = first;
-      }
+
       for (Unit succ : graph.getSuccsOf(u)) {
-        Statement[] succStmts = JimpleStatement.create((Stmt) succ, method);
-        succsOfCache.put(second, succStmts[0]);
+        Statement succStmt = JimpleStatement.create((Stmt) succ, method);
+        succsOfCache.put(first, succStmt);
       }
 
       for (Unit pred : graph.getPredsOf(u)) {
-        Statement[] predStmts = JimpleStatement.create((Stmt) pred, method);
-        predsOfCache.put(first, predStmts.length == 2 ? predStmts[1] : predStmts[0]);
+        Statement predStmt = JimpleStatement.create((Stmt) pred, method);
+        predsOfCache.put(first, predStmt);
       }
     }
   }

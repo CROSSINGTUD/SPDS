@@ -6,6 +6,7 @@ import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.controlflowgraph.ObservableControlFlowGraph;
 import boomerang.controlflowgraph.PredecessorListener;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.DeclaredMethod;
 import boomerang.scene.Field;
 import boomerang.scene.IfStatement;
@@ -89,42 +90,47 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
     return timedout;
   }
 
-  public Table<Statement, Val, W> getObjectDestructingStatements() {
+  public Table<Edge, Val, W> getObjectDestructingStatements() {
     AbstractBoomerangSolver<W> solver = queryToSolvers.get(query);
     if (solver == null) {
       return HashBasedTable.create();
     }
-    Table<Statement, Val, W> res = asStatementValWeightTable();
+    Table<Edge, Val, W> res = asStatementValWeightTable();
     Set<Method> visitedMethods = Sets.newHashSet();
-    for (Statement s : res.rowKeySet()) {
+    for (Edge s : res.rowKeySet()) {
       visitedMethods.add(s.getMethod());
     }
-    ForwardBoomerangSolver<W> forwardSolver = (ForwardBoomerangSolver) queryToSolvers.get(query);
-    Table<Statement, Val, W> destructingStatement = HashBasedTable.create();
+    ForwardBoomerangSolver<W> forwardSolver = queryToSolvers.get(query);
+    Table<Edge, Val, W> destructingStatement = HashBasedTable.create();
     for (Method flowReaches : visitedMethods) {
       for (Statement exitStmt : icfg.getEndPointsOf(flowReaches)) {
-        Set<State> escapes = Sets.newHashSet();
-        icfg.addCallerListener(
-            new CallerListener<Statement, Method>() {
-              @Override
-              public Method getObservedCallee() {
-                return flowReaches;
-              }
+        for (Statement predOfExit :
+            exitStmt.getMethod().getControlFlowGraph().getPredsOf(exitStmt)) {
+          Edge exitEdge = new Edge(predOfExit, exitStmt);
+          Set<State> escapes = Sets.newHashSet();
+          icfg.addCallerListener(
+              new CallerListener<Statement, Method>() {
+                @Override
+                public Method getObservedCallee() {
+                  return flowReaches;
+                }
 
-              @Override
-              public void onCallerAdded(Statement callSite, Method m) {
-                Method callee = callSite.getMethod();
-                if (visitedMethods.contains(callee)) {
-                  for (Entry<Val, W> valAndW : res.row(exitStmt).entrySet()) {
-                    escapes.addAll(
-                        forwardSolver.computeReturnFlow(flowReaches, exitStmt, valAndW.getKey()));
+                @Override
+                public void onCallerAdded(Statement callSite, Method m) {
+                  Method callee = callSite.getMethod();
+                  if (visitedMethods.contains(callee)) {
+                    for (Entry<Val, W> valAndW : res.row(exitEdge).entrySet()) {
+                      escapes.addAll(
+                          forwardSolver.computeReturnFlow(flowReaches, exitStmt, valAndW.getKey()));
+                    }
                   }
                 }
-              }
-            });
-        if (escapes.isEmpty()) {
-          Map<Val, W> row = res.row(exitStmt);
-          findLastUsage(exitStmt, row, destructingStatement, forwardSolver);
+              });
+
+          if (escapes.isEmpty()) {
+            Map<Val, W> row = res.row(exitEdge);
+            findLastUsage(exitEdge, row, destructingStatement, forwardSolver);
+          }
         }
       }
     }
@@ -132,26 +138,26 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
     return destructingStatement;
   }
 
-  public Table<Statement, Val, W> asStatementValWeightTable() {
+  public Table<Edge, Val, W> asStatementValWeightTable() {
     return asStatementValWeightTable(query);
   }
 
   private void findLastUsage(
-      Statement exitStmt,
+      Edge exitStmt,
       Map<Val, W> row,
-      Table<Statement, Val, W> destructingStatement,
+      Table<Edge, Val, W> destructingStatement,
       ForwardBoomerangSolver<W> forwardSolver) {
-    LinkedList<Statement> worklist = Lists.newLinkedList();
+    LinkedList<Edge> worklist = Lists.newLinkedList();
     worklist.add(exitStmt);
-    Set<Statement> visited = Sets.newHashSet();
+    Set<Edge> visited = Sets.newHashSet();
     while (!worklist.isEmpty()) {
-      Statement curr = worklist.poll();
+      Edge curr = worklist.poll();
       if (!visited.add(curr)) {
         continue;
       }
       boolean valueUsedInStmt = false;
       for (Entry<Val, W> e : row.entrySet()) {
-        if (curr.uses(e.getKey())) {
+        if (curr.getTarget().uses(e.getKey())) {
           destructingStatement.put(curr, e.getKey(), e.getValue());
           valueUsedInStmt = true;
         }
@@ -159,13 +165,13 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
       if (!valueUsedInStmt
           &&
           /** Do not continue over CatchStmt */
-          !(curr.isIdentityStmt())) {
+          !(curr.getTarget().isIdentityStmt())) {
         cfg.addPredsOfListener(
-            new PredecessorListener(curr) {
+            new PredecessorListener(curr.getStart()) {
 
               @Override
               public void getPredecessor(Statement succ) {
-                worklist.add(succ);
+                worklist.add(new Edge(succ, curr.getStart()));
               }
             });
       }
@@ -176,10 +182,11 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
     return stats;
   }
 
-  public Map<Statement, DeclaredMethod> getInvokedMethodOnInstance() {
-    Map<Statement, DeclaredMethod> invokedMethodsOnInstance = Maps.newHashMap();
-    if (query.stmt().containsInvokeExpr()) {
-      invokedMethodsOnInstance.put(query.stmt(), query.stmt().getInvokeExpr().getMethod());
+  public Map<Edge, DeclaredMethod> getInvokedMethodOnInstance() {
+    Map<Edge, DeclaredMethod> invokedMethodsOnInstance = Maps.newHashMap();
+    if (query.cfgEdge().getStart().containsInvokeExpr()) {
+      invokedMethodsOnInstance.put(
+          query.cfgEdge(), query.cfgEdge().getStart().getInvokeExpr().getMethod());
     }
     queryToSolvers
         .get(query)
@@ -189,14 +196,15 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
               if (!t.getLabel().equals(Field.empty()) || t.getStart() instanceof GeneratedState) {
                 return;
               }
-              Node<Statement, Val> node = t.getStart().fact();
+              Node<Edge, Val> node = t.getStart().fact();
               Val fact = node.fact();
-              Statement curr = node.stmt();
+              Edge currEdge = node.stmt();
+              Statement curr = currEdge.getStart();
               if (curr.containsInvokeExpr()) {
                 if (curr.getInvokeExpr().isInstanceInvokeExpr()) {
                   Val base = curr.getInvokeExpr().getBase();
                   if (base.equals(fact)) {
-                    invokedMethodsOnInstance.put(curr, curr.getInvokeExpr().getMethod());
+                    invokedMethodsOnInstance.put(currEdge, curr.getInvokeExpr().getMethod());
                   }
                 }
               }
@@ -206,20 +214,20 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 
   public QueryResults getPotentialNullPointerDereferences() {
     // FIXME this should be located nullpointer analysis
-    Set<Node<Statement, Val>> res = Sets.newHashSet();
-    for (Transition<Field, INode<Node<Statement, Val>>> t :
+    Set<Node<Edge, Val>> res = Sets.newHashSet();
+    for (Transition<Field, INode<Node<Edge, Val>>> t :
         queryToSolvers.get(query).getFieldAutomaton().getTransitions()) {
       if (!t.getLabel().equals(Field.empty()) || t.getStart() instanceof GeneratedState) {
         continue;
       }
-      Node<Statement, Val> nullPointerNode = t.getStart().fact();
+      Node<Edge, Val> nullPointerNode = t.getStart().fact();
       if (NullPointerDereference.isNullPointerNode(nullPointerNode)
           && queryToSolvers.get(query).getReachedStates().contains(nullPointerNode)) {
         res.add(nullPointerNode);
       }
     }
     Set<AffectedLocation> resWithContext = Sets.newHashSet();
-    for (Node<Statement, Val> r : res) {
+    for (Node<Edge, Val> r : res) {
       // Context context = constructContextGraph(query, r);
       if (trackDataFlowPath) {
         DataFlowPathWeight dataFlowPath = getDataFlowPathWeight(query, r);
@@ -252,14 +260,14 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
   }
 
   private DataFlowPathWeight getDataFlowPathWeight(
-      ForwardQuery query, Node<Statement, Val> sinkLocation) {
-    WeightedPAutomaton<Statement, INode<Val>, W> callAut =
+      ForwardQuery query, Node<Edge, Val> sinkLocation) {
+    WeightedPAutomaton<Edge, INode<Val>, W> callAut =
         queryToSolvers.getOrCreate(query).getCallAutomaton();
     // Iterating over whole set to find the matching transition is not the most elegant solution....
-    for (Entry<Transition<Statement, INode<Val>>, W> e :
+    for (Entry<Transition<Edge, INode<Val>>, W> e :
         callAut.getTransitionsToFinalWeights().entrySet()) {
-      Transition<Statement, INode<Val>> t = e.getKey();
-      if (t.getLabel().equals(Statement.epsilon())) {
+      Transition<Edge, INode<Val>> t = e.getKey();
+      if (t.getLabel().equals(new Edge(Statement.epsilon(), Statement.epsilon()))) {
         continue;
       }
       if (t.getStart().fact().isLocal()
@@ -281,7 +289,7 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
       Statement ifStmt, ConditionDomain mustBeVal, Map<Val, ConditionDomain> evaluationMap) {
     if (ifStmt.isIfStmt()) {
       IfStatement ifStmt1 = ifStmt.getIfStmt();
-      for (Transition<Field, INode<Node<Statement, Val>>> t :
+      for (Transition<Field, INode<Node<Edge, Val>>> t :
           queryToSolvers.get(query).getFieldAutomaton().getTransitions()) {
 
         if (!t.getStart().fact().stmt().equals(ifStmt)) {
@@ -291,7 +299,7 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
           continue;
         }
 
-        Node<Statement, Val> node = t.getStart().fact();
+        Node<Edge, Val> node = t.getStart().fact();
         Val fact = node.fact();
         switch (ifStmt1.evaluate(fact)) {
           case TRUE:
@@ -336,10 +344,10 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
   }
 
   private List<PathElement> transformPath(
-      List<Node<Statement, Val>> allStatements, Node<Statement, Val> sinkLocation) {
+      List<Node<Edge, Val>> allStatements, Node<Edge, Val> sinkLocation) {
     List<PathElement> res = Lists.newArrayList();
     int index = 0;
-    for (Node<Statement, Val> x : allStatements) {
+    for (Node<Edge, Val> x : allStatements) {
       res.add(new PathElement(x.stmt(), x.fact(), index++));
     }
     // TODO The analysis misses
@@ -349,12 +357,12 @@ public class ForwardBoomerangResults<W extends Weight> extends AbstractBoomerang
 
     for (PathElement n : res) {
       LOGGER.trace(
-          "Statement: {}, Variable {}, Index {}", n.getStatement(), n.getVariable(), n.stepIndex());
+          "Statement: {}, Variable {}, Index {}", n.getEdge(), n.getVariable(), n.stepIndex());
     }
     return res;
   }
 
-  public Context getContext(Node<Statement, Val> node) {
+  public Context getContext(Node<Edge, Val> node) {
     return constructContextGraph(query, node);
   }
 

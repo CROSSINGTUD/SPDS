@@ -12,11 +12,14 @@
 package test;
 
 import boomerang.results.ForwardBoomerangResults;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Table;
+import com.google.common.collect.Table.Cell;
 import java.util.Map.Entry;
 import java.util.Set;
 import sync.pds.solver.nodes.Node;
@@ -31,8 +34,14 @@ public class TestingResultReporter<W extends Weight> {
     }
   }
 
-  public void onSeedFinished(Node<Statement, Val> seed, final ForwardBoomerangResults<W> res) {
-    Table<Statement, Val, W> results = res.asStatementValWeightTable();
+  public void onSeedFinished(Node<Edge, Val> seed, final ForwardBoomerangResults<W> res) {
+    Table<Edge, Val, W> resultsAsCFGEdges = res.asStatementValWeightTable();
+    Table<Statement, Val, W> results = HashBasedTable.create();
+
+    for (Cell<Edge, Val, W> c : resultsAsCFGEdges.cellSet()) {
+      results.put(c.getRowKey().getTarget(), c.getColumnKey(), c.getValue());
+    }
+
     for (final Entry<Statement, Assertion> e : stmtToResults.entries()) {
       if (e.getValue() instanceof ComparableResult) {
         final ComparableResult<W, Val> expectedResults = (ComparableResult) e.getValue();

@@ -11,17 +11,19 @@
  */
 package boomerang.scene;
 
+import boomerang.scene.ControlFlowGraph.Edge;
+
 public abstract class StaticFieldVal extends Val {
 
   protected StaticFieldVal(Method m) {
     super(m);
   }
 
-  protected StaticFieldVal(Method m, Statement unbalanced) {
+  protected StaticFieldVal(Method m, Edge unbalanced) {
     super(m, unbalanced);
   }
 
   public abstract Field field();
 
-  public abstract Val asUnbalanced(Statement stmt);
+  public abstract Val asUnbalanced(Edge stmt);
 }

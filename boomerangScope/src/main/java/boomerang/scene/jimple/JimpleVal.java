@@ -11,9 +11,9 @@
  */
 package boomerang.scene.jimple;
 
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Method;
 import boomerang.scene.Pair;
-import boomerang.scene.Statement;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Type;
 import boomerang.scene.Val;
@@ -42,7 +42,7 @@ public class JimpleVal extends Val {
     this(v, m, null);
   }
 
-  protected JimpleVal(Value v, Method m, Statement unbalanced) {
+  protected JimpleVal(Value v, Method m, Edge unbalanced) {
     super(m, unbalanced);
     if (v == null) throw new RuntimeException("Value must not be null!");
     this.v = v;
@@ -79,7 +79,7 @@ public class JimpleVal extends Val {
     return new JimpleType(((NewExpr) v).getType());
   }
 
-  public Val asUnbalanced(Statement stmt) {
+  public Val asUnbalanced(Edge stmt) {
     return new JimpleVal(v, m, stmt);
   }
 

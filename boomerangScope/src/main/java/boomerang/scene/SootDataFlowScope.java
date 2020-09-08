@@ -93,6 +93,7 @@ public class SootDataFlowScope {
     public MapFilter() {
       List<SootClass> mapSubClasses =
           Scene.v().getActiveHierarchy().getImplementersOf(Scene.v().getSootClass(MAP));
+      excludes.add(Scene.v().getSootClass(MAP));
       excludes.addAll(mapSubClasses);
       if (Scene.v().containsClass(GUAVA_MAP)) {
         SootClass c = Scene.v().getSootClass(GUAVA_MAP);

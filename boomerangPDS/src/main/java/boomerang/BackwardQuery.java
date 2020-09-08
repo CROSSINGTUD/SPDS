@@ -11,13 +11,13 @@
  */
 package boomerang;
 
-import boomerang.scene.CallSiteStatement;
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Val;
 
 public class BackwardQuery extends Query {
-  protected BackwardQuery(Statement stmt, Val variable) {
-    super(stmt, variable);
+  protected BackwardQuery(ControlFlowGraph.Edge edge, Val variable) {
+    super(edge, variable);
   }
 
   @Override
@@ -25,11 +25,7 @@ public class BackwardQuery extends Query {
     return "BackwardQuery: " + super.toString();
   }
 
-  public static BackwardQuery make(Statement stmt, Val variable) {
-    return new BackwardQuery(
-        (stmt instanceof CallSiteStatement)
-            ? ((CallSiteStatement) stmt).getReturnSiteStatement()
-            : stmt,
-        variable);
+  public static BackwardQuery make(Edge edge, Val variable) {
+    return new BackwardQuery(edge, variable);
   }
 }

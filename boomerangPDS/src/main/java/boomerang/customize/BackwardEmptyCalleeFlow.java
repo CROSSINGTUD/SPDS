@@ -11,6 +11,7 @@
  */
 package boomerang.customize;
 
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Method;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
@@ -34,7 +35,7 @@ public class BackwardEmptyCalleeFlow extends EmptyCalleeFlow {
       Method caller, Statement callSite, Val value, Statement returnSite) {
     if (value.equals(callSite.getInvokeExpr().getArg(2))) {
       Val arg = callSite.getInvokeExpr().getArg(0);
-      return Collections.singleton(new Node<Statement, Val>(returnSite, arg));
+      return Collections.singleton(new Node<>(new Edge(returnSite, callSite), arg));
     }
     return Collections.emptySet();
   }

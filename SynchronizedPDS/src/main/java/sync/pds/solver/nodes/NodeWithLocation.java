@@ -17,7 +17,7 @@ public class NodeWithLocation<Stmt, Fact, Location> implements INode<Node<Stmt, 
   private Node<Stmt, Fact> fact;
 
   public NodeWithLocation(Stmt stmt, Fact variable, Location loc) {
-    this.fact = new Node<Stmt, Fact>(stmt, variable);
+    this.fact = new Node<>(stmt, variable);
     this.loc = loc;
   }
 

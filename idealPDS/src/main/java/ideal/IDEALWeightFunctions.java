@@ -11,7 +11,7 @@
  */
 package ideal;
 
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Val;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
@@ -27,40 +27,37 @@ import sync.pds.solver.nodes.Node;
 import sync.pds.solver.nodes.PushNode;
 import wpds.impl.Weight;
 
-public class IDEALWeightFunctions<W extends Weight>
-    implements WeightFunctions<Statement, Val, Statement, W> {
+public class IDEALWeightFunctions<W extends Weight> implements WeightFunctions<Edge, Val, Edge, W> {
 
   private static final Logger logger = LoggerFactory.getLogger(IDEALWeightFunctions.class);
-  private WeightFunctions<Statement, Val, Statement, W> delegate;
+  private WeightFunctions<Edge, Val, Edge, W> delegate;
   private Set<NonOneFlowListener> listeners = Sets.newHashSet();
-  private Set<Statement> potentialStrongUpdates = Sets.newHashSet();
-  private Set<Statement> weakUpdates = Sets.newHashSet();
-  private Set<Node<Statement, Val>> nonOneFlowNodes = Sets.newHashSet();
+  private Set<Edge> potentialStrongUpdates = Sets.newHashSet();
+  private Set<Edge> weakUpdates = Sets.newHashSet();
+  private Set<Node<Edge, Val>> nonOneFlowNodes = Sets.newHashSet();
   private Phases phase;
   private boolean strongUpdates;
-  private Multimap<Node<Statement, Val>, Node<Statement, Val>> indirectAlias =
-      HashMultimap.create();
-  private Set<Node<Statement, Val>> nodesWithStrongUpdate = Sets.newHashSet();
+  private Multimap<Node<Edge, Val>, Node<Edge, Val>> indirectAlias = HashMultimap.create();
+  private Set<Node<Edge, Val>> nodesWithStrongUpdate = Sets.newHashSet();
 
-  public IDEALWeightFunctions(
-      WeightFunctions<Statement, Val, Statement, W> delegate, boolean strongUpdates) {
+  public IDEALWeightFunctions(WeightFunctions<Edge, Val, Edge, W> delegate, boolean strongUpdates) {
     this.delegate = delegate;
     this.strongUpdates = strongUpdates;
   }
 
   @Override
-  public W push(Node<Statement, Val> curr, Node<Statement, Val> succ, Statement calleeSp) {
+  public W push(Node<Edge, Val> curr, Node<Edge, Val> succ, Edge calleeSp) {
     W weight = delegate.push(curr, succ, calleeSp);
     if (isObjectFlowPhase() && !weight.equals(getOne())) {
       if (succ instanceof PushNode) {
-        PushNode<Statement, Val, Statement> pushNode = (PushNode<Statement, Val, Statement>) succ;
+        PushNode<Edge, Val, Edge> pushNode = (PushNode<Edge, Val, Edge>) succ;
         addOtherThanOneWeight(new Node<>(pushNode.location(), curr.fact()));
       }
     }
     return weight;
   }
 
-  void addOtherThanOneWeight(Node<Statement, Val> curr) {
+  void addOtherThanOneWeight(Node<Edge, Val> curr) {
     if (nonOneFlowNodes.add(curr)) {
       for (NonOneFlowListener l : Lists.newArrayList(listeners)) {
         l.nonOneFlow(curr);
@@ -69,9 +66,11 @@ public class IDEALWeightFunctions<W extends Weight>
   }
 
   @Override
-  public W normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
+  public W normal(Node<Edge, Val> curr, Node<Edge, Val> succ) {
     W weight = delegate.normal(curr, succ);
-    if (isObjectFlowPhase() && succ.stmt().containsInvokeExpr() && !weight.equals(getOne())) {
+    if (isObjectFlowPhase()
+        && succ.stmt().getTarget().containsInvokeExpr()
+        && !weight.equals(getOne())) {
       addOtherThanOneWeight(succ);
     }
     return weight;
@@ -86,13 +85,13 @@ public class IDEALWeightFunctions<W extends Weight>
   }
 
   @Override
-  public W pop(Node<Statement, Val> curr) {
+  public W pop(Node<Edge, Val> curr) {
     return delegate.pop(curr);
   }
 
   public void registerListener(NonOneFlowListener listener) {
     if (listeners.add(listener)) {
-      for (Node<Statement, Val> existing : Lists.newArrayList(nonOneFlowNodes)) {
+      for (Node<Edge, Val> existing : Lists.newArrayList(nonOneFlowNodes)) {
         listener.nonOneFlow(existing);
       }
     }
@@ -108,11 +107,11 @@ public class IDEALWeightFunctions<W extends Weight>
     return "[IDEAL-Wrapped Weights] " + delegate.toString();
   }
 
-  public void potentialStrongUpdate(Statement stmt) {
+  public void potentialStrongUpdate(Edge stmt) {
     potentialStrongUpdates.add(stmt);
   }
 
-  public void weakUpdate(Statement stmt) {
+  public void weakUpdate(Edge stmt) {
     weakUpdates.add(stmt);
   }
 
@@ -120,25 +119,25 @@ public class IDEALWeightFunctions<W extends Weight>
     this.phase = phase;
   }
 
-  public void addIndirectFlow(Node<Statement, Val> source, Node<Statement, Val> target) {
+  public void addIndirectFlow(Node<Edge, Val> source, Node<Edge, Val> target) {
     if (source.equals(target)) return;
     logger.trace("Alias flow detected " + source + " " + target);
     indirectAlias.put(source, target);
   }
 
-  public Collection<Node<Statement, Val>> getAliasesFor(Node<Statement, Val> node) {
+  public Collection<Node<Edge, Val>> getAliasesFor(Node<Edge, Val> node) {
     return indirectAlias.get(node);
   }
 
-  public boolean isStrongUpdateStatement(Statement stmt) {
+  public boolean isStrongUpdateStatement(Edge stmt) {
     return potentialStrongUpdates.contains(stmt) && !weakUpdates.contains(stmt) && strongUpdates;
   }
 
-  public boolean isKillFlow(Node<Statement, Val> node) {
+  public boolean isKillFlow(Node<Edge, Val> node) {
     return !nodesWithStrongUpdate.contains(node);
   }
 
-  public void addNonKillFlow(Node<Statement, Val> curr) {
+  public void addNonKillFlow(Node<Edge, Val> curr) {
     nodesWithStrongUpdate.add(curr);
   }
 }

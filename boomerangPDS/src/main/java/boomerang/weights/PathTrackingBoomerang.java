@@ -15,16 +15,16 @@ import boomerang.BoomerangOptions;
 import boomerang.ForwardQuery;
 import boomerang.WeightedBoomerang;
 import boomerang.scene.CallGraph;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.DataFlowScope;
 import boomerang.scene.Field;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
 
 public abstract class PathTrackingBoomerang extends WeightedBoomerang<DataFlowPathWeight> {
 
-  private OneWeightFunctions<Statement, Val, Field, DataFlowPathWeight> fieldWeights;
+  private OneWeightFunctions<Edge, Val, Field, DataFlowPathWeight> fieldWeights;
   private PathTrackingWeightFunctions callWeights;
 
   public PathTrackingBoomerang(CallGraph cg, DataFlowScope scope) {
@@ -36,35 +36,34 @@ public abstract class PathTrackingBoomerang extends WeightedBoomerang<DataFlowPa
   }
 
   @Override
-  protected WeightFunctions<Statement, Val, Field, DataFlowPathWeight> getForwardFieldWeights() {
+  protected WeightFunctions<Edge, Val, Field, DataFlowPathWeight> getForwardFieldWeights() {
     return getOrCreateFieldWeights();
   }
 
   @Override
-  protected WeightFunctions<Statement, Val, Field, DataFlowPathWeight> getBackwardFieldWeights() {
+  protected WeightFunctions<Edge, Val, Field, DataFlowPathWeight> getBackwardFieldWeights() {
     return getOrCreateFieldWeights();
   }
 
   @Override
-  protected WeightFunctions<Statement, Val, Statement, DataFlowPathWeight>
-      getBackwardCallWeights() {
+  protected WeightFunctions<Edge, Val, Edge, DataFlowPathWeight> getBackwardCallWeights() {
     return getOrCreateCallWeights();
   }
 
   @Override
-  protected WeightFunctions<Statement, Val, Statement, DataFlowPathWeight> getForwardCallWeights(
+  protected WeightFunctions<Edge, Val, Edge, DataFlowPathWeight> getForwardCallWeights(
       ForwardQuery sourceQuery) {
     return getOrCreateCallWeights();
   }
 
-  private WeightFunctions<Statement, Val, Field, DataFlowPathWeight> getOrCreateFieldWeights() {
+  private WeightFunctions<Edge, Val, Field, DataFlowPathWeight> getOrCreateFieldWeights() {
     if (fieldWeights == null) {
       fieldWeights = new OneWeightFunctions<>(DataFlowPathWeight.one());
     }
     return fieldWeights;
   }
 
-  private WeightFunctions<Statement, Val, Statement, DataFlowPathWeight> getOrCreateCallWeights() {
+  private WeightFunctions<Edge, Val, Edge, DataFlowPathWeight> getOrCreateCallWeights() {
     if (callWeights == null) {
       callWeights =
           new PathTrackingWeightFunctions(

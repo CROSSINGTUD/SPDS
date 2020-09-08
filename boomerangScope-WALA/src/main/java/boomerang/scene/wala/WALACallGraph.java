@@ -12,7 +12,6 @@
 package boomerang.scene.wala;
 
 import boomerang.scene.CallGraph;
-import boomerang.scene.CallSiteStatement;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -70,10 +69,7 @@ public class WALACallGraph extends CallGraph {
             if (ignore(succ.getMethod())) {
               continue;
             }
-            this.addEdge(
-                new Edge(
-                    new CallSiteStatement(new WALAStatement(i, getOrCreate(curr))),
-                    getOrCreate(succ)));
+            this.addEdge(new Edge(new WALAStatement(i, getOrCreate(curr)), getOrCreate(succ)));
           }
         }
       }

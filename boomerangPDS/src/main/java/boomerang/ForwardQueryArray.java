@@ -11,7 +11,7 @@
  */
 package boomerang;
 
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Val;
 import com.google.common.base.Objects;
 
@@ -19,7 +19,7 @@ public class ForwardQueryArray extends ForwardQuery {
 
   private final Integer index;
 
-  public ForwardQueryArray(Statement stmt, Val variable, Integer index) {
+  public ForwardQueryArray(Edge stmt, Val variable, Integer index) {
     super(stmt, variable);
     this.index = index;
   }

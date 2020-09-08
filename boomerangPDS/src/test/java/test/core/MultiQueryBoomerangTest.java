@@ -75,7 +75,7 @@ public class MultiQueryBoomerangTest extends AbstractTestingFramework {
         queryForCallSites = analysisScope.computeSeeds();
 
         for (Query q : queryForCallSites) {
-          Val arg2 = q.stmt().getInvokeExpr().getArg(1);
+          Val arg2 = q.cfgEdge().getStart().getInvokeExpr().getArg(1);
           if (arg2.isClassConstant()) {
             Preanalysis analysis =
                 new Preanalysis(

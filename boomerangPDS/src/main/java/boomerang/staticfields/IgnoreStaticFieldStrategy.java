@@ -1,6 +1,6 @@
 package boomerang.staticfields;
 
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Val;
 import boomerang.solver.BackwardBoomerangSolver;
@@ -13,7 +13,7 @@ public class IgnoreStaticFieldStrategy<W extends Weight> implements StaticFieldS
 
   @Override
   public void handleForward(
-      Statement storeStmt,
+      Edge storeStmt,
       Val storedVal,
       StaticFieldVal staticVal,
       Set<State> out,
@@ -21,10 +21,9 @@ public class IgnoreStaticFieldStrategy<W extends Weight> implements StaticFieldS
 
   @Override
   public void handleBackward(
-      Statement loadStatement,
+      Edge loadStatement,
       Val loadedVal,
       StaticFieldVal staticVal,
-      Statement succ,
       Set<State> out,
       BackwardBoomerangSolver<W> solver) {}
 }

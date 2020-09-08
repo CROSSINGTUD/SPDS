@@ -12,9 +12,9 @@
 package boomerang;
 
 import boomerang.scene.CallGraph;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.DataFlowScope;
 import boomerang.scene.Field;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import sync.pds.solver.OneWeightFunctions;
 import sync.pds.solver.WeightFunctions;
@@ -22,8 +22,8 @@ import wpds.impl.Weight;
 
 public class Boomerang extends WeightedBoomerang<Weight.NoWeight> {
 
-  private OneWeightFunctions<Statement, Val, Field, Weight.NoWeight> fieldWeights;
-  private OneWeightFunctions<Statement, Val, Statement, Weight.NoWeight> callWeights;
+  private OneWeightFunctions<Edge, Val, Field, Weight.NoWeight> fieldWeights;
+  private OneWeightFunctions<Edge, Val, Edge, Weight.NoWeight> callWeights;
 
   public Boomerang(CallGraph callGraph, DataFlowScope scope) {
     super(callGraph, scope);
@@ -34,34 +34,34 @@ public class Boomerang extends WeightedBoomerang<Weight.NoWeight> {
   }
 
   @Override
-  protected WeightFunctions<Statement, Val, Field, Weight.NoWeight> getForwardFieldWeights() {
+  protected WeightFunctions<Edge, Val, Field, Weight.NoWeight> getForwardFieldWeights() {
     return getOrCreateFieldWeights();
   }
 
   @Override
-  protected WeightFunctions<Statement, Val, Field, Weight.NoWeight> getBackwardFieldWeights() {
+  protected WeightFunctions<Edge, Val, Field, Weight.NoWeight> getBackwardFieldWeights() {
     return getOrCreateFieldWeights();
   }
 
   @Override
-  protected WeightFunctions<Statement, Val, Statement, Weight.NoWeight> getBackwardCallWeights() {
+  protected WeightFunctions<Edge, Val, Edge, Weight.NoWeight> getBackwardCallWeights() {
     return getOrCreateCallWeights();
   }
 
   @Override
-  protected WeightFunctions<Statement, Val, Statement, Weight.NoWeight> getForwardCallWeights(
+  protected WeightFunctions<Edge, Val, Edge, Weight.NoWeight> getForwardCallWeights(
       ForwardQuery sourceQuery) {
     return getOrCreateCallWeights();
   }
 
-  private WeightFunctions<Statement, Val, Field, Weight.NoWeight> getOrCreateFieldWeights() {
+  private WeightFunctions<Edge, Val, Field, Weight.NoWeight> getOrCreateFieldWeights() {
     if (fieldWeights == null) {
       fieldWeights = new OneWeightFunctions<>(Weight.NO_WEIGHT_ONE);
     }
     return fieldWeights;
   }
 
-  private WeightFunctions<Statement, Val, Statement, Weight.NoWeight> getOrCreateCallWeights() {
+  private WeightFunctions<Edge, Val, Edge, Weight.NoWeight> getOrCreateCallWeights() {
     if (callWeights == null) {
       callWeights = new OneWeightFunctions<>(Weight.NO_WEIGHT_ONE);
     }

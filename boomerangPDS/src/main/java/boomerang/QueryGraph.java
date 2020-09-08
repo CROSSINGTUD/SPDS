@@ -1,9 +1,8 @@
 package boomerang;
 
-import boomerang.scene.CallSiteStatement;
+import boomerang.scene.ControlFlowGraph;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Method;
-import boomerang.scene.ReturnSiteStatement;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.BackwardBoomerangSolver;
@@ -47,7 +46,7 @@ public class QueryGraph<W extends Weight> {
     this.roots.add(root);
   }
 
-  public void addEdge(Query parent, Node<Statement, Val> node, Query child) {
+  public void addEdge(Query parent, Node<ControlFlowGraph.Edge, Val> node, Query child) {
     assert getSolver(child) != null;
     QueryEdge queryEdge = new QueryEdge(parent, node, child);
     sourceToQueryEdgeLookUp.put(parent, queryEdge);
@@ -58,8 +57,7 @@ public class QueryGraph<W extends Weight> {
     }
     getSolver(parent)
         .getCallAutomaton()
-        .registerListener(
-            new SourceListener(new SingleNode<Val>(node.fact()), parent, child, null));
+        .registerListener(new SourceListener(new SingleNode<>(node.fact()), parent, child, null));
   }
 
   private AbstractBoomerangSolver<W> getSolver(Query query) {
@@ -76,7 +74,7 @@ public class QueryGraph<W extends Weight> {
     this.targetToQueryEdgeLookUp.clear();
   }
 
-  private class SourceListener extends WPAStateListener<Statement, INode<Val>, W> {
+  private class SourceListener extends WPAStateListener<Edge, INode<Val>, W> {
 
     private Query child;
     private Query parent;
@@ -91,15 +89,12 @@ public class QueryGraph<W extends Weight> {
 
     @Override
     public void onOutTransitionAdded(
-        Transition<Statement, INode<Val>> t,
+        Transition<Edge, INode<Val>> t,
         W w,
-        WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {
+        WeightedPAutomaton<Edge, INode<Val>, W> weightedPAutomaton) {
       if (t.getStart() instanceof GeneratedState && callee != null) {
-        Statement callSiteLabel = t.getLabel();
-        if (callSiteLabel instanceof ReturnSiteStatement) {
-          callSiteLabel = ((ReturnSiteStatement) callSiteLabel).getCallSiteStatement();
-        }
-        getSolver(child).allowUnbalanced(callee, (CallSiteStatement) callSiteLabel);
+        Edge callSiteLabel = t.getLabel();
+        getSolver(child).allowUnbalanced(callee, callSiteLabel);
       }
       if (t.getTarget() instanceof GeneratedState) {
         getSolver(parent)
@@ -115,9 +110,9 @@ public class QueryGraph<W extends Weight> {
 
     @Override
     public void onInTransitionAdded(
-        Transition<Statement, INode<Val>> t,
+        Transition<Edge, INode<Val>> t,
         W w,
-        WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {}
+        WeightedPAutomaton<Edge, INode<Val>, W> weightedPAutomaton) {}
 
     @Override
     public int hashCode() {
@@ -200,7 +195,7 @@ public class QueryGraph<W extends Weight> {
           .getCallAutomaton()
           .registerListener(
               new SourceListener(
-                  new SingleNode<Val>(parentOfParent.getNode().fact()), newParent, child, null));
+                  new SingleNode<>(parentOfParent.getNode().fact()), newParent, child, null));
     }
 
     @Override
@@ -270,15 +265,15 @@ public class QueryGraph<W extends Weight> {
   private static class QueryEdge {
     private final Query source;
     private final Query target;
-    private Node<Statement, Val> node;
+    private Node<ControlFlowGraph.Edge, Val> node;
 
-    public QueryEdge(Query source, Node<Statement, Val> node, Query target) {
+    public QueryEdge(Query source, Node<ControlFlowGraph.Edge, Val> node, Query target) {
       this.source = source;
       this.node = node;
       this.target = target;
     }
 
-    public Node<Statement, Val> getNode() {
+    public Node<Edge, Val> getNode() {
       return node;
     }
 

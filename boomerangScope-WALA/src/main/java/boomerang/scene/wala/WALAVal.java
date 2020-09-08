@@ -11,9 +11,9 @@
  */
 package boomerang.scene.wala;
 
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Method;
 import boomerang.scene.Pair;
-import boomerang.scene.Statement;
 import boomerang.scene.Type;
 import boomerang.scene.Val;
 import com.ibm.wala.analysis.typeInference.PointType;
@@ -43,7 +43,7 @@ public class WALAVal extends Val {
     this(programCounter, method, null);
   }
 
-  public WALAVal(int programCounter, WALAMethod method, Statement unbalanced) {
+  public WALAVal(int programCounter, WALAMethod method, Edge unbalanced) {
     super(method, unbalanced);
     this.programCounter = programCounter;
     this.method = method;
@@ -59,7 +59,7 @@ public class WALAVal extends Val {
    * @param newSite
    * @param method
    */
-  public WALAVal(NewSiteReference newSite, WALAMethod method, Statement unbalanced) {
+  public WALAVal(NewSiteReference newSite, WALAMethod method, Edge unbalanced) {
     super(method, unbalanced);
     this.newSite = newSite;
     this.method = method;
@@ -80,7 +80,7 @@ public class WALAVal extends Val {
    * @param delegate
    * @param method
    */
-  public WALAVal(SSAInstruction delegate, OP op, WALAMethod method, Statement unbalanced) {
+  public WALAVal(SSAInstruction delegate, OP op, WALAMethod method, Edge unbalanced) {
     super(method, unbalanced);
     this.ssaInstruction = delegate;
     this.op = op;
@@ -125,7 +125,7 @@ public class WALAVal extends Val {
   }
 
   @Override
-  public Val asUnbalanced(Statement stmt) {
+  public Val asUnbalanced(Edge stmt) {
     if (newSite != null) {
       return new WALAVal(newSite, method, stmt);
     }

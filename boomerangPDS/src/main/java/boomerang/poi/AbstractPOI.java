@@ -11,16 +11,18 @@
  */
 package boomerang.poi;
 
+import boomerang.scene.ControlFlowGraph.Edge;
+
 public abstract class AbstractPOI<Statement, Val, Field>
     extends PointOfIndirection<Statement, Val, Field> {
 
   private final Val baseVar;
   private final Field field;
   private final Val storedVar;
-  private Statement statement;
+  private Edge cfgEdge;
 
-  public AbstractPOI(Statement statement, Val baseVar, Field field, Val storedVar) {
-    this.statement = statement;
+  public AbstractPOI(Edge cfgEdge, Val baseVar, Field field, Val storedVar) {
+    this.cfgEdge = cfgEdge;
     this.baseVar = baseVar;
     this.field = field;
     this.storedVar = storedVar;
@@ -38,8 +40,8 @@ public abstract class AbstractPOI<Statement, Val, Field>
     return storedVar;
   }
 
-  public Statement getStmt() {
-    return statement;
+  public Edge getCfgEdge() {
+    return cfgEdge;
   }
 
   @Override
@@ -49,7 +51,7 @@ public abstract class AbstractPOI<Statement, Val, Field>
     result = prime * result + ((field == null) ? 0 : field.hashCode());
     result = prime * result + ((baseVar == null) ? 0 : baseVar.hashCode());
     result = prime * result + ((storedVar == null) ? 0 : storedVar.hashCode());
-    result = prime * result + ((statement == null) ? 0 : statement.hashCode());
+    result = prime * result + ((cfgEdge == null) ? 0 : cfgEdge.hashCode());
     return result;
   }
 
@@ -68,14 +70,14 @@ public abstract class AbstractPOI<Statement, Val, Field>
     if (storedVar == null) {
       if (other.storedVar != null) return false;
     } else if (!storedVar.equals(other.storedVar)) return false;
-    if (statement == null) {
-      if (other.statement != null) return false;
-    } else if (!statement.equals(other.statement)) return false;
+    if (cfgEdge == null) {
+      if (other.cfgEdge != null) return false;
+    } else if (!cfgEdge.equals(other.cfgEdge)) return false;
     return true;
   }
 
   @Override
   public String toString() {
-    return "POI:" + statement.toString();
+    return "POI:" + cfgEdge.toString();
   }
 }

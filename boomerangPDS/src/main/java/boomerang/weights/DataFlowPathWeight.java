@@ -1,5 +1,6 @@
 package boomerang.weights;
 
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Method;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
@@ -22,12 +23,12 @@ public class DataFlowPathWeight extends Weight {
     condition = PathConditionWeight.one();
   }
 
-  public DataFlowPathWeight(Node<Statement, Val> path) {
+  public DataFlowPathWeight(Node<Edge, Val> path) {
     this.path = new PathTrackingWeight(path);
     this.condition = PathConditionWeight.one();
   }
 
-  public DataFlowPathWeight(Node<Statement, Val> path, Statement callSite, Method callee) {
+  public DataFlowPathWeight(Node<Edge, Val> path, Statement callSite, Method callee) {
     this.path = new PathTrackingWeight(path);
     this.condition = new PathConditionWeight(callSite, callee);
   }
@@ -75,8 +76,8 @@ public class DataFlowPathWeight extends Weight {
     return Objects.hashCode(path, condition);
   }
 
-  public List<Node<Statement, Val>> getAllStatements() {
-    return path.getAllStatements();
+  public List<Node<Edge, Val>> getAllStatements() {
+    return path.getShortestPathWitness();
   }
 
   public Map<Statement, ConditionDomain> getConditions() {

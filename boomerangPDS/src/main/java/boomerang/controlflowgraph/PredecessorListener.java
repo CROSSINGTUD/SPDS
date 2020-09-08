@@ -14,5 +14,5 @@ public abstract class PredecessorListener {
     return curr;
   }
 
-  public abstract void getPredecessor(Statement succ);
+  public abstract void getPredecessor(Statement pred);
 }

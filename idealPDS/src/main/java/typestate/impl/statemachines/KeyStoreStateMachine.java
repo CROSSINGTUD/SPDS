@@ -13,6 +13,7 @@ package typestate.impl.statemachines;
 
 import boomerang.WeightedForwardQuery;
 import boomerang.scene.AllocVal;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.DeclaredMethod;
 import boomerang.scene.Statement;
 import java.util.Collections;
@@ -84,12 +85,13 @@ public class KeyStoreStateMachine extends TypeStateMachineWeightFunctions {
   }
 
   @Override
-  public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement unit) {
+  public Set<WeightedForwardQuery<TransitionFunction>> generateSeed(Edge edge) {
+    Statement unit = edge.getStart();
     if (unit.isAssign() && unit.containsInvokeExpr()) {
       if (isKeyStoreConstructor(unit.getInvokeExpr().getMethod())) {
         return Collections.singleton(
             new WeightedForwardQuery<>(
-                unit,
+                edge,
                 new AllocVal(unit.getLeftOp(), unit, unit.getRightOp()),
                 initialTransition()));
       }

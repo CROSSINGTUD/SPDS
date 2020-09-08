@@ -1,11 +1,10 @@
 package boomerang.results;
 
 import boomerang.Query;
-import boomerang.scene.CallSiteStatement;
+import boomerang.scene.ControlFlowGraph;
 import boomerang.scene.Field;
 import boomerang.scene.Method;
 import boomerang.scene.Pair;
-import boomerang.scene.ReturnSiteStatement;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import java.util.List;
@@ -16,28 +15,28 @@ import wpds.impl.PAutomaton;
 public class NullPointerDereference implements AffectedLocation {
   public static final int RULE_INDEX = 0;
 
-  private final Statement statement;
+  private final ControlFlowGraph.Edge statement;
   private final Val variable;
   private PAutomaton<Statement, INode<Val>> openingContext;
   private PAutomaton<Statement, INode<Val>> closingContext;
   private List<PathElement> dataFlowPath;
-  private final Statement sourceStatement;
+  private final ControlFlowGraph.Edge sourceStatement;
   private final Val sourceVariable;
   private Query query;
 
-  public NullPointerDereference(Statement statement) {
+  public NullPointerDereference(ControlFlowGraph.Edge statement) {
     this(null, statement, null, null, null, null);
   }
 
   public NullPointerDereference(
       Query query,
-      Statement statement,
+      ControlFlowGraph.Edge statement,
       Val variable,
       PAutomaton<Statement, INode<Val>> openingContext,
       PAutomaton<Statement, INode<Val>> closingContext,
       List<PathElement> dataFlowPath) {
     this.query = query;
-    this.sourceStatement = query.stmt();
+    this.sourceStatement = query.cfgEdge();
     this.sourceVariable = query.var();
     this.statement = statement;
     this.variable = variable;
@@ -79,7 +78,7 @@ public class NullPointerDereference implements AffectedLocation {
    *
    * @return the statement where the respective {@link #getVariable() getVariable} is null
    */
-  public Statement getStatement() {
+  public ControlFlowGraph.Edge getStatement() {
     return statement;
   }
 
@@ -90,7 +89,7 @@ public class NullPointerDereference implements AffectedLocation {
    *
    * @return The source statement of the data-flow/null pointer.
    */
-  public Statement getSourceStatement() {
+  public ControlFlowGraph.Edge getSourceStatement() {
     return sourceStatement;
   }
 
@@ -110,7 +109,7 @@ public class NullPointerDereference implements AffectedLocation {
    * @return The SootMethod of the null pointer statement
    */
   public Method getMethod() {
-    return getStatement().getMethod();
+    return getStatement().getStart().getMethod();
   }
 
   /**
@@ -179,7 +178,7 @@ public class NullPointerDereference implements AffectedLocation {
   @Override
   public String toString() {
     String str = "Null Pointer: \n";
-    str += "defined at " + getSourceStatement().getMethod();
+    str += "defined at " + getSourceStatement().getStart().getMethod();
     str += (getVariable() != null ? "\tVariable: " + getVariable() : "");
     str += "\n\tStatement: " + getStatement() + "\n\tMethod: " + getMethod();
     return str;
@@ -189,18 +188,14 @@ public class NullPointerDereference implements AffectedLocation {
     return query;
   }
 
-  public static boolean isNullPointerNode(Node<Statement, Val> nullPointerNode) {
+  public static boolean isNullPointerNode(Node<ControlFlowGraph.Edge, Val> nullPointerNode) {
     Val fact = nullPointerNode.fact();
     Method m = fact.m();
     // A this variable can never be null.
     if (!m.isStatic() && m.getThisLocal().equals(fact)) {
       return false;
     }
-    Statement curr = nullPointerNode.stmt();
-    if (curr instanceof CallSiteStatement) return false;
-    if (curr instanceof ReturnSiteStatement) {
-      curr = ((ReturnSiteStatement) curr).getCallSiteStatement();
-    }
+    Statement curr = nullPointerNode.stmt().getStart();
     if (curr.containsInvokeExpr()) {
       if (curr.getInvokeExpr().isInstanceInvokeExpr()) {
         Val invocationBase = curr.getInvokeExpr().getBase();

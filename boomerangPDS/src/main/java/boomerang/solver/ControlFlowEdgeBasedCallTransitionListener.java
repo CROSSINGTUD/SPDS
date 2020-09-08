@@ -11,7 +11,8 @@
  */
 package boomerang.solver;
 
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Val;
 import sync.pds.solver.nodes.INode;
 import wpds.impl.Transition;
@@ -19,32 +20,34 @@ import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.WPAUpdateListener;
 
-public abstract class StatementBasedCallTransitionListener<W extends Weight>
-    implements WPAUpdateListener<Statement, INode<Val>, W> {
+public abstract class ControlFlowEdgeBasedCallTransitionListener<W extends Weight>
+    implements WPAUpdateListener<Edge, INode<Val>, W> {
 
-  private final Statement stmt;
+  private final Edge edge;
 
-  public StatementBasedCallTransitionListener(Statement stmt) {
-    this.stmt = stmt;
+  public ControlFlowEdgeBasedCallTransitionListener(Edge edge) {
+    this.edge = edge;
   }
 
-  public Statement getStmt() {
-    return stmt;
+  public ControlFlowGraph.Edge getControlFlowEdge() {
+    return edge;
   }
 
   @Override
   public void onWeightAdded(
-      Transition<Statement, INode<Val>> t, W w, WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+      Transition<ControlFlowGraph.Edge, INode<Val>> t,
+      W w,
+      WeightedPAutomaton<Edge, INode<Val>, W> aut) {
     onAddedTransition(t, w);
   }
 
-  public abstract void onAddedTransition(Transition<Statement, INode<Val>> t, W w);
+  public abstract void onAddedTransition(Transition<ControlFlowGraph.Edge, INode<Val>> t, W w);
 
   @Override
   public int hashCode() {
     final int prime = 31;
     int result = 1;
-    result = prime * result + ((stmt == null) ? 0 : stmt.hashCode());
+    result = prime * result + ((edge == null) ? 0 : edge.hashCode());
     return result;
   }
 
@@ -53,10 +56,11 @@ public abstract class StatementBasedCallTransitionListener<W extends Weight>
     if (this == obj) return true;
     if (obj == null) return false;
     if (getClass() != obj.getClass()) return false;
-    StatementBasedCallTransitionListener other = (StatementBasedCallTransitionListener) obj;
-    if (stmt == null) {
-      if (other.stmt != null) return false;
-    } else if (!stmt.equals(other.stmt)) return false;
+    ControlFlowEdgeBasedCallTransitionListener other =
+        (ControlFlowEdgeBasedCallTransitionListener) obj;
+    if (edge == null) {
+      if (other.edge != null) return false;
+    } else if (!edge.equals(other.edge)) return false;
     return true;
   }
 }

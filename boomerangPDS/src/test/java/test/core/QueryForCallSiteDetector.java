@@ -4,7 +4,7 @@ import boomerang.BackwardQuery;
 import boomerang.Query;
 import boomerang.scene.AnalysisScope;
 import boomerang.scene.CallGraph;
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Val;
 import boomerang.scene.jimple.AccessPathParser;
 import boomerang.scene.jimple.JimpleMethod;
@@ -26,8 +26,8 @@ class QueryForCallSiteDetector extends AnalysisScope {
     super(cg);
   }
 
-  private void getAllExpectedAccessPath(Statement u) {
-    Val arg = u.getInvokeExpr().getArg(1);
+  private void getAllExpectedAccessPath(Edge u) {
+    Val arg = u.getStart().getInvokeExpr().getArg(1);
     if (arg.isStringConstant()) {
       String value = arg.getStringValue();
       expectedAccessPaths.addAll(
@@ -44,9 +44,9 @@ class QueryForCallSiteDetector extends AnalysisScope {
     }
 
     @Override
-    public Optional<? extends Query> test(Statement stmt) {
-      if (!(stmt.containsInvokeExpr())) return Optional.empty();
-      boomerang.scene.InvokeExpr invokeExpr = stmt.getInvokeExpr();
+    public Optional<? extends Query> test(Edge stmt) {
+      if (!(stmt.getTarget().containsInvokeExpr())) return Optional.empty();
+      boomerang.scene.InvokeExpr invokeExpr = stmt.getTarget().getInvokeExpr();
       if (!invokeExpr.getMethod().getName().matches(methodNameMatcher)) return Optional.empty();
       Val param = invokeExpr.getArg(0);
       if (!param.isLocal()) return Optional.empty();
@@ -56,7 +56,7 @@ class QueryForCallSiteDetector extends AnalysisScope {
   }
 
   @Override
-  protected Collection<? extends Query> generate(Statement stmt) {
+  protected Collection<? extends Query> generate(Edge stmt) {
     Optional<? extends Query> query = new FirstArgumentOf("queryFor").test(stmt);
 
     if (query.isPresent()) {

@@ -24,7 +24,7 @@ public class JimpleIfStatement implements IfStatement {
 
   @Override
   public Statement getTarget() {
-    return JimpleStatement.create(delegate.getTarget(), (JimpleMethod) method)[0];
+    return JimpleStatement.create(delegate.getTarget(), (JimpleMethod) method);
   }
 
   @Override

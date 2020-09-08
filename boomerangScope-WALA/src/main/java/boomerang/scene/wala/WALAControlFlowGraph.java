@@ -11,10 +11,8 @@
  */
 package boomerang.scene.wala;
 
-import boomerang.scene.CallSiteStatement;
 import boomerang.scene.ControlFlowGraph;
 import boomerang.scene.Method;
-import boomerang.scene.ReturnSiteStatement;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import com.google.common.base.Joiner;
@@ -284,10 +282,7 @@ public class WALAControlFlowGraph implements ControlFlowGraph {
       }
     }
 
-    CallSiteStatement cs = new CallSiteStatement(call);
-    ReturnSiteStatement rs = new ReturnSiteStatement(call);
-    res.add(cs);
-    res.add(rs);
+    res.add(call);
   }
 
   private Graph<ISSABasicBlock> buildDirectedGraph() {

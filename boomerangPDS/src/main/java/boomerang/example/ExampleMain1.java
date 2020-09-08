@@ -17,6 +17,7 @@ import boomerang.DefaultBoomerangOptions;
 import boomerang.Query;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.scene.AnalysisScope;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.SootDataFlowScope;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
@@ -121,10 +122,11 @@ public class ExampleMain1 {
         AnalysisScope scope =
             new AnalysisScope(sootCallGraph) {
               @Override
-              protected Collection<? extends Query> generate(Statement statement) {
+              protected Collection<? extends Query> generate(Edge cfgEdge) {
+                Statement statement = cfgEdge.getTarget();
                 if (statement.toString().contains("queryFor") && statement.containsInvokeExpr()) {
                   Val arg = statement.getInvokeExpr().getArg(0);
-                  return Collections.singleton(BackwardQuery.make(statement, arg));
+                  return Collections.singleton(BackwardQuery.make(cfgEdge, arg));
                 }
                 return Collections.emptySet();
               }

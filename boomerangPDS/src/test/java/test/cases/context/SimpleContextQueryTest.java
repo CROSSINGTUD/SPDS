@@ -23,8 +23,8 @@ public class SimpleContextQueryTest extends AbstractBoomerangTest {
     methodOfQuery(alloc);
   }
 
-  private void methodOfQuery(AllocatedObject alloc) {
-    AllocatedObject alias = alloc;
+  private void methodOfQuery(AllocatedObject allocInner) {
+    AllocatedObject alias = allocInner;
     queryFor(alias);
   }
 

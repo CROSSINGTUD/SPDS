@@ -16,14 +16,15 @@ import boomerang.BoomerangOptions;
 import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.controlflowgraph.ObservableControlFlowGraph;
+import boomerang.controlflowgraph.PredecessorListener;
 import boomerang.scene.AllocVal;
-import boomerang.scene.CallSiteStatement;
+import boomerang.scene.ControlFlowGraph;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.DataFlowScope;
 import boomerang.scene.Field;
 import boomerang.scene.InvokeExpr;
 import boomerang.scene.Method;
 import boomerang.scene.Pair;
-import boomerang.scene.ReturnSiteStatement;
 import boomerang.scene.Statement;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Type;
@@ -58,11 +59,14 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
   public BackwardBoomerangSolver(
       ObservableICFG<Statement, Method> icfg,
       ObservableControlFlowGraph cfg,
-      Map<Entry<INode<Node<Statement, Val>>, Field>, INode<Node<Statement, Val>>> genField,
+      Map<
+              Entry<INode<Node<ControlFlowGraph.Edge, Val>>, Field>,
+              INode<Node<ControlFlowGraph.Edge, Val>>>
+          genField,
       BackwardQuery query,
       BoomerangOptions options,
-      NestedWeightedPAutomatons<Statement, INode<Val>, W> callSummaries,
-      NestedWeightedPAutomatons<Field, INode<Node<Statement, Val>>, W> fieldSummaries,
+      NestedWeightedPAutomatons<ControlFlowGraph.Edge, INode<Val>, W> callSummaries,
+      NestedWeightedPAutomatons<Field, INode<Node<ControlFlowGraph.Edge, Val>>, W> fieldSummaries,
       DataFlowScope scope,
       Strategies strategies,
       Type propagationType) {
@@ -86,13 +90,12 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
     return false;
   }
 
-  public INode<Node<Statement, Val>> generateFieldState(
-      final INode<Node<Statement, Val>> d, final Field loc) {
-    Entry<INode<Node<Statement, Val>>, Field> e = new SimpleEntry<>(d, loc);
+  public INode<Node<ControlFlowGraph.Edge, Val>> generateFieldState(
+      final INode<Node<ControlFlowGraph.Edge, Val>> d, final Field loc) {
+    Entry<INode<Node<Edge, Val>>, Field> e = new SimpleEntry<>(d, loc);
     if (!generatedFieldState.containsKey(e)) {
       generatedFieldState.put(
-          e,
-          new GeneratedState<>(new SingleNode<>(new Node<>(Statement.epsilon(), Val.zero())), loc));
+          e, new GeneratedState<>(new SingleNode<>(new Node<>(epsilonStmt(), Val.zero())), loc));
     }
     return generatedFieldState.get(e);
   }
@@ -129,63 +132,57 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
     return out;
   }
 
-  protected void callFlow(Method caller, Node<Statement, Val> curr, CallSiteStatement callSite) {
-    icfg.addCalleeListener(new CallSiteCalleeListener(curr, caller, callSite));
+  protected void callFlow(Method caller, Node<Edge, Val> curr, Statement callSite) {
+    icfg.addCalleeListener(new CallSiteCalleeListener(curr, caller));
     InvokeExpr invokeExpr = callSite.getInvokeExpr();
     if (dataFlowScope.isExcluded(invokeExpr.getMethod())) {
       byPassFlowAtCallsite(caller, curr);
     }
   }
 
-  private void byPassFlowAtCallsite(Method caller, Node<Statement, Val> curr) {
+  private void byPassFlowAtCallsite(Method caller, Node<Edge, Val> curr) {
     normalFlow(caller, curr);
     for (Statement returnSite :
-        curr.stmt().getMethod().getControlFlowGraph().getPredsOf(curr.stmt())) {
+        curr.stmt()
+            .getStart()
+            .getMethod()
+            .getControlFlowGraph()
+            .getPredsOf(curr.stmt().getStart())) {
 
-      for (State s : getEmptyCalleeFlow(caller, curr.stmt(), curr.fact(), returnSite)) {
+      for (State s :
+          getEmptyCalleeFlow(caller, new Edge(curr.stmt().getStart(), returnSite), curr.fact())) {
         propagate(curr, s);
       }
     }
   }
 
   @Override
-  public void computeSuccessor(Node<Statement, Val> node) {
-    Statement stmt = node.stmt();
+  public void computeSuccessor(Node<Edge, Val> node) {
     LOGGER.trace("BW: Computing successor of {} for {}", node, this);
+    Edge edge = node.stmt();
     Val value = node.fact();
     assert !(value instanceof AllocVal);
-    Method method = stmt.getMethod();
+    Method method = edge.getStart().getMethod();
     if (method == null) return;
-    //        if(dataFlowScope.isExcluded(method))
-    //          return;
-    if (killFlow(method, stmt, value)) {
+    if (dataFlowScope.isExcluded(method)) return;
+    if (killFlow(method, edge.getStart(), value)) {
       return;
     }
-    if (isReturnSiteStatement(stmt, value) && INTERPROCEDURAL) {
-      ReturnSiteStatement returnSiteStatement = (ReturnSiteStatement) stmt;
-      CallSiteStatement callSite = returnSiteStatement.getCallSiteStatement();
-      callFlow(method, node, callSite);
-    } else if (icfg.isExitStmt(stmt)) {
+    if (edge.getStart().containsInvokeExpr() && edge.getStart().uses(value) && INTERPROCEDURAL) {
+      callFlow(method, node, edge.getStart());
+    } else if (icfg.isExitStmt(edge.getStart())) {
       returnFlow(method, node);
     } else {
       normalFlow(method, node);
     }
   }
 
-  protected boolean isReturnSiteStatement(Statement stmt, Val value) {
-    if ((stmt instanceof ReturnSiteStatement)) {
-      ReturnSiteStatement returnSiteStatement = (ReturnSiteStatement) stmt;
-      CallSiteStatement callSite = returnSiteStatement.getCallSiteStatement();
-      return callSite.uses(value);
-    }
-    return false;
-  }
-
-  protected void normalFlow(Method method, Node<Statement, Val> currNode) {
-    Statement curr = currNode.stmt();
+  protected void normalFlow(Method method, Node<ControlFlowGraph.Edge, Val> currNode) {
+    Edge curr = currNode.stmt();
     Val value = currNode.fact();
-    for (Statement succ : curr.getMethod().getControlFlowGraph().getPredsOf(curr)) {
-      Collection<State> flow = computeNormalFlow(method, curr, value, succ);
+    for (Statement pred :
+        curr.getStart().getMethod().getControlFlowGraph().getPredsOf(curr.getStart())) {
+      Collection<State> flow = computeNormalFlow(method, new Edge(pred, curr.getStart()), value);
       for (State s : flow) {
         propagate(currNode, s);
       }
@@ -193,11 +190,8 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
   }
 
   protected Collection<? extends State> computeCallFlow(
-      CallSiteStatement callSite,
-      InvokeExpr invokeExpr,
-      Val fact,
-      Method callee,
-      Statement calleeSp) {
+      Edge callSiteEdge, InvokeExpr invokeExpr, Val fact, Method callee, Edge calleeStartEdge) {
+    Statement calleeSp = calleeStartEdge.getTarget();
     if (calleeSp.isThrowStmt()) {
       return Collections.emptySet();
     }
@@ -205,8 +199,7 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
     if (invokeExpr.isInstanceInvokeExpr()) {
       if (invokeExpr.getBase().equals(fact) && !callee.isStatic()) {
         out.add(
-            new PushNode<Statement, Val, Statement>(
-                calleeSp, callee.getThisLocal(), callSite, PDSSystem.CALLS));
+            new PushNode<>(calleeStartEdge, callee.getThisLocal(), callSiteEdge, PDSSystem.CALLS));
       }
     }
     List<Val> parameterLocals = callee.getParameterLocals();
@@ -214,30 +207,30 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
     for (Val arg : invokeExpr.getArgs()) {
       if (arg.equals(fact) && parameterLocals.size() > i) {
         Val param = parameterLocals.get(i);
-        out.add(
-            new PushNode<Statement, Val, Statement>(calleeSp, param, callSite, PDSSystem.CALLS));
+        out.add(new PushNode<>(calleeStartEdge, param, callSiteEdge, PDSSystem.CALLS));
       }
       i++;
     }
 
+    Statement callSite = callSiteEdge.getTarget();
     if (callSite.isAssign() && calleeSp.isReturnStmt()) {
       if (callSite.getLeftOp().equals(fact)) {
         out.add(
-            new PushNode<Statement, Val, Statement>(
-                calleeSp, calleeSp.getReturnOp(), callSite, PDSSystem.CALLS));
+            new PushNode<>(calleeStartEdge, calleeSp.getReturnOp(), callSiteEdge, PDSSystem.CALLS));
       }
     }
     if (fact.isStatic()) {
       out.add(
-          new PushNode<Statement, Val, Statement>(
-              calleeSp, fact.withNewMethod(callee), callSite, PDSSystem.CALLS));
+          new PushNode<>(
+              calleeStartEdge, fact.withNewMethod(callee), callSiteEdge, PDSSystem.CALLS));
     }
     return out;
   }
 
   @Override
-  protected Collection<State> computeNormalFlow(
-      Method method, Statement curr, Val fact, Statement succ) {
+  protected Collection<State> computeNormalFlow(Method method, Edge currEdge, Val fact) {
+    // BW data-flow inverses, therefore we
+    Statement curr = currEdge.getTarget();
     if (options.getAllocationVal(method, curr, fact, icfg).isPresent()) {
       return Collections.emptySet();
     }
@@ -256,33 +249,33 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
           if (options.trackFields()) {
             Pair<Val, Field> ifr = curr.getFieldLoad();
             if (!options.ignoreInnerClassFields() || !ifr.getY().isInnerClassField()) {
-              out.add(new PushNode<>(succ, ifr.getX(), ifr.getY(), PDSSystem.FIELDS));
+              out.add(new PushNode<>(currEdge, ifr.getX(), ifr.getY(), PDSSystem.FIELDS));
             }
           }
         } else if (curr.isStaticFieldLoad()) {
           if (options.trackFields()) {
             strategies
                 .getStaticFieldStrategy()
-                .handleBackward(curr, curr.getLeftOp(), curr.getStaticField(), succ, out, this);
+                .handleBackward(currEdge, curr.getLeftOp(), curr.getStaticField(), out, this);
           }
         } else if (rightOp.isArrayRef()) {
           Pair<Val, Integer> arrayBase = curr.getArrayBase();
           if (options.trackFields()) {
-            strategies.getArrayHandlingStrategy().handleBackward(curr, arrayBase, succ, out, this);
+            strategies.getArrayHandlingStrategy().handleBackward(currEdge, arrayBase, out, this);
           }
           // leftSideMatches = false;
         } else if (rightOp.isCast()) {
-          out.add(new Node<>(succ, rightOp.getCastOp()));
+          out.add(new Node<>(currEdge, rightOp.getCastOp()));
         } else if (curr.isPhiStatement()) {
           Collection<Val> phiVals = curr.getPhiVals();
           for (Val v : phiVals) {
-            out.add(new Node<>(succ, v));
+            out.add(new Node<>(currEdge, v));
           }
         } else {
           if (curr.isFieldLoadWithBase(fact)) {
-            out.add(new ExclusionNode<>(succ, fact, curr.getLoadedField()));
+            out.add(new ExclusionNode<>(currEdge, fact, curr.getLoadedField()));
           } else {
-            out.add(new Node<>(succ, rightOp));
+            out.add(new Node<>(currEdge, rightOp));
           }
         }
       }
@@ -290,88 +283,95 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
         Pair<Val, Field> ifr = curr.getFieldStore();
         Val base = ifr.getX();
         if (base.equals(fact)) {
-          NodeWithLocation<Statement, Val, Field> succNode =
-              new NodeWithLocation<>(succ, rightOp, ifr.getY());
+          NodeWithLocation<Edge, Val, Field> succNode =
+              new NodeWithLocation<>(currEdge, rightOp, ifr.getY());
           out.add(new PopNode<>(succNode, PDSSystem.FIELDS));
         }
       } else if (curr.isStaticFieldStore()) {
         StaticFieldVal staticField = curr.getStaticField();
         if (fact.isStatic() && fact.equals(staticField)) {
-          out.add(new Node<>(succ, rightOp));
+          out.add(new Node<>(currEdge, rightOp));
         }
       } else if (leftOp.isArrayRef()) {
         Pair<Val, Integer> arrayBase = curr.getArrayBase();
         if (arrayBase.getX().equals(fact)) {
-          NodeWithLocation<Statement, Val, Field> succNode =
-              new NodeWithLocation<>(succ, rightOp, Field.array(arrayBase.getY()));
+          NodeWithLocation<Edge, Val, Field> succNode =
+              new NodeWithLocation<>(currEdge, rightOp, Field.array(arrayBase.getY()));
           out.add(new PopNode<>(succNode, PDSSystem.FIELDS));
         }
       }
     }
-    if (!leftSideMatches) out.add(new Node<>(succ, fact));
+    if (!leftSideMatches) out.add(new Node<>(currEdge, fact));
     return out;
   }
 
   @Override
   public void applyCallSummary(
-      Statement callSite,
-      Val factAtSpInCallee,
-      Statement spInCallee,
-      Statement exitStmt,
-      Val exitingFact) {
-    Set<Node<Statement, Val>> out = Sets.newHashSet();
+      Edge callSiteEdge, Val factAtSpInCallee, Edge spInCallee, Edge exitStmt, Val exitingFact) {
+    Set<Node<Edge, Val>> out = Sets.newHashSet();
+    Statement callSite = callSiteEdge.getTarget();
     if (callSite.containsInvokeExpr()) {
       if (exitingFact.isThisLocal()) {
         if (callSite.getInvokeExpr().isInstanceInvokeExpr()) {
-          out.add(new Node<>(callSite, callSite.getInvokeExpr().getBase()));
+          out.add(new Node<>(callSiteEdge, callSite.getInvokeExpr().getBase()));
         }
       }
       if (exitingFact.isReturnLocal()) {
         if (callSite.isAssign()) {
-          out.add(new Node<>(callSite, callSite.getLeftOp()));
+          out.add(new Node<>(callSiteEdge, callSite.getLeftOp()));
         }
       }
       for (int i = 0; i < callSite.getInvokeExpr().getArgs().size(); i++) {
         if (exitingFact.isParameterLocal(i)) {
-          out.add(new Node<>(callSite, callSite.getInvokeExpr().getArg(i)));
+          out.add(new Node<>(callSiteEdge, callSite.getInvokeExpr().getArg(i)));
         }
       }
     }
-    for (Node<Statement, Val> xs : out) {
-      addNormalCallFlow(new Node<>(callSite, exitingFact), xs);
+    for (Node<Edge, Val> xs : out) {
+      addNormalCallFlow(new Node<>(callSiteEdge, exitingFact), xs);
       addNormalFieldFlow(new Node<>(exitStmt, exitingFact), xs);
     }
   }
 
   @Override
   protected void propagateUnbalancedToCallSite(
-      CallSiteStatement callSite, Transition<Statement, INode<Val>> transInCallee) {
-    GeneratedState<Val, Statement> target =
-        (GeneratedState<Val, Statement>) transInCallee.getTarget();
-    Node<Statement, Val> curr = new Node<>(callSite.getReturnSiteStatement(), query.var());
+      Edge callSite, Transition<Edge, INode<Val>> transInCallee) {
+    GeneratedState<Val, Edge> target = (GeneratedState<Val, Edge>) transInCallee.getTarget();
+    cfg.addPredsOfListener(
+        new PredecessorListener(callSite.getStart()) {
+          @Override
+          public void getPredecessor(Statement pred) {
+            Node<ControlFlowGraph.Edge, Val> curr = new Node<>(callSite, query.var());
 
-    Transition<Statement, INode<Val>> callTrans =
-        new Transition<>(
-            wrap(curr.fact()), curr.stmt(), generateCallState(wrap(curr.fact()), curr.stmt()));
-    callAutomaton.addTransition(callTrans);
-    callAutomaton.addUnbalancedState(generateCallState(wrap(curr.fact()), curr.stmt()), target);
+            Transition<ControlFlowGraph.Edge, INode<Val>> callTrans =
+                new Transition<>(
+                    wrap(curr.fact()),
+                    curr.stmt(),
+                    generateCallState(wrap(curr.fact()), curr.stmt()));
+            callAutomaton.addTransition(callTrans);
+            callAutomaton.addUnbalancedState(
+                generateCallState(wrap(curr.fact()), curr.stmt()), target);
 
-    State s = new PushNode<>(target.location(), target.node().fact(), callSite, PDSSystem.CALLS);
-    propagate(curr, s);
+            State s =
+                new PushNode<>(
+                    target.location(),
+                    target.node().fact(),
+                    new Edge(pred, callSite.getStart()),
+                    PDSSystem.CALLS);
+            propagate(curr, s);
+          }
+        });
   }
 
   private final class CallSiteCalleeListener implements CalleeListener<Statement, Method> {
-    private final CallSiteStatement callSite;
-    private final Node<Statement, Val> curr;
+    private final Statement callSite;
+    private final Node<Edge, Val> curr;
     private final Method caller;
 
-    private CallSiteCalleeListener(
-        Node<Statement, Val> curr, Method caller, CallSiteStatement callSite) {
+    private CallSiteCalleeListener(Node<Edge, Val> curr, Method caller) {
       this.curr = curr;
-      this.callSite = callSite;
+      this.callSite = curr.stmt().getStart();
       this.caller = caller;
-      if (!curr.stmt().equals(callSite.getReturnSiteStatement()))
-        throw new RuntimeException("Mismatch of call and return sites!");
     }
 
     @Override
@@ -386,11 +386,18 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
       }
       InvokeExpr invokeExpr = callSite.getInvokeExpr();
       for (Statement calleeSp : icfg.getStartPointsOf(callee)) {
-        Collection<? extends State> res =
-            computeCallFlow(
-                (CallSiteStatement) callSite, invokeExpr, curr.fact(), callee, calleeSp);
-        for (State o : res) {
-          BackwardBoomerangSolver.this.propagate(curr, o);
+        for (Statement predOfCall :
+            callSite.getMethod().getControlFlowGraph().getPredsOf(callSite)) {
+          Collection<? extends State> res =
+              computeCallFlow(
+                  new Edge(predOfCall, callSite),
+                  invokeExpr,
+                  curr.fact(),
+                  callee,
+                  new Edge(calleeSp, calleeSp));
+          for (State o : res) {
+            BackwardBoomerangSolver.this.propagate(curr, o);
+          }
         }
       }
     }

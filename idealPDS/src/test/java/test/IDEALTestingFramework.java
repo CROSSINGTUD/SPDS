@@ -18,7 +18,7 @@ import boomerang.debugger.Debugger;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.scene.CallGraph;
 import boomerang.scene.CallGraph.Edge;
-import boomerang.scene.CallSiteStatement;
+import boomerang.scene.ControlFlowGraph;
 import boomerang.scene.DataFlowScope;
 import boomerang.scene.Method;
 import boomerang.scene.SootDataFlowScope;
@@ -62,12 +62,15 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework {
         new IDEALAnalysisDefinition<TransitionFunction>() {
 
           @Override
-          public Collection<WeightedForwardQuery<TransitionFunction>> generate(Statement stmt) {
+          public Collection<WeightedForwardQuery<TransitionFunction>> generate(
+              ControlFlowGraph.Edge stmt) {
             return IDEALTestingFramework.this.getStateMachine().generateSeed(stmt);
           }
 
           @Override
-          public WeightFunctions<Statement, Val, Statement, TransitionFunction> weightFunctions() {
+          public WeightFunctions<
+                  ControlFlowGraph.Edge, Val, ControlFlowGraph.Edge, TransitionFunction>
+              weightFunctions() {
             return IDEALTestingFramework.this.getStateMachine();
           }
 
@@ -176,7 +179,7 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework {
 
   private Set<Assertion> parseExpectedQueryResults(Method sootTestMethod) {
     Set<Assertion> results = new HashSet<>();
-    parseExpectedQueryResults(sootTestMethod, results, new HashSet<Method>());
+    parseExpectedQueryResults(sootTestMethod, results, new HashSet<>());
     return results;
   }
 
@@ -186,7 +189,6 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework {
 
     for (Statement stmt : m.getStatements()) {
       if (!(stmt.containsInvokeExpr())) continue;
-      CallSiteStatement cs = (CallSiteStatement) stmt;
       for (Edge callSite : callGraph.edgesOutOf(stmt)) {
         parseExpectedQueryResults(callSite.tgt(), queries, visited);
       }
@@ -199,12 +201,12 @@ public abstract class IDEALTestingFramework extends AbstractTestingFramework {
       Val val = invokeExpr.getArg(0);
       if (invocationName.startsWith("mayBeIn")) {
         if (invocationName.contains("Error"))
-          queries.add(new MayBe(cs.getReturnSiteStatement(), val, InternalState.ERROR));
-        else queries.add(new MayBe(cs.getReturnSiteStatement(), val, InternalState.ACCEPTING));
+          queries.add(new MayBe(stmt, val, InternalState.ERROR));
+        else queries.add(new MayBe(stmt, val, InternalState.ACCEPTING));
       } else if (invocationName.startsWith("mustBeIn")) {
         if (invocationName.contains("Error"))
-          queries.add(new MustBe(cs.getReturnSiteStatement(), val, InternalState.ERROR));
-        else queries.add(new MustBe(cs.getReturnSiteStatement(), val, InternalState.ACCEPTING));
+          queries.add(new MustBe(stmt, val, InternalState.ERROR));
+        else queries.add(new MustBe(stmt, val, InternalState.ACCEPTING));
       }
     }
   }

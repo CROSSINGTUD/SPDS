@@ -56,7 +56,9 @@ public abstract class AnalysisScope {
             }
           }
         }
-        seeds.addAll(generate(u));
+        for (Statement succ : u.getMethod().getControlFlowGraph().getSuccsOf(u)) {
+          seeds.addAll(generate(new ControlFlowGraph.Edge(u, succ)));
+        }
       }
     }
     LOGGER.info("Found {} seeds in {} in {} LOC .", seeds.size(), watch, statementCount);
@@ -68,5 +70,5 @@ public abstract class AnalysisScope {
     return false;
   }
 
-  protected abstract Collection<? extends Query> generate(Statement seed);
+  protected abstract Collection<? extends Query> generate(ControlFlowGraph.Edge seed);
 }

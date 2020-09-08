@@ -12,6 +12,7 @@
 package typestate.impl.statemachines;
 
 import boomerang.WeightedForwardQuery;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.DeclaredMethod;
 import boomerang.scene.Statement;
 import java.util.Collection;
@@ -135,12 +136,13 @@ public class SignatureStateMachine extends TypeStateMachineWeightFunctions {
   }
 
   @Override
-  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement unit) {
+  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Edge edge) {
+    Statement unit = edge.getStart();
     if (unit.containsInvokeExpr()) {
       DeclaredMethod method = unit.getInvokeExpr().getMethod();
       if (method.getName().equals("getInstance")
           && method.getSubSignature().contains("Signature")) {
-        return getLeftSideOf(unit);
+        return getLeftSideOf(edge);
       }
     }
     return Collections.emptySet();

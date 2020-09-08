@@ -17,9 +17,8 @@ import boomerang.Query;
 import boomerang.WeightedBoomerang;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
-import boomerang.scene.Field;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Method;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import com.google.common.collect.Maps;
@@ -51,27 +50,19 @@ public class SimpleBoomerangStats<W extends Weight> implements IBoomerangStats<W
     solver
         .getCallAutomaton()
         .registerListener(
-            new WPAUpdateListener<Statement, INode<Val>, W>() {
+            new WPAUpdateListener<Edge, INode<Val>, W>() {
               @Override
               public void onWeightAdded(
-                  Transition<Statement, INode<Val>> t,
+                  Transition<Edge, INode<Val>> t,
                   W w,
-                  WeightedPAutomaton<Statement, INode<Val>, W> aut) {
+                  WeightedPAutomaton<Edge, INode<Val>, W> aut) {
                 callVisitedMethods.add(t.getLabel().getMethod());
               }
             });
     solver
         .getFieldAutomaton()
         .registerListener(
-            new WPAUpdateListener<Field, INode<Node<Statement, Val>>, W>() {
-              @Override
-              public void onWeightAdded(
-                  Transition<Field, INode<Node<Statement, Val>>> t,
-                  W w,
-                  WeightedPAutomaton<Field, INode<Node<Statement, Val>>, W> aut) {
-                fieldVisitedMethods.add(t.getStart().fact().stmt().getMethod());
-              }
-            });
+            (t, w, aut) -> fieldVisitedMethods.add(t.getStart().fact().stmt().getMethod()));
   }
 
   @Override
@@ -102,8 +93,8 @@ public class SimpleBoomerangStats<W extends Weight> implements IBoomerangStats<W
   }
 
   @Override
-  public Collection<? extends Node<Statement, Val>> getForwardReachesNodes() {
-    Set<Node<Statement, Val>> res = Sets.newHashSet();
+  public Collection<? extends Node<Edge, Val>> getForwardReachesNodes() {
+    Set<Node<Edge, Val>> res = Sets.newHashSet();
     for (Query q : queries.keySet()) {
       if (q instanceof ForwardQuery) res.addAll(queries.get(q).getReachedStates());
     }

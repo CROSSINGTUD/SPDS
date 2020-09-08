@@ -1,6 +1,7 @@
 package boomerang.results;
 
 import boomerang.ForwardQuery;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.solver.AbstractBoomerangSolver;
@@ -31,8 +32,7 @@ public class AbstractBoomerangResults<W extends Weight> {
     this.queryToSolvers = solverMap;
   }
 
-  protected Context constructContextGraph(
-      ForwardQuery forwardQuery, Node<Statement, Val> targetFact) {
+  protected Context constructContextGraph(ForwardQuery forwardQuery, Node<Edge, Val> targetFact) {
     Context context = new Context(targetFact, forwardQuery);
     AbstractBoomerangSolver<W> forwardSolver = queryToSolvers.get(forwardQuery);
     computeUnmatchedOpeningContext(context, forwardSolver, targetFact);
@@ -42,18 +42,18 @@ public class AbstractBoomerangResults<W extends Weight> {
 
   public void computeUnmatchedClosingContext(
       Context context, AbstractBoomerangSolver<W> forwardSolver) {
-    for (Transition<Statement, INode<Val>> t : forwardSolver.getCallAutomaton().getTransitions()) {
+    for (Transition<Edge, INode<Val>> t : forwardSolver.getCallAutomaton().getTransitions()) {
       if (t.getTarget().fact().isUnbalanced()) {
         INode<Val> v = t.getTarget();
         forwardSolver
             .getCallAutomaton()
-            .registerListener(new ClosingCallStackExtracter<W>(v, v, context, forwardSolver));
+            .registerListener(new ClosingCallStackExtracter<>(v, v, context, forwardSolver));
       }
     }
   }
 
   public void computeUnmatchedOpeningContext(
-      Context context, AbstractBoomerangSolver<W> forwardSolver, Node<Statement, Val> node) {
+      Context context, AbstractBoomerangSolver<W> forwardSolver, Node<Edge, Val> node) {
     SingleNode<Val> initialState = new SingleNode<>(node.fact());
     forwardSolver
         .getCallAutomaton()
@@ -61,17 +61,17 @@ public class AbstractBoomerangResults<W extends Weight> {
             new OpeningCallStackExtracter<>(initialState, initialState, context, forwardSolver));
   }
 
-  public Table<Statement, Val, W> asStatementValWeightTable(ForwardQuery query) {
-    final Table<Statement, Val, W> results = HashBasedTable.create();
+  public Table<Edge, Val, W> asStatementValWeightTable(ForwardQuery query) {
+    final Table<Edge, Val, W> results = HashBasedTable.create();
     Stopwatch sw = Stopwatch.createStarted();
     LOGGER.trace("Computing final weighted results for {}", query);
-    WeightedPAutomaton<Statement, INode<Val>, W> callAut =
+    WeightedPAutomaton<Edge, INode<Val>, W> callAut =
         queryToSolvers.getOrCreate(query).getCallAutomaton();
-    for (Entry<Transition<Statement, INode<Val>>, W> e :
+    for (Entry<Transition<Edge, INode<Val>>, W> e :
         callAut.getTransitionsToFinalWeights().entrySet()) {
-      Transition<Statement, INode<Val>> t = e.getKey();
+      Transition<Edge, INode<Val>> t = e.getKey();
       W w = e.getValue();
-      if (t.getLabel().equals(Statement.epsilon())) continue;
+      if (t.getLabel().equals(new Edge(Statement.epsilon(), Statement.epsilon()))) continue;
       if (t.getStart().fact().isLocal()
           && !t.getLabel().getMethod().equals(t.getStart().fact().m())) continue;
       results.put(t.getLabel(), t.getStart().fact(), w);
@@ -81,7 +81,7 @@ public class AbstractBoomerangResults<W extends Weight> {
   }
 
   private static class OpeningCallStackExtracter<W extends Weight>
-      extends WPAStateListener<Statement, INode<Val>, W> {
+      extends WPAStateListener<Edge, INode<Val>, W> {
 
     private AbstractBoomerangSolver<W> solver;
     private INode<Val> source;
@@ -97,9 +97,9 @@ public class AbstractBoomerangResults<W extends Weight> {
 
     @Override
     public void onOutTransitionAdded(
-        Transition<Statement, INode<Val>> t,
+        Transition<Edge, INode<Val>> t,
         W w,
-        WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {
+        WeightedPAutomaton<Edge, INode<Val>, W> weightedPAutomaton) {
       if (weightedPAutomaton.getInitialStates().contains(t.getTarget())) {
         return;
       }
@@ -122,9 +122,9 @@ public class AbstractBoomerangResults<W extends Weight> {
 
     @Override
     public void onInTransitionAdded(
-        Transition<Statement, INode<Val>> t,
+        Transition<Edge, INode<Val>> t,
         W w,
-        WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {}
+        WeightedPAutomaton<Edge, INode<Val>, W> weightedPAutomaton) {}
 
     @Override
     public int hashCode() {
@@ -156,7 +156,7 @@ public class AbstractBoomerangResults<W extends Weight> {
   }
 
   private static class ClosingCallStackExtracter<W extends Weight>
-      extends WPAStateListener<Statement, INode<Val>, W> {
+      extends WPAStateListener<Edge, INode<Val>, W> {
 
     private AbstractBoomerangSolver<W> solver;
     private INode<Val> source;
@@ -172,15 +172,15 @@ public class AbstractBoomerangResults<W extends Weight> {
 
     @Override
     public void onOutTransitionAdded(
-        Transition<Statement, INode<Val>> t,
+        Transition<Edge, INode<Val>> t,
         W w,
-        WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {}
+        WeightedPAutomaton<Edge, INode<Val>, W> weightedPAutomaton) {}
 
     @Override
     public void onInTransitionAdded(
-        Transition<Statement, INode<Val>> t,
+        Transition<Edge, INode<Val>> t,
         W w,
-        WeightedPAutomaton<Statement, INode<Val>, W> weightedPAutomaton) {
+        WeightedPAutomaton<Edge, INode<Val>, W> weightedPAutomaton) {
       if (weightedPAutomaton.isUnbalancedState(t.getStart())) {
         if (!t.getStart().fact().isStatic()) {
           context.getClosingContext().addTransition(t);
@@ -218,17 +218,17 @@ public class AbstractBoomerangResults<W extends Weight> {
   }
 
   public static class Context {
-    final Node<Statement, Val> node;
-    private final PAutomaton<Statement, INode<Val>> openingContext;
-    private final PAutomaton<Statement, INode<Val>> closingContext;
+    final Node<Edge, Val> node;
+    private final PAutomaton<Edge, INode<Val>> openingContext;
+    private final PAutomaton<Edge, INode<Val>> closingContext;
 
-    public Context(Node<Statement, Val> node, ForwardQuery forwardQuery) {
+    public Context(Node<Edge, Val> node, ForwardQuery forwardQuery) {
       this.node = node;
       this.openingContext =
-          new PAutomaton<Statement, INode<Val>>() {
+          new PAutomaton<Edge, INode<Val>>() {
 
             @Override
-            public INode<Val> createState(INode<Val> d, Statement loc) {
+            public INode<Val> createState(INode<Val> d, Edge loc) {
               throw new RuntimeException("Not implemented");
             }
 
@@ -238,15 +238,15 @@ public class AbstractBoomerangResults<W extends Weight> {
             }
 
             @Override
-            public Statement epsilon() {
-              return Statement.epsilon();
+            public Edge epsilon() {
+              return new Edge(Statement.epsilon(), Statement.epsilon());
             }
           };
       this.closingContext =
-          new PAutomaton<Statement, INode<Val>>() {
+          new PAutomaton<Edge, INode<Val>>() {
 
             @Override
-            public INode<Val> createState(INode<Val> d, Statement loc) {
+            public INode<Val> createState(INode<Val> d, Edge loc) {
               throw new RuntimeException("Not implemented");
             }
 
@@ -256,8 +256,8 @@ public class AbstractBoomerangResults<W extends Weight> {
             }
 
             @Override
-            public Statement epsilon() {
-              return Statement.epsilon();
+            public Edge epsilon() {
+              return new Edge(Statement.epsilon(), Statement.epsilon());
             }
           };
     }
@@ -284,11 +284,11 @@ public class AbstractBoomerangResults<W extends Weight> {
       return true;
     }
 
-    public PAutomaton<Statement, INode<Val>> getOpeningContext() {
+    public PAutomaton<Edge, INode<Val>> getOpeningContext() {
       return openingContext;
     }
 
-    public PAutomaton<Statement, INode<Val>> getClosingContext() {
+    public PAutomaton<Edge, INode<Val>> getClosingContext() {
       return closingContext;
     }
   }

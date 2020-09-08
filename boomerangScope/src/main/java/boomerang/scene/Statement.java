@@ -493,13 +493,4 @@ public abstract class Statement implements Location {
   public boolean accepts(Location other) {
     return this.equals(other);
   }
-
-  public Statement unwrap() {
-    if (this instanceof ReturnSiteStatement) {
-      return ((ReturnSiteStatement) this).getDelegate();
-    } else if (this instanceof CallSiteStatement) {
-      return ((CallSiteStatement) this).getDelegate();
-    }
-    return this;
-  }
 }

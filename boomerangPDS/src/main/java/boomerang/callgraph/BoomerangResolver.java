@@ -8,6 +8,7 @@ import boomerang.SolverCreationListener;
 import boomerang.WeightedBoomerang;
 import boomerang.results.ExtractAllocationSiteStateListener;
 import boomerang.scene.CallGraph;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.DataFlowScope;
 import boomerang.scene.DeclaredMethod;
 import boomerang.scene.InvokeExpr;
@@ -135,7 +136,7 @@ public class BoomerangResolver implements ICallerCalleeResolutionStrategy {
     // Not using cfg here because we are iterating backward
     for (Statement pred :
         resolvingStmt.getMethod().getControlFlowGraph().getPredsOf(resolvingStmt)) {
-      BackwardQuery query = BackwardQuery.make(pred, value);
+      BackwardQuery query = BackwardQuery.make(new Edge(pred, resolvingStmt), value);
       solver.solve(query, false);
       res.addAll(forAnyAllocationSiteOfQuery(query, resolvingStmt, pred));
     }
@@ -211,7 +212,7 @@ public class BoomerangResolver implements ICallerCalleeResolutionStrategy {
       if (solver instanceof ForwardBoomerangSolver) {
         ForwardQuery forwardQuery = (ForwardQuery) q;
         ForwardBoomerangSolver<W> forwardBoomerangSolver = (ForwardBoomerangSolver<W>) solver;
-        for (INode<Node<Statement, Val>> initialState :
+        for (INode<Node<Edge, Val>> initialState :
             forwardBoomerangSolver.getFieldAutomaton().getInitialStates()) {
           forwardBoomerangSolver
               .getFieldAutomaton()

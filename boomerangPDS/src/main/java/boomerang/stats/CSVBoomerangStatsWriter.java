@@ -18,10 +18,10 @@ import boomerang.Util;
 import boomerang.WeightedBoomerang;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Field;
 import boomerang.scene.Field.ArrayField;
 import boomerang.scene.Method;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
@@ -52,26 +52,25 @@ import wpds.interfaces.State;
 public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStats<W> {
 
   private Map<Query, AbstractBoomerangSolver<W>> queries = Maps.newHashMap();
-  private Set<WeightedTransition<Field, INode<Node<Statement, Val>>, W>> globalFieldTransitions =
+  private Set<WeightedTransition<Field, INode<Node<Edge, Val>>, W>> globalFieldTransitions =
       Sets.newHashSet();
   private int fieldTransitionCollisions;
-  private Set<WeightedTransition<Statement, INode<Val>, W>> globalCallTransitions =
-      Sets.newHashSet();
+  private Set<WeightedTransition<Edge, INode<Val>, W>> globalCallTransitions = Sets.newHashSet();
   private int callTransitionCollisions;
-  private Set<Rule<Field, INode<Node<Statement, Val>>, W>> globalFieldRules = Sets.newHashSet();
+  private Set<Rule<Field, INode<Node<Edge, Val>>, W>> globalFieldRules = Sets.newHashSet();
   private int fieldRulesCollisions;
-  private Set<Rule<Statement, INode<Val>, W>> globalCallRules = Sets.newHashSet();
+  private Set<Rule<Edge, INode<Val>, W>> globalCallRules = Sets.newHashSet();
   private int callRulesCollisions;
-  private Set<Node<Statement, Val>> reachedForwardNodes = Sets.newHashSet();
+  private Set<Node<Edge, Val>> reachedForwardNodes = Sets.newHashSet();
   private int reachedForwardNodeCollisions;
 
-  private Set<Node<Statement, Val>> reachedBackwardNodes = Sets.newHashSet();
+  private Set<Node<Edge, Val>> reachedBackwardNodes = Sets.newHashSet();
   private int reachedBackwardNodeCollisions;
   private Set<Method> callVisitedMethods = Sets.newHashSet();
   private Set<Method> fieldVisitedMethods = Sets.newHashSet();
-  private Set<Statement> callVisitedStmts = Sets.newHashSet();
-  private Set<Statement> fieldVisitedStmts = Sets.newHashSet();
-  private Set<INode<Node<Statement, Val>>> fieldGeneratedStates = Sets.newHashSet();
+  private Set<Edge> callVisitedStmts = Sets.newHashSet();
+  private Set<Edge> fieldVisitedStmts = Sets.newHashSet();
+  private Set<INode<Node<Edge, Val>>> fieldGeneratedStates = Sets.newHashSet();
   private Set<INode<Val>> callGeneratedStates = Sets.newHashSet();
   private int arrayFlows;
   private int staticFlows;
@@ -147,7 +146,7 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
         .registerListener(
             (t, w, aut) -> {
               if (!globalFieldTransitions.add(
-                  new WeightedTransition<Field, INode<Node<Statement, Val>>, W>(t, w))) {
+                  new WeightedTransition<Field, INode<Node<Edge, Val>>, W>(t, w))) {
                 fieldTransitionCollisions++;
               }
               fieldVisitedMethods.add(t.getStart().fact().stmt().getMethod());
@@ -207,7 +206,7 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
         });
   }
 
-  protected void addFieldGeneratedState(INode<Node<Statement, Val>> s) {
+  protected void addFieldGeneratedState(INode<Node<Edge, Val>> s) {
     if (s instanceof GeneratedState) {
       fieldGeneratedStates.add(s);
     }
@@ -334,8 +333,8 @@ public class CSVBoomerangStatsWriter<W extends Weight> implements IBoomerangStat
   }
 
   @Override
-  public Collection<? extends Node<Statement, Val>> getForwardReachesNodes() {
-    Set<Node<Statement, Val>> res = Sets.newHashSet();
+  public Collection<? extends Node<Edge, Val>> getForwardReachesNodes() {
+    Set<Node<Edge, Val>> res = Sets.newHashSet();
     for (Query q : queries.keySet()) {
       if (q instanceof ForwardQuery) res.addAll(queries.get(q).getReachedStates());
     }

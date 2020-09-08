@@ -12,7 +12,7 @@
 package typestate.impl.statemachines;
 
 import boomerang.WeightedForwardQuery;
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import java.util.Collection;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.MatcherTransition;
@@ -67,8 +67,8 @@ public class InputStreamStateMachine extends TypeStateMachineWeightFunctions {
   }
 
   @Override
-  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement unit) {
-    return this.generateThisAtAnyCallSitesOf(unit, TYPE, CLOSE_METHODS);
+  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Edge edge) {
+    return this.generateThisAtAnyCallSitesOf(edge, TYPE, CLOSE_METHODS);
   }
 
   @Override

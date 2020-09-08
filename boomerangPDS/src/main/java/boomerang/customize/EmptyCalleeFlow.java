@@ -29,7 +29,7 @@ public abstract class EmptyCalleeFlow {
   }
 
   public abstract Collection<? extends State> getEmptyCalleeFlow(
-      Method caller, Statement curr, Val value, Statement succ);
+      Method caller, Statement callSite, Val value, Statement succOfCall);
 
   protected abstract Collection<? extends State> systemArrayCopyFlow(
       Method caller, Statement callSite, Val value, Statement returnSite);

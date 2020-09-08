@@ -13,8 +13,8 @@ package typestate.finiteautomata;
 
 import boomerang.WeightedForwardQuery;
 import boomerang.scene.AllocVal;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.InvokeExpr;
-import boomerang.scene.ReturnSiteStatement;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import com.google.common.base.Joiner;
@@ -37,7 +37,7 @@ import typestate.finiteautomata.MatcherTransition.Parameter;
 import typestate.finiteautomata.MatcherTransition.Type;
 
 public abstract class TypeStateMachineWeightFunctions
-    implements WeightFunctions<Statement, Val, Statement, TransitionFunction> {
+    implements WeightFunctions<Edge, Val, Edge, TransitionFunction> {
   private static final Logger LOGGER =
       LoggerFactory.getLogger(TypeStateMachineWeightFunctions.class);
   public Set<MatcherTransition> transition = new HashSet<>();
@@ -51,19 +51,16 @@ public abstract class TypeStateMachineWeightFunctions
     return TransitionFunction.one();
   }
 
-  public TransitionFunction pop(Node<Statement, Val> curr) {
+  public TransitionFunction pop(Node<Edge, Val> curr) {
     LOGGER.trace("Getting pop weights for {} which returns to {}", curr);
     return getOne();
   }
 
-  public TransitionFunction push(
-      Node<Statement, Val> curr, Node<Statement, Val> succ, Statement push) {
+  public TransitionFunction push(Node<Edge, Val> curr, Node<Edge, Val> succ, Edge push) {
     return getMatchingTransitions(
         succ.stmt(),
         succ.fact(),
-        (push instanceof ReturnSiteStatement
-            ? ((ReturnSiteStatement) push).getCallSiteStatement()
-            : push),
+        push,
         Collections2.filter(
             transition,
             input ->
@@ -73,15 +70,15 @@ public abstract class TypeStateMachineWeightFunctions
   }
 
   @Override
-  public TransitionFunction normal(Node<Statement, Val> curr, Node<Statement, Val> succ) {
-    if (succ.stmt().containsInvokeExpr()) {
-      return callToReturn(curr, succ, succ.stmt().getInvokeExpr());
+  public TransitionFunction normal(Node<Edge, Val> curr, Node<Edge, Val> succ) {
+    if (succ.stmt().getTarget().containsInvokeExpr()) {
+      return callToReturn(curr, succ, succ.stmt().getTarget().getInvokeExpr());
     }
     return getOne();
   }
 
   public TransitionFunction callToReturn(
-      Node<Statement, Val> curr, Node<Statement, Val> succ, InvokeExpr invokeExpr) {
+      Node<Edge, Val> curr, Node<Edge, Val> succ, InvokeExpr invokeExpr) {
     Set<Transition> res = Sets.newHashSet();
     if (invokeExpr.isInstanceInvokeExpr()) {
       if (invokeExpr.getBase().equals(succ.fact())) {
@@ -103,11 +100,12 @@ public abstract class TypeStateMachineWeightFunctions
   }
 
   private TransitionFunction getMatchingTransitions(
-      Statement statement,
+      Edge edge,
       Val node,
-      Statement transitionStmt,
+      Edge transitionEdge,
       Collection<MatcherTransition> filteredTrans,
       Type type) {
+    Statement transitionStmt = transitionEdge.getStart();
     Set<ITransition> res = new HashSet<>();
     if (filteredTrans.isEmpty() || !transitionStmt.containsInvokeExpr()) return getOne();
     for (MatcherTransition trans : filteredTrans) {
@@ -115,13 +113,11 @@ public abstract class TypeStateMachineWeightFunctions
         LOGGER.trace(
             "Found potential transition at {}, now checking if parameter match", transitionStmt);
         Parameter param = trans.getParam();
-        if (param.equals(Parameter.This) && statement.getMethod().isThisLocal(node))
+        if (param.equals(Parameter.This) && edge.getMethod().isThisLocal(node))
           res.add(new Transition(trans.from(), trans.to()));
-        if (param.equals(Parameter.Param1)
-            && statement.getMethod().getParameterLocal(0).equals(node))
+        if (param.equals(Parameter.Param1) && edge.getMethod().getParameterLocal(0).equals(node))
           res.add(new Transition(trans.from(), trans.to()));
-        if (param.equals(Parameter.Param2)
-            && statement.getMethod().getParameterLocal(1).equals(node))
+        if (param.equals(Parameter.Param2) && edge.getMethod().getParameterLocal(1).equals(node))
           res.add(new Transition(trans.from(), trans.to()));
       }
     }
@@ -129,7 +125,7 @@ public abstract class TypeStateMachineWeightFunctions
     if (res.isEmpty()) return getOne();
 
     LOGGER.debug("Typestate transition at {} to {}, [{}]", transitionStmt, res, type);
-    return new TransitionFunction(res, Collections.singleton(transitionStmt));
+    return new TransitionFunction(res, Collections.singleton(transitionEdge));
   }
 
   protected List<SootClass> getSubclassesOf(String className) {
@@ -142,24 +138,26 @@ public abstract class TypeStateMachineWeightFunctions
     return res;
   }
 
-  protected Collection<WeightedForwardQuery<TransitionFunction>> getLeftSideOf(Statement s) {
+  protected Collection<WeightedForwardQuery<TransitionFunction>> getLeftSideOf(Edge edge) {
+    Statement s = edge.getStart();
     if (s.isAssign()) {
       return Collections.singleton(
           new WeightedForwardQuery<>(
-              s, new AllocVal(s.getLeftOp(), s, s.getRightOp()), initialTransition()));
+              edge, new AllocVal(s.getLeftOp(), s, s.getRightOp()), initialTransition()));
     }
     return Collections.emptySet();
   }
 
   protected Collection<WeightedForwardQuery<TransitionFunction>> generateAtAllocationSiteOf(
-      Statement s, Class allocationSuperType) {
+      Edge edge, Class allocationSuperType) {
+    Statement s = edge.getStart();
     if (s.isAssign()) {
       if (s.getRightOp().isNewExpr()) {
         boomerang.scene.Type newExprType = s.getRightOp().getNewExprType();
         if (newExprType.isSubtypeOf(allocationSuperType.getName())) {
           return Collections.singleton(
               new WeightedForwardQuery<>(
-                  s, new AllocVal(s.getLeftOp(), s, s.getRightOp()), initialTransition()));
+                  edge, new AllocVal(s.getLeftOp(), s, s.getRightOp()), initialTransition()));
         }
       }
     }
@@ -167,7 +165,8 @@ public abstract class TypeStateMachineWeightFunctions
   }
 
   public Collection<WeightedForwardQuery<TransitionFunction>> generateThisAtAnyCallSitesOf(
-      Statement unit, String declaredType, String declaredMethod) {
+      Edge edge, String declaredType, String declaredMethod) {
+    Statement unit = edge.getStart();
     if (unit.containsInvokeExpr()) {
       if (unit.getInvokeExpr().isInstanceInvokeExpr()) {
         Val base = unit.getInvokeExpr().getBase();
@@ -175,7 +174,7 @@ public abstract class TypeStateMachineWeightFunctions
           if (base.getType().isSubtypeOf(declaredType)) {
             return Collections.singleton(
                 new WeightedForwardQuery<>(
-                    unit, new AllocVal(base, unit, base), initialTransition()));
+                    edge, new AllocVal(base, unit, base), initialTransition()));
           }
         }
       }
@@ -188,7 +187,7 @@ public abstract class TypeStateMachineWeightFunctions
     return Joiner.on("\n").join(transition);
   }
 
-  public abstract Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement stmt);
+  public abstract Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Edge stmt);
 
   public TransitionFunction initialTransition() {
     return new TransitionFunction(

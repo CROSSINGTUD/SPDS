@@ -11,6 +11,7 @@
  */
 package boomerang.customize;
 
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Method;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
@@ -22,19 +23,19 @@ import wpds.interfaces.State;
 public class ForwardEmptyCalleeFlow extends EmptyCalleeFlow {
 
   public Collection<? extends State> getEmptyCalleeFlow(
-      Method caller, Statement curr, Val value, Statement callSite) {
-    if (isSystemArrayCopy(curr.getInvokeExpr().getMethod())) {
-      return systemArrayCopyFlow(caller, curr, value, callSite);
+      Method caller, Statement callSite, Val value, Statement returnSite) {
+    if (isSystemArrayCopy(callSite.getInvokeExpr().getMethod())) {
+      return systemArrayCopyFlow(caller, callSite, value, returnSite);
     }
     return Collections.emptySet();
   }
 
   @Override
   protected Collection<? extends State> systemArrayCopyFlow(
-      Method caller, Statement curr, Val value, Statement callSite) {
-    if (value.equals(curr.getInvokeExpr().getArg(0))) {
-      Val arg = curr.getInvokeExpr().getArg(2);
-      return Collections.singleton(new Node<Statement, Val>(curr, arg));
+      Method caller, Statement callSite, Val value, Statement returnSite) {
+    if (value.equals(callSite.getInvokeExpr().getArg(0))) {
+      Val arg = callSite.getInvokeExpr().getArg(2);
+      return Collections.singleton(new Node<>(new Edge(callSite, returnSite), arg));
     }
     return Collections.emptySet();
   }

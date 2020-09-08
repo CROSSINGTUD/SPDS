@@ -15,6 +15,7 @@ import boomerang.WeightedForwardQuery;
 import boomerang.debugger.Debugger;
 import boomerang.results.ForwardBoomerangResults;
 import boomerang.scene.CallGraph;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.DataFlowScope;
 import boomerang.scene.SootDataFlowScope;
 import boomerang.scene.Statement;
@@ -114,8 +115,8 @@ public class Main {
                 new IDEALAnalysisDefinition<InferenceWeight>() {
 
                   @Override
-                  public Collection<WeightedForwardQuery<InferenceWeight>> generate(
-                      Statement stmt) {
+                  public Collection<WeightedForwardQuery<InferenceWeight>> generate(Edge edge) {
+                    Statement stmt = edge.getStart();
                     if (stmt.isAssign()) {
                       if (stmt.getRightOp().isNewExpr()
                           && stmt.getRightOp()
@@ -124,15 +125,14 @@ public class Main {
                               .contains("inference.example.InferenceExample$File")) {
                         return Collections.singleton(
                             new WeightedForwardQuery<InferenceWeight>(
-                                stmt, stmt.getLeftOp(), InferenceWeight.one()));
+                                edge, stmt.getLeftOp(), InferenceWeight.one()));
                       }
                     }
                     return Collections.emptySet();
                   }
 
                   @Override
-                  public WeightFunctions<Statement, Val, Statement, InferenceWeight>
-                      weightFunctions() {
+                  public WeightFunctions<Edge, Val, Edge, InferenceWeight> weightFunctions() {
                     return new InferenceWeightFunctions();
                   }
 
@@ -162,7 +162,7 @@ public class Main {
             resultHandler.getResults();
         for (Entry<WeightedForwardQuery<InferenceWeight>, ForwardBoomerangResults<InferenceWeight>>
             e : res.entrySet()) {
-          Table<Statement, Val, InferenceWeight> results = e.getValue().asStatementValWeightTable();
+          Table<Edge, Val, InferenceWeight> results = e.getValue().asStatementValWeightTable();
           logger.info(Joiner.on("\n").join(results.cellSet()));
         }
       }

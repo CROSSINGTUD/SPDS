@@ -4,6 +4,7 @@ import boomerang.BackwardQuery;
 import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.Util;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Field;
 import boomerang.scene.Statement;
 import boomerang.scene.Type;
@@ -74,7 +75,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
     if (allocationSites != null) return;
     final Set<ForwardQuery> results = Sets.newHashSet();
     for (final Entry<ForwardQuery, ForwardBoomerangSolver<W>> fw : queryToSolvers.entrySet()) {
-      for (INode<Node<Statement, Val>> node : fw.getValue().getFieldAutomaton().getInitialStates())
+      for (INode<Node<Edge, Val>> node : fw.getValue().getFieldAutomaton().getInitialStates())
         fw.getValue()
             .getFieldAutomaton()
             .registerListener(
@@ -98,7 +99,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
   public boolean aliases(Query el) {
     for (final ForwardQuery fw : getAllocationSites().keySet()) {
       if (queryToSolvers.getOrCreate(fw).getReachedStates().contains(el.asNode())) {
-        for (Transition<Field, INode<Node<Statement, Val>>> t :
+        for (Transition<Field, INode<Node<Edge, Val>>> t :
             queryToSolvers.getOrCreate(fw).getFieldAutomaton().getTransitions()) {
           if (t.getStart() instanceof GeneratedState) {
             continue;
@@ -113,7 +114,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
   }
 
   @Deprecated
-  public Set<AccessPath> getAllAliases(Statement stmt) {
+  public Set<AccessPath> getAllAliases(Edge stmt) {
     final Set<AccessPath> results = Sets.newHashSet();
     for (final ForwardQuery fw : getAllocationSites().keySet()) {
       queryToSolvers
@@ -126,7 +127,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
 
   @Deprecated
   public Set<AccessPath> getAllAliases() {
-    return getAllAliases(query.stmt());
+    return getAllAliases(query.cfgEdge());
   }
 
   public boolean isEmpty() {
@@ -141,7 +142,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
    */
   public Set<Type> getPropagationType() {
     Set<Type> types = Sets.newHashSet();
-    for (Transition<Statement, INode<Val>> t : backwardSolver.getCallAutomaton().getTransitions()) {
+    for (Transition<Edge, INode<Val>> t : backwardSolver.getCallAutomaton().getTransitions()) {
       if (!t.getStart().fact().isStatic()) types.add(t.getStart().fact().getType());
     }
     return types;
@@ -155,18 +156,19 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
    *
    * @return The set of relevant statements during data-flow propagation
    */
-  public Set<Node<Statement, Val>> getDataFlowPath(ForwardQuery query) {
-    Set<Node<Statement, Val>> dataFlowPath = Sets.newHashSet();
-    WeightedPAutomaton<Statement, INode<Val>, W> callAut =
+  @Deprecated
+  public Set<Node<Edge, Val>> getDataFlowPath(ForwardQuery query) {
+    Set<Node<Edge, Val>> dataFlowPath = Sets.newHashSet();
+    WeightedPAutomaton<Edge, INode<Val>, W> callAut =
         queryToSolvers.getOrCreate(query).getCallAutomaton();
-    for (Entry<Transition<Statement, INode<Val>>, W> e :
+    for (Entry<Transition<Edge, INode<Val>>, W> e :
         callAut.getTransitionsToFinalWeights().entrySet()) {
-      Transition<Statement, INode<Val>> t = e.getKey();
+      Transition<Edge, INode<Val>> t = e.getKey();
       if (t.getLabel().equals(Statement.epsilon())) continue;
       if (t.getStart().fact().isLocal()
           && !t.getLabel().getMethod().equals(t.getStart().fact().m())) continue;
-      if (t.getLabel().uses(t.getStart().fact()))
-        dataFlowPath.add(new Node<Statement, Val>(t.getLabel(), t.getStart().fact()));
+      if (t.getLabel().getStart().uses(t.getStart().fact()))
+        dataFlowPath.add(new Node<>(t.getLabel(), t.getStart().fact()));
     }
     return dataFlowPath;
   }

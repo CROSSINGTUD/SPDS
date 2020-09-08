@@ -19,6 +19,7 @@ import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.controlflowgraph.ObservableControlFlowGraph;
 import boomerang.controlflowgraph.SuccessorListener;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Method;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
@@ -59,7 +60,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W> {
   private static final Logger logger = LoggerFactory.getLogger(IDEVizDebugger.class);
   private File ideVizFile;
   private ObservableICFG<Statement, Method> icfg;
-  private Table<Query, Method, Set<Rule<Statement, INode<Val>, W>>> rules = HashBasedTable.create();
+  private Table<Query, Method, Set<Rule<Edge, INode<Val>, W>>> rules = HashBasedTable.create();
   private Map<Object, Integer> objectToInteger = new HashMap<>();
   private int charSize;
   private ObservableControlFlowGraph cfg;
@@ -68,19 +69,19 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W> {
     this.ideVizFile = ideVizFile;
   }
 
-  private void callRules(Query q, Set<Rule<Statement, INode<Val>, W>> allRules) {
-    for (Rule<Statement, INode<Val>, W> e : allRules) {
-      Statement stmt = e.getL1();
+  private void callRules(Query q, Set<Rule<Edge, INode<Val>, W>> allRules) {
+    for (Rule<Edge, INode<Val>, W> e : allRules) {
+      Edge stmt = e.getL1();
       if (stmt.getMethod() == null) continue;
-      Set<Rule<Statement, INode<Val>, W>> transInMethod = getOrCreateRuleSet(q, stmt.getMethod());
+      Set<Rule<Edge, INode<Val>, W>> transInMethod = getOrCreateRuleSet(q, stmt.getMethod());
       transInMethod.add(e);
     }
   }
 
-  private Set<Rule<Statement, INode<Val>, W>> getOrCreateRuleSet(Query q, Method method) {
-    Set<Rule<Statement, INode<Val>, W>> map = rules.get(q, method);
+  private Set<Rule<Edge, INode<Val>, W>> getOrCreateRuleSet(Query q, Method method) {
+    Set<Rule<Edge, INode<Val>, W>> map = rules.get(q, method);
     if (map != null) return map;
-    rules.put(q, method, Sets.<Rule<Statement, INode<Val>, W>>newHashSet());
+    rules.put(q, method, Sets.newHashSet());
     return rules.get(q, method);
   }
 
@@ -108,7 +109,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W> {
       JSONQuery queryJSON = new JSONQuery(query);
       JSONArray data = new JSONArray();
       for (Method m : Lists.newArrayList(visitedMethods)) {
-        Table<Statement, RegExAccessPath, W> results = e.getValue().getResults(m);
+        Table<Edge, RegExAccessPath, W> results = e.getValue().getResults(m);
         if (results.isEmpty()) continue;
         int labelYOffset = ONLY_CFG ? 0 : computeLabelYOffset(results.columnKeySet());
         JSONMethod jsonMethod = new JSONMethod(m);
@@ -117,7 +118,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W> {
 
         jsonMethod.put("cfg", cfg);
         if (!ONLY_CFG) {
-          Set<Rule<Statement, INode<Val>, W>> rulesInMethod = getOrCreateRuleSet(query, m);
+          Set<Rule<Edge, INode<Val>, W>> rulesInMethod = getOrCreateRuleSet(query, m);
           logger.debug("Creating data-flow graph for {}", m);
           DataFlowGraph dfg =
               createDataFlowGraph(query, results, rulesInMethod, cfg, m, labelYOffset);
@@ -150,8 +151,8 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W> {
 
   private DataFlowGraph createDataFlowGraph(
       Query q,
-      Table<Statement, RegExAccessPath, W> table,
-      Set<Rule<Statement, INode<Val>, W>> rulesInMethod,
+      Table<Edge, RegExAccessPath, W> table,
+      Set<Rule<Edge, INode<Val>, W>> rulesInMethod,
       JSONControlFlowGraph cfg,
       Method m,
       int labelYOffset) {
@@ -177,10 +178,10 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W> {
       data.add(nodeObj);
     }
 
-    Multimap<Node<Statement, Val>, RegExAccessPath> esgNodes = HashMultimap.create();
+    Multimap<Node<Edge, Val>, RegExAccessPath> esgNodes = HashMultimap.create();
     // System.out.println("Number of nodes:\t" + esg.getNodes().size());
-    for (Cell<Statement, RegExAccessPath, W> trans : table.cellSet()) {
-      Statement stmt = trans.getRowKey();
+    for (Cell<Edge, RegExAccessPath, W> trans : table.cellSet()) {
+      Edge stmt = trans.getRowKey();
       RegExAccessPath val = trans.getColumnKey();
       if (!trans.getRowKey().getMethod().equals(val.getVal().m())) continue;
       JSONObject nodeObj = new JSONObject();
@@ -195,8 +196,7 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W> {
       String classes = "esgNode method" + id(m) + " ";
 
       JSONObject additionalData = new JSONObject();
-      additionalData.put(
-          "id", "q" + id(q) + "n" + id(new Node<Statement, RegExAccessPath>(stmt, val)));
+      additionalData.put("id", "q" + id(q) + "n" + id(new Node<>(stmt, val)));
       additionalData.put("stmtId", id(stmt));
       additionalData.put("factId", id(val));
       if (trans.getValue() != null) additionalData.put("ideValue", trans.getValue().toString());
@@ -206,32 +206,22 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W> {
 
       data.add(nodeObj);
 
-      esgNodes.put(new Node<Statement, Val>(stmt, val.getVal()), val);
+      esgNodes.put(new Node<>(stmt, val.getVal()), val);
     }
 
-    for (Rule<Statement, INode<Val>, W> rule : rulesInMethod) {
+    for (Rule<Edge, INode<Val>, W> rule : rulesInMethod) {
       if (!(rule instanceof NormalRule)) {
         continue;
       }
       JSONObject nodeObj = new JSONObject();
       JSONObject dataEntry = new JSONObject();
       dataEntry.put("id", "e" + id(rule));
-      Node<Statement, Val> start = getStartNode(rule);
-      Node<Statement, Val> target = getTargetNode(rule);
+      Node<Edge, Val> start = getStartNode(rule);
+      Node<Edge, Val> target = getTargetNode(rule);
       for (RegExAccessPath startField : esgNodes.get(start)) {
         for (RegExAccessPath targetField : esgNodes.get(target)) {
-          dataEntry.put(
-              "source",
-              "q"
-                  + id(q)
-                  + "n"
-                  + id(new Node<Statement, RegExAccessPath>(start.stmt(), startField)));
-          dataEntry.put(
-              "target",
-              "q"
-                  + id(q)
-                  + "n"
-                  + id(new Node<Statement, RegExAccessPath>(target.stmt(), targetField)));
+          dataEntry.put("source", "q" + id(q) + "n" + id(new Node<>(start.stmt(), startField)));
+          dataEntry.put("target", "q" + id(q) + "n" + id(new Node<>(target.stmt(), targetField)));
           dataEntry.put("directed", "true");
           dataEntry.put("direction", (q instanceof BackwardQuery ? "Backward" : "Forward"));
           nodeObj.put("data", dataEntry);
@@ -245,12 +235,12 @@ public class IDEVizDebugger<W extends Weight> extends Debugger<W> {
     return dataFlowGraph;
   }
 
-  private Node<Statement, Val> getTargetNode(Rule<Statement, INode<Val>, W> rule) {
-    return new Node<Statement, Val>(rule.getL2(), rule.getS2().fact());
+  private Node<Edge, Val> getTargetNode(Rule<Edge, INode<Val>, W> rule) {
+    return new Node<>(rule.getL2(), rule.getS2().fact());
   }
 
-  private Node<Statement, Val> getStartNode(Rule<Statement, INode<Val>, W> rule) {
-    return new Node<Statement, Val>(rule.getL1(), rule.getS1().fact());
+  private Node<Edge, Val> getStartNode(Rule<Edge, INode<Val>, W> rule) {
+    return new Node<>(rule.getL1(), rule.getS1().fact());
   }
 
   private JSONControlFlowGraph createControlFlowGraph(Method m, int labelYOffset) {

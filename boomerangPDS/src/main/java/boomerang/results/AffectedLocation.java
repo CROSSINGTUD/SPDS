@@ -1,12 +1,12 @@
 package boomerang.results;
 
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph;
 import boomerang.scene.Val;
 import java.util.List;
 
 public interface AffectedLocation {
 
-  Statement getStatement();
+  ControlFlowGraph.Edge getStatement();
 
   Val getVariable();
 

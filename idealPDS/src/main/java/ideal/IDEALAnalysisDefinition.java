@@ -16,8 +16,8 @@ import boomerang.DefaultBoomerangOptions;
 import boomerang.WeightedForwardQuery;
 import boomerang.debugger.Debugger;
 import boomerang.scene.CallGraph;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.DataFlowScope;
-import boomerang.scene.Statement;
 import boomerang.scene.Val;
 import java.util.Collection;
 import sync.pds.solver.WeightFunctions;
@@ -34,14 +34,14 @@ public abstract class IDEALAnalysisDefinition<W extends Weight> {
    * @param stmt The statement over which is iterated over
    * @return
    */
-  public abstract Collection<WeightedForwardQuery<W>> generate(Statement stmt);
+  public abstract Collection<WeightedForwardQuery<W>> generate(Edge stmt);
 
   /**
    * This function must generate and return the AnalysisEdgeFunctions that are used for the
    * analysis. As for standard IDE in Heros, the edge functions for normal-, call-, return- and
    * call-to-return flows have to be specified.
    */
-  public abstract WeightFunctions<Statement, Val, Statement, W> weightFunctions();
+  public abstract WeightFunctions<Edge, Val, Edge, W> weightFunctions();
 
   public abstract CallGraph callGraph();
 

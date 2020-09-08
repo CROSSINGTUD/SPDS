@@ -11,7 +11,7 @@
  */
 package boomerang;
 
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Val;
 import com.google.common.base.Objects;
 
@@ -20,7 +20,7 @@ public class ForwardQueryMultiDimensionalArray extends ForwardQueryArray {
   private final Integer index2;
 
   public ForwardQueryMultiDimensionalArray(
-      Statement stmt, Val variable, Integer index1, Integer index2) {
+      Edge stmt, Val variable, Integer index1, Integer index2) {
     super(stmt, variable, index1);
     this.index2 = index2;
   }

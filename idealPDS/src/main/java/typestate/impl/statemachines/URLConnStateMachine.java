@@ -12,7 +12,7 @@
 package typestate.impl.statemachines;
 
 import boomerang.WeightedForwardQuery;
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import java.util.Collection;
 import typestate.TransitionFunction;
 import typestate.finiteautomata.MatcherTransition;
@@ -60,7 +60,7 @@ public class URLConnStateMachine extends TypeStateMachineWeightFunctions {
   }
 
   @Override
-  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Statement unit) {
+  public Collection<WeightedForwardQuery<TransitionFunction>> generateSeed(Edge unit) {
     return this.generateThisAtAnyCallSitesOf(unit, TYPE, CONNECT_METHOD);
   }
 

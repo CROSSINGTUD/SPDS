@@ -1,6 +1,6 @@
 package boomerang.staticfields;
 
-import boomerang.scene.Statement;
+import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Val;
 import boomerang.solver.BackwardBoomerangSolver;
@@ -13,22 +13,21 @@ import wpds.interfaces.State;
 public class FlowSensitiveStaticFieldStrategy<W extends Weight> implements StaticFieldStrategy<W> {
   @Override
   public void handleForward(
-      Statement storeStmt,
+      Edge storeStmt,
       Val storedVal,
       StaticFieldVal staticVal,
       Set<State> out,
       ForwardBoomerangSolver<W> solver) {
-    out.add(new Node<Statement, Val>(storeStmt, staticVal));
+    out.add(new Node<>(storeStmt, staticVal));
   }
 
   @Override
   public void handleBackward(
-      Statement loadStatement,
+      Edge loadStatement,
       Val loadedVal,
       StaticFieldVal staticVal,
-      Statement succ,
       Set<State> out,
       BackwardBoomerangSolver<W> solver) {
-    out.add(new Node<Statement, Val>(succ, loadStatement.getStaticField()));
+    out.add(new Node<>(loadStatement, loadStatement.getStart().getStaticField()));
   }
 }

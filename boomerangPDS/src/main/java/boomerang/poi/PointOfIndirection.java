@@ -13,6 +13,7 @@ package boomerang.poi;
 
 import boomerang.ForwardQuery;
 import boomerang.Query;
+import boomerang.scene.ControlFlowGraph.Edge;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import java.util.Set;
@@ -40,5 +41,5 @@ public abstract class PointOfIndirection<Statement, Val, Field> {
     }
   }
 
-  public abstract Statement getStmt();
+  public abstract Edge getCfgEdge();
 }
