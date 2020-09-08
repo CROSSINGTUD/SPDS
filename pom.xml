@@ -5,7 +5,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>de.fraunhofer.iem</groupId>
 	<artifactId>SPDS</artifactId>
-	<version>2.5.1-SNAPSHOT</version>
+	<version>2.5.1</version>
 	<packaging>pom</packaging>
 	<name>SPDS</name>
 	<modules>
@@ -17,7 +17,7 @@
 	</modules>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<sootVersion>4.0.0</sootVersion>
+		<sootVersion>4.2.1</sootVersion>
 	</properties>
 	<build>
 		<plugins>
