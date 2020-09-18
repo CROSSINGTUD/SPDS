@@ -47,7 +47,7 @@
     </modules>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <sootVersion>4.1.0-SNAPSHOT</sootVersion>
+        <sootVersion>4.3.0-SNAPSHOT</sootVersion>
         <fmt-maven-plugin.version>2.9</fmt-maven-plugin.version>
         <maven-scm-plugin.version>1.11.2</maven-scm-plugin.version>
         <enforced-maven-version>3.6.1</enforced-maven-version>
@@ -169,9 +169,9 @@
                 <version>1.0.0</version>
             </dependency>
             <dependency>
-                <groupId>ca.mcgill.sable</groupId>
+                <groupId>org.soot-oss</groupId>
                 <artifactId>soot</artifactId>
-                <version>4.1.0</version>
+                <version>${sootVersion}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
