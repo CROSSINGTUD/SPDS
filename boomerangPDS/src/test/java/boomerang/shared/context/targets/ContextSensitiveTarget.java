@@ -2,7 +2,7 @@ package boomerang.shared.context.targets;
 
 import java.io.File;
 
-public class SharedContextTarget2 {
+public class ContextSensitiveTarget {
 
   public static void main(String...args){
     String bar = doPassArgument("bar");

@@ -16,6 +16,7 @@ public class SootCallGraph extends CallGraph {
       if (e.src().hasActiveBody() && e.tgt().hasActiveBody() && e.srcStmt() != null) {
         Statement callSite = JimpleStatement.create(e.srcStmt(), JimpleMethod.of(e.src()));
         if (callSite.containsInvokeExpr()) {
+          LOGGER.trace("Call edge from {} to target method {}", callSite,e.tgt());
           this.addEdge(new Edge(callSite, JimpleMethod.of(e.tgt())));
         }
       }

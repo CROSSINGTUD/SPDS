@@ -15,9 +15,11 @@ import boomerang.scene.Method;
 import boomerang.scene.SootDataFlowScope;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
+import boomerang.scene.jimple.IntAndStringBoomerangOptions;
 import boomerang.scene.jimple.SootCallGraph;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import java.text.CollationElementIterator;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -40,10 +42,13 @@ public class SharedContextAnalysis {
   public SharedContextAnalysis(){
     callGraph = new SootCallGraph();
     scope = SootDataFlowScope.make(Scene.v());
-    customBoomerangOptions = new DefaultBoomerangOptions(){
+    customBoomerangOptions = new IntAndStringBoomerangOptions(){
       @Override
       public Optional<AllocVal> getAllocationVal(Method m, Statement stmt, Val fact,
           ObservableICFG<Statement, Method> icfg) {
+        if (stmt.isAssign() && stmt.getLeftOp().equals(fact) && isStringOrIntAllocation(stmt)) {
+          return Optional.of(new AllocVal(stmt.getLeftOp(), stmt, stmt.getRightOp()));
+        }
         if(stmt.containsInvokeExpr()){
 
           if(isInSourceList(stmt)) {
@@ -67,6 +72,10 @@ public class SharedContextAnalysis {
     };
   }
 
+  private boolean isStringOrIntAllocation(Statement stmt) {
+    return stmt.isAssign() && (stmt.getRightOp().isIntConstant() || stmt.getRightOp().isStringConstant());
+  }
+
   private boolean isInSourceList(Statement stmt) {
     return stmt.getInvokeExpr().getMethod().getDeclaringClass().getFullyQualifiedName().equals("java.lang.String") && stmt.getInvokeExpr().getMethod().getName().equals("<init>");
   }
@@ -74,9 +83,9 @@ public class SharedContextAnalysis {
   public Collection<ForwardQuery> run(BackwardQuery query) {
     queryQueue.add(new QueryWithContext(query));
     Boomerang bSolver = new Boomerang(callGraph, scope, customBoomerangOptions);
+    Collection<ForwardQuery> finalAllocationSites = Sets.newHashSet();
     while(!queryQueue.isEmpty()){
       QueryWithContext pop = queryQueue.pop();
-      System.out.println(pop.query);
       BackwardBoomerangResults<NoWeight> results;
       if(pop.parentQuery == null) {
         results = bSolver.solve((BackwardQuery) pop.query);
@@ -100,11 +109,14 @@ public class SharedContextAnalysis {
             }
           }
         }
+        if(isStringOrIntAllocation(start)){
+          finalAllocationSites.add(entry.getKey());
+        }
       }
     }
     
 
-    return Collections.emptySet();
+    return finalAllocationSites;
   }
 
   private static class QueryWithContext{

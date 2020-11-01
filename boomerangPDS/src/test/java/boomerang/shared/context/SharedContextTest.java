@@ -1,88 +1,163 @@
 package boomerang.shared.context;
 
 import boomerang.BackwardQuery;
+import boomerang.ForwardQuery;
+import boomerang.scene.AllocVal;
 import boomerang.scene.ControlFlowGraph.Edge;
 import boomerang.scene.Method;
 import boomerang.scene.Statement;
 import boomerang.scene.Val;
+import boomerang.scene.jimple.BoomerangPretransformer;
 import boomerang.scene.jimple.JimpleMethod;
+import boomerang.shared.context.targets.BasicTarget;
+import boomerang.shared.context.targets.ContextSensitiveAndLeftUnbalancedTarget;
+import boomerang.shared.context.targets.ContextSensitiveTarget;
+import boomerang.shared.context.targets.LeftUnbalancedTarget;
+import boomerang.shared.context.targets.WrappedInNewStringInnerTarget;
+import boomerang.shared.context.targets.WrappedInNewStringTarget;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.junit.Assert;
 import org.junit.Test;
+import soot.G;
+import soot.PackManager;
 import soot.Scene;
+import soot.SootClass;
 import soot.SootMethod;
+import soot.options.Options;
 
-public class SharedContextTest extends AbstractSharedContextTests {
+public class SharedContextTest {
+
+  public static String CG = "cha";
 
   @Test
-  public void simpleTest() {
-    setupSoot(boomerang.shared.context.targets.SharedContextTarget1.class);
-    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.SharedContextTarget1: void bar(java.lang.String)>");
-    Method method = JimpleMethod.of(m);
+  public void basicTarget() {
+    setupSoot(BasicTarget.class);
+    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.BasicTarget: void main(java.lang.String[])>");
+    BackwardQuery query = selectFirstFileInitArgument(m);
 
-    method.getStatements().stream().filter(x -> x.containsInvokeExpr()).forEach(x -> x.toString());
-    Statement newFileStatement = method.getStatements().stream().filter(x -> x.containsInvokeExpr()).filter(x -> {x.toString(); return true;}).filter(
-        x ->  x.getInvokeExpr().getMethod().getName().equals("<init>") && x.getInvokeExpr().getMethod().getDeclaringClass().getFullyQualifiedName().equals("java.io.File")).findFirst().get();
-    Val arg = newFileStatement.getInvokeExpr().getArg(0);
-
-    Statement predecessor = method.getControlFlowGraph().getPredsOf(newFileStatement).stream().findFirst().get();
-    Edge cfgEdge = new Edge(predecessor, newFileStatement);
-    BackwardQuery query = BackwardQuery.make(cfgEdge, arg);
-
-    runAnalysis(boomerang.shared.context.targets.SharedContextTarget1.class, query, "bar" );
+    runAnalysis(LeftUnbalancedTarget.class, query, "bar" );
   }
 
   @Test
-  public void contextTest() {
-    setupSoot(boomerang.shared.context.targets.SharedContextTarget2.class);
-    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.SharedContextTarget2: void main(java.lang.String[])>");
-    Method method = JimpleMethod.of(m);
+  public void leftUnbalancedTargetTest() {
+    setupSoot(LeftUnbalancedTarget.class);
+    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.LeftUnbalancedTarget: void bar(java.lang.String)>");
+    BackwardQuery query = selectFirstFileInitArgument(m);
 
-    method.getStatements().stream().filter(x -> x.containsInvokeExpr()).forEach(x -> x.toString());
-    Statement newFileStatement = method.getStatements().stream().filter(x -> x.containsInvokeExpr()).filter(x -> {x.toString(); return true;}).filter(
-        x ->  x.getInvokeExpr().getMethod().getName().equals("<init>") && x.getInvokeExpr().getMethod().getDeclaringClass().getFullyQualifiedName().equals("java.io.File")).findFirst().get();
-    Val arg = newFileStatement.getInvokeExpr().getArg(0);
+    runAnalysis(LeftUnbalancedTarget.class, query, "bar" );
+  }
 
-    Statement predecessor = method.getControlFlowGraph().getPredsOf(newFileStatement).stream().findFirst().get();
-    Edge cfgEdge = new Edge(predecessor, newFileStatement);
-    BackwardQuery query = BackwardQuery.make(cfgEdge, arg);
+  @Test
+  public void contextSensitiveTest() {
+    setupSoot(ContextSensitiveTarget.class);
+    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.ContextSensitiveTarget: void main(java.lang.String[])>");
+    BackwardQuery query = selectFirstFileInitArgument(m);
 
-    runAnalysis(boomerang.shared.context.targets.SharedContextTarget1.class, query, "bar" );
+    runAnalysis(LeftUnbalancedTarget.class, query, "bar" );
   }
 
 
   @Test
-  public void contextTestUnbalanced() {
-    setupSoot(boomerang.shared.context.targets.SharedContextTarget3.class);
-    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.SharedContextTarget3: void context(java.lang.String)>");
-    Method method = JimpleMethod.of(m);
+  public void contextSensitiveAndLeftUnbalancedTest() {
+    setupSoot(ContextSensitiveAndLeftUnbalancedTarget.class);
+    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.ContextSensitiveAndLeftUnbalancedTarget: void context(java.lang.String)>");
+    BackwardQuery query = selectFirstFileInitArgument(m);
 
-    method.getStatements().stream().filter(x -> x.containsInvokeExpr()).forEach(x -> x.toString());
-    Statement newFileStatement = method.getStatements().stream().filter(x -> x.containsInvokeExpr()).filter(x -> {x.toString(); return true;}).filter(
-        x ->  x.getInvokeExpr().getMethod().getName().equals("<init>") && x.getInvokeExpr().getMethod().getDeclaringClass().getFullyQualifiedName().equals("java.io.File")).findFirst().get();
-    Val arg = newFileStatement.getInvokeExpr().getArg(0);
-
-    Statement predecessor = method.getControlFlowGraph().getPredsOf(newFileStatement).stream().findFirst().get();
-    Edge cfgEdge = new Edge(predecessor, newFileStatement);
-    BackwardQuery query = BackwardQuery.make(cfgEdge, arg);
-
-    runAnalysis(boomerang.shared.context.targets.SharedContextTarget1.class, query, "bar" );
+    runAnalysis(LeftUnbalancedTarget.class, query, "bar" );
   }
 
 
   @Test
-  public void contextTestUnbalancedSimple() {
-    setupSoot(boomerang.shared.context.targets.SharedContextTarget3.class);
-    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.SharedContextTarget4: void main(java.lang.String[])>");
-    Method method = JimpleMethod.of(m);
+  public void wrappedInNewStringTest() {
+    setupSoot(WrappedInNewStringTarget.class);
+    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.WrappedInNewStringTarget: void main(java.lang.String[])>");
+    BackwardQuery query = selectFirstFileInitArgument(m);
 
+    runAnalysis(LeftUnbalancedTarget.class, query, "bar" );
+  }
+
+  @Test
+  public void wrappedInNewStringInnerTest() {
+    setupSoot(WrappedInNewStringInnerTarget.class);
+    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.WrappedInNewStringInnerTarget: void main(java.lang.String[])>");
+    BackwardQuery query = selectFirstFileInitArgument(m);
+
+    runAnalysis(LeftUnbalancedTarget.class, query, "bar" );
+  }
+
+  public static BackwardQuery selectFirstFileInitArgument(SootMethod m) {
+    Method method = JimpleMethod.of(m);
     method.getStatements().stream().filter(x -> x.containsInvokeExpr()).forEach(x -> x.toString());
-    Statement newFileStatement = method.getStatements().stream().filter(x -> x.containsInvokeExpr()).filter(x -> {x.toString(); return true;}).filter(
-        x ->  x.getInvokeExpr().getMethod().getName().equals("<init>") && x.getInvokeExpr().getMethod().getDeclaringClass().getFullyQualifiedName().equals("java.io.File")).findFirst().get();
+    Statement newFileStatement = method.getStatements().stream().filter(x -> x.containsInvokeExpr())
+        .filter(x -> {
+          x.toString();
+          return true;
+        }).filter(
+            x -> x.getInvokeExpr().getMethod().getName().equals("<init>") && x.getInvokeExpr()
+                .getMethod().getDeclaringClass().getFullyQualifiedName().equals("java.io.File"))
+        .findFirst().get();
     Val arg = newFileStatement.getInvokeExpr().getArg(0);
 
-    Statement predecessor = method.getControlFlowGraph().getPredsOf(newFileStatement).stream().findFirst().get();
+    Statement predecessor = method.getControlFlowGraph().getPredsOf(newFileStatement).stream()
+        .findFirst().get();
     Edge cfgEdge = new Edge(predecessor, newFileStatement);
-    BackwardQuery query = BackwardQuery.make(cfgEdge, arg);
+    return BackwardQuery.make(cfgEdge, arg);
+  }
 
-    runAnalysis(boomerang.shared.context.targets.SharedContextTarget1.class, query, "bar" );
+
+  protected void runAnalysis(Class cls, BackwardQuery query, String... expectedValues) {
+    //TODO move to analysis
+    SharedContextAnalysis sharedContextAnalysis = new SharedContextAnalysis();
+    Collection<ForwardQuery> res = sharedContextAnalysis.run(query);
+    Assert.assertEquals(
+        Sets.newHashSet(expectedValues),res.stream().map(t -> ((AllocVal)t.var()).getAllocVal()).filter(x -> x.isStringConstant()).map(x-> x.getStringValue()).collect(
+            Collectors.toSet()));
+  }
+
+
+  protected void setupSoot(Class cls){
+    G.v().reset();
+    setupSoot();
+    setApplicationClass(cls);
+    PackManager.v().runPacks();
+    BoomerangPretransformer.v().reset();
+    BoomerangPretransformer.v().apply();
+  }
+
+  private void setupSoot() {
+    Options.v().set_whole_program(true);
+    Options.v().setPhaseOption("cg." + CG, "on");
+    Options.v().setPhaseOption("cg." + CG, "verbose:true");
+    Options.v().set_output_format(Options.output_format_none);
+    Options.v().set_no_bodies_for_excluded(true);
+    Options.v().set_allow_phantom_refs(true);
+    Options.v().setPhaseOption("jb", "use-original-names:true");
+    Options.v().set_keep_line_number(true);
+    Options.v().set_prepend_classpath(true);
+    Options.v().set_process_dir(getProcessDir());
+  }
+
+  private void setApplicationClass(Class cls) {
+    Scene.v().loadNecessaryClasses();
+    List<SootMethod> eps = Lists.newArrayList();
+    for (SootClass sootClass : Scene.v().getClasses()) {
+      if (sootClass.toString().equals(cls.getName())
+          || (sootClass.toString().contains(cls.getName() + "$"))) {
+        sootClass.setApplicationClass();
+        eps.addAll(sootClass.getMethods());
+      }
+    }
+    Scene.v().setEntryPoints(eps);
+  }
+
+  private List<String> getProcessDir() {
+    Path path = Paths.get("target/test-classes");
+    return Lists.newArrayList(path.toAbsolutePath().toString());
   }
 }

@@ -2,7 +2,7 @@ package boomerang.shared.context.targets;
 
 import java.io.File;
 
-public class SharedContextTarget3 {
+public class ContextSensitiveAndLeftUnbalancedTarget {
 
   public static void main(String...args){
     context("bar");

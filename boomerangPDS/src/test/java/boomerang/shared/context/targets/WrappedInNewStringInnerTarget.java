@@ -2,10 +2,11 @@ package boomerang.shared.context.targets;
 
 import java.io.File;
 
-public class SharedContextTarget4 {
+public class WrappedInNewStringInnerTarget {
 
   public static void main(String...args){
-    String bar = doPassArgument("bar");
+    String x = "bar";
+    String bar = doPassArgument(x);
     new File(bar);;
   }
 
