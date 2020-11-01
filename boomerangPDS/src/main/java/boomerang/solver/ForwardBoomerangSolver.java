@@ -50,6 +50,7 @@ import wpds.impl.NestedWeightedPAutomatons;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
 import wpds.impl.WeightedPAutomaton;
+import wpds.interfaces.Location;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
 
@@ -82,6 +83,14 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
     this.query = query;
   }
 
+  @Override
+  public void processPush(Node<Edge, Val> curr, Location location, PushNode<Edge, Val, ?> succ,
+      PDSSystem system) {
+    if(PDSSystem.CALLS == system && !((PushNode<Edge,Val,Edge>)succ).location().getStart().equals(curr.stmt().getTarget())){
+      throw new RuntimeException("Invalid push rule");
+    }
+    super.processPush(curr, location, succ, system);
+  }
   private final class OverwriteAtFieldStore
       extends WPAStateListener<Field, INode<Node<ControlFlowGraph.Edge, Val>>, W> {
     private final Edge nextStmt;
@@ -296,6 +305,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
         }
       }
     }
+
 
     @Override
     public void onNoCalleeFound() {

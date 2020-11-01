@@ -50,6 +50,7 @@ import sync.pds.solver.nodes.SingleNode;
 import wpds.impl.NestedWeightedPAutomatons;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
+import wpds.interfaces.Location;
 import wpds.interfaces.State;
 
 public abstract class BackwardBoomerangSolver<W extends Weight> extends AbstractBoomerangSolver<W> {
@@ -225,6 +226,15 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
               calleeStartEdge, fact.withNewMethod(callee), callSiteEdge, PDSSystem.CALLS));
     }
     return out;
+  }
+
+  @Override
+  public void processPush(Node<Edge, Val> curr, Location location, PushNode<Edge, Val, ?> succ,
+      PDSSystem system) {
+    if(PDSSystem.CALLS == system && !((PushNode<Edge,Val,Edge>)succ).location().getTarget().equals(curr.stmt().getStart())){
+      throw new RuntimeException("Invalid push rule");
+    }
+    super.processPush(curr, location, succ, system);
   }
 
   @Override
