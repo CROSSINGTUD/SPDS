@@ -17,6 +17,7 @@ import boomerang.callgraph.CalleeListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.controlflowgraph.ObservableControlFlowGraph;
 import boomerang.controlflowgraph.PredecessorListener;
+import boomerang.controlflowgraph.SuccessorListener;
 import boomerang.scene.AllocVal;
 import boomerang.scene.ControlFlowGraph;
 import boomerang.scene.ControlFlowGraph.Edge;
@@ -350,30 +351,56 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
   protected void propagateUnbalancedToCallSite(
       Edge callSite, Transition<Edge, INode<Val>> transInCallee) {
     GeneratedState<Val, Edge> target = (GeneratedState<Val, Edge>) transInCallee.getTarget();
-    cfg.addPredsOfListener(
-        new PredecessorListener(callSite.getStart()) {
-          @Override
-          public void getPredecessor(Statement pred) {
-            Node<ControlFlowGraph.Edge, Val> curr = new Node<>(callSite, query.var());
+    // TODO Why do we need to distinguish here?
+    if (callSite.getStart().containsInvokeExpr()) {
+      cfg.addPredsOfListener(
+          new PredecessorListener(callSite.getStart()) {
+            @Override
+            public void getPredecessor(Statement pred) {
+              Node<ControlFlowGraph.Edge, Val> curr = new Node<>(callSite, query.var());
 
-            Transition<ControlFlowGraph.Edge, INode<Val>> callTrans =
-                new Transition<>(
-                    wrap(curr.fact()),
-                    curr.stmt(),
-                    generateCallState(wrap(curr.fact()), curr.stmt()));
-            callAutomaton.addTransition(callTrans);
-            callAutomaton.addUnbalancedState(
-                generateCallState(wrap(curr.fact()), curr.stmt()), target);
+              Transition<ControlFlowGraph.Edge, INode<Val>> callTrans =
+                  new Transition<>(
+                      wrap(curr.fact()),
+                      curr.stmt(),
+                      generateCallState(wrap(curr.fact()), curr.stmt()));
+              callAutomaton.addTransition(callTrans);
+              callAutomaton.addUnbalancedState(
+                  generateCallState(wrap(curr.fact()), curr.stmt()), target);
 
-            State s =
-                new PushNode<>(
-                    target.location(),
-                    target.node().fact(),
-                    new Edge(pred, callSite.getStart()),
-                    PDSSystem.CALLS);
-            propagate(curr, s);
-          }
-        });
+              State s =
+                  new PushNode<>(
+                      target.location(),
+                      target.node().fact(),
+                      new Edge(pred, callSite.getStart()),
+                      PDSSystem.CALLS);
+              propagate(curr, s);
+            }
+          });
+    } else if (callSite.getTarget().containsInvokeExpr()) {
+      cfg.addSuccsOfListener(
+          new SuccessorListener(callSite.getTarget()) {
+            @Override
+            public void getSuccessor(Statement succ) {
+              Node<ControlFlowGraph.Edge, Val> curr =
+                  new Node<>(new Edge(callSite.getTarget(), succ), query.var());
+
+              Transition<ControlFlowGraph.Edge, INode<Val>> callTrans =
+                  new Transition<>(
+                      wrap(curr.fact()),
+                      curr.stmt(),
+                      generateCallState(wrap(curr.fact()), curr.stmt()));
+              callAutomaton.addTransition(callTrans);
+              callAutomaton.addUnbalancedState(
+                  generateCallState(wrap(curr.fact()), curr.stmt()), target);
+
+              State s =
+                  new PushNode<>(
+                      target.location(), target.node().fact(), callSite, PDSSystem.CALLS);
+              propagate(curr, s);
+            }
+          });
+    }
   }
 
   private final class CallSiteCalleeListener implements CalleeListener<Statement, Method> {
