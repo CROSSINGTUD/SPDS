@@ -94,7 +94,7 @@ public class QueryGraph<W extends Weight> {
         WeightedPAutomaton<Edge, INode<Val>, W> weightedPAutomaton) {
       if (t.getStart() instanceof GeneratedState && callee != null) {
         Edge callSiteLabel = t.getLabel();
-        getSolver(child).allowUnbalanced(callee, callSiteLabel);
+        getSolver(child).allowUnbalanced(callee, (parent instanceof BackwardQuery ? callSiteLabel.getTarget() : callSiteLabel.getStart()));
       }
       if (t.getTarget() instanceof GeneratedState) {
         getSolver(parent)

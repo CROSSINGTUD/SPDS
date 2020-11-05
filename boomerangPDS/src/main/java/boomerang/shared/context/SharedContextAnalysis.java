@@ -54,7 +54,7 @@ public class SharedContextAnalysis {
             if (stmt.isAssign() && stmt.getLeftOp().equals(fact) && isStringOrIntAllocation(stmt)) {
               return Optional.of(new AllocVal(stmt.getLeftOp(), stmt, stmt.getRightOp()));
             }
-            if (stmt.containsInvokeExpr()) {
+            /*if (stmt.containsInvokeExpr()) {
               if (isInSourceList(stmt)) {
                 if (stmt.getInvokeExpr().getBase().equals(fact)) {
                   return Optional.of(
@@ -62,7 +62,7 @@ public class SharedContextAnalysis {
                           stmt.getInvokeExpr().getBase(), stmt, stmt.getInvokeExpr().getBase()));
                 }
               }
-            }
+            }*/
             return super.getAllocationVal(m, stmt, fact, icfg);
           }
 
@@ -84,6 +84,7 @@ public class SharedContextAnalysis {
     Collection<ForwardQuery> finalAllocationSites = Sets.newHashSet();
     while (!queryQueue.isEmpty()) {
       QueryWithContext pop = queryQueue.pop();
+      System.out.println(pop.query);
       if (pop.query instanceof ForwardQuery) {
         ForwardBoomerangResults<NoWeight> results;
         ForwardQuery currentQuery = (ForwardQuery) pop.query;
@@ -108,7 +109,6 @@ public class SharedContextAnalysis {
         }
         Map<ForwardQuery, Context> allocationSites = results.getAllocationSites();
 
-        System.out.println(pop.query);
         System.out.println(allocationSites);
         for (Entry<ForwardQuery, Context> entry : allocationSites.entrySet()) {
           ForwardQuery forwardQuery = entry.getKey();

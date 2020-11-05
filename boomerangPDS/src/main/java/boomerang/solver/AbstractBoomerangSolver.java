@@ -241,23 +241,7 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
 
             @Override
             public void onCallerAdded(Statement n, Method m) {
-              if (AbstractBoomerangSolver.this instanceof ForwardBoomerangSolver) {
-                cfg.addPredsOfListener(
-                    new PredecessorListener(n) {
-                      @Override
-                      public void getPredecessor(Statement pred) {
-                        propagateUnbalancedToCallSite(new Edge(pred, n), trans);
-                      }
-                    });
-              } else if (AbstractBoomerangSolver.this instanceof BackwardBoomerangSolver) {
-                cfg.addSuccsOfListener(
-                    new SuccessorListener(n) {
-                      @Override
-                      public void getSuccessor(Statement succ) {
-                        propagateUnbalancedToCallSite(new Edge(n, succ), trans);
-                      }
-                    });
-              }
+              propagateUnbalancedToCallSite(n, trans);
             }
           });
     }
@@ -267,22 +251,41 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
     return false;
   }
 
-  public void allowUnbalanced(Method callee, Edge callSiteEdge) {
+  public void allowUnbalanced(Method callee, Statement callSite) {
     if (dataFlowScope.isExcluded(callee)) {
       return;
     }
-    UnbalancedDataFlowListener l = new UnbalancedDataFlowListener(callee, callSiteEdge);
+    UnbalancedDataFlowListener l = new UnbalancedDataFlowListener(callee, callSite);
     if (unbalancedDataFlowListeners.put(callee, l)) {
       LOGGER.trace(
-          "Allowing unbalanced propagation from {} to {} of {}", callee, callSiteEdge, this);
+          "Allowing unbalanced propagation from {} to {} of {}", callee, callSite, this);
       for (UnbalancedDataFlow<W> e : Lists.newArrayList(unbalancedDataFlows.get(callee))) {
-        propagateUnbalancedToCallSite(callSiteEdge, e.getReturningTransition());
+        propagateUnbalancedToCallSite(callSite, e.getReturningTransition());
       }
     }
   }
 
+
+  protected void assertCalleeCallerRelation(Statement callSite, Method method){
+    Set<Statement> callsitesOfCall = Sets.newHashSet();
+    icfg.addCallerListener(new CallerListener<Statement, Method>() {
+      @Override
+      public Method getObservedCallee() {
+        return method;
+      }
+
+      @Override
+      public void onCallerAdded(Statement statement, Method method) {
+        callsitesOfCall.add(statement);
+      }
+    });
+    if(!callsitesOfCall.contains(callSite)){
+      throw new RuntimeException("Invalid pair of callSite and method for unbalanced return");
+    }
+  }
+
   protected abstract void propagateUnbalancedToCallSite(
-      Edge callSiteEdge, Transition<ControlFlowGraph.Edge, INode<Val>> transInCallee);
+      Statement callSiteEdge, Transition<ControlFlowGraph.Edge, INode<Val>> transInCallee);
 
   @Override
   protected boolean preventCallTransitionAdd(
@@ -623,14 +626,14 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
 
   private static class UnbalancedDataFlowListener {
     private Method callee;
-    private Edge callSite;
+    private Statement callSite;
 
-    public UnbalancedDataFlowListener(Method callee, Edge callSite) {
+    public UnbalancedDataFlowListener(Method callee, Statement callSite) {
       this.callee = callee;
       this.callSite = callSite;
     }
 
-    public Edge getCallSiteEdge() {
+    public Statement getCallSiteEdge() {
       return callSite;
     }
 
