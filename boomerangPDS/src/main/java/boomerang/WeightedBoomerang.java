@@ -80,7 +80,6 @@ import wpds.impl.Rule;
 import wpds.impl.SummaryNestedWeightedPAutomatons;
 import wpds.impl.Transition;
 import wpds.impl.Weight;
-import wpds.impl.Weight.NoWeight;
 import wpds.impl.WeightedPAutomaton;
 import wpds.interfaces.State;
 import wpds.interfaces.WPAStateListener;
@@ -624,6 +623,10 @@ public abstract class WeightedBoomerang<W extends Weight> {
     return queryToBackwardSolvers;
   }
 
+  public QueryGraph<W> getQueryGraph() {
+    return queryGraph;
+  }
+
   private final class EmptyFieldListener
       extends WPAStateListener<Field, INode<Node<ControlFlowGraph.Edge, Val>>, W> {
 
@@ -968,8 +971,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
         query, timedout, this.queryToSolvers, backwardSolverIns, getStats(), analysisWatch);
   }
 
-
-  public BackwardBoomerangResults<W> solveUnderScope(BackwardQuery query, Node<Edge, Val> triggeringNode, BackwardQuery parentQuery) {
+  public BackwardBoomerangResults<W> solveUnderScope(
+      BackwardQuery query, Node<Edge, Val> triggeringNode, Query parentQuery) {
     if (!options.allowMultipleQueries() && solving) {
       throw new RuntimeException(
           "One cannot re-use the same Boomerang solver for more than one query, unless option allowMultipleQueries is enabled. If allowMultipleQueries is enabled, ensure to call unregisterAllListeners() on this instance upon termination of all queries.");
@@ -983,7 +986,8 @@ public abstract class WeightedBoomerang<W extends Weight> {
 
       LOGGER.trace("Starting backward analysis of: {}", query);
       backwardSolve(query);
-      queryGraph.addEdge(query, triggeringNode, parentQuery);
+      queryGraph.addEdge(parentQuery, triggeringNode, query);
+      this.debugOutput();
     } catch (BoomerangTimeoutException e) {
       timedout = true;
       LOGGER.info("Timeout ({}) of query: {} ", analysisWatch, query);
@@ -995,6 +999,56 @@ public abstract class WeightedBoomerang<W extends Weight> {
         query, timedout, this.queryToSolvers, backwardSolverIns, getStats(), analysisWatch);
   }
 
+  public ForwardBoomerangResults<W> solveUnderScope(
+      ForwardQuery query, Node<Edge, Val> triggeringNode, Query parentQuery) {
+    if (!options.allowMultipleQueries() && solving) {
+      throw new RuntimeException(
+          "One cannot re-use the same Boomerang solver for more than one query, unless option allowMultipleQueries is enabled. If allowMultipleQueries is enabled, ensure to call unregisterAllListeners() on this instance upon termination of all queries.");
+    }
+    solving = true;
+    if (!analysisWatch.isRunning()) {
+      analysisWatch.start();
+    }
+    boolean timedout = false;
+    try {
+      LOGGER.trace("Starting forward analysis of: {}", query);
+      forwardSolve(query);
+      LOGGER.trace(
+          "Query terminated in {} ({}), visited methods {}",
+          analysisWatch,
+          query,
+          visitedMethods.size());
+      queryGraph.addEdge(parentQuery, triggeringNode, query);
+    } catch (BoomerangTimeoutException e) {
+      timedout = true;
+      LOGGER.trace(
+          "Timeout ({}) of query: {}, visited methods {}",
+          analysisWatch,
+          query,
+          visitedMethods.size());
+    } catch (Throwable e) {
+      LOGGER.error("Solving query crashed in {}", e);
+    }
+    if (!options.allowMultipleQueries()) {
+      unregisterAllListeners();
+    }
+
+    if (analysisWatch.isRunning()) {
+      analysisWatch.stop();
+    }
+    return new ForwardBoomerangResults<W>(
+        query,
+        icfg(),
+        cfg(),
+        timedout,
+        this.queryToSolvers,
+        getStats(),
+        analysisWatch,
+        visitedMethods,
+        options.trackDataFlowPath(),
+        options.prunePathConditions(),
+        options.trackImplicitFlows());
+  }
 
   public void debugOutput() {
     if (LOGGER.isTraceEnabled()) {

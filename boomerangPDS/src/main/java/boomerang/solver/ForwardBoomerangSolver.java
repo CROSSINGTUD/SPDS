@@ -30,7 +30,10 @@ import boomerang.scene.Statement;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Type;
 import boomerang.scene.Val;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Table;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -84,13 +87,35 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
   }
 
   @Override
-  public void processPush(Node<Edge, Val> curr, Location location, PushNode<Edge, Val, ?> succ,
-      PDSSystem system) {
-    if(PDSSystem.CALLS == system && !((PushNode<Edge,Val,Edge>)succ).location().getStart().equals(curr.stmt().getTarget())){
-      throw new RuntimeException("Invalid push rule");
+  public void processPush(
+      Node<Edge, Val> curr, Location location, PushNode<Edge, Val, ?> succ, PDSSystem system) {
+    if (PDSSystem.CALLS == system) {
+      if (!((PushNode<Edge, Val, Edge>) succ).location().getStart().equals(curr.stmt().getTarget())
+          || !curr.stmt().getTarget().containsInvokeExpr()) {
+        throw new RuntimeException("Invalid push rule");
+      }
     }
     super.processPush(curr, location, succ, system);
   }
+
+  public Table<Edge, Val, W> asStatementValWeightTable() {
+    final Table<Edge, Val, W> results = HashBasedTable.create();
+    Stopwatch sw = Stopwatch.createStarted();
+    LOGGER.trace("Computing final weighted results for {}", query);
+    WeightedPAutomaton<Edge, INode<Val>, W> callAut = getCallAutomaton();
+    for (Entry<Transition<Edge, INode<Val>>, W> e :
+        callAut.getTransitionsToFinalWeights().entrySet()) {
+      Transition<Edge, INode<Val>> t = e.getKey();
+      W w = e.getValue();
+      if (t.getLabel().equals(new Edge(Statement.epsilon(), Statement.epsilon()))) continue;
+      if (t.getStart().fact().isLocal()
+          && !t.getLabel().getMethod().equals(t.getStart().fact().m())) continue;
+      results.put(t.getLabel(), t.getStart().fact(), w);
+    }
+    LOGGER.trace("Computed final weighted results for {} in {}", query, sw);
+    return results;
+  }
+
   private final class OverwriteAtFieldStore
       extends WPAStateListener<Field, INode<Node<ControlFlowGraph.Edge, Val>>, W> {
     private final Edge nextStmt;

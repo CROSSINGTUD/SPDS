@@ -229,10 +229,13 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
   }
 
   @Override
-  public void processPush(Node<Edge, Val> curr, Location location, PushNode<Edge, Val, ?> succ,
-      PDSSystem system) {
-    if(PDSSystem.CALLS == system && !((PushNode<Edge,Val,Edge>)succ).location().getTarget().equals(curr.stmt().getStart())){
-      throw new RuntimeException("Invalid push rule");
+  public void processPush(
+      Node<Edge, Val> curr, Location location, PushNode<Edge, Val, ?> succ, PDSSystem system) {
+    if (PDSSystem.CALLS == system) {
+      if (!((PushNode<Edge, Val, Edge>) succ).location().getTarget().equals(curr.stmt().getStart())
+          || !(curr.stmt().getStart().containsInvokeExpr())) {
+        throw new RuntimeException("Invalid push rule");
+      }
     }
     super.processPush(curr, location, succ, system);
   }

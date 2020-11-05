@@ -4,9 +4,9 @@ import java.io.File;
 
 public class BasicTarget {
 
-  public static void main(String...args){
+  public static void main(String... args) {
     String x = "bar";
-    new File(x);;
+    new File(x);
+    ;
   }
-
 }

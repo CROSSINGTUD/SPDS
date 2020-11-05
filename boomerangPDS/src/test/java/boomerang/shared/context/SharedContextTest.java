@@ -15,6 +15,7 @@ import boomerang.shared.context.targets.ContextSensitiveTarget;
 import boomerang.shared.context.targets.LeftUnbalancedTarget;
 import boomerang.shared.context.targets.WrappedInNewStringInnerTarget;
 import boomerang.shared.context.targets.WrappedInNewStringTarget;
+import boomerang.shared.context.targets.WrappedInStringTwiceTest;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import java.nio.file.Path;
@@ -38,90 +39,130 @@ public class SharedContextTest {
   @Test
   public void basicTarget() {
     setupSoot(BasicTarget.class);
-    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.BasicTarget: void main(java.lang.String[])>");
+    SootMethod m =
+        Scene.v()
+            .getMethod(
+                "<boomerang.shared.context.targets.BasicTarget: void main(java.lang.String[])>");
     BackwardQuery query = selectFirstFileInitArgument(m);
 
-    runAnalysis(LeftUnbalancedTarget.class, query, "bar" );
+    runAnalysis(query, "bar");
   }
 
   @Test
   public void leftUnbalancedTargetTest() {
     setupSoot(LeftUnbalancedTarget.class);
-    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.LeftUnbalancedTarget: void bar(java.lang.String)>");
+    SootMethod m =
+        Scene.v()
+            .getMethod(
+                "<boomerang.shared.context.targets.LeftUnbalancedTarget: void bar(java.lang.String)>");
     BackwardQuery query = selectFirstFileInitArgument(m);
 
-    runAnalysis(LeftUnbalancedTarget.class, query, "bar" );
+    runAnalysis(query, "bar");
   }
 
   @Test
   public void contextSensitiveTest() {
     setupSoot(ContextSensitiveTarget.class);
-    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.ContextSensitiveTarget: void main(java.lang.String[])>");
+    SootMethod m =
+        Scene.v()
+            .getMethod(
+                "<boomerang.shared.context.targets.ContextSensitiveTarget: void main(java.lang.String[])>");
     BackwardQuery query = selectFirstFileInitArgument(m);
 
-    runAnalysis(LeftUnbalancedTarget.class, query, "bar" );
+    runAnalysis(query, "bar");
   }
-
 
   @Test
   public void contextSensitiveAndLeftUnbalancedTest() {
     setupSoot(ContextSensitiveAndLeftUnbalancedTarget.class);
-    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.ContextSensitiveAndLeftUnbalancedTarget: void context(java.lang.String)>");
+    SootMethod m =
+        Scene.v()
+            .getMethod(
+                "<boomerang.shared.context.targets.ContextSensitiveAndLeftUnbalancedTarget: void context(java.lang.String)>");
     BackwardQuery query = selectFirstFileInitArgument(m);
 
-    runAnalysis(LeftUnbalancedTarget.class, query, "bar" );
+    runAnalysis(query, "bar");
   }
-
 
   @Test
   public void wrappedInNewStringTest() {
     setupSoot(WrappedInNewStringTarget.class);
-    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.WrappedInNewStringTarget: void main(java.lang.String[])>");
+    SootMethod m =
+        Scene.v()
+            .getMethod(
+                "<boomerang.shared.context.targets.WrappedInNewStringTarget: void main(java.lang.String[])>");
     BackwardQuery query = selectFirstFileInitArgument(m);
 
-    runAnalysis(LeftUnbalancedTarget.class, query, "bar" );
+    runAnalysis(query, "bar");
   }
 
   @Test
   public void wrappedInNewStringInnerTest() {
     setupSoot(WrappedInNewStringInnerTarget.class);
-    SootMethod m = Scene.v().getMethod("<boomerang.shared.context.targets.WrappedInNewStringInnerTarget: void main(java.lang.String[])>");
+    SootMethod m =
+        Scene.v()
+            .getMethod(
+                "<boomerang.shared.context.targets.WrappedInNewStringInnerTarget: void main(java.lang.String[])>");
     BackwardQuery query = selectFirstFileInitArgument(m);
 
-    runAnalysis(LeftUnbalancedTarget.class, query, "bar" );
+    runAnalysis(query, "bar");
+  }
+
+  @Test
+  public void wrappedInNewStringTwiceTest() {
+    setupSoot(WrappedInStringTwiceTest.class);
+    SootMethod m =
+        Scene.v()
+            .getMethod(
+                "<boomerang.shared.context.targets.WrappedInStringTwiceTest: void main(java.lang.String[])>");
+    BackwardQuery query = selectFirstFileInitArgument(m);
+
+    runAnalysis(query, "bar");
   }
 
   public static BackwardQuery selectFirstFileInitArgument(SootMethod m) {
     Method method = JimpleMethod.of(m);
     method.getStatements().stream().filter(x -> x.containsInvokeExpr()).forEach(x -> x.toString());
-    Statement newFileStatement = method.getStatements().stream().filter(x -> x.containsInvokeExpr())
-        .filter(x -> {
-          x.toString();
-          return true;
-        }).filter(
-            x -> x.getInvokeExpr().getMethod().getName().equals("<init>") && x.getInvokeExpr()
-                .getMethod().getDeclaringClass().getFullyQualifiedName().equals("java.io.File"))
-        .findFirst().get();
+    Statement newFileStatement =
+        method.getStatements().stream()
+            .filter(x -> x.containsInvokeExpr())
+            .filter(
+                x -> {
+                  x.toString();
+                  return true;
+                })
+            .filter(
+                x ->
+                    x.getInvokeExpr().getMethod().getName().equals("<init>")
+                        && x.getInvokeExpr()
+                            .getMethod()
+                            .getDeclaringClass()
+                            .getFullyQualifiedName()
+                            .equals("java.io.File"))
+            .findFirst()
+            .get();
     Val arg = newFileStatement.getInvokeExpr().getArg(0);
 
-    Statement predecessor = method.getControlFlowGraph().getPredsOf(newFileStatement).stream()
-        .findFirst().get();
+    Statement predecessor =
+        method.getControlFlowGraph().getPredsOf(newFileStatement).stream().findFirst().get();
     Edge cfgEdge = new Edge(predecessor, newFileStatement);
     return BackwardQuery.make(cfgEdge, arg);
   }
 
-
-  protected void runAnalysis(Class cls, BackwardQuery query, String... expectedValues) {
-    //TODO move to analysis
+  protected void runAnalysis(BackwardQuery query, String... expectedValues) {
+    // TODO move to analysis
     SharedContextAnalysis sharedContextAnalysis = new SharedContextAnalysis();
     Collection<ForwardQuery> res = sharedContextAnalysis.run(query);
     Assert.assertEquals(
-        Sets.newHashSet(expectedValues),res.stream().map(t -> ((AllocVal)t.var()).getAllocVal()).filter(x -> x.isStringConstant()).map(x-> x.getStringValue()).collect(
-            Collectors.toSet()));
+        Sets.newHashSet(expectedValues),
+        res.stream()
+            .map(t -> ((AllocVal) t.var()).getAllocVal())
+            .filter(x -> x.isStringConstant())
+            .map(x -> x.getStringValue())
+            .collect(Collectors.toSet()));
   }
 
-
-  protected void setupSoot(Class cls){
+  protected void setupSoot(Class cls) {
     G.v().reset();
     setupSoot();
     setApplicationClass(cls);

@@ -2,10 +2,10 @@ package boomerang.shared.context.targets;
 
 import java.io.File;
 
-public class WrappedInNewStringInnerTarget {
+public class WrappedInStringTwiceTest {
 
   public static void main(String... args) {
-    String x = "bar";
+    String x = new String("bar");
     String bar = doPassArgument(x);
     new File(bar);
     ;

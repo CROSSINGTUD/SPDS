@@ -110,13 +110,14 @@ public abstract class AbstractTestingFramework {
     Options.v().set_exclude(excludedPackages());
 
     // JAVA VERSION 8
-    if(getJavaVersion() < 9) {
+    if (getJavaVersion() < 9) {
       Options.v().set_prepend_classpath(true);
       Options.v().set_soot_classpath(getSootClassPath());
     }
     // JAVA VERSION 9
-    else if(getJavaVersion() >= 9) {
-      Options.v().set_soot_classpath("VIRTUAL_FS_FOR_JDK" + File.pathSeparator + getSootClassPath());
+    else if (getJavaVersion() >= 9) {
+      Options.v()
+          .set_soot_classpath("VIRTUAL_FS_FOR_JDK" + File.pathSeparator + getSootClassPath());
     }
 
     // Options.v().set_main_class(this.getTargetClass());
@@ -161,7 +162,7 @@ public abstract class AbstractTestingFramework {
       throw new RuntimeException("Could not get property java.home!");
 
     String sootCp = userdir + "/target/test-classes";
-    if(getJavaVersion() < 9) {
+    if (getJavaVersion() < 9) {
       sootCp += File.pathSeparator + javaHome + "/lib/rt.jar";
       sootCp += File.pathSeparator + javaHome + "/lib/jce.jar";
     }
@@ -240,11 +241,14 @@ public abstract class AbstractTestingFramework {
 
   private static int getJavaVersion() {
     String version = System.getProperty("java.version");
-    if(version.startsWith("1.")) {
+    if (version.startsWith("1.")) {
       version = version.substring(2, 3);
     } else {
       int dot = version.indexOf(".");
-      if(dot != -1) { version = version.substring(0, dot); }
-    } return Integer.parseInt(version);
+      if (dot != -1) {
+        version = version.substring(0, dot);
+      }
+    }
+    return Integer.parseInt(version);
   }
 }

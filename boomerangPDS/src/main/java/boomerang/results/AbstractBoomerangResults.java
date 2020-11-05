@@ -7,10 +7,7 @@ import boomerang.scene.Val;
 import boomerang.solver.AbstractBoomerangSolver;
 import boomerang.solver.ForwardBoomerangSolver;
 import boomerang.util.DefaultValueMap;
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
-import java.util.Map.Entry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sync.pds.solver.nodes.GeneratedState;
@@ -62,22 +59,7 @@ public class AbstractBoomerangResults<W extends Weight> {
   }
 
   public Table<Edge, Val, W> asStatementValWeightTable(ForwardQuery query) {
-    final Table<Edge, Val, W> results = HashBasedTable.create();
-    Stopwatch sw = Stopwatch.createStarted();
-    LOGGER.trace("Computing final weighted results for {}", query);
-    WeightedPAutomaton<Edge, INode<Val>, W> callAut =
-        queryToSolvers.getOrCreate(query).getCallAutomaton();
-    for (Entry<Transition<Edge, INode<Val>>, W> e :
-        callAut.getTransitionsToFinalWeights().entrySet()) {
-      Transition<Edge, INode<Val>> t = e.getKey();
-      W w = e.getValue();
-      if (t.getLabel().equals(new Edge(Statement.epsilon(), Statement.epsilon()))) continue;
-      if (t.getStart().fact().isLocal()
-          && !t.getLabel().getMethod().equals(t.getStart().fact().m())) continue;
-      results.put(t.getLabel(), t.getStart().fact(), w);
-    }
-    LOGGER.trace("Computed final weighted results for {} in {}", query, sw);
-    return results;
+    return queryToSolvers.getOrCreate(query).asStatementValWeightTable();
   }
 
   private static class OpeningCallStackExtracter<W extends Weight>
