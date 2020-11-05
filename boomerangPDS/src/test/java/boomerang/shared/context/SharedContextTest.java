@@ -10,6 +10,8 @@ import boomerang.scene.Val;
 import boomerang.scene.jimple.BoomerangPretransformer;
 import boomerang.scene.jimple.JimpleMethod;
 import boomerang.shared.context.targets.BasicTarget;
+import boomerang.shared.context.targets.BranchingAfterNewStringTest;
+import boomerang.shared.context.targets.BranchingTest;
 import boomerang.shared.context.targets.ContextSensitiveAndLeftUnbalancedTarget;
 import boomerang.shared.context.targets.ContextSensitiveTarget;
 import boomerang.shared.context.targets.LeftUnbalancedTarget;
@@ -108,6 +110,7 @@ public class SharedContextTest {
     runAnalysis(query, "bar");
   }
 
+
   @Test
   public void wrappedInNewStringTwiceTest() {
     setupSoot(WrappedInStringTwiceTest.class);
@@ -118,6 +121,30 @@ public class SharedContextTest {
     BackwardQuery query = selectFirstFileInitArgument(m);
 
     runAnalysis(query, "bar");
+  }
+
+  @Test
+  public void branchingTest() {
+    setupSoot(BranchingTest.class);
+    SootMethod m =
+        Scene.v()
+            .getMethod(
+                "<boomerang.shared.context.targets.BranchingTest: void main(java.lang.String[])>");
+    BackwardQuery query = selectFirstFileInitArgument(m);
+
+    runAnalysis(query, "bar", "foo");
+  }
+
+  @Test
+  public void branchingAfterNewTest() {
+    setupSoot(BranchingAfterNewStringTest.class);
+    SootMethod m =
+        Scene.v()
+            .getMethod(
+                "<boomerang.shared.context.targets.BranchingAfterNewStringTest: void main(java.lang.String[])>");
+    BackwardQuery query = selectFirstFileInitArgument(m);
+
+    runAnalysis(query, "bar", "foo");
   }
 
   public static BackwardQuery selectFirstFileInitArgument(SootMethod m) {

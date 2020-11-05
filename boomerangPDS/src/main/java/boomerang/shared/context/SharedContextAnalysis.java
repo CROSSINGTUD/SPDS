@@ -54,7 +54,7 @@ public class SharedContextAnalysis {
             if (stmt.isAssign() && stmt.getLeftOp().equals(fact) && isStringOrIntAllocation(stmt)) {
               return Optional.of(new AllocVal(stmt.getLeftOp(), stmt, stmt.getRightOp()));
             }
-            /*if (stmt.containsInvokeExpr()) {
+            if (stmt.containsInvokeExpr()) {
               if (isInSourceList(stmt)) {
                 if (stmt.getInvokeExpr().getBase().equals(fact)) {
                   return Optional.of(
@@ -62,7 +62,7 @@ public class SharedContextAnalysis {
                           stmt.getInvokeExpr().getBase(), stmt, stmt.getInvokeExpr().getBase()));
                 }
               }
-            }*/
+            }
             return super.getAllocationVal(m, stmt, fact, icfg);
           }
 
