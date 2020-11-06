@@ -37,12 +37,14 @@ import wpds.impl.Weight.NoWeight;
 public class SharedContextAnalysis {
 
   private final DefaultBoomerangOptions customBoomerangOptions;
-  private DataFlowScope scope;
-  private SootCallGraph callGraph;
-  private LinkedList<QueryWithContext> queryQueue = Lists.newLinkedList();
-  private Set<Query> visited = Sets.newHashSet();
+  private final Specification spec;
+  private final DataFlowScope scope;
+  private final SootCallGraph callGraph;
+  private final LinkedList<QueryWithContext> queryQueue = Lists.newLinkedList();
+  private final Set<Query> visited = Sets.newHashSet();
 
-  public SharedContextAnalysis() {
+  public SharedContextAnalysis(Specification specification) {
+    spec = specification;
     callGraph = new SootCallGraph();
     scope = SootDataFlowScope.make(Scene.v());
     customBoomerangOptions =
