@@ -360,32 +360,34 @@ public abstract class BackwardBoomerangSolver<W extends Weight> extends Abstract
         new SuccessorListener(callSite) {
           @Override
           public void getSuccessor(Statement succ) {
-            cfg.addPredsOfListener(new PredecessorListener(callSite) {
-              @Override
-              public void getPredecessor(Statement pred) {
-                Node<ControlFlowGraph.Edge, Val> curr =
-                    new Node<>(new Edge(callSite, succ), query.var());
+            cfg.addPredsOfListener(
+                new PredecessorListener(callSite) {
+                  @Override
+                  public void getPredecessor(Statement pred) {
+                    Node<ControlFlowGraph.Edge, Val> curr =
+                        new Node<>(new Edge(callSite, succ), query.var());
 
-                Transition<ControlFlowGraph.Edge, INode<Val>> callTrans =
-                    new Transition<>(
-                        wrap(curr.fact()),
-                        curr.stmt(),
-                        generateCallState(wrap(curr.fact()), curr.stmt()));
-                callAutomaton.addTransition(callTrans);
-                callAutomaton.addUnbalancedState(
-                    generateCallState(wrap(curr.fact()), curr.stmt()), target);
+                    Transition<ControlFlowGraph.Edge, INode<Val>> callTrans =
+                        new Transition<>(
+                            wrap(curr.fact()),
+                            curr.stmt(),
+                            generateCallState(wrap(curr.fact()), curr.stmt()));
+                    callAutomaton.addTransition(callTrans);
+                    callAutomaton.addUnbalancedState(
+                        generateCallState(wrap(curr.fact()), curr.stmt()), target);
 
-                State s =
-                    new PushNode<>(
-                        target.location(), target.node().fact(), new Edge(pred, callSite), PDSSystem.CALLS);
-                propagate(curr, s);
-              }
-            });
+                    State s =
+                        new PushNode<>(
+                            target.location(),
+                            target.node().fact(),
+                            new Edge(pred, callSite),
+                            PDSSystem.CALLS);
+                    propagate(curr, s);
+                  }
+                });
           }
         });
-
   }
-
 
   private final class CallSiteCalleeListener implements CalleeListener<Statement, Method> {
     private final Statement callSite;

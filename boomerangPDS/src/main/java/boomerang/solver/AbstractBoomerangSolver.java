@@ -17,8 +17,6 @@ import boomerang.callgraph.BackwardsObservableICFG;
 import boomerang.callgraph.CallerListener;
 import boomerang.callgraph.ObservableICFG;
 import boomerang.controlflowgraph.ObservableControlFlowGraph;
-import boomerang.controlflowgraph.PredecessorListener;
-import boomerang.controlflowgraph.SuccessorListener;
 import boomerang.scene.AllocVal;
 import boomerang.scene.ControlFlowGraph;
 import boomerang.scene.ControlFlowGraph.Edge;
@@ -133,9 +131,8 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
     this.generatedFieldState = genField;
   }
 
-  public boolean reachesNodeWithEmptyField(Node<Edge, Val> node){
-    for (Transition<Field, INode<Node<Edge, Val>>> t :
-        getFieldAutomaton().getTransitions()) {
+  public boolean reachesNodeWithEmptyField(Node<Edge, Val> node) {
+    for (Transition<Field, INode<Node<Edge, Val>>> t : getFieldAutomaton().getTransitions()) {
       if (t.getStart() instanceof GeneratedState) {
         continue;
       }
@@ -287,29 +284,28 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
     }
     UnbalancedDataFlowListener l = new UnbalancedDataFlowListener(callee, callSite);
     if (unbalancedDataFlowListeners.put(callee, l)) {
-      LOGGER.trace(
-          "Allowing unbalanced propagation from {} to {} of {}", callee, callSite, this);
+      LOGGER.trace("Allowing unbalanced propagation from {} to {} of {}", callee, callSite, this);
       for (UnbalancedDataFlow<W> e : Lists.newArrayList(unbalancedDataFlows.get(callee))) {
         propagateUnbalancedToCallSite(callSite, e.getReturningTransition());
       }
     }
   }
 
-
-  protected void assertCalleeCallerRelation(Statement callSite, Method method){
+  protected void assertCalleeCallerRelation(Statement callSite, Method method) {
     Set<Statement> callsitesOfCall = Sets.newHashSet();
-    icfg.addCallerListener(new CallerListener<Statement, Method>() {
-      @Override
-      public Method getObservedCallee() {
-        return method;
-      }
+    icfg.addCallerListener(
+        new CallerListener<Statement, Method>() {
+          @Override
+          public Method getObservedCallee() {
+            return method;
+          }
 
-      @Override
-      public void onCallerAdded(Statement statement, Method method) {
-        callsitesOfCall.add(statement);
-      }
-    });
-    if(!callsitesOfCall.contains(callSite)){
+          @Override
+          public void onCallerAdded(Statement statement, Method method) {
+            callsitesOfCall.add(statement);
+          }
+        });
+    if (!callsitesOfCall.contains(callSite)) {
       throw new RuntimeException("Invalid pair of callSite and method for unbalanced return");
     }
   }

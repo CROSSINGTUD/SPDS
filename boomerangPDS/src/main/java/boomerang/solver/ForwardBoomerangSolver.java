@@ -31,10 +31,7 @@ import boomerang.scene.Statement;
 import boomerang.scene.StaticFieldVal;
 import boomerang.scene.Type;
 import boomerang.scene.Val;
-import com.google.common.base.Stopwatch;
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Table;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -209,7 +206,7 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
   protected void propagateUnbalancedToCallSite(
       Statement callSite, Transition<ControlFlowGraph.Edge, INode<Val>> transInCallee) {
     GeneratedState<Val, Edge> target = (GeneratedState<Val, Edge>) transInCallee.getTarget();
-    if(!callSite.containsInvokeExpr()){
+    if (!callSite.containsInvokeExpr()) {
       throw new RuntimeException("Invalid propagate Unbalanced return");
     }
     assertCalleeCallerRelation(callSite, transInCallee.getLabel().getMethod());
@@ -217,32 +214,34 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
         new SuccessorListener(callSite) {
           @Override
           public void getSuccessor(Statement succ) {
-            cfg.addPredsOfListener(new PredecessorListener(callSite) {
-              @Override
-              public void getPredecessor(Statement pred) {
-                Node<ControlFlowGraph.Edge, Val> curr = new Node<>(new Edge(pred,callSite), query.var());
-                /**
-                 * Transition<Field, INode<Node<Statement, Val>>> fieldTrans = new Transition<>(new
-                 * SingleNode<>(curr), emptyField(), new SingleNode<>(curr));
-                 * fieldAutomaton.addTransition(fieldTrans);*
-                 */
-                Transition<ControlFlowGraph.Edge, INode<Val>> callTrans =
-                    new Transition<>(
-                        wrap(curr.fact()),
-                        curr.stmt(),
-                        generateCallState(wrap(curr.fact()), curr.stmt()));
-                callAutomaton.addTransition(callTrans);
-                callAutomaton.addUnbalancedState(
-                    generateCallState(wrap(curr.fact()), curr.stmt()), target);
-                State s =
-                    new PushNode<>(
-                        target.location(),
-                        target.node().fact(),
-                        new Edge(callSite, succ),
-                        PDSSystem.CALLS);
-                propagate(curr, s);
-              }
-            });
+            cfg.addPredsOfListener(
+                new PredecessorListener(callSite) {
+                  @Override
+                  public void getPredecessor(Statement pred) {
+                    Node<ControlFlowGraph.Edge, Val> curr =
+                        new Node<>(new Edge(pred, callSite), query.var());
+                    /**
+                     * Transition<Field, INode<Node<Statement, Val>>> fieldTrans = new
+                     * Transition<>(new SingleNode<>(curr), emptyField(), new SingleNode<>(curr));
+                     * fieldAutomaton.addTransition(fieldTrans);*
+                     */
+                    Transition<ControlFlowGraph.Edge, INode<Val>> callTrans =
+                        new Transition<>(
+                            wrap(curr.fact()),
+                            curr.stmt(),
+                            generateCallState(wrap(curr.fact()), curr.stmt()));
+                    callAutomaton.addTransition(callTrans);
+                    callAutomaton.addUnbalancedState(
+                        generateCallState(wrap(curr.fact()), curr.stmt()), target);
+                    State s =
+                        new PushNode<>(
+                            target.location(),
+                            target.node().fact(),
+                            new Edge(callSite, succ),
+                            PDSSystem.CALLS);
+                    propagate(curr, s);
+                  }
+                });
           }
         });
   }

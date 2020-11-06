@@ -5,7 +5,6 @@ import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.Util;
 import boomerang.scene.ControlFlowGraph.Edge;
-import boomerang.scene.Field;
 import boomerang.scene.Statement;
 import boomerang.scene.Type;
 import boomerang.scene.Val;
@@ -20,7 +19,6 @@ import com.google.common.collect.Sets;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import sync.pds.solver.nodes.GeneratedState;
 import sync.pds.solver.nodes.INode;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.Transition;
@@ -99,7 +97,7 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
   public boolean aliases(Query el) {
     for (final ForwardQuery fw : getAllocationSites().keySet()) {
       if (queryToSolvers.getOrCreate(fw).getReachedStates().contains(el.asNode())) {
-        if(queryToSolvers.getOrCreate(fw).reachesNodeWithEmptyField(el.asNode())){
+        if (queryToSolvers.getOrCreate(fw).reachesNodeWithEmptyField(el.asNode())) {
           return true;
         }
       }

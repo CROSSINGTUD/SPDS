@@ -10,7 +10,7 @@ public class NestedContextTarget {
   }
 
   private static String doPassArgument(String level0) {
-    return wrappedWayDeeper( new String(level0));
+    return wrappedWayDeeper(new String(level0));
   }
 
   private static String wrappedWayDeeper(String level1) {

@@ -10,12 +10,11 @@ public class NestedContextAndBranchingTarget {
   }
 
   private static String doPassArgument(String level0) {
-    return wrappedWayDeeper( new String(level0));
+    return wrappedWayDeeper(new String(level0));
   }
 
-  private static String wrappedWayDeeper(String level1)
-  {
-    if(Math.random() > 0){
+  private static String wrappedWayDeeper(String level1) {
+    if (Math.random() > 0) {
       return "foo";
     }
     return andMoreStacks(level1);
