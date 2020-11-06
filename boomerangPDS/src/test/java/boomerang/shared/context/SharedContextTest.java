@@ -15,6 +15,8 @@ import boomerang.shared.context.targets.BranchingTest;
 import boomerang.shared.context.targets.ContextSensitiveAndLeftUnbalancedTarget;
 import boomerang.shared.context.targets.ContextSensitiveTarget;
 import boomerang.shared.context.targets.LeftUnbalancedTarget;
+import boomerang.shared.context.targets.NestedContextAndBranchingTarget;
+import boomerang.shared.context.targets.NestedContextTarget;
 import boomerang.shared.context.targets.WrappedInNewStringInnerTarget;
 import boomerang.shared.context.targets.WrappedInNewStringTarget;
 import boomerang.shared.context.targets.WrappedInStringTwiceTest;
@@ -72,6 +74,32 @@ public class SharedContextTest {
     BackwardQuery query = selectFirstFileInitArgument(m);
 
     runAnalysis(query, "bar");
+  }
+
+
+  @Test
+  public void nestedContextTest() {
+    setupSoot(NestedContextTarget.class);
+    SootMethod m =
+        Scene.v()
+            .getMethod(
+                "<boomerang.shared.context.targets.NestedContextTarget: void main(java.lang.String[])>");
+    BackwardQuery query = selectFirstFileInitArgument(m);
+
+    runAnalysis(query, "bar");
+  }
+
+
+  @Test
+  public void nestedContextAndBranchingTest() {
+    setupSoot(NestedContextAndBranchingTarget.class);
+    SootMethod m =
+        Scene.v()
+            .getMethod(
+                "<boomerang.shared.context.targets.NestedContextAndBranchingTarget: void main(java.lang.String[])>");
+    BackwardQuery query = selectFirstFileInitArgument(m);
+
+    runAnalysis(query, "bar", "foo");
   }
 
   @Test

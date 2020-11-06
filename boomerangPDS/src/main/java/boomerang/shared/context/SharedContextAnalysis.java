@@ -198,15 +198,6 @@ public class SharedContextAnalysis {
     return Sets.newHashSet();
   }
 
-  private boolean isInNextQueryList(Statement potentialCallSite, Val reachingVariable) {
-    if (isInSourceList(potentialCallSite)) {
-      if (potentialCallSite.getInvokeExpr().getArgs().contains(reachingVariable)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   private static class QueryWithContext {
     private QueryWithContext(Query query) {
       this.query = query;

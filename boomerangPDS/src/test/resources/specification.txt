@@ -1,0 +1,2 @@
+<GO{F}java.lang.String: void <init>(ON{F}java.lang.String)>
+<ON{B}java.lang.String: void <init>(GO{B}java.lang.String)>
