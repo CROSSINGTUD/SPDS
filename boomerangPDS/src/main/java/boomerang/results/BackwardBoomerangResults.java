@@ -99,14 +99,8 @@ public class BackwardBoomerangResults<W extends Weight> extends AbstractBoomeran
   public boolean aliases(Query el) {
     for (final ForwardQuery fw : getAllocationSites().keySet()) {
       if (queryToSolvers.getOrCreate(fw).getReachedStates().contains(el.asNode())) {
-        for (Transition<Field, INode<Node<Edge, Val>>> t :
-            queryToSolvers.getOrCreate(fw).getFieldAutomaton().getTransitions()) {
-          if (t.getStart() instanceof GeneratedState) {
-            continue;
-          }
-          if (t.getStart().fact().equals(el.asNode()) && t.getLabel().equals(Field.empty())) {
-            return true;
-          }
+        if(queryToSolvers.getOrCreate(fw).reachesNodeWithEmptyField(el.asNode())){
+          return true;
         }
       }
     }

@@ -132,6 +132,19 @@ public abstract class AbstractBoomerangSolver<W extends Weight>
     this.generatedFieldState = genField;
   }
 
+  public boolean reachesNodeWithEmptyField(Node<Edge, Val> node){
+    for (Transition<Field, INode<Node<Edge, Val>>> t :
+        getFieldAutomaton().getTransitions()) {
+      if (t.getStart() instanceof GeneratedState) {
+        continue;
+      }
+      if (t.getStart().fact().equals(node) && t.getLabel().equals(Field.empty())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private class UnbalancedListener
       implements WPAUpdateListener<ControlFlowGraph.Edge, INode<Val>, W> {
 
