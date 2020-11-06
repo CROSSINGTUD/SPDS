@@ -207,7 +207,7 @@ public class SharedContextTest {
   protected void runAnalysis(BackwardQuery query, String... expectedValues) {
     // TODO move to analysis
     Specification specification = Specification
-        .create("<GO{F}java.lang.String: void <init>(ON{F}java.lang.String)>","<ON{B}java.lang.String: void <init>(GO{B}java.lang.String)>)");
+        .create("<GO{F}java.lang.String: void <init>(ON{F}java.lang.String)>","<ON{B}java.lang.String: void <init>(GO{B}java.lang.String)>");
     SharedContextAnalysis sharedContextAnalysis = new SharedContextAnalysis(specification);
     Collection<ForwardQuery> res = sharedContextAnalysis.run(query);
     Assert.assertEquals(

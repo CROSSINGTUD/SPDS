@@ -71,24 +71,14 @@ public class Specification {
 
   private void createQuerySelector(String arg, Parameter p,  Set<QuerySelector> on, Set<QuerySelector> go) {
     if(arg.startsWith(ON_SELECTOR)){
-      if(arg.contains(FORWARD)){
-        on.add(new QuerySelector(QueryDirection.BACKWARD,p));
-      }
-      if(arg.contains(BACKWARD)){
-        on.add(new QuerySelector(QueryDirection.BACKWARD,p));
-      }
+      on.add(new QuerySelector(arg.contains(FORWARD) ? QueryDirection.FORWARD : QueryDirection.BACKWARD, p));
     }
     if(arg.startsWith(GO_SELECTOR)){
-      if(arg.contains(FORWARD)){
-        go.add(new QuerySelector(QueryDirection.BACKWARD,p));
-      }
-      if(arg.contains(BACKWARD)){
-        go.add(new QuerySelector(QueryDirection.BACKWARD,p));
-      }
+      go.add(new QuerySelector(arg.contains(FORWARD) ? QueryDirection.FORWARD : QueryDirection.BACKWARD, p));
     }
   }
 
-  private class SootMethodWithSelector{
+  public static class SootMethodWithSelector{
     SootMethodWithSelector(String sootMethod, Collection<QuerySelector> on, Collection<QuerySelector> go){
       this.sootMethod = sootMethod;
       this.on = on;
@@ -97,6 +87,18 @@ public class Specification {
     private String sootMethod;
     private Collection<QuerySelector> on;
     private Collection<QuerySelector> go;
+
+    public Collection<QuerySelector> getOn() {
+      return on;
+    }
+
+    public Collection<QuerySelector> getGo() {
+      return go;
+    }
+
+    public String getSootMethod() {
+      return sootMethod;
+    }
   }
 
 
@@ -121,6 +123,10 @@ public class Specification {
       return new Parameter(integer);
     }
 
+    public int getValue() {
+      return value;
+    }
+
     @Override
     public boolean equals(Object o) {
       if (this == o) {
@@ -140,7 +146,7 @@ public class Specification {
   }
 
 
-  private class QuerySelector{
+  public class QuerySelector{
       QuerySelector(QueryDirection direction, Parameter argumentSelection){
         this.direction = direction;
         this.argumentSelection = argumentSelection;

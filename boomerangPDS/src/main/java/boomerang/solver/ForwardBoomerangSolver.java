@@ -99,24 +99,6 @@ public abstract class ForwardBoomerangSolver<W extends Weight> extends AbstractB
     super.processPush(curr, location, succ, system);
   }
 
-  public Table<Edge, Val, W> asStatementValWeightTable() {
-    final Table<Edge, Val, W> results = HashBasedTable.create();
-    Stopwatch sw = Stopwatch.createStarted();
-    LOGGER.trace("Computing final weighted results for {}", query);
-    WeightedPAutomaton<Edge, INode<Val>, W> callAut = getCallAutomaton();
-    for (Entry<Transition<Edge, INode<Val>>, W> e :
-        callAut.getTransitionsToFinalWeights().entrySet()) {
-      Transition<Edge, INode<Val>> t = e.getKey();
-      W w = e.getValue();
-      if (t.getLabel().equals(new Edge(Statement.epsilon(), Statement.epsilon()))) continue;
-      if (t.getStart().fact().isLocal()
-          && !t.getLabel().getMethod().equals(t.getStart().fact().m())) continue;
-      results.put(t.getLabel(), t.getStart().fact(), w);
-    }
-    LOGGER.trace("Computed final weighted results for {} in {}", query, sw);
-    return results;
-  }
-
   private final class OverwriteAtFieldStore
       extends WPAStateListener<Field, INode<Node<ControlFlowGraph.Edge, Val>>, W> {
     private final Edge nextStmt;
