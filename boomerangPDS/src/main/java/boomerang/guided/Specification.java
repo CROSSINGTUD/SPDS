@@ -1,4 +1,4 @@
-package boomerang.shared.context;
+package boomerang.guided;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Sets;

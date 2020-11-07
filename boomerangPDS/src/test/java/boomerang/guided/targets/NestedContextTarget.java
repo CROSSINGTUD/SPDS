@@ -1,8 +1,8 @@
-package boomerang.shared.context.targets;
+package boomerang.guided.targets;
 
 import java.io.File;
 
-public class NestedContextAndBranchingTarget {
+public class NestedContextTarget {
 
   public static void main(String... args) {
     String bar = doPassArgument("bar");
@@ -14,9 +14,6 @@ public class NestedContextAndBranchingTarget {
   }
 
   private static String wrappedWayDeeper(String level1) {
-    if (Math.random() > 0) {
-      return "foo";
-    }
     return andMoreStacks(level1);
   }
 

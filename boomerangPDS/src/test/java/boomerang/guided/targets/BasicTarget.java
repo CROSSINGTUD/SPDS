@@ -1,4 +1,4 @@
-package boomerang.shared.context.targets;
+package boomerang.guided.targets;
 
 import java.io.File;
 

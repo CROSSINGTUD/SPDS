@@ -1,4 +1,4 @@
-package boomerang.shared.context;
+package boomerang.guided;
 
 import boomerang.BackwardQuery;
 import boomerang.Boomerang;
@@ -7,6 +7,10 @@ import boomerang.ForwardQuery;
 import boomerang.Query;
 import boomerang.QueryGraph;
 import boomerang.callgraph.ObservableICFG;
+import boomerang.guided.Specification.Parameter;
+import boomerang.guided.Specification.QueryDirection;
+import boomerang.guided.Specification.QuerySelector;
+import boomerang.guided.Specification.SootMethodWithSelector;
 import boomerang.results.AbstractBoomerangResults.Context;
 import boomerang.results.BackwardBoomerangResults;
 import boomerang.results.ForwardBoomerangResults;
@@ -20,10 +24,6 @@ import boomerang.scene.Val;
 import boomerang.scene.jimple.IntAndStringBoomerangOptions;
 import boomerang.scene.jimple.JimpleStatement;
 import boomerang.scene.jimple.SootCallGraph;
-import boomerang.shared.context.Specification.Parameter;
-import boomerang.shared.context.Specification.QueryDirection;
-import boomerang.shared.context.Specification.QuerySelector;
-import boomerang.shared.context.Specification.SootMethodWithSelector;
 import boomerang.solver.ForwardBoomerangSolver;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -41,7 +41,7 @@ import soot.jimple.Stmt;
 import sync.pds.solver.nodes.Node;
 import wpds.impl.Weight.NoWeight;
 
-public class SharedContextAnalysis {
+public class DemandDrivenGuidedAnalysis {
 
   private final DefaultBoomerangOptions customBoomerangOptions;
   private final Specification spec;
@@ -50,7 +50,7 @@ public class SharedContextAnalysis {
   private final LinkedList<QueryWithContext> queryQueue = Lists.newLinkedList();
   private final Set<Query> visited = Sets.newHashSet();
 
-  public SharedContextAnalysis(Specification specification) {
+  public DemandDrivenGuidedAnalysis(Specification specification) {
     spec = specification;
     callGraph = new SootCallGraph();
     scope = SootDataFlowScope.make(Scene.v());
@@ -96,7 +96,7 @@ public class SharedContextAnalysis {
             results.asStatementValWeightTable((ForwardQuery) pop.query);
         // Any ForwardQuery may trigger additional ForwardQuery under its own scope.
         triggerNewForwardQueries(forwardResults, currentQuery);
-        triggerNewBackwardQueries(forwardResults,currentQuery,QueryDirection.FORWARD);
+        triggerNewBackwardQueries(forwardResults, currentQuery, QueryDirection.FORWARD);
       } else {
         BackwardBoomerangResults<NoWeight> results;
         if (pop.parentQuery == null) {
@@ -119,7 +119,10 @@ public class SharedContextAnalysis {
             finalAllocationSites.add(entry.getKey());
           }
 
-          triggerNewBackwardQueries(results.asStatementValWeightTable(entry.getKey()), entry.getKey(), QueryDirection.FORWARD);
+          triggerNewBackwardQueries(
+              results.asStatementValWeightTable(entry.getKey()),
+              entry.getKey(),
+              QueryDirection.FORWARD);
         }
         // Any ForwardQuery may trigger additional ForwardQuery under its own scope.
         for (ForwardBoomerangSolver<NoWeight> solver : bSolver.getSolvers().values()) {
@@ -141,9 +144,6 @@ public class SharedContextAnalysis {
       Statement stmt = triggeringEdge.getStart();
       Val fact = cell.getColumnKey();
       if (stmt.containsInvokeExpr()) {
-        if(stmt.toString().contains("append")){
-          System.out.println("");
-        }
         Set<SootMethodWithSelector> selectors =
             spec.getMethodAndQueries().stream()
                 .filter(x -> isInOnList(x, stmt, fact, direction))
@@ -170,7 +170,10 @@ public class SharedContextAnalysis {
           }
         } else if (qSel.direction == QueryDirection.FORWARD) {
           for (Statement succ : method.getControlFlowGraph().getSuccsOf(stmt)) {
-            results.add(new ForwardQuery(new Edge(stmt, succ), new AllocVal(parameterVal.get(), stmt, parameterVal.get())));
+            results.add(
+                new ForwardQuery(
+                    new Edge(stmt, succ),
+                    new AllocVal(parameterVal.get(), stmt, parameterVal.get())));
           }
         }
       }

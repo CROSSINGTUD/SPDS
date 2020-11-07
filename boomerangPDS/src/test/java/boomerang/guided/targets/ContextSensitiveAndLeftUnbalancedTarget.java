@@ -1,11 +1,15 @@
-package boomerang.shared.context.targets;
+package boomerang.guided.targets;
 
 import java.io.File;
 
-public class ContextSensitiveTarget {
+public class ContextSensitiveAndLeftUnbalancedTarget {
 
   public static void main(String... args) {
-    String bar = doPassArgument("bar");
+    context("bar");
+  }
+
+  private static void context(String barParam) {
+    String bar = doPassArgument(barParam);
     String foo = doPassArgument("foo");
     String quz = doPassArgument("quz");
     new File(bar);

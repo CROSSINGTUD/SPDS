@@ -1,13 +1,12 @@
-package boomerang.shared.context.targets;
+package boomerang.guided.targets;
 
 import java.io.File;
 
-public class BranchingAfterNewStringTest {
+public class WrappedInStringTwiceTest {
 
   public static void main(String... args) {
     String x = new String("bar");
-    String y = new String("foo");
-    String bar = doPassArgument(Math.random() > 0 ? x : y);
+    String bar = doPassArgument(x);
     new File(bar);
     ;
   }
