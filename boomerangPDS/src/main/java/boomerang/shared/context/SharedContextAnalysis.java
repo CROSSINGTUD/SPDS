@@ -96,6 +96,7 @@ public class SharedContextAnalysis {
             results.asStatementValWeightTable((ForwardQuery) pop.query);
         // Any ForwardQuery may trigger additional ForwardQuery under its own scope.
         triggerNewForwardQueries(forwardResults, currentQuery);
+        triggerNewBackwardQueries(forwardResults,currentQuery,QueryDirection.FORWARD);
       } else {
         BackwardBoomerangResults<NoWeight> results;
         if (pop.parentQuery == null) {
@@ -108,7 +109,7 @@ public class SharedContextAnalysis {
         Table<Edge, Val, NoWeight> backwardResults =
             bSolver.getBackwardSolvers().get(query).asStatementValWeightTable();
 
-        triggerNewBackwardQueries(backwardResults, pop.query);
+        triggerNewBackwardQueries(backwardResults, pop.query, QueryDirection.BACKWARD);
         Map<ForwardQuery, Context> allocationSites = results.getAllocationSites();
 
         for (Entry<ForwardQuery, Context> entry : allocationSites.entrySet()) {
@@ -117,6 +118,8 @@ public class SharedContextAnalysis {
           if (isStringOrIntAllocation(start)) {
             finalAllocationSites.add(entry.getKey());
           }
+
+          triggerNewBackwardQueries(results.asStatementValWeightTable(entry.getKey()), entry.getKey(), QueryDirection.FORWARD);
         }
         // Any ForwardQuery may trigger additional ForwardQuery under its own scope.
         for (ForwardBoomerangSolver<NoWeight> solver : bSolver.getSolvers().values()) {
@@ -126,21 +129,24 @@ public class SharedContextAnalysis {
     }
 
     QueryGraph<NoWeight> queryGraph = bSolver.getQueryGraph();
-    bSolver.unregisterAllListeners();
     System.out.println(queryGraph.toDotString());
+    bSolver.unregisterAllListeners();
     return finalAllocationSites;
   }
 
   private void triggerNewBackwardQueries(
-      Table<Edge, Val, NoWeight> backwardResults, Query lastQuery) {
+      Table<Edge, Val, NoWeight> backwardResults, Query lastQuery, QueryDirection direction) {
     for (Cell<Edge, Val, NoWeight> cell : backwardResults.cellSet()) {
       Edge triggeringEdge = cell.getRowKey();
       Statement stmt = triggeringEdge.getStart();
       Val fact = cell.getColumnKey();
       if (stmt.containsInvokeExpr()) {
+        if(stmt.toString().contains("append")){
+          System.out.println("");
+        }
         Set<SootMethodWithSelector> selectors =
             spec.getMethodAndQueries().stream()
-                .filter(x -> isInOnList(x, stmt, fact, QueryDirection.BACKWARD))
+                .filter(x -> isInOnList(x, stmt, fact, direction))
                 .collect(Collectors.toSet());
         for (SootMethodWithSelector sel : selectors) {
           Collection<Query> queries = createNewQueries(sel, stmt);
@@ -164,7 +170,7 @@ public class SharedContextAnalysis {
           }
         } else if (qSel.direction == QueryDirection.FORWARD) {
           for (Statement succ : method.getControlFlowGraph().getSuccsOf(stmt)) {
-            results.add(BackwardQuery.make(new Edge(stmt, succ), parameterVal.get()));
+            results.add(new ForwardQuery(new Edge(stmt, succ), new AllocVal(parameterVal.get(), stmt, parameterVal.get())));
           }
         }
       }

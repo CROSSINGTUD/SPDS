@@ -17,6 +17,7 @@ import boomerang.shared.context.targets.ContextSensitiveTarget;
 import boomerang.shared.context.targets.LeftUnbalancedTarget;
 import boomerang.shared.context.targets.NestedContextAndBranchingTarget;
 import boomerang.shared.context.targets.NestedContextTarget;
+import boomerang.shared.context.targets.PingPongTarget;
 import boomerang.shared.context.targets.WrappedInNewStringInnerTarget;
 import boomerang.shared.context.targets.WrappedInNewStringTarget;
 import boomerang.shared.context.targets.WrappedInStringTwiceTest;
@@ -172,9 +173,30 @@ public class SharedContextTest {
     runAnalysis(query, "bar", "foo");
   }
 
+  @Test
+  public void pingPongTest() {
+    setupSoot(PingPongTarget.class);
+    SootMethod m =
+        Scene.v()
+            .getMethod(
+                "<boomerang.shared.context.targets.PingPongTarget: void main(java.lang.String[])>");
+    BackwardQuery query = selectFirstFileInitArgument(m);
+
+
+    Specification specification =
+        Specification.create(
+            "<ON{B}java.lang.StringBuilder: java.lang.StringBuilder append(GO{B}java.lang.String)>",
+            "<ON{F}java.lang.StringBuilder: java.lang.StringBuilder append(GO{B}java.lang.String)>",
+            "<ON{F}java.lang.StringBuilder: GO{F}java.lang.StringBuilder append(java.lang.String)>",
+            "<GO{B}java.lang.StringBuilder: ON{B}java.lang.String toString()>"
+            );
+    runAnalysis(specification, query, "hello", "world");
+  }
+
   public static BackwardQuery selectFirstFileInitArgument(SootMethod m) {
     Method method = JimpleMethod.of(m);
     method.getStatements().stream().filter(x -> x.containsInvokeExpr()).forEach(x -> x.toString());
+    System.out.println(m.getActiveBody());
     Statement newFileStatement =
         method.getStatements().stream()
             .filter(x -> x.containsInvokeExpr())
@@ -202,11 +224,15 @@ public class SharedContextTest {
   }
 
   protected void runAnalysis(BackwardQuery query, String... expectedValues) {
-    // TODO move to analysis
     Specification specification =
         Specification.create(
             "<GO{F}java.lang.String: void <init>(ON{F}java.lang.String)>",
-            "<ON{B}java.lang.String: void <init>(GO{B}java.lang.String)>");
+            "<ON{B}java.lang.String: void <init>(GO{B}java.lang.String)>"
+            );
+    runAnalysis(specification,query,expectedValues);
+  }
+
+  protected void runAnalysis(Specification specification, BackwardQuery query, String... expectedValues) {
     SharedContextAnalysis sharedContextAnalysis = new SharedContextAnalysis(specification);
     Collection<ForwardQuery> res = sharedContextAnalysis.run(query);
     Assert.assertEquals(
