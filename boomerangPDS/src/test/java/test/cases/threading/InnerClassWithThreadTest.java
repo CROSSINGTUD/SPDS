@@ -17,6 +17,7 @@ import test.cases.fields.Alloc;
 import test.core.AbstractBoomerangTest;
 import test.core.selfrunning.AllocatedObject;
 
+@Ignore
 public class InnerClassWithThreadTest extends AbstractBoomerangTest {
   private static Alloc param;
 
